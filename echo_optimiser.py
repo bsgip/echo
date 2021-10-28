@@ -9,10 +9,9 @@ from echo_models import FlexibleAsset
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, energy_system, objective, ES):
+    def __init__(self, interval_duration, number_of_intervals, objective, ES):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
-        self.energy_system = energy_system
         self.ES = ES
 
         # Configure the optimiser through setting appropriate environmental variables.
@@ -110,28 +109,6 @@ class EchoOptimiser(object):
 
     def build_objective(self):
         self.objective = 0
-
-
-        # Connection point cost
-        # The import tariff per kWh
-        self.model.btm_import_tariff = en.Param(self.model.Time, initialize=self.energy_system.tariff.import_tariff)
-        # The export tariff per kWh
-        self.model.btm_export_tariff = en.Param(self.model.Time, initialize=self.energy_system.tariff.export_tariff)
-
-        c = None
-        for _, obj in self.ES.hub_obj.items():
-            edges = self.ES.edges(obj.uid)
-            hub_vars = obj.nodes
-            for _, v in hub_vars.items():
-                if v.has_tariff:
-                    c = v
-                    self.c = v
-
-        self.objective += sum(
-             self.model.btm_import_tariff[i] * getattr(self.model, 'positive_' + c.node_name)[i] +  # The cost of purchasing energy
-             self.model.btm_export_tariff[i] * getattr(self.model, 'negative_' + c.node_name)[i]  # The value of selling energy
-             for i in self.model.Time)
-
         for _, obj in self.ES.asset_obj.items():
             self.objective += obj.add_objective(self.model)
 
@@ -149,7 +126,7 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        opt.solve(self.model)
+        opt.solve(self.model,tee=True)
 
     def values(self, variable_name):
         output = np.zeros(self.number_of_intervals)

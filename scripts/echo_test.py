@@ -67,26 +67,26 @@ export_tariff_dct = dict(enumerate(export_tariff))
 import_tariff_dct = dict(enumerate(import_tariff))
 
 
-
-colors = sns.color_palette()
-hrs = np.arange(0, len(test_load)) / 4
-fig = plt.figure(figsize=(14, 4))
-ax1 = fig.add_subplot(2, 1, 1)
-l1, = ax1.plot(hrs, 4 * test_load, color=colors[0])
-l2, = ax1.plot(hrs, 4 * test_pv, color=colors[1])
-l3, = ax1.plot(hrs, 4 * net_load, color=colors[2])
-ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([l1, l2, l3], ['Load', 'PV', 'Connection Point'], ncol=2)
-ax1.set_xlim([0, len(test_load) / 4])
-ax2 = fig.add_subplot(2, 1, 2)
-l1, = ax2.plot(hrs, import_tariff, color=colors[3])
-l2, = ax2.plot(hrs, export_tariff, color=colors[4])
-ax2.set_xlabel('hour'), ax2.set_ylabel('price ($/kWh)')
-ax2.legend([l1, l2], ['buy price', 'sell price'], ncol=2)
-ax2.set_xlim([0, len(test_load) / 4])
-fig.tight_layout()
-
-fig.show()
+# # Plot data
+# colors = sns.color_palette()
+# hrs = np.arange(0, len(test_load)) / 4
+# fig = plt.figure(figsize=(14, 4))
+# ax1 = fig.add_subplot(2, 1, 1)
+# l1, = ax1.plot(hrs, 4 * test_load, color=colors[0])
+# l2, = ax1.plot(hrs, 4 * test_pv, color=colors[1])
+# l3, = ax1.plot(hrs, 4 * net_load, color=colors[2])
+# ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+# ax1.legend([l1, l2, l3], ['Load', 'PV', 'Connection Point'], ncol=2)
+# ax1.set_xlim([0, len(test_load) / 4])
+# ax2 = fig.add_subplot(2, 1, 2)
+# l1, = ax2.plot(hrs, import_tariff, color=colors[3])
+# l2, = ax2.plot(hrs, export_tariff, color=colors[4])
+# ax2.set_xlabel('hour'), ax2.set_ylabel('price ($/kWh)')
+# ax2.legend([l1, l2], ['buy price', 'sell price'], ncol=2)
+# ax2.set_xlim([0, len(test_load) / 4])
+# fig.tight_layout()
+#
+# fig.show()
 
 ############################ Optimise this Example ########################################
 
@@ -145,32 +145,14 @@ dispatch.add_dispatch_request_linear_ramp(req)
 energy_system.add_dispatch(dispatch)'''
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(15, 96, energy_system, OptimiserObjectiveSet.EnergyOptimisation, ES)
+optimiser = EchoOptimiser(15, 96, OptimiserObjectiveSet.EnergyOptimisation, ES)
 
 log_infeasible_constraints(optimiser.model)
 
-
 ############################ Analyse the Optimisation ########################################
-# storage_energy_delta = optimiser.values('storage_charge_grid') +\
-#                        optimiser.values('storage_charge_generation') +\
-#                        optimiser.values('storage_discharge_demand') +\
-#                        optimiser.values('storage_discharge_grid')
 
 storage_energy_delta = optimiser.values(battery.node_name)
-
-optimised_connection_point_load = optimiser.values('negative_' + optimiser.c.node_name) + optimiser.values('positive_' + optimiser.c.node_name)
-
-aa = optimiser.values(battery.node_name)
-bb = optimiser.value_test()
-
-cc = optimiser.values('negative_' + optimiser.c.node_name)
-dd = optimiser.values('positive_' + optimiser.c.node_name)
-ee = 1
-# a = optimiser.values('cgen')
-# b = optimiser.system_generation_dct.values()
-# c = zip(list(a), list(b))
-#
-# print(list(c))
+optimised_connection_point_load = optimiser.values(connection_point.node_name)
 
 
 colors = sns.color_palette()

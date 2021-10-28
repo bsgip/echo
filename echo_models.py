@@ -46,6 +46,7 @@ class Node(object):
 
         # Details about any tariffs and incentives
         self.has_tariff = False
+        self.tariff = None
 
     def verify_node(self):
         """ Used to verify that a port has been setup appropriately"""
@@ -89,7 +90,7 @@ class Node(object):
             # This is only applicable for variables, not for parameters which are fixed.
             # By splitting the variables, we are able to use either the positive
             # or negative component.
-            # This is only calculated for decision variables becuase it cannot be calculated for parameters.
+            # This is only calculated for decision variables because it cannot be calculated for parameters.
             self.positive_node_component = positive_variable_component + self.node_name
             self.negative_node_component = negative_variable_component + self.node_name
             setattr(model, self.positive_node_component, en.Var(model.Time, initialize=0, domain=en.NonNegativeReals))
@@ -109,7 +110,16 @@ class Node(object):
         self.initial_value = initial_value
 
     def add_objective(self, model):
-        pass
+        objective = 0
+        if self.has_tariff:
+            model.import_tariff = en.Param(model.Time, initialize=self.tariff.import_tariff)
+            model.export_tariff = en.Param(model.Time, initialize=self.tariff.export_tariff)
+            objective += sum(
+                model.import_tariff[i] * getattr(model, 'positive_' + self.node_name)[i] +
+                model.export_tariff[i] * getattr(model, 'negative_' + self.node_name)[i]
+                for i in model.Time)
+        return objective
+
 
 class Hub(object):
     """Hubs are collections of one or more ports that can include non-trivial relationships between the ports,
