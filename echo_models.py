@@ -29,6 +29,7 @@ class OptimisationGraph(Graph):
 class ConfigurationError(Exception):
     pass
 
+
 class Node(object):
     def __init__(self):
         self.uid = uuid.uuid4()
@@ -57,13 +58,15 @@ class Node(object):
             if self.import_constraint is FlowConstraint.NA:
                 raise ConfigurationError("The Import FlowConstraint cannot be set to a value of NA.")
             if self.import_constraint is not FlowConstraint.NoConstraint and self.import_constraint_value is None:
-                raise ConfigurationError("The Import flow constraint value cannot be set to None when an Import constraint exists.")
+                raise ConfigurationError(
+                    "The Import flow constraint value cannot be set to None when an Import constraint exists.")
 
         if self.flows is (Flows.Export or Flows.Both):
             if self.export_constraint is FlowConstraint.NA:
                 raise ConfigurationError("The Export FlowConstraint cannot be set to a value of NA.")
             if self.export_constraint is not FlowConstraint.NoConstraint and self.export_constraint_value is None:
-                raise ConfigurationError("The Export flow constraint value cannot be set to None when an Export constraint exists.")
+                raise ConfigurationError(
+                    "The Export flow constraint value cannot be set to None when an Export constraint exists.")
 
         if self.opt_type is OptimisationType.NA:
             raise ConfigurationError(
@@ -95,7 +98,8 @@ class Node(object):
             self.negative_node_component = negative_variable_component + self.node_name
             setattr(model, self.positive_node_component, en.Var(model.Time, initialize=0, domain=en.NonNegativeReals))
             setattr(model, self.negative_node_component, en.Var(model.Time, initialize=0, domain=en.NonPositiveReals))
-            con_rule = self.factory_pos_neg_flows(self.node_name, self.positive_node_component, self.negative_node_component)
+            con_rule = self.factory_pos_neg_flows(self.node_name, self.positive_node_component,
+                                                  self.negative_node_component)
             con_name = positive_variable_component + negative_variable_component + self.node_name
             setattr(model, con_name, en.Constraint(model.Time, rule=con_rule))
 
@@ -140,9 +144,11 @@ class Hub(object):
     def add_named_node(self):
         pass
 
+
 # High Level definitions of asset types
 class Source(Node):
     """ A source of a commodity. """
+
     def __init__(self):
         super(Source, self).__init__()
         self.flows = Flows.Export
@@ -151,6 +157,7 @@ class Source(Node):
 
 class Sink(Node):
     """ The sink for a commodity. """
+
     def __init__(self):
         super(Sink, self).__init__()
         self.flows = Flows.Import
@@ -159,6 +166,7 @@ class Sink(Node):
 
 class Storage(Node):
     """ Storage for a commodity. """
+
     def __init__(self,
                  max_capacity,
                  depth_of_discharge_limit,
@@ -240,7 +248,6 @@ class Storage(Node):
         soc_con = 'soc_limit_' + self.node_name
         setattr(model, soc_con, en.Constraint(model.Time, rule=SOC_rule))
 
-
     def calc_capacity(self):
         capacity = self.max_capacity
         if 0 <= self.depth_of_discharge_limit <= 1:
@@ -258,13 +265,16 @@ class Storage(Node):
         super(Storage, self).add_objective(model)
 
         objective = 0
-        objective += sum(getattr(model, 'positive_' + self.node_name)[i] - getattr(model, 'negative_' + self.node_name)[i]
-                        for i in model.Time) * self.throughput_cost / 2.0
+        objective += sum(
+            getattr(model, 'positive_' + self.node_name)[i] - getattr(model, 'negative_' + self.node_name)[i]
+            for i in model.Time) * self.throughput_cost / 2.0
 
-        objective += sum(getattr(model, 'positive_' + self.node_name)[i] * getattr(model, 'positive_' + self.node_name)[i] + \
-                         getattr(model, 'negative_' + self.node_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
-                        for i in model.Time) * 0.0000001
+        objective += sum(
+            getattr(model, 'positive_' + self.node_name)[i] * getattr(model, 'positive_' + self.node_name)[i] + \
+            getattr(model, 'negative_' + self.node_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
+            for i in model.Time) * 0.0000001
         return objective
+
 
 class FlexibleAsset(Node):
 
@@ -285,6 +295,7 @@ class ElectricalDemand(Sink):
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
+
 class ElectricalGeneration(Source):
 
     def __init__(self):
@@ -294,7 +305,7 @@ class ElectricalGeneration(Source):
 
     def add_generation_profile(self, generation):
         self.add_initial_value(generation)
-        
+
 
 class ElectricalStorage(Storage):
     def __init__(self,
@@ -307,25 +318,39 @@ class ElectricalStorage(Storage):
                  throughput_cost,
                  initial_state_of_charge=0
                  ):
-         super(ElectricalStorage, self).__init__(max_capacity,
-                 depth_of_discharge_limit,
-                 charging_power_limit,
-                 discharging_power_limit,
-                 charging_efficiency,
-                 discharging_efficiency,
-                 throughput_cost,
-                 initial_state_of_charge=0)
-         self.units = Units.KW
+        super(ElectricalStorage, self).__init__(max_capacity,
+                                                depth_of_discharge_limit,
+                                                charging_power_limit,
+                                                discharging_power_limit,
+                                                charging_efficiency,
+                                                discharging_efficiency,
+                                                throughput_cost,
+                                                initial_state_of_charge=0)
+        self.units = Units.KW
 
 
 class ElectricalHub(Hub):
-    """A hub that implements a kirchoff / tellegen constraint requiring that electrical power is conserved"""
+    """A hub that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
+
     def __init__(self):
         super(ElectricalHub, self).__init__()
         self.units = Units.KW
+
 
 class BulkElectricalGrid(FlexibleAsset):
 
     def __init__(self):
         super(BulkElectricalGrid, self).__init__()
         self.units = Units.KW
+
+
+class Tariff(object):
+
+    def __init__(self):
+        pass
+
+    def add_tariff_profile_import(self, tariff):
+        self.import_tariff = tariff
+
+    def add_tariff_profile_export(self, tariff):
+        self.export_tariff = tariff
