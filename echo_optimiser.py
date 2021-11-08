@@ -3,13 +3,13 @@ import pyomo.environ as en
 import pyomo.network
 import os
 import numpy as np
-from configuration import Units, Flows, FlowConstraint, OptimisationType
+from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule
 from constants import minutes_per_hour
 from echo_models import FlexibleAsset
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, objective, ES):
+    def __init__(self, interval_duration, number_of_intervals, ES):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.ES = ES
@@ -30,8 +30,6 @@ class EchoOptimiser(object):
         self.storage_soc_value = None
         self.var_names = list()
 
-
-        self.objectives = objective
         self.build_model()
         self.apply_constraints()
         self.build_objective()
@@ -46,6 +44,7 @@ class EchoOptimiser(object):
         return constraint
 
     def add_asset(self, obj):
+        # Constraints relevant to particular assets are added here as part of initialising the node
         obj.verify_node()
         obj.initialise_node(self.model)
 
@@ -79,21 +78,6 @@ class EchoOptimiser(object):
             setattr(self.model, con_name, en.Constraint(self.model.Time, rule=con_rule1))
 
 
-
-        # Apply the Kirchoff flow constraints at each Hub
-        for _, obj in self.ES.hub_obj.items():
-            hub_vars = obj.nodes
-
-            def reliability(model, time_interval):
-                a = 0
-                for _, hv in hub_vars.items():
-                    b = getattr(self.model, hv.node_name)
-                    a += b[time_interval]
-                return a == 0
-
-            self.model.reliability_con = en.Constraint(self.model.Time, rule=reliability)
-
-
         #### Bias Values ####
 
         # A small fudge factor for reducing the size of the solution set and
@@ -104,7 +88,38 @@ class EchoOptimiser(object):
 
 
     def apply_constraints(self):
-        pass
+
+        for _, obj in self.ES.hub_obj.items():
+            hub_vars = obj.nodes
+
+            # Kirchoff flow constraint at each aggregation Hub
+            def reliability(model, time_interval):
+                a = 0
+                for _, hv in hub_vars.items():
+                    b = getattr(self.model, hv.node_name)
+                    a += b[time_interval]
+                return a == 0
+
+            # Transformation constraint at each transformation Hub
+            def loss(model, time_interval):
+                a = 0
+                b = 0
+                for _, hv in hub_vars.items():
+                    p = getattr(self.model, hv.positive_node_component)
+                    n = getattr(self.model, hv.negative_node_component)
+                    a += p[time_interval]
+                    b += n[time_interval]
+                c = a + b
+                return c == 0.95*a  # e.g., 5% bi-directional loss
+
+        # Apply the correct constraint based on the hub rule
+        if obj.hub_rule == HubNodeRule.Tellegen:
+            self.model.reliability_con = en.Constraint(self.model.Time, rule=reliability)
+        if obj.hub_rule == HubNodeRule.Custom:
+            self.model.loss_con = en.Constraint(self.model.Time, rule=loss)
+
+
+
 
 
     def build_objective(self):
@@ -119,14 +134,14 @@ class EchoOptimiser(object):
 
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
 
-        # set the path to the solver
+        # Set the path to the solver
         if self.optimiser_engine == 'cplex':
             opt = SolverFactory(self.optimiser_engine, executable=self.optimiser_engine_executable)
         else:
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        opt.solve(self.model,tee=True)
+        opt.solve(self.model, tee=True)
 
     def values(self, variable_name):
         output = np.zeros(self.number_of_intervals)
@@ -139,5 +154,4 @@ class EchoOptimiser(object):
         outputs = []
         for var in self.var_names:
             outputs.append(self.values(var))
-
         return outputs
