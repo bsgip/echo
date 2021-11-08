@@ -7,13 +7,12 @@ from pyomo.core import Var
 from pyomo.util.infeasible import log_infeasible_constraints
 
 
-# Since using the data-driven data for the testing, use their battery class
 import sys
 sys.path.append("../")
-from old_models import EnergyStorage, EnergySystem, Demand, Generation, Tariff, DispatchRequest, LocalTariff
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, BulkElectricalGrid, OptimisationGraph, FlexibleAsset
-from old_optimiser import EnergyOptimiser, OptimiserObjectiveSet, BTMEnergyOptimiser, LocalEnergyOptimiser
+from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, BulkElectricalGrid, OptimisationGraph, FlexibleAsset, Tariff
+#from old_optimiser import EnergyOptimiser, OptimiserObjectiveSet, BTMEnergyOptimiser, LocalEnergyOptimiser
 from echo_optimiser import EchoOptimiser
+from configuration import HubNodeRule
 from networkx import Graph
 
 # set up seaborn the way you like
@@ -22,15 +21,6 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
                'axes.facecolor': 'white', 'grid.color': '.8', 'grid.linestyle': u'-', 'grid.linewidth': 0.5})
 
 ############################ Define an Example Optimisation Problem ########################################
-
-battery = ElectricalStorage(max_capacity=15.0,
-                        depth_of_discharge_limit=0,
-                        charging_power_limit=5.0,
-                        discharging_power_limit=-5.0,
-                        charging_efficiency=1,
-                        discharging_efficiency=1,
-                        throughput_cost=0.018,
-                        initial_state_of_charge=0.0)
 
 # The load and pv arrays below are in kwh consumed per 15 minutes
 test_load = np.array([2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
@@ -67,31 +57,39 @@ export_tariff_dct = dict(enumerate(export_tariff))
 import_tariff_dct = dict(enumerate(import_tariff))
 
 
-# # Plot data
-# colors = sns.color_palette()
-# hrs = np.arange(0, len(test_load)) / 4
-# fig = plt.figure(figsize=(14, 4))
-# ax1 = fig.add_subplot(2, 1, 1)
-# l1, = ax1.plot(hrs, 4 * test_load, color=colors[0])
-# l2, = ax1.plot(hrs, 4 * test_pv, color=colors[1])
-# l3, = ax1.plot(hrs, 4 * net_load, color=colors[2])
-# ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-# ax1.legend([l1, l2, l3], ['Load', 'PV', 'Connection Point'], ncol=2)
-# ax1.set_xlim([0, len(test_load) / 4])
-# ax2 = fig.add_subplot(2, 1, 2)
-# l1, = ax2.plot(hrs, import_tariff, color=colors[3])
-# l2, = ax2.plot(hrs, export_tariff, color=colors[4])
-# ax2.set_xlabel('hour'), ax2.set_ylabel('price ($/kWh)')
-# ax2.legend([l1, l2], ['buy price', 'sell price'], ncol=2)
-# ax2.set_xlim([0, len(test_load) / 4])
-# fig.tight_layout()
-#
-# fig.show()
+# Plot data
+colors = sns.color_palette()
+hrs = np.arange(0, len(test_load)) / 4
+fig = plt.figure(figsize=(14, 4))
+ax1 = fig.add_subplot(2, 1, 1)
+l1, = ax1.plot(hrs, 4 * test_load, color=colors[0])
+l2, = ax1.plot(hrs, 4 * test_pv, color=colors[1])
+l3, = ax1.plot(hrs, 4 * net_load, color=colors[2])
+ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+ax1.legend([l1, l2, l3], ['Load', 'PV', 'Connection Point'], ncol=2)
+ax1.set_xlim([0, len(test_load) / 4])
+ax2 = fig.add_subplot(2, 1, 2)
+l1, = ax2.plot(hrs, import_tariff, color=colors[3])
+l2, = ax2.plot(hrs, export_tariff, color=colors[4])
+ax2.set_xlabel('hour'), ax2.set_ylabel('price ($/kWh)')
+ax2.legend([l1, l2], ['buy price', 'sell price'], ncol=2)
+ax2.set_xlim([0, len(test_load) / 4])
+fig.tight_layout()
+
+fig.show()
 
 ############################ Optimise this Example ########################################
 
-energy_system = EnergySystem()
-energy_system.add_energy_storage(battery)
+# Since using the data-driven data for the testing, use their battery class
+battery = ElectricalStorage(max_capacity=15.0,
+                        depth_of_discharge_limit=0,
+                        charging_power_limit=5.0,
+                        discharging_power_limit=-5.0,
+                        charging_efficiency=1,
+                        discharging_efficiency=1,
+                        throughput_cost=0.018,
+                        initial_state_of_charge=0.0)
+
 load = ElectricalDemand()
 load.add_demand_profile(dict(enumerate(connection_point_import)))
 pv = ElectricalGeneration()
@@ -99,9 +97,6 @@ pv.add_generation_profile(dict(enumerate(connection_point_export)))
 tariff = Tariff()
 tariff.add_tariff_profile_export(export_tariff_dct)
 tariff.add_tariff_profile_import(import_tariff_dct)
-energy_system.add_demand(load)
-energy_system.add_generation(pv)
-energy_system.add_tariff(tariff)
 
 grid = BulkElectricalGrid()
 
@@ -115,9 +110,11 @@ dyn3 = FlexibleAsset()
 
 ES = OptimisationGraph()
 elec_hub = ElectricalHub()
+elec_hub.hub_rule = HubNodeRule.Tellegen
 elec_hub.named_nodes.append('connection_point')
 elec_hub.nodes['connection_point'] = connection_point
 
+# ToDo - neater way to add dynamic nodes
 elec_hub.nodes['dyn1'] = dyn1
 elec_hub.nodes['dyn2'] = dyn2
 elec_hub.nodes['dyn3'] = dyn3
@@ -145,7 +142,7 @@ dispatch.add_dispatch_request_linear_ramp(req)
 energy_system.add_dispatch(dispatch)'''
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(15, 96, OptimiserObjectiveSet.EnergyOptimisation, ES)
+optimiser = EchoOptimiser(15, 96, ES)
 
 log_infeasible_constraints(optimiser.model)
 
