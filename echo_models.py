@@ -14,16 +14,33 @@ class OptimisationGraph(Graph):
         self.edge_obj = dict()
 
     def add_asset(self, asset_obj):
-        self.add_node(asset_obj.uid)
-        self.asset_obj[asset_obj.uid] = asset_obj
+        if type(asset_obj) == list:
+            for asset in asset_obj:
+                self.add_node(asset.uid)
+                self.asset_obj[asset.uid] = asset
+        else:
+            self.add_node(asset_obj.uid)
+            self.asset_obj[asset_obj.uid] = asset_obj
 
     def add_hub(self, hub_obj):
+        # Add Hub
         self.add_node(hub_obj.uid)
         self.hub_obj[hub_obj.uid] = hub_obj
+        # Add any nodes within the hub
+        for _, node in hub_obj.nodes.items():
+            self.add_node(node.uid)
+            self.asset_obj[node.uid] = node
 
-    def connect_asset_to_hub(self, hub_obj, asset_obj):
+    def connect_asset_to_hub(self, hub, port_name, asset_obj):
+        hub_obj = hub.nodes[port_name]
         self.add_edge(hub_obj.uid, asset_obj.uid)
         self.edge_obj[uuid.uuid4()] = (hub_obj, asset_obj)
+        hub.connected_assets[asset_obj.uid] = asset_obj
+
+    def add_expansions(self):
+        # Function for automatically creating additional nodes and hubs based on expansion parameters
+        # Will need to create hubs/assets, connect them, and initialise states as 0
+        pass
 
 
 class ConfigurationError(Exception):
@@ -44,10 +61,12 @@ class Node(object):
         self.import_constraint_value = None
         self.export_constraint = FlowConstraint.NA
         self.export_constraint_value = None
-
+        # ToDo - decide whether costs on flows through nodes should be differentiated from tariffs
         # Details about any tariffs and incentives
         self.has_tariff = False
         self.tariff = None
+        self.initial_state = 1  # For setting initial state, 1 = active, 0 = off
+
 
     def verify_node(self):
         """ Used to verify that a port has been setup appropriately"""
@@ -85,8 +104,16 @@ class Node(object):
 
         if self.opt_type is OptimisationType.Parameter:
             setattr(model, self.node_name, en.Param(model.Time, initialize=self.initial_value, domain=domain))
+            state_name = 'active_' + self.node_name
+            self.node_state_value = state_name
+            setattr(model, self.node_state_value, en.Param(initialize=1, domain=en.Binary))
 
         if self.opt_type is OptimisationType.Variable:
+            # Define a decision variable that turns the node on or off
+            state_name = 'active_' + self.node_name
+            self.node_state_value = state_name
+            setattr(model, self.node_state_value, en.Var(initialize=self.initial_state, domain=en.Binary))
+
             setattr(model, self.node_name, en.Var(model.Time, initialize=self.initial_value, domain=domain))
 
             # Divide the variable into a positive and negative flow.
@@ -103,10 +130,19 @@ class Node(object):
             con_name = positive_variable_component + negative_variable_component + self.node_name
             setattr(model, con_name, en.Constraint(model.Time, rule=con_rule))
 
+            # Big M Constraint for on/off variable
+            con_name2 = 'on_off_con' + self.node_name
+
+            def on_off_rule(model, time_interval):
+                return getattr(model, self.node_name)[time_interval] <= getattr(model,
+                                                                                self.node_state_value) * model.bigM
+
+            setattr(model, con_name2, en.Constraint(model.Time, rule=on_off_rule))
+
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
         def constraint(model, time_interval):
-            return getattr(model, var_name)[time_interval] == getattr(model, pos_name)[time_interval] + \
-                   getattr(model, neg_name)[time_interval]
+            return getattr(model, var_name)[time_interval] == (getattr(model, pos_name)[time_interval] + \
+                                                               getattr(model, neg_name)[time_interval])
 
         return constraint
 
@@ -116,12 +152,17 @@ class Node(object):
     def add_objective(self, model):
         objective = 0
         if self.has_tariff:
-            model.import_tariff = en.Param(model.Time, initialize=self.tariff.import_tariff)
-            model.export_tariff = en.Param(model.Time, initialize=self.tariff.export_tariff)
+            import_tariff_name = 'import_tariff_' + self.node_name
+            setattr(model, import_tariff_name, en.Param(model.Time, initialize=self.tariff.import_tariff))
+
+            export_tariff_name = 'export_tariff_' + self.node_name
+            setattr(model, export_tariff_name, en.Param(model.Time, initialize=self.tariff.export_tariff))
+
             objective += sum(
-                model.import_tariff[i] * getattr(model, 'positive_' + self.node_name)[i] +
-                model.export_tariff[i] * getattr(model, 'negative_' + self.node_name)[i]
+                getattr(model, import_tariff_name)[i] * getattr(model, 'positive_' + self.node_name)[i] +
+                getattr(model, export_tariff_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
                 for i in model.Time)
+
         return objective
 
 
@@ -137,12 +178,53 @@ class Hub(object):
         # Included to ensure that nodes can be dynamically populated or can have 'fixed' ports used to implement
         # particular assets like transformations.
         self.allow_dynamic_nodes = False
+        self.dynamic_nodes = []
+        self.hub_name = 'hub_' + str(self.uid)
+        self.connected_assets = {}  # Dict to hold objects that are connected to the hub
+        self.connected_storage_nodes = []  # List to hold node names of connected storage assets
+        self.max_storage_expansions = 1  # Number of storage asset expansions per expansion planning period at this hub
 
-    def add_dynamic_node(self):
-        pass
+    def add_dynamic_node(self, node_name):
+        if self.allow_dynamic_nodes is False:
+            raise ConfigurationError("Hub does not permit dynamic nodes")
 
-    def add_named_node(self):
-        pass
+        # Creates and adds node to the hub, as well as adding it to the list of dynamic nodes
+        dn = FlexibleAsset()
+        self.nodes[str(node_name)] = dn
+        self.dynamic_nodes.append([str(node_name)])
+
+    def add_named_node(self, node_name):
+        # Creates and adds node to the hub, as well as adding it to the list of named nodes
+        nn = FlexibleAsset()
+        self.nodes[str(node_name)] = nn
+        self.named_nodes.append([str(node_name)])
+
+    def initialise_hub(self, model):
+        # Constrains the number of active node types connected to hub, by node type
+        self.add_node_type_list()
+        # ToDo - add hub initialisation constraints for other node types
+        def expansion_rule(model):
+            if len(self.connected_storage_nodes) == 0:
+                return en.Constraint.Feasible
+            else:
+                a = 0
+                node_count_prev_planning_period = 1  #ToDo - this should be a variable
+                for node in self.connected_storage_nodes:
+                    a += getattr(model, 'active_' + node)
+                return a <= (self.max_storage_expansions + node_count_prev_planning_period)
+
+        con_name = 'expansion_' + str(self.uid)
+        setattr(model, con_name, en.Constraint(rule=expansion_rule))
+
+
+    def add_node_type_list(self):
+        # For storing info about connected node types
+        for _,node in self.connected_assets.items():
+            if type(node) == ElectricalStorage: # Storage
+                self.connected_storage_nodes.append(node.node_name)
+
+        # TODo - add other node types
+
 
 
 # High Level definitions of asset types
@@ -201,14 +283,28 @@ class Storage(Node):
         # Initial state of charge
         self.initial_state_of_charge = initial_state_of_charge
         self.interval_duration = 15
+        self.capex = 0   # in $/unit capacity
 
     def initialise_node(self, model):
-        super(Storage, self).initialise_node(model)
+        super(Storage, self).initialise_node(model)  # Creates pos and neg flow variables for node
         SOC_name = 'storage_soc_' + self.node_name
         self.storage_soc_value = SOC_name
-        setattr(model, SOC_name,
-                en.Var(model.Time, initialize=0, bounds=(0, self.capacity)))
 
+        setattr(model, SOC_name,
+                en.Var(model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+
+        max_cap = 'max_cap_' + self.node_name  # Define max battery capacity as variable
+        self.max_cap_value = max_cap
+        setattr(model, max_cap, en.Var(initialize=0, bounds=(0, self.max_capacity), domain=en.NonNegativeReals))
+
+        def cap_limit(model, time_interval):  # Ensure SOC is within max capacity
+            return getattr(model, SOC_name)[time_interval] <= getattr(model, max_cap)
+
+        cap_limit_con_name = 'cap_limit_cons_' + self.node_name
+        setattr(model, cap_limit_con_name, en.Constraint(model.Time, rule=cap_limit))
+
+
+        # ToDo - take account of battery charging efficiency
         # # The battery charging efficiency
         eta_chg = self.charging_efficiency
         # # The battery discharging efficiency
@@ -242,8 +338,7 @@ class Storage(Node):
                        == initial_state_of_charge + getattr(model, self.node_name)[time_interval]
             else:
                 return getattr(model, SOC_name)[time_interval] \
-                       == getattr(model, SOC_name)[time_interval - 1] + getattr(model, self.node_name)[
-                           time_interval]
+                       == getattr(model, SOC_name)[time_interval - 1] + getattr(model, self.node_name)[time_interval]
 
         soc_con = 'soc_limit_' + self.node_name
         setattr(model, soc_con, en.Constraint(model.Time, rule=SOC_rule))
@@ -273,6 +368,10 @@ class Storage(Node):
             getattr(model, 'positive_' + self.node_name)[i] * getattr(model, 'positive_' + self.node_name)[i] + \
             getattr(model, 'negative_' + self.node_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
             for i in model.Time) * 0.0000001
+
+        # Capex - cost of storage in $/kWh
+        objective += getattr(model, self.max_cap_value)*getattr(model, self.node_state_value)*self.capex
+
         return objective
 
 
