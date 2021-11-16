@@ -52,32 +52,6 @@ class EchoOptimiser(object):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
 
-        # We use RangeSet to create a index for each of the time
-        # periods that we will optimise within.
-        self.model.Time = en.RangeSet(0, self.number_of_intervals - 1)
-
-        # Parameters and Variable Definitions for Assets
-        for _, obj in self.ES.asset_obj.items():
-            self.add_asset(obj)
-
-        # Add Edges
-        for _, edge_obj in self.ES.edge_obj.items():
-            #obj = edge_obj[2]
-
-            #hub_port = FlexibleAsset()
-            #hub_port.verify_node()
-            #hub_port.initialise_node(self.model)
-
-            hub_port = edge_obj[0]
-            asset_port = edge_obj[1]
-            # if asset_port.has_tariff:
-            #     hub_port.has_tariff = True
-
-            con_rule1 = self.factory_constraint_edge_builder(hub_port.node_name, asset_port.node_name)
-            con_name = 'edge_con_' + hub_port.node_name + '_' + asset_port.node_name
-            setattr(self.model, con_name, en.Constraint(self.model.Time, rule=con_rule1))
-
-
         #### Bias Values ####
 
         # A small fudge factor for reducing the size of the solution set and
@@ -86,22 +60,46 @@ class EchoOptimiser(object):
         # A bigM value for integer optimisation
         self.model.bigM = en.Param(initialize=self.bigM)
 
+        # ToDo - may need to introduce additional sets in the model to track different time periods
+        # We use RangeSet to create a index for each of the time
+        # periods that we will optimise within.
+        self.model.Time = en.RangeSet(0, self.number_of_intervals - 1)
+
+
+        # Parameters and Variable Definitions for Assets
+        for _, obj in self.ES.asset_obj.items():
+            self.add_asset(obj)
+
+        # Hub initialisation for expansion constraints per hub
+        for _, obj in self.ES.hub_obj.items():
+            obj.initialise_hub(self.model)
+
+
+        # Add Edges
+        for _, edge_obj in self.ES.edge_obj.items():
+
+            hub_port = edge_obj[0]
+            asset_port = edge_obj[1]
+
+            con_rule1 = self.factory_constraint_edge_builder(hub_port.node_name, asset_port.node_name)
+            con_name = 'edge_con_' + hub_port.node_name + '_' + asset_port.node_name
+            setattr(self.model, con_name, en.Constraint(self.model.Time, rule=con_rule1))
+
+
 
     def apply_constraints(self):
 
         for _, obj in self.ES.hub_obj.items():
             hub_vars = obj.nodes
-
-            # Kirchoff flow constraint at each aggregation Hub
-            def reliability(model, time_interval):
+            # Apply hub constraints
+            def reliability(model, time_interval):  # Kirchoff flow constraint at each aggregation Hub
                 a = 0
                 for _, hv in hub_vars.items():
                     b = getattr(self.model, hv.node_name)
                     a += b[time_interval]
                 return a == 0
 
-            # Transformation constraint at each transformation Hub
-            def loss(model, time_interval):
+            def loss(model, time_interval):  # Transformation constraint at each transformation Hub
                 a = 0
                 b = 0
                 for _, hv in hub_vars.items():
@@ -112,14 +110,19 @@ class EchoOptimiser(object):
                 c = a + b
                 return c == 0.95*a  # e.g., 5% bi-directional loss
 
-        # Apply the correct constraint based on the hub rule
-        if obj.hub_rule == HubNodeRule.Tellegen:
-            self.model.reliability_con = en.Constraint(self.model.Time, rule=reliability)
-        if obj.hub_rule == HubNodeRule.Custom:
-            self.model.loss_con = en.Constraint(self.model.Time, rule=loss)
+            # Apply correct constraint based on hub rule
+            if obj.hub_rule == HubNodeRule.Tellegen:
+                con_name = 'reliability_con_' + obj.hub_name
+                setattr(self.model, con_name, en.Constraint(self.model.Time, rule=reliability))
+            if obj.hub_rule == HubNodeRule.Custom:
+                con_name = 'loss_con_' + obj.hub_name
+                setattr(self.model, con_name, en.Constraint(self.model.Time, rule=loss))
 
-
-
+        # def global_expansion_con(self, model):
+        #     return en.Constraint.Feasible
+        #
+        # con_name = 'global_storage_expansion_con'
+        # setattr(self.model, con_name, en.Constraint(rule=global_expansion_con))
 
 
     def build_objective(self):
@@ -144,11 +147,14 @@ class EchoOptimiser(object):
         opt.solve(self.model, tee=True)
 
     def values(self, variable_name):
-        output = np.zeros(self.number_of_intervals)
         var_obj = getattr(self.model, variable_name)
-        for index in var_obj:
-            output[index] = var_obj[index].value
-        return output
+        if var_obj.is_indexed():
+            output = np.zeros(self.number_of_intervals)
+            for index in var_obj:
+                output[index] = var_obj[index].value
+            return output
+        else:
+            return var_obj.value
 
     def value_test(self):
         outputs = []
