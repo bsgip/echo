@@ -39,7 +39,9 @@ class OptimisationGraph(Graph):
 
     def add_expansions(self):
         # Function for automatically creating additional nodes and hubs based on expansion parameters
-        # Will need to create hubs/assets, connect them, and initialise states as 0
+        # Will need to create hubs/assets, connect them, etc
+        # Would be sensible to keep info on all expansion nodes somewhere to make it easier to apply a global expansion
+        # constraint later
         pass
 
 
@@ -66,7 +68,9 @@ class Node(object):
         self.has_tariff = False
         self.tariff = None
         self.initial_state = 1  # For setting initial state, 1 = active, 0 = off
-
+        self.fixed_capacity = True
+        self.flow_capacity = 5000000
+        self.expansion_node = False  # For keeping track of which nodes are expansion nodes and which are fixed
 
     def verify_node(self):
         """ Used to verify that a port has been setup appropriately"""
@@ -103,46 +107,97 @@ class Node(object):
             domain = en.NonNegativeReals
 
         if self.opt_type is OptimisationType.Parameter:
-            setattr(model, self.node_name, en.Param(model.Time, initialize=self.initial_value, domain=domain))
+            setattr(model, self.node_name,
+                    en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
             state_name = 'active_' + self.node_name
             self.node_state_value = state_name
-            setattr(model, self.node_state_value, en.Param(initialize=1, domain=en.Binary))
+            setattr(model, self.node_state_value, en.Param(model.Expansion, initialize=1, domain=en.Binary))
 
         if self.opt_type is OptimisationType.Variable:
             # Define a decision variable that turns the node on or off
             state_name = 'active_' + self.node_name
             self.node_state_value = state_name
-            setattr(model, self.node_state_value, en.Var(initialize=self.initial_state, domain=en.Binary))
+            setattr(model, self.node_state_value,
+                    en.Var(model.Expansion, initialize=self.initial_state, domain=en.Binary))
 
-            setattr(model, self.node_name, en.Var(model.Time, initialize=self.initial_value, domain=domain))
+            # Define a decision variable for installing an asset/node
+            self.installed = 'installed_' + self.node_name
+            setattr(model, self.installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+
+            # Asset can only be installed at most once.
+            def install_once_rule(model, expansion_interval):
+                return sum(getattr(model, self.installed)[p] for p in model.Expansion) <= 1
+
+            con_name = 'install_once_' + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, rule=install_once_rule))
+
+            # Constraint relating install to on/off
+            def install_before_run_rule(model, expansion_interval):
+                if expansion_interval == 0:
+                    return getattr(model, self.node_state_value)[expansion_interval] <= getattr(model, self.installed)[expansion_interval]
+                else:
+                    return getattr(model, self.node_state_value)[expansion_interval] <= (getattr(model, self.installed)[expansion_interval] +
+                        getattr(model, self.node_state_value)[expansion_interval-1])
+
+            con_name = 'install_before_run_' + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, rule=install_before_run_rule))
+
+            # Define decision variable for the node value
+            setattr(model, self.node_name,
+                    en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
             # Divide the variable into a positive and negative flow.
             # This is only applicable for variables, not for parameters which are fixed.
-            # By splitting the variables, we are able to use either the positive
-            # or negative component.
-            # This is only calculated for decision variables because it cannot be calculated for parameters.
+            # By splitting the variables, we are able to use either the positive or negative component.
             self.positive_node_component = positive_variable_component + self.node_name
             self.negative_node_component = negative_variable_component + self.node_name
-            setattr(model, self.positive_node_component, en.Var(model.Time, initialize=0, domain=en.NonNegativeReals))
-            setattr(model, self.negative_node_component, en.Var(model.Time, initialize=0, domain=en.NonPositiveReals))
+            setattr(model, self.positive_node_component,
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            setattr(model, self.negative_node_component,
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
             con_rule = self.factory_pos_neg_flows(self.node_name, self.positive_node_component,
                                                   self.negative_node_component)
             con_name = positive_variable_component + negative_variable_component + self.node_name
-            setattr(model, con_name, en.Constraint(model.Time, rule=con_rule))
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
             # Big M Constraint for on/off variable
+            def on_off_rule(model, expansion_interval, time_interval):
+                return getattr(model, self.node_name)[expansion_interval, time_interval] <= \
+                       getattr(model, self.node_state_value)[expansion_interval] * model.bigM
+
             con_name2 = 'on_off_con' + self.node_name
+            setattr(model, con_name2, en.Constraint(model.Expansion, model.Time, rule=on_off_rule))
 
-            def on_off_rule(model, time_interval):
-                return getattr(model, self.node_name)[time_interval] <= getattr(model,
-                                                                                self.node_state_value) * model.bigM
+            # Node flow capacity constraint
+            def node_cap_rule_pos(model, expansion_interval, time_interval):
+                return getattr(model, self.node_name)[expansion_interval, time_interval] <= \
+                       getattr(model, self.node_cap_value)[expansion_interval]
 
-            setattr(model, con_name2, en.Constraint(model.Time, rule=on_off_rule))
+            def node_cap_rule_neg(model, expansion_interval, time_interval):
+                return getattr(model, self.node_name)[expansion_interval, time_interval] >= - \
+                    getattr(model, self.node_cap_value)[expansion_interval]
+
+            # Introduce decision variable or parameter for the node flow capacity
+            var_name = 'flow_con_' + self.node_name
+            self.node_cap_value = var_name
+            if not self.fixed_capacity:
+                setattr(model, var_name, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeReals))
+            else:
+                setattr(model, var_name, en.Param(model.Expansion, initialize=self.flow_capacity, domain=en.NonNegativeReals))
+
+            con_name = 'flow_cap_pos_' + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_cap_rule_pos))
+            con_name = 'flow_cap_neg_' + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_cap_rule_neg))
+
+
+
 
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
-        def constraint(model, time_interval):
-            return getattr(model, var_name)[time_interval] == (getattr(model, pos_name)[time_interval] + \
-                                                               getattr(model, neg_name)[time_interval])
+        def constraint(model, expansion_interval, time_interval):
+            return getattr(model, var_name)[expansion_interval, time_interval] == \
+                   (getattr(model, pos_name)[expansion_interval, time_interval] +
+                    getattr(model, neg_name)[expansion_interval, time_interval])
 
         return constraint
 
@@ -153,15 +208,17 @@ class Node(object):
         objective = 0
         if self.has_tariff:
             import_tariff_name = 'import_tariff_' + self.node_name
-            setattr(model, import_tariff_name, en.Param(model.Time, initialize=self.tariff.import_tariff))
+            setattr(model, import_tariff_name,
+                    en.Param(model.Expansion, model.Time, initialize=self.tariff.import_tariff))
 
             export_tariff_name = 'export_tariff_' + self.node_name
-            setattr(model, export_tariff_name, en.Param(model.Time, initialize=self.tariff.export_tariff))
+            setattr(model, export_tariff_name,
+                    en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
 
             objective += sum(
-                getattr(model, import_tariff_name)[i] * getattr(model, 'positive_' + self.node_name)[i] +
-                getattr(model, export_tariff_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
-                for i in model.Time)
+                getattr(model, import_tariff_name)[p, i] * getattr(model, 'positive_' + self.node_name)[p, i] +
+                getattr(model, export_tariff_name)[p, i] * getattr(model, 'negative_' + self.node_name)[p, i]
+                for p in model.Expansion for i in model.Time)
 
         return objective
 
@@ -198,33 +255,6 @@ class Hub(object):
         nn = FlexibleAsset()
         self.nodes[str(node_name)] = nn
         self.named_nodes.append([str(node_name)])
-
-    def initialise_hub(self, model):
-        # Constrains the number of active node types connected to hub, by node type
-        self.add_node_type_list()
-        # ToDo - add hub initialisation constraints for other node types
-        def expansion_rule(model):
-            if len(self.connected_storage_nodes) == 0:
-                return en.Constraint.Feasible
-            else:
-                a = 0
-                node_count_prev_planning_period = 1  #ToDo - this should be a variable
-                for node in self.connected_storage_nodes:
-                    a += getattr(model, 'active_' + node)
-                return a <= (self.max_storage_expansions + node_count_prev_planning_period)
-
-        con_name = 'expansion_' + str(self.uid)
-        setattr(model, con_name, en.Constraint(rule=expansion_rule))
-
-
-    def add_node_type_list(self):
-        # For storing info about connected node types
-        for _,node in self.connected_assets.items():
-            if type(node) == ElectricalStorage: # Storage
-                self.connected_storage_nodes.append(node.node_name)
-
-        # TODo - add other node types
-
 
 
 # High Level definitions of asset types
@@ -283,26 +313,24 @@ class Storage(Node):
         # Initial state of charge
         self.initial_state_of_charge = initial_state_of_charge
         self.interval_duration = 15
-        self.capex = 0   # in $/unit capacity
+        self.capex = 0  # in $/unit capacity
 
     def initialise_node(self, model):
         super(Storage, self).initialise_node(model)  # Creates pos and neg flow variables for node
         SOC_name = 'storage_soc_' + self.node_name
         self.storage_soc_value = SOC_name
 
-        setattr(model, SOC_name,
-                en.Var(model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        setattr(model, SOC_name, en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
 
         max_cap = 'max_cap_' + self.node_name  # Define max battery capacity as variable
         self.max_cap_value = max_cap
         setattr(model, max_cap, en.Var(initialize=0, bounds=(0, self.max_capacity), domain=en.NonNegativeReals))
 
-        def cap_limit(model, time_interval):  # Ensure SOC is within max capacity
-            return getattr(model, SOC_name)[time_interval] <= getattr(model, max_cap)
+        def cap_limit(model, expansion_interval, time_interval):  # Ensure SOC is within max capacity
+            return getattr(model, SOC_name)[expansion_interval, time_interval] <= getattr(model, max_cap)
 
         cap_limit_con_name = 'cap_limit_cons_' + self.node_name
-        setattr(model, cap_limit_con_name, en.Constraint(model.Time, rule=cap_limit))
-
+        setattr(model, cap_limit_con_name, en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
         # ToDo - take account of battery charging efficiency
         # # The battery charging efficiency
@@ -317,31 +345,32 @@ class Storage(Node):
         throughput_cost = self.throughput_cost
 
         # Enforce the charging rate limit
-        def storage_charge_rate_limit(model, time_interval):
-            return getattr(model, self.node_name)[time_interval] <= charging_limit
+        def storage_charge_rate_limit(model, expansion_interval, time_interval):
+            return getattr(model, self.node_name)[expansion_interval, time_interval] <= charging_limit
 
         # Enforce the discharge rate limit
-        def storage_discharge_rate_limit(model, time_interval):
-            return getattr(model, self.node_name)[time_interval] >= discharging_limit
+        def storage_discharge_rate_limit(model, expansion_interval, time_interval):
+            return getattr(model, self.node_name)[expansion_interval, time_interval] >= discharging_limit
 
         con_name = 'charge_limit_' + self.node_name
         con_name2 = 'discharge_limit_' + self.node_name
 
-        setattr(model, con_name, en.Constraint(model.Time, rule=storage_charge_rate_limit))
-        setattr(model, con_name2, en.Constraint(model.Time, rule=storage_discharge_rate_limit))
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=storage_charge_rate_limit))
+        setattr(model, con_name2, en.Constraint(model.Expansion, model.Time, rule=storage_discharge_rate_limit))
 
         initial_state_of_charge = self.initial_state_of_charge
 
-        def SOC_rule(model, time_interval):
+        def SOC_rule(model, expansion_interval, time_interval):
             if time_interval == 0:
-                return getattr(model, SOC_name)[time_interval] \
-                       == initial_state_of_charge + getattr(model, self.node_name)[time_interval]
+                return getattr(model, SOC_name)[expansion_interval, time_interval] \
+                       == initial_state_of_charge + getattr(model, self.node_name)[expansion_interval, time_interval]
             else:
-                return getattr(model, SOC_name)[time_interval] \
-                       == getattr(model, SOC_name)[time_interval - 1] + getattr(model, self.node_name)[time_interval]
+                return getattr(model, SOC_name)[expansion_interval, time_interval] \
+                       == getattr(model, SOC_name)[expansion_interval, time_interval - 1] + \
+                       getattr(model, self.node_name)[expansion_interval, time_interval]
 
         soc_con = 'soc_limit_' + self.node_name
-        setattr(model, soc_con, en.Constraint(model.Time, rule=SOC_rule))
+        setattr(model, soc_con, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
     def calc_capacity(self):
         capacity = self.max_capacity
@@ -361,16 +390,18 @@ class Storage(Node):
 
         objective = 0
         objective += sum(
-            getattr(model, 'positive_' + self.node_name)[i] - getattr(model, 'negative_' + self.node_name)[i]
-            for i in model.Time) * self.throughput_cost / 2.0
+            getattr(model, 'positive_' + self.node_name)[p, i] - getattr(model, 'negative_' + self.node_name)[p, i]
+            for p in model.Expansion for i in model.Time) * self.throughput_cost / 2.0
 
         objective += sum(
-            getattr(model, 'positive_' + self.node_name)[i] * getattr(model, 'positive_' + self.node_name)[i] + \
-            getattr(model, 'negative_' + self.node_name)[i] * getattr(model, 'negative_' + self.node_name)[i]
-            for i in model.Time) * 0.0000001
+            getattr(model, 'positive_' + self.node_name)[p, i] * getattr(model, 'positive_' + self.node_name)[p, i] + \
+            getattr(model, 'negative_' + self.node_name)[p, i] * getattr(model, 'negative_' + self.node_name)[p, i]
+            for p in model.Expansion for i in model.Time) * 0.0000001
 
-        # Capex - cost of storage in $/kWh
-        objective += getattr(model, self.max_cap_value)*getattr(model, self.node_state_value)*self.capex
+        # Capex - cost of storage in $/kWh, associated with installation variable
+        objective += sum(
+            getattr(model, self.max_cap_value) * getattr(model, self.installed)[p] * self.capex for
+            p in model.Expansion)
 
         return objective
 
