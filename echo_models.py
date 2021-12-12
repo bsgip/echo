@@ -648,10 +648,10 @@ class Edge(object):
             selected_port = hub_port
 
         # Check whether selected port has existing flow constraints
-        if selected_port.import_constraint is FlowConstraint.Fixed:
-            warnings.warn('Applying an edge flow constraint to a port with an existing import constraint.')
-        if selected_port.export_constraint is FlowConstraint.Fixed:
-            warnings.warn('Applying an edge flow constraint to a port with an existing export constraint.')
+        if (hub_port.import_constraint is FlowConstraint.Fixed) or (asset_port.import_constraint is FlowConstraint.Fixed):
+            warnings.warn('Applying an edge flow constraint but an import constraint exists at a vertex.')
+        if (hub_port.export_constraint is FlowConstraint.Fixed) or (asset_port.export_constraint is FlowConstraint.Fixed):
+            warnings.warn('Applying an edge flow constraint but an export constraint exists at a vertex.')
 
         # Define variable for added capacity per expansion period
         self.cap_add = 'cap_add_' + self.edge_name
