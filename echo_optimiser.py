@@ -3,9 +3,9 @@ import pyomo.environ as en
 import pyomo.network
 import os
 import numpy as np
-from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule
+from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule, TransformationRule
 from constants import minutes_per_hour
-from echo_models import FlexibleAsset, ElectricalStorage
+from echo_models import FlexibleAsset, ElectricalStorage, ConfigurationError
 
 
 class EchoOptimiser(object):
@@ -38,13 +38,7 @@ class EchoOptimiser(object):
         self.build_objective()
         self.optimise()
 
-    def factory_constraint_edge_builder(self, hub_edge_par, asset_edge_par):
 
-        def constraint(model, expansion_interval, time_interval):
-            return getattr(model, hub_edge_par)[expansion_interval, time_interval] + \
-                   getattr(model, asset_edge_par)[expansion_interval, time_interval] == 0
-
-        return constraint
 
     def add_asset(self, obj):
         # Constraints relevant to particular assets are added here as part of initialising the node
@@ -76,14 +70,14 @@ class EchoOptimiser(object):
         for _, obj in self.ES.asset_obj.items():
             self.add_asset(obj)
 
-        # Add Edges
-        for _, edge_obj in self.ES.edge_obj.items():
-            hub_port = edge_obj[0]
-            asset_port = edge_obj[1]
+        # Verify hubs are set up correctly
+        for _, hub_obj in self.ES.hub_obj.items():
+            hub_obj.verify_hub()
 
-            con_rule1 = self.factory_constraint_edge_builder(hub_port.node_name, asset_port.node_name)
-            con_name = 'edge_con_' + hub_port.node_name + '_' + asset_port.node_name
-            setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=con_rule1))
+        # Initialise edges and add edge constraints
+        for _, edge in self.ES.edge_obj.items():
+            edge.initialise_edge(self.model)
+
 
     def apply_constraints(self):
 
@@ -99,45 +93,55 @@ class EchoOptimiser(object):
                     a += b[expansion_interval, time_interval]
                 return a == 0
 
-            # Transformation constraint at each transformation Hu
-            def loss(model, expansion_interval, time_interval):
-                a = 0
-                b = 0
-                for _, hv in hub_vars.items():
-                    p = getattr(self.model, hv.positive_node_component)
-                    n = getattr(self.model, hv.negative_node_component)
-                    a += p[expansion_interval, time_interval]
-                    b += n[expansion_interval, time_interval]
-                c = a + b
-                return c == 0.95 * a  # e.g., 5% bi-directional loss
-
             # Apply correct hub constraint based on hub rule
             if obj.hub_rule == HubNodeRule.Tellegen:
                 con_name = 'reliability_con_' + obj.hub_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
-            if obj.hub_rule == HubNodeRule.Custom:
-                con_name = 'loss_con_' + obj.hub_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=loss))
+
+            # Generic transformation hub
+            def transform(model, expansion_interval, time_interval):
+                lhs = 0
+                rhs = 0
+                for _, i in obj.transformation.items():
+                    rhs = i.rhs
+                    for var, weight in i.lhs.items():
+                        tr_rule = i.rule[var]
+                        if tr_rule is TransformationRule.Both:
+                            lhs += getattr(self.model, var.node_name)[expansion_interval, time_interval] * weight
+                        if tr_rule is TransformationRule.NegativeComponent:
+                            lhs += getattr(self.model, var.negative_node_component)[
+                                       expansion_interval, time_interval] * weight
+                        if tr_rule is TransformationRule.PositiveComponent:
+                            lhs += getattr(self.model, var.positive_node_component)[
+                                       expansion_interval, time_interval] * weight
+                return lhs == rhs
+
+            if obj.hub_rule == HubNodeRule.Transform:
+                if not obj.transformation:
+                    raise ConfigurationError("Transformation object has not been added to Node.")
+                con_name = 'transformation_con_' + obj.hub_name
+                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
 
     def apply_expansion_constraints(self):
-        # Retrieve info on potential storage expansions
-        storage_expansions = {}
-        for _, obj in self.ES.asset_obj.items():
-            if type(obj) == ElectricalStorage and obj.expansion_node is True:
-                storage_expansions[obj.node_name] = obj
-
+        # ToDo - include other asset types in expansion problem
+        # ToDo - include option for constraining number of expansion type decisions (e.g., network expansion vs asset expansion)
         def storage_exp_rule(model, expansion_interval):
             a = 0
-            for _, storage_obj in storage_expansions.items():
-                a += getattr(model, storage_obj.installed)[expansion_interval]
-            return a <= 1
+            for _, storage_hub in self.ES.expansion_obj.items():
+                for _, storage_port in storage_hub.nodes.items():
+                    a += getattr(model, storage_port.installed)[expansion_interval]
+            return a <= self.ES.global_storage_exp_con
 
-        con_name = 'storage_exp_con'
-        setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=storage_exp_rule))
+        if self.ES.expansion_obj:
+            con_name = 'storage_exp_con'
+            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=storage_exp_rule))
 
     def build_objective(self):
         self.objective = 0
         for _, obj in self.ES.asset_obj.items():
+            self.objective += obj.add_objective(self.model)
+
+        for _, obj in self.ES.edge_obj.items():
             self.objective += obj.add_objective(self.model)
 
     def optimise(self):
@@ -153,7 +157,9 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        opt.solve(self.model, tee=True)
+        opt.solve(self.model, tee=True, symbolic_solver_labels=True)
+
+
 
     def values(self, variable_name, expansion):
         var_obj = getattr(self.model, variable_name)
@@ -174,3 +180,43 @@ class EchoOptimiser(object):
         for var in self.var_names:
             outputs.append(self.values(var))
         return outputs
+
+    def hub_values(self, hub_obj, expansion):
+        outputs = {}
+        for name, var_obj in hub_obj.nodes.items():
+            outputs[name] = self.values(var_obj.node_name, expansion)
+        return outputs
+
+    def hub_installations(self, hub_obj, expansion):
+        outputs = {}
+        for name, var_obj in hub_obj.nodes.items():
+            outputs[name] = self.values(var_obj.installed, expansion)
+        return outputs
+
+    def print_life_cycle(self, var, expansion_periods):
+        for j in range(0, expansion_periods):
+            print('expansion period: ' + str(j))
+            print('installed:' + str(self.values(var.installed, j)))
+            print('retired:' + str(self.values(var.retire, j)))
+            print('replaced:' + str(self.values(var.replace, j)))
+            print('life remaining:' + str(self.values(var.lifetime_remaining, j)))
+            print('\n')
+
+    def print_expansion_life_cycle(self, expansion_periods):
+        if not self.ES.expansion_obj:
+            return print('No expansion objects')
+        else:
+            for _, i in self.ES.expansion_obj.items():
+                for _, m in i.nodes.items():
+                    print(m.node_name)
+                    output = {'installed': [], 'active': [], 'retired': [], 'replaced': [],
+                              'life remaining': []}
+                    for j in range(0, expansion_periods):
+                        output['installed'].append(self.values(m.installed, j))
+                        output['active'].append(self.values(m.state_value, j))
+                        output['retired'].append(self.values(m.retire, j))
+                        output['replaced'].append(self.values(m.replace, j))
+                        output['life remaining'].append((self.values(m.lifetime_remaining, j)))
+
+                    print(output)
+                    print('\n')
