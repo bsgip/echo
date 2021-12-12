@@ -3,6 +3,8 @@ class Units(object):
 
     NA = 0  # Used for initialisation but optimisation will fail if units not set prior to execution.
     KW = 1  # Instantaneous electrical power
+    CO = 2  # CO2 emissions
+    KWT = 3  # Thermal
 
 
 class Flows(object):
@@ -15,7 +17,6 @@ class Flows(object):
 
 
 class FlowConstraint(object):
-
     NA = 0
     NoConstraint = 1
     Fixed = 2
@@ -23,18 +24,25 @@ class FlowConstraint(object):
 
 
 class OptimisationType(object):
-
     NA = 0
     Parameter = 1
     Variable = 2
 
 
 class HubNodeRule(object):
-
     NA = 0
     Tellegen = 1
     Sum = 2
     Custom = 3
+    Transform = 4
+
+
+class TransformationRule(object):
+
+    NA = 0
+    Both = 1
+    PositiveComponent = 2
+    NegativeComponent = 3
 
 
 # Define some useful container objects to define the optimisation objectives
