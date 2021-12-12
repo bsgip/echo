@@ -266,7 +266,9 @@ ES.add_expansions(expansion_periods)
 #site1_edge.expansion_planning = True
 #site1.expansion_planning = True
 #site2.expansion_planning = True
-bess_edge1.initial_edge_capacity = 4
+#bess_edge1.initial_edge_capacity = 3
+# bess_edge1.initial_edge_capacity = 1
+# bess_edge1.expansion_planning = False
 
 
 
