@@ -46,7 +46,6 @@ class OptimisationGraph(Graph):
         self.add_edge(hub_obj.uid, asset_obj.uid)
         self.edge_obj[uuid.uuid4()] = (hub_obj, asset_obj)
 
-
     def add_expansions(self, expansion_periods):
         hubs_to_add = []
         for _, hub in self.hub_obj.items():
@@ -109,6 +108,8 @@ class Node(object):
         self.initial_state = 1  # 1 = on, 0 = off
         self.lifetime = 10
         self.existing_port = False  # To force an asset to be installed in first period
+        self.capex = 0
+        self.replacement_cost = 0
 
     def verify_node(self):
         """ Used to verify that a port has been setup appropriately"""
@@ -157,7 +158,6 @@ class Node(object):
                     en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         if self.opt_type is OptimisationType.Variable:
-
             # Define decision variable for the node value and divide into a positive and negative flow
             setattr(model, self.node_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
@@ -249,7 +249,8 @@ class Node(object):
 
         # Lifetime remaining variable
         self.lifetime_remaining = 'lifetime_remaining_' + self.node_name
-        setattr(model, self.lifetime_remaining, en.Var(model.Expansion, initialize=self.lifetime, domain=en.NonNegativeReals))
+        setattr(model, self.lifetime_remaining,
+                en.Var(model.Expansion, initialize=self.lifetime, domain=en.NonNegativeReals))
 
         # Define remaining life in terms of state value and replacement variable
         def remaining_life_rule(model, p):
@@ -291,6 +292,8 @@ class Node(object):
 
     def add_objective(self, model):
         objective = 0
+
+        # Tariffs
         if self.has_tariff:
             import_tariff_name = 'import_tariff_' + self.node_name
             setattr(model, import_tariff_name,
@@ -301,12 +304,14 @@ class Node(object):
                     en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
 
             objective += sum(
-                getattr(model, import_tariff_name)[p, i] * getattr(model, 'positive_' + self.node_name)[p, i] +
-                getattr(model, export_tariff_name)[p, i] * getattr(model, 'negative_' + self.node_name)[p, i]
+                getattr(model, import_tariff_name)[p, i] * getattr(model, 'positive_' + self.node_name)[p, i] *
+                getattr(model, model.discount_factors)[p, i] +
+                getattr(model, export_tariff_name)[p, i] * getattr(model, 'negative_' + self.node_name)[p, i] *
+                getattr(model, model.discount_factors)[p, i]
                 for p in model.Expansion for i in model.Time)
 
-        # To ensure either positive or negative component = 0
         if self.opt_type is OptimisationType.Variable:
+            # To ensure either positive or negative component = 0
             objective += sum(
                 (getattr(model, 'positive_' + self.node_name)[p, i] + getattr(model, 'negative_' + self.node_name)[
                     p, i]) for p in model.Expansion for i in model.Time) * 0.00000001
@@ -518,6 +523,11 @@ class Storage(Node):
         # Capex - cost of storage in $/kWh, associated with installation variable
         objective += getattr(model, self.optimised_capacity) * self.capex
 
+        # Replacement cost
+        objective += sum(getattr(model, self.replace)[p] *
+                         getattr(model, model.discount_factors)[p, t] for p in model.Expansion for t in model.Time) * \
+                     self.replacement_cost
+
         return objective
 
 
@@ -628,7 +638,7 @@ class Edge(object):
         self.expansion_planning = False
         self.capex = 0
 
-    def add_vertices(self,  obj1, obj2):
+    def add_vertices(self, obj1, obj2):
         self.edge_objs = (obj1, obj2)
 
     def initialise_edge(self, model):
@@ -647,11 +657,11 @@ class Edge(object):
         else:
             selected_port = hub_port
 
-        # Check whether selected port has existing flow constraints
-        if (hub_port.import_constraint is FlowConstraint.Fixed) or (asset_port.import_constraint is FlowConstraint.Fixed):
-            warnings.warn('Applying an edge flow constraint but an import constraint exists at a vertex.')
-        if (hub_port.export_constraint is FlowConstraint.Fixed) or (asset_port.export_constraint is FlowConstraint.Fixed):
-            warnings.warn('Applying an edge flow constraint but an export constraint exists at a vertex.')
+        # # Check whether selected port has existing flow constraints
+        # if (hub_port.import_constraint is FlowConstraint.Fixed) or (asset_port.import_constraint is FlowConstraint.Fixed):
+        #     warnings.warn('Applying an edge flow constraint but an import constraint exists at a vertex.')
+        # if (hub_port.export_constraint is FlowConstraint.Fixed) or (asset_port.export_constraint is FlowConstraint.Fixed):
+        #     warnings.warn('Applying an edge flow constraint but an export constraint exists at a vertex.')
 
         # Define variable for added capacity per expansion period
         self.cap_add = 'cap_add_' + self.edge_name
@@ -666,10 +676,11 @@ class Edge(object):
 
         def current_cap(model, p):
             if p == 0:
-                return getattr(model, self.current_cap)[p] == self.initial_edge_capacity + getattr(model, self.cap_add)[p]
+                return getattr(model, self.current_cap)[p] == self.initial_edge_capacity + getattr(model, self.cap_add)[
+                    p]
             else:
                 return getattr(model, self.current_cap)[p] == \
-                       getattr(model, self.current_cap)[p-1] + getattr(model, self.cap_add)[p]
+                       getattr(model, self.current_cap)[p - 1] + getattr(model, self.cap_add)[p]
 
         con_name = 'current_cap_con_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, rule=current_cap))
@@ -686,7 +697,6 @@ class Edge(object):
         con_name = 'flow_con_2_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
 
-
     def factory_constraint_edge_builder(self, obj1, obj2):
 
         def constraint(model, expansion_interval, time_interval):
@@ -697,10 +707,11 @@ class Edge(object):
 
     def add_objective(self, model):
         # Only cost is cost of edge expansions
-        return sum(getattr(model, self.cap_add)[p] for p in model.Expansion)*self.capex
+        return sum(getattr(model, self.cap_add)[p]*getattr(model, model.discount_factors)[p, t] for p in model.Expansion for t in model.Time) * self.capex
 
     def add_initial_edge_capacity(self, cap):
         self.initial_edge_capacity = cap
+
 
 class Transform(object):
 

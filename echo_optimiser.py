@@ -66,6 +66,10 @@ class EchoOptimiser(object):
         else:
             self.model.Expansion = en.RangeSet(0, self.number_of_expansion_intervals - 1)
 
+        self.model.discount_factors = 'discount_rates'
+        setattr(self.model, self.model.discount_factors,
+                en.Param(self.model.Expansion, self.model.Time, initialize=self.ES.discount_factors))
+
         # Parameters and Variable Definitions for Assets
         for _, obj in self.ES.asset_obj.items():
             self.add_asset(obj)

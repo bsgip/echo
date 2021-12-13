@@ -76,8 +76,11 @@ export_tariff = np.array(([0.0] * 96))
 np.set_printoptions(suppress=True)
 
 #### Modelling parameters ####
-expansion_periods = 1  # Number of expansion time periods
+
+expansion_periods = 3  # Number of expansion time periods
 storage_expansions_per_period = 0  # limit on storage expansions per time period
+
+##########################
 
 # Setup load, pv, and tariffs as dictionaries
 # For now, each expansion period has identical load, pv, tariffs
@@ -88,7 +91,7 @@ gen2 = {}
 it = {}
 et = {}
 
-for ep in range(0,expansion_periods):
+for ep in range(0, expansion_periods):
     for i, x in enumerate(connection_point_import):
         d1[(ep, i)] = x
     for i, x in enumerate(connection_point_export):
@@ -102,10 +105,9 @@ for ep in range(0,expansion_periods):
     for i, x in enumerate(export_tariff):
         et[(ep, i)] = x
 
-
 # Setup graph
 ES = OptimisationGraph()
-ES.global_storage_exp_con = storage_expansions_per_period  #ToDo - better way to carry these parameters
+ES.global_storage_exp_con = storage_expansions_per_period  # ToDo - better way to carry these parameters
 ES.expansion_periods = expansion_periods
 
 tariff = Tariff()
@@ -123,7 +125,6 @@ gt.add_lhs(grid.nodes['grid'], 0.5, TransformationRule.NegativeComponent)
 grid.add_transformation(gt)
 grid.hub_rule = HubNodeRule.Transform
 ES.add_hub(grid)
-
 
 #### Site 1
 battery1 = Hub()
@@ -223,7 +224,6 @@ load_edge2.add_vertices(site2.nodes['loadCP'], l2)
 pv_edge2 = Edge()
 pv_edge2.add_vertices(site2.nodes['pvCP'], pv2)
 
-
 # Add edge objects to ES - this creates an actual networkx edge
 ES.add_edge_obj(bess_edge2)
 ES.add_edge_obj(load_edge2)
@@ -244,13 +244,10 @@ site2_edge.add_vertices(site2.nodes['CP'], pcc.nodes['site2'])
 grid_edge = Edge()
 grid_edge.add_vertices(pcc.nodes['grid'], grid.nodes['grid'])
 
-
-
 # Add edge objects to ES - this creates an actual networkx edge
 ES.add_edge_obj(site1_edge)
 ES.add_edge_obj(site2_edge)
 ES.add_edge_obj(grid_edge)
-
 
 ES.add_expansions(expansion_periods)
 
@@ -262,15 +259,26 @@ ES.add_expansions(expansion_periods)
 # b1.fixed_capacity = False
 # b2.max_capacity = 100
 # b2.fixed_capacity = False
-#site1_edge.initial_edge_capacity = 2
-#site1_edge.expansion_planning = True
-#site1.expansion_planning = True
-#site2.expansion_planning = True
-#bess_edge1.initial_edge_capacity = 3
+# site1_edge.initial_edge_capacity = 2
+# site1_edge.expansion_planning = True
+# site1.expansion_planning = True
+# site2.expansion_planning = True
+# bess_edge1.initial_edge_capacity = 3
 # bess_edge1.initial_edge_capacity = 1
 # bess_edge1.expansion_planning = False
+b1.lifetime = 10
+b1.replacement_cost = 0
+b1.capex = 0
 
+# ToDo - better way of carrying this info
+# Discounting
+discount_rate = 0.05
+dr = {}
+for ep in range(0, expansion_periods):
+    for t in range(0, 96):
+        dr[ep, t] = 1 / ((1 + discount_rate) ** ep)
 
+ES.discount_factors = dr
 
 ############################ ----------------------- ########################################
 
