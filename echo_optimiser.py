@@ -238,9 +238,9 @@ class EchoOptimiser(object):
         if not self.ES.asset_expansion_obj:
             return print('No asset expansion objects.')
         else:
+            output = {'exp': [], 'installed': [], 'active': [], 'retired': [], 'replaced': [], 'remaining life': []}
+            rows = []
             for _, hub in self.ES.asset_expansion_obj.items():
-                output = {'exp': [], 'installed': [], 'active': [], 'retired': [], 'replaced': [], 'remaining life': []}
-                rows = []
                 for name, var in hub.ports.items():
                     for j in range(0, total_expansion_periods):
                         rows.append(name[0:len(name) - (len(name) - 13)])
@@ -297,6 +297,23 @@ class EchoOptimiser(object):
 
     def total_export(self, var, expansion_period):
         return sum(self.values(var.negative_port_component, expansion_period))
+
+    def get_expansions_off_hub(self, hub):
+        """ Returns ports that are parts of expansion hubs connected to specified hub."""
+
+        output = []
+        for exp_p_name in hub.exp_port_names:
+            exp_p = hub.ports[exp_p_name]
+            # Find edge
+            e = self.ES.lookup_edges_from_port(exp_p)
+            p1 = e.vertices[0]
+            p2 = e.vertices[1]
+            if exp_p == p1:
+                output.append(p2)
+            else:
+                output.append(p1)
+
+        return output
 
 
 
