@@ -43,7 +43,7 @@ class OptimisationGraph(Graph):
         hubs_to_add = []
         for _, hub in self.hub_obj.items():
             if hub.expansion_planning:  # Check if the hub has expansion planning
-                for i in range(0, expansion_periods):
+                for i in range(0, self.global_storage_exp_con):  # Todo decide if this is the right approach
                     h = Hub()
                     h.expansion_asset = True  # Designate new asset as an expansion asset
                     if hub.storage_planning is True:  # Check if hub has storage expansion planning
@@ -75,11 +75,12 @@ class OptimisationGraph(Graph):
                     # Connect new port to new hub
                     h.ports['exp_' + str(i)] = s
                     s.lifetime = 2
-                    s.capex = 0
+                    s.capex = hub.storage_planning_capex
                     # Make a new port on the expansion hub
                     p = ElectricalPort()
                     port_name = 'exp_' + str(i) + '_' + hub.hub_name
                     hub.ports[port_name] = p
+                    hub.exp_port_names.append(port_name)
                     # Create edge object
                     expansion_link = Edge()
                     expansion_link.add_vertices(p, s)
@@ -90,6 +91,23 @@ class OptimisationGraph(Graph):
                     hubs_to_add.append(h)  # Keep track of the new hubs so we can add them to graph outside this loop
         for i in hubs_to_add:
             self.add_hub(i)
+
+    def lookup_hub_from_port(self, port):
+        """ Returns hub that a specified port belongs to, raises error if port has no corresponding hub."""
+        for _, h in self.hub_obj.items():
+            for _, p in h.ports.items():
+                if port == p:
+                    return h
+        raise ConfigurationError('Port is not connected to any hub.')
+
+    def lookup_edges_from_port(self, port):
+        """ Returns edge containing the specified port, raises an error if no edge exists."""
+        for _, e in self.edge_obj.items():
+            p1 = e.vertices[0]
+            p2 = e.vertices[1]
+            if (port == p1) or (port == p2):
+                return e
+        raise ConfigurationError('Port is not part of any edge object.')
 
 
 class ConfigurationError(Exception):
@@ -398,7 +416,12 @@ class Hub(object):
         self.expansion_planning = False  # For identifying hubs which we can connect new expansion assets to
         self.storage_planning = False
         self.generator_planning = False
-        self.expansion_asset = False  # For identifying hubs (assets) that ARE potential expansions
+        self.storage_planning_capex = 0
+        # Keep list of ports that connect to expansion assets, to more easily retrieve info after optimisation
+        # Only applicable for hubs that have expansion planning
+        self.exp_port_names = []
+        # For identifying hubs (assets) that ARE potential expansions
+        self.expansion_asset = False
         self.expansion_asset_type = ExpansionType.NA
         self.lifetime = 10  # ToDo - link to expansion period timescale
 
@@ -443,14 +466,13 @@ class Hub(object):
         if self.expansion_asset is True and self.expansion_asset_type is ExpansionType.NA:
             raise ConfigurationError("Expansion asset type cannot be NA.")
 
-
     def initialise_hub(self, model):
         var_name = 'installed_hub_' + self.hub_name
         self.hub_installed = var_name
         setattr(model, self.hub_installed,
                 en.Var(model.Expansion, initialize=0, domain=en.Binary))
 
-        def installed_hub_rule1(model, p): # BigM constraints: hub is installed if  all ports in hub are installed
+        def installed_hub_rule1(model, p):  # BigM constraints: hub is installed if  all ports in hub are installed
             num_ports = 0
             a = 0
             for _, port in self.ports.items():
