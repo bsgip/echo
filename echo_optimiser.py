@@ -3,9 +3,10 @@ import pyomo.environ as en
 import pyomo.network
 import os
 import numpy as np
-from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule, TransformationRule
+from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule, TransformationRule, ExpansionType
 from constants import minutes_per_hour
-from echo_models import FlexibleAsset, ElectricalStorage, ConfigurationError
+from echo_models import ConfigurationError
+import pandas as pd
 
 
 class EchoOptimiser(object):
@@ -38,12 +39,10 @@ class EchoOptimiser(object):
         self.build_objective()
         self.optimise()
 
-
-
-    def add_asset(self, obj):
-        # Constraints relevant to particular assets are added here as part of initialising the node
-        obj.verify_node()
-        obj.initialise_node(self.model)
+    def add_port(self, obj):
+        # Constraints relevant to particular assets are added here as part of initialising the port
+        obj.verify_port()
+        obj.initialise_port(self.model)
 
     def build_model(self):
         # Set up the Pyomo model
@@ -66,44 +65,39 @@ class EchoOptimiser(object):
         else:
             self.model.Expansion = en.RangeSet(0, self.number_of_expansion_intervals - 1)
 
-        self.model.discount_factors = 'discount_rates'
-        setattr(self.model, self.model.discount_factors,
-                en.Param(self.model.Expansion, self.model.Time, initialize=self.ES.discount_factors))
+        self.model.dr = 'discount_rates'
+        setattr(self.model, self.model.dr,
+                en.Param(self.model.Expansion, initialize=self.ES.discount_factors))
 
-        # Parameters and Variable Definitions for Assets
-        for _, obj in self.ES.asset_obj.items():
-            self.add_asset(obj)
+        # Add expansion objects
+        self.ES.add_expansions(self.ES.expansion_periods)
 
-        # Verify hubs are set up correctly
+        # Parameter and Variable Definitions for ports
+        for _, obj in self.ES.port_obj.items():
+            self.add_port(obj)
+
+        # Verify hubs are set up correctly and initialise hub variables
         for _, hub_obj in self.ES.hub_obj.items():
             hub_obj.verify_hub()
+            hub_obj.initialise_hub(self.model)
 
         # Initialise edges and add edge constraints
         for _, edge in self.ES.edge_obj.items():
             edge.initialise_edge(self.model)
 
-
     def apply_constraints(self):
-
-        # Apply hub constraints
+        # Hub constraints
         for _, obj in self.ES.hub_obj.items():
-            hub_vars = obj.nodes
+            hub_vars = obj.ports
 
-            # Kirchoff flow constraint at each aggregation Hub
-            def reliability(model, expansion_interval, time_interval):
+            def reliability(model, expansion_interval, time_interval):  # Tellegen hub rule
                 a = 0
                 for _, hv in hub_vars.items():
-                    b = getattr(self.model, hv.node_name)
+                    b = getattr(self.model, hv.port_name)
                     a += b[expansion_interval, time_interval]
                 return a == 0
 
-            # Apply correct hub constraint based on hub rule
-            if obj.hub_rule == HubNodeRule.Tellegen:
-                con_name = 'reliability_con_' + obj.hub_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
-
-            # Generic transformation hub
-            def transform(model, expansion_interval, time_interval):
+            def transform(model, expansion_interval, time_interval):  # Generic transformation hub
                 lhs = 0
                 rhs = 0
                 for _, i in obj.transformation.items():
@@ -111,38 +105,53 @@ class EchoOptimiser(object):
                     for var, weight in i.lhs.items():
                         tr_rule = i.rule[var]
                         if tr_rule is TransformationRule.Both:
-                            lhs += getattr(self.model, var.node_name)[expansion_interval, time_interval] * weight
+                            lhs += getattr(self.model, var.port_name)[expansion_interval, time_interval] * weight
                         if tr_rule is TransformationRule.NegativeComponent:
-                            lhs += getattr(self.model, var.negative_node_component)[
+                            lhs += getattr(self.model, var.negative_port_component)[
                                        expansion_interval, time_interval] * weight
                         if tr_rule is TransformationRule.PositiveComponent:
-                            lhs += getattr(self.model, var.positive_node_component)[
+                            lhs += getattr(self.model, var.positive_port_component)[
                                        expansion_interval, time_interval] * weight
                 return lhs == rhs
 
             if obj.hub_rule == HubNodeRule.Transform:
-                if not obj.transformation:
-                    raise ConfigurationError("Transformation object has not been added to Node.")
                 con_name = 'transformation_con_' + obj.hub_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
+            if obj.hub_rule == HubNodeRule.Tellegen:
+                con_name = 'reliability_con_' + obj.hub_name
+                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
 
     def apply_expansion_constraints(self):
-        # ToDo - include other asset types in expansion problem
-        # ToDo - include option for constraining number of expansion type decisions (e.g., network expansion vs asset expansion)
+
         def storage_exp_rule(model, expansion_interval):
             a = 0
-            for _, storage_hub in self.ES.expansion_obj.items():
-                for _, storage_port in storage_hub.nodes.items():
-                    a += getattr(model, storage_port.installed)[expansion_interval]
-            return a <= self.ES.global_storage_exp_con
+            for _, hub in self.ES.asset_expansion_obj.items():
+                if hub.expansion_asset_type == ExpansionType.Storage:
+                    a += getattr(model, hub.hub_installed)[expansion_interval]
+            if type(a) is int:
+                return en.Constraint.Feasible
+            else:
+                return a <= self.ES.global_storage_exp_con
 
-        if self.ES.expansion_obj:
-            con_name = 'storage_exp_con'
+        def gen_exp_rule(model, expansion_interval):
+            a = 0
+            for _, hub in self.ES.asset_expansion_obj.items():
+                if hub.expansion_asset_type == ExpansionType.Generation:
+                    a += getattr(model, hub.hub_installed)[expansion_interval]
+            if type(a) is int:
+                return en.Constraint.Feasible
+            else:
+                return a <= self.ES.global_generator_exp_con
+
+        if self.ES.asset_expansion_obj:
+            con_name = 'global_storage_exp_con'
             setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=storage_exp_rule))
+            con_name = 'global_gen_exp_con'
+            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=gen_exp_rule))
 
     def build_objective(self):
         self.objective = 0
-        for _, obj in self.ES.asset_obj.items():
+        for _, obj in self.ES.port_obj.items():
             self.objective += obj.add_objective(self.model)
 
         for _, obj in self.ES.edge_obj.items():
@@ -163,15 +172,19 @@ class EchoOptimiser(object):
         # Solve the optimisation
         opt.solve(self.model, tee=True, symbolic_solver_labels=True)
 
-
-
     def values(self, variable_name, expansion):
+        """ Returns the value of a single specified variable during a single specified expansion period."""
+
         var_obj = getattr(self.model, variable_name)
         if var_obj.dim() == 2:
             output = np.zeros(self.number_of_intervals)
+            max_planning_period = 0
             for index in var_obj:
                 if index[0] == expansion:
                     output[index[1]] = var_obj[index].value
+                max_planning_period = max(max_planning_period, index[0])
+            if expansion > max_planning_period:
+                raise ConfigurationError('Expansion period is not in range.')
             return output
         else:
             if var_obj.is_indexed():
@@ -179,48 +192,114 @@ class EchoOptimiser(object):
             else:
                 return var_obj.value
 
-    def value_test(self):
-        outputs = []
-        for var in self.var_names:
-            outputs.append(self.values(var))
-        return outputs
+    def hub_values(self, hub_obj, expansion_period):
+        """ Returns all values of all ports in a specified hub for a single specified expansion period."""
 
-    def hub_values(self, hub_obj, expansion):
         outputs = {}
-        for name, var_obj in hub_obj.nodes.items():
-            outputs[name] = self.values(var_obj.node_name, expansion)
+        for name, var_obj in hub_obj.ports.items():
+            outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def hub_installations(self, hub_obj, expansion):
-        outputs = {}
-        for name, var_obj in hub_obj.nodes.items():
-            outputs[name] = self.values(var_obj.installed, expansion)
-        return outputs
+    def hub_life_cycle(self, hub_obj, total_expansion_periods):
+        """ Returns life-cycle variables (installed, retired, replaced, capacity) for all ports in the specified hub,
+         for all expansion periods. """
 
-    def print_life_cycle(self, var, expansion_periods):
-        for j in range(0, expansion_periods):
-            print('expansion period: ' + str(j))
-            print('installed:' + str(self.values(var.installed, j)))
-            print('retired:' + str(self.values(var.retire, j)))
-            print('replaced:' + str(self.values(var.replace, j)))
-            print('life remaining:' + str(self.values(var.lifetime_remaining, j)))
-            print('\n')
+        output = {'expansion period': [], 'installed': [], 'retired': [], 'replaced': [], 'remaining life': []}
+        rows = []
+        for name, var in hub_obj.ports.items():
+            for j in range(0, total_expansion_periods):
+                rows.append(name[0:len(name) - (len(name) - 13)])
+                output['expansion period'].append(j)
+                output['installed'].append(self.values(var.installed, j))
+                output['retired'].append(self.values(var.retire, j))
+                output['replaced'].append(self.values(var.replace, j))
+                output['remaining life'].append(self.values(var.lifetime_remaining, j))
+        df = pd.DataFrame(output, index=rows)
+        return df
 
-    def print_expansion_life_cycle(self, expansion_periods):
-        if not self.ES.expansion_obj:
-            return print('No expansion objects')
+    def port_life_cycle(self, var, total_expansion_periods):
+        """ Returns life-cycle variables (installed, retired, replaced, remaining lifetime) for a specified port
+        over all expansion periods."""
+
+        output = {'expansion period': [], 'installed': [], 'retired': [], 'replaced': [], 'remaining life': []}
+        for j in range(0, total_expansion_periods):
+            output['expansion period'].append(j)
+            output['installed'].append(self.values(var.installed, j))
+            output['retired'].append(self.values(var.retire, j))
+            output['replaced'].append(self.values(var.replace, j))
+            output['remaining life'].append(self.values(var.lifetime_remaining, j))
+        df = pd.DataFrame(output)
+        return df
+
+    def expansion_life_cycle(self, total_expansion_periods):
+        """ Returns life-cycle variables (installed, capacity, active, retired, replaced, lifetime remaining) for
+         all expansion objects in the model, over all expansion periods. """
+
+        if not self.ES.asset_expansion_obj:
+            return print('No asset expansion objects.')
         else:
-            for _, i in self.ES.expansion_obj.items():
-                for _, m in i.nodes.items():
-                    print(m.node_name)
-                    output = {'installed': [], 'active': [], 'retired': [], 'replaced': [],
-                              'life remaining': []}
-                    for j in range(0, expansion_periods):
-                        output['installed'].append(self.values(m.installed, j))
-                        output['active'].append(self.values(m.state_value, j))
-                        output['retired'].append(self.values(m.retire, j))
-                        output['replaced'].append(self.values(m.replace, j))
-                        output['life remaining'].append((self.values(m.lifetime_remaining, j)))
+            for _, hub in self.ES.asset_expansion_obj.items():
+                output = {'exp': [], 'installed': [], 'active': [], 'retired': [], 'replaced': [], 'remaining life': []}
+                rows = []
+                for name, var in hub.ports.items():
+                    for j in range(0, total_expansion_periods):
+                        rows.append(name[0:len(name) - (len(name) - 13)])
+                        output['exp'].append(j)
+                        output['installed'].append(self.values(var.installed, j))
+                        output['active'].append(self.values(var.active, j))
+                        output['retired'].append(self.values(var.retire, j))
+                        output['replaced'].append(self.values(var.replace, j))
+                        output['remaining life'].append(self.values(var.lifetime_remaining, j))
+            df = pd.DataFrame(output, index=rows)
+            return df
 
-                    print(output)
-                    print('\n')
+    def edge_life_cycle(self, edge, total_expansion_periods):
+        """ Returns life-cycle variables (initial capacity, current capacity, added capacity) for a specified edge object
+        over all expansion periods. """
+
+        output = {'initial_edge_capacity': [], 'current_edge_capacity': [], 'capacity_added': []}
+        output['initial_edge_capacity'].append(edge.initial_edge_capacity)
+        for j in range(0, total_expansion_periods):
+            output['current_edge_capacity'].append(self.values(edge.current_cap, j))
+            if edge.expansion_planning is True:
+                output['capacity_added'].append(self.values(edge.cap_add, j))
+        return output
+
+    def get_expansion_ports(self):
+        """ Returns all expansion hub ports in model."""
+
+        output = []
+        for _, exp_hub in self.ES.asset_expansion_obj.items():
+            for _, exp_port in exp_hub.ports.items():
+                output.append(exp_port)
+        return output
+
+    def test_value_functions(self, hub, total_expansion_periods):
+        """ Tests all value functions for a specified hub."""
+
+        print('Hub values')
+        print(self.hub_values(hub, 0))
+        print('\nHub life cycle')
+        print(self.hub_life_cycle(hub, total_expansion_periods))
+        p = list(hub.ports.values())[0]
+        p_name = list(hub.ports.keys())[0]
+        print('\nPort (', p_name, ') values')
+        print(self.values(p.port_name, 0))
+        print('\nPort (', p_name, ') life cycle')
+        print(self.port_life_cycle(p, total_expansion_periods))
+        print('\nGet expansion ports')
+        print(self.get_expansion_ports())
+        print('\nExpansion life cycle')
+        print(self.expansion_life_cycle(total_expansion_periods))
+
+    def total_import(self, var, expansion_period):
+        return sum(self.values(var.positive_port_component, expansion_period))
+
+    def total_export(self, var, expansion_period):
+        return sum(self.values(var.negative_port_component, expansion_period))
+
+
+
+
+
+
