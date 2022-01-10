@@ -21,6 +21,7 @@ class FlowConstraint(object):
     NoConstraint = 1
     Fixed = 2
     Series = 3
+    Variable = 4
 
 
 class OptimisationType(object):
@@ -44,6 +45,12 @@ class TransformationRule(object):
     PositiveComponent = 2
     NegativeComponent = 3
 
+
+class ExpansionType(object):
+    NA = 0
+    Storage = 1
+    Generation = 2
+    Edge = 3
 
 # Define some useful container objects to define the optimisation objectives
 
