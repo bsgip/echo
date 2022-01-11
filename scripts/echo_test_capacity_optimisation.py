@@ -1,0 +1,364 @@
+from __future__ import division
+
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pyomo.core import Var
+from pyomo.util.infeasible import log_infeasible_constraints
+
+import sys
+
+sys.path.append("../")
+from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, \
+    OptimisationGraph, Tariff, Hub, Port, Edge, Transform, ElectricalPort, CarbonPort
+from echo_optimiser import EchoOptimiser
+from configuration import HubNodeRule, TransformationRule, FlowConstraint, Flows
+from networkx import Graph, draw
+
+# set up seaborn the way you like
+sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
+    'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
+               'axes.facecolor': 'white', 'grid.color': '.8', 'grid.linestyle': u'-', 'grid.linewidth': 0.5})
+
+############################ Define an Example Optimisation Problem ########################################
+
+# Example problem - 2 separate hubs (loads/sites) supplied from a single supply point that is connected to the grid.
+# Site 1 has a load + pv
+# Site 2 has the same load + pv
+
+# The load and pv arrays below are in kwh consumed per 15 minutes
+test_load = np.array(
+    [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
+     2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
+     3.99, 3.71, 3.38, 3.76, 3.71, 3.78, 3.29, 3.65, 3.61, 3.75, 3.38, 3.66, 3.56, 3.69, 3.3, 3.61, 3.71, 3.82,
+     3.17, 3.69, 3.74, 3.86, 3.57, 3.55, 3.75, 3.6, 3.67, 3.48, 3.51, 3.46, 3.19, 3.38, 3.19, 3.38, 3.04, 3.12,
+     2.91, 3.11, 3.13, 2.77, 2.24, 2.54, 2.24, 2.24, 2.09, 2.33, 2.17, 2.16, 1.97, 2.16, 2.21, 2.18, 2.01, 2.16,
+     2.19, 2.11, 2.17, 2.13, 2.05, 2.19])
+
+test_pv = 2 * np.array(
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.23, 0.52,
+     0.74, 0.71, 0.63, 0.68, 0.97, 0.01, 0.52, 0.83, 0.83, 0.79, 1.22, 1.36, 1.27, 1.42, 1.97, 2.56, 2.91, 3.24,
+     3.8, 4.3, 4.62, 4.84, 4.6, 4.17, 3.77, 3.76, 3.38, 2.64, 1.96, 1.76, 1.85, 2.4, 3.82, 5.13, 4.97, 5.02, 5.43,
+     5.32, 3.56, 1.75, 1.43, 1.65, 1.69, 2.3, 2.71, 2.41, 2.63, 2.6, 1.9, 0.78, 0.13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+test_pv *= -1  # convert solar generation to negative to match convention.
+
+# Site 1
+net_load = test_load + test_pv
+# split load into import and export
+connection_point_import = np.copy(net_load)
+connection_point_export = np.copy(net_load)
+
+for j, e in enumerate(net_load):
+    if e >= 0:
+        connection_point_export[j] = 0
+
+    else:
+        connection_point_import[j] = 0
+
+# Site 2
+site2_load_scale = 1
+site2_pv_scale = 1
+
+net_load2 = test_load*site2_load_scale + test_pv*site2_pv_scale
+# split load into import and export
+connection_point_import2 = np.copy(net_load2)
+connection_point_export2 = np.copy(net_load2)
+
+for j, e in enumerate(net_load2):
+    if e >= 0:
+        connection_point_export2[j] = 0
+
+    else:
+        connection_point_import2[j] = 0
+
+
+# Tariffs are in $ / kwh
+import_tariff = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
+export_tariff = np.array(([0.0] * 96))
+
+############################ Optimise this Example ########################################
+
+np.set_printoptions(suppress=True)
+
+# Parameters
+expansion_periods = 1
+storage_expansions_per_period = 0
+generator_expansions_per_period = 0
+capacity_expansions_per_period = 10
+
+# Discounting
+discount_rate = 0
+dr = {}
+for ep in range(0, expansion_periods):
+    dr[ep] = 1 / ((1 + discount_rate) ** ep)
+
+# Setup load, pv, and tariffs as dictionaries
+d1 = {}
+d2 = {}
+gen1 = {}
+gen2 = {}
+it = {}
+et = {}
+
+for ep in range(0, expansion_periods):
+    for i, _ in enumerate(connection_point_import):
+        d1[(ep, i)] = connection_point_import[i]
+        d2[(ep, i)] = connection_point_import2[i]
+        gen1[(ep, i)] = connection_point_export[i]
+        gen2[(ep, i)] = connection_point_export2[i]
+        it[(ep, i)] = import_tariff[i]
+        et[(ep, i)] = export_tariff[i]
+
+# Setup graph
+ES = OptimisationGraph()
+
+# ToDo - better way to carry these parameters
+ES.global_storage_exp_con = storage_expansions_per_period
+ES.global_generator_exp_con = generator_expansions_per_period
+ES.global_capacity_exp_con = capacity_expansions_per_period
+ES.expansion_periods = expansion_periods
+ES.discount_factors = dr
+
+# Setup model components
+
+tariff = Tariff()
+tariff.add_tariff_profile_export(et)
+tariff.add_tariff_profile_import(it)
+
+grid = Hub()
+emissions = CarbonPort()
+emissions.flows = Flows.Export
+grid.ports['grid'] = ElectricalPort()
+grid.ports['CO2'] = emissions
+gt = Transform()
+gt.add_rhs(0)
+gt.add_lhs(grid.ports['CO2'], 0.7*4, TransformationRule.Both)
+gt.add_lhs(grid.ports['grid'], -1, TransformationRule.NegativeComponent)
+grid.add_transformation(gt)
+grid.hub_rule = HubNodeRule.Transform
+ES.add_hub(grid)
+
+# Site 1
+battery1 = Hub()
+b1 = ElectricalStorage(max_capacity=150.0,
+                       depth_of_discharge_limit=0,
+                       charging_power_limit=5.0,
+                       discharging_power_limit=-5.0,
+                       charging_efficiency=1,
+                       discharging_efficiency=1,
+                       throughput_cost=0.018,
+                       initial_state_of_charge=0.0)
+battery1.ports['battery_asset'] = b1
+b1.fixed_storage_capacity = False
+
+load1 = Hub()
+l1 = ElectricalDemand()
+l1.add_demand_profile(d1)
+load1.ports['demand'] = l1
+
+solar1 = Hub()
+pv1 = ElectricalGeneration()
+pv1.add_generation_profile(gen1)
+solar1.ports['solar'] = pv1
+
+site1 = ElectricalHub()
+cp1 = ElectricalPort()
+cp1.has_tariff = True
+cp1.tariff = tariff
+besscp1 = ElectricalPort()
+
+site1.ports['CP'] = cp1
+site1.ports['bessCP'] = besscp1
+site1.ports['loadCP'] = ElectricalPort()
+site1.ports['pvCP'] = ElectricalPort()
+site1.hub_rule = HubNodeRule.Tellegen
+
+ES.add_hub(battery1)
+ES.add_hub(load1)
+ES.add_hub(site1)
+ES.add_hub(solar1)
+
+bess_edge1 = Edge()
+bess_edge1.add_vertices(b1, site1.ports['bessCP'])
+load_edge1 = Edge()
+load_edge1.add_vertices(site1.ports['loadCP'], l1)
+pv_edge1 = Edge()
+pv_edge1.add_vertices(site1.ports['pvCP'], pv1)
+
+ES.add_edge_obj(bess_edge1)
+ES.add_edge_obj(load_edge1)
+ES.add_edge_obj(pv_edge1)
+
+# Site 2
+battery2 = Hub()
+b2 = ElectricalStorage(max_capacity=150.0,
+                       depth_of_discharge_limit=0,
+                       charging_power_limit=5.0,
+                       discharging_power_limit=-5.0,
+                       charging_efficiency=1,
+                       discharging_efficiency=1,
+                       throughput_cost=0.018,
+                       initial_state_of_charge=0.0)
+battery2.ports['battery_asset'] = b2
+b2.fixed_storage_capacity = False
+
+load2 = Hub()
+l2 = ElectricalDemand()
+l2.add_demand_profile(d2)
+load2.ports['demand'] = l2
+
+solar2 = Hub()
+pv2 = ElectricalGeneration()
+pv2.add_generation_profile(gen2)
+solar2.ports['solar'] = pv2
+
+site2 = ElectricalHub()
+cp2 = ElectricalPort()
+cp2.has_tariff = True
+cp2.tariff = tariff
+besscp2 = ElectricalPort()
+
+site2.ports['CP'] = cp2
+site2.ports['bessCP'] = besscp2
+site2.ports['loadCP'] = ElectricalPort()
+site2.ports['pvCP'] = ElectricalPort()
+site2.hub_rule = HubNodeRule.Tellegen
+
+ES.add_hub(battery2)
+ES.add_hub(load2)
+ES.add_hub(site2)
+ES.add_hub(solar2)
+
+bess_edge2 = Edge()
+bess_edge2.add_vertices(b2, site2.ports['bessCP'])
+load_edge2 = Edge()
+load_edge2.add_vertices(site2.ports['loadCP'], l2)
+pv_edge2 = Edge()
+pv_edge2.add_vertices(site2.ports['pvCP'], pv2)
+
+# Add edge objects to ES - this creates an actual networkx edge
+ES.add_edge_obj(bess_edge2)
+ES.add_edge_obj(load_edge2)
+ES.add_edge_obj(pv_edge2)
+
+# Create intermediate hub for connecting the two sites to the grid
+pcc = Hub()
+pcc.ports['site1'] = ElectricalPort()
+pcc.ports['site2'] = ElectricalPort()
+pcc.ports['grid'] = ElectricalPort()
+pcc.hub_rule = HubNodeRule.Tellegen
+
+ES.add_hub(pcc)
+
+site1_edge = Edge()
+site1_edge.add_vertices(site1.ports['CP'], pcc.ports['site1'])
+site2_edge = Edge()
+site2_edge.add_vertices(site2.ports['CP'], pcc.ports['site2'])
+grid_edge = Edge()
+grid_edge.add_vertices(pcc.ports['grid'], grid.ports['grid'])
+
+# Add edge objects to ES - this creates an actual networkx edge
+ES.add_edge_obj(site1_edge)
+ES.add_edge_obj(site2_edge)
+ES.add_edge_obj(grid_edge)
+
+#### Test settings
+
+
+grid_edge.initial_edge_capacity = 0
+grid_edge.capacity_expansion = True
+grid_edge.expansion_capex = 0
+
+# Site 1 --
+besscp1.import_constraint = FlowConstraint.Fixed
+besscp1.import_constraint_value = 0
+besscp1.export_constraint = FlowConstraint.Fixed
+besscp1.export_constraint_value = 0
+besscp1.capacity_expansion = True
+besscp1.expansion_capex = 0
+b1.installation_capex = 0
+
+# Site 2 --
+besscp2.import_constraint = FlowConstraint.Fixed
+besscp2.import_constraint_value = 0
+besscp2.export_constraint = FlowConstraint.Fixed
+besscp2.export_constraint_value = 0
+besscp2.capacity_expansion = True
+besscp2.expansion_capex = 6
+b2.installation_capex = 0
+
+############################ ----------------------- ########################################
+
+# Invoke the optimiser and optimise
+optimiser = EchoOptimiser(15, 96, expansion_periods, ES)
+
+log_infeasible_constraints(optimiser.model)
+
+############################ Analyse the Optimisation ########################################
+
+# Print optimised capacities
+print('\nBattery storage capacity optimisation on both batteries')
+print('B1 capex ($/kWh): ', b1.installation_capex)
+print('B1 (kWh): ', optimiser.values(b1.optimised_storage_capacity, expansion_periods))
+print('B2 capex ($/kWh): ', b2.installation_capex)
+print('B2 (kWh): ', optimiser.values(b2.optimised_storage_capacity, expansion_periods))
+
+print('\nEdge capacity optimisation on edge linking grid and pcc:')
+print('Expansion capex ($/kW): ', grid_edge.expansion_capex)
+print('Initial edge capacity (kW): ', grid_edge.initial_edge_capacity)
+print('Optimised capacity (kW): ', optimiser.values(grid_edge.current_capacity, 0))
+
+print('\nPort capacity optimisation on port connected to bess 1')
+print('Expansion capex ($/kW): ', besscp1.expansion_capex)
+print('Initial import/export capacity (kW): ', besscp1.import_constraint_value)
+print('Optimised capacity (kW): ', optimiser.values(besscp1.current_capacity, 0))
+
+print('\nPort capacity optimisation on port connected to bess 2')
+print('Expansion capex ($/kW): ', besscp2.expansion_capex)
+print('Initial import/export capacity (kW): ', besscp2.import_constraint_value)
+print('Optimised capacity (kW): ', optimiser.values(besscp2.current_capacity, 0))
+
+colors = sns.color_palette()
+hrs = np.arange(0, len(test_load)) / 4
+
+############################ ----------------------- ########################################
+
+# Site 1
+fig = plt.figure(figsize=(14, 7))
+ax1 = fig.add_subplot(2, 1, 1)
+plt.title('Site 1')
+line1, = ax1.plot(hrs, test_load, color=colors[0])
+line2, = ax1.plot(hrs, test_pv, color=colors[1])
+line3, = ax1.plot(hrs, optimiser.values(cp1.port_name, 0), color=colors[2])
+ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
+ax1.set_xlim([0, len(test_load) / 4])
+
+ax2 = fig.add_subplot(2, 1, 2)
+line1, = ax2.plot(hrs, optimiser.values(b1.port_name, 0), color=colors[3])
+line2, = ax2.plot(hrs, optimiser.values(b1.storage_soc_value, 0), color=colors[4])
+ax2.set_xlim([0, len(test_load) / 4])
+ax2.set_xlabel('hour'), ax2.set_ylabel('kW')
+ax2.legend([line1, line2], ['B1 action (kW)', 'B1 SOC (kWh)'])
+
+############################ ----------------------- ########################################
+
+# Site 2
+fig = plt.figure(figsize=(14, 7))
+ax1 = fig.add_subplot(2, 1, 1)
+plt.title('Site 2')
+line1, = ax1.plot(hrs, test_load*site2_load_scale, color=colors[0])
+line2, = ax1.plot(hrs, test_pv*site2_pv_scale, color=colors[1])
+line3, = ax1.plot(hrs, optimiser.values(cp2.port_name, 0), color=colors[2])
+ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
+ax1.set_xlim([0, len(test_load) / 4])
+
+ax2 = fig.add_subplot(2, 1, 2)
+line1, = ax2.plot(hrs, optimiser.values(b2.port_name, 0), color=colors[3])
+line2, = ax2.plot(hrs, optimiser.values(b2.storage_soc_value, 0), color=colors[4])
+ax2.set_xlim([0, len(test_load) / 4])
+ax2.set_xlabel('hour'), ax2.set_ylabel('kW')
+ax2.legend([line1, line2], ['B2 action (kW)', 'B2 SOC (kWh)'])
+
