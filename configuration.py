@@ -21,7 +21,6 @@ class FlowConstraint(object):
     NoConstraint = 1
     Fixed = 2
     Series = 3
-    Variable = 4
 
 
 class OptimisationType(object):
@@ -30,7 +29,7 @@ class OptimisationType(object):
     Variable = 2
 
 
-class HubNodeRule(object):
+class NodeRule(object):
     NA = 0
     Tellegen = 1
     Sum = 2
@@ -38,7 +37,14 @@ class HubNodeRule(object):
     Transform = 4
 
 
-class TransformationRule(object):
+class PathRule(object):
+    NA = 0
+    SourceOrSink = 1
+    Source = 2
+    Sink = 3
+
+
+class TransformRule(object):
 
     NA = 0
     Both = 1
