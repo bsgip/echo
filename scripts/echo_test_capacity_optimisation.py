@@ -9,10 +9,10 @@ from pyomo.util.infeasible import log_infeasible_constraints
 import sys
 
 sys.path.append("../")
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, \
-    OptimisationGraph, Tariff, Hub, Port, Edge, Transform, ElectricalPort, CarbonPort
+from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
+    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, CarbonPort
 from echo_optimiser import EchoOptimiser
-from configuration import HubNodeRule, TransformationRule, FlowConstraint, Flows
+from configuration import NodeRule, TransformRule, FlowConstraint, Flows
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -22,7 +22,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 
 ############################ Define an Example Optimisation Problem ########################################
 
-# Example problem - 2 separate hubs (loads/sites) supplied from a single supply point that is connected to the grid.
+# Example problem - 2 separate nodes (loads/sites) supplied from a single supply point that is connected to the grid.
 # Site 1 has a load + pv
 # Site 2 has the same load + pv
 
@@ -126,21 +126,21 @@ tariff = Tariff()
 tariff.add_tariff_profile_export(et)
 tariff.add_tariff_profile_import(it)
 
-grid = Hub()
+grid = Node()
 emissions = CarbonPort()
 emissions.flows = Flows.Export
 grid.ports['grid'] = ElectricalPort()
 grid.ports['CO2'] = emissions
 gt = Transform()
 gt.add_rhs(0)
-gt.add_lhs(grid.ports['CO2'], 0.7*4, TransformationRule.Both)
-gt.add_lhs(grid.ports['grid'], -1, TransformationRule.NegativeComponent)
+gt.add_lhs(emissions, TransformRule.Both, 0.7*4)
+gt.add_lhs(grid.ports['grid'], TransformRule.NegativeComponent, -1)
 grid.add_transformation(gt)
-grid.hub_rule = HubNodeRule.Transform
-ES.add_hub(grid)
+grid.node_rule = NodeRule.Transform
+ES.add_node_obj(grid)
 
 # Site 1
-battery1 = Hub()
+battery1 = Node()
 b1 = ElectricalStorage(max_capacity=150.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=5.0,
@@ -152,17 +152,17 @@ b1 = ElectricalStorage(max_capacity=150.0,
 battery1.ports['battery_asset'] = b1
 b1.fixed_storage_capacity = False
 
-load1 = Hub()
+load1 = Node()
 l1 = ElectricalDemand()
 l1.add_demand_profile(d1)
 load1.ports['demand'] = l1
 
-solar1 = Hub()
+solar1 = Node()
 pv1 = ElectricalGeneration()
 pv1.add_generation_profile(gen1)
 solar1.ports['solar'] = pv1
 
-site1 = ElectricalHub()
+site1 = ElectricalNode()
 cp1 = ElectricalPort()
 cp1.has_tariff = True
 cp1.tariff = tariff
@@ -172,12 +172,12 @@ site1.ports['CP'] = cp1
 site1.ports['bessCP'] = besscp1
 site1.ports['loadCP'] = ElectricalPort()
 site1.ports['pvCP'] = ElectricalPort()
-site1.hub_rule = HubNodeRule.Tellegen
+site1.node_rule = NodeRule.Tellegen
 
-ES.add_hub(battery1)
-ES.add_hub(load1)
-ES.add_hub(site1)
-ES.add_hub(solar1)
+ES.add_node_obj(battery1)
+ES.add_node_obj(load1)
+ES.add_node_obj(site1)
+ES.add_node_obj(solar1)
 
 bess_edge1 = Edge()
 bess_edge1.add_vertices(b1, site1.ports['bessCP'])
@@ -191,7 +191,7 @@ ES.add_edge_obj(load_edge1)
 ES.add_edge_obj(pv_edge1)
 
 # Site 2
-battery2 = Hub()
+battery2 = Node()
 b2 = ElectricalStorage(max_capacity=150.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=5.0,
@@ -203,17 +203,17 @@ b2 = ElectricalStorage(max_capacity=150.0,
 battery2.ports['battery_asset'] = b2
 b2.fixed_storage_capacity = False
 
-load2 = Hub()
+load2 = Node()
 l2 = ElectricalDemand()
 l2.add_demand_profile(d2)
 load2.ports['demand'] = l2
 
-solar2 = Hub()
+solar2 = Node()
 pv2 = ElectricalGeneration()
 pv2.add_generation_profile(gen2)
 solar2.ports['solar'] = pv2
 
-site2 = ElectricalHub()
+site2 = ElectricalNode()
 cp2 = ElectricalPort()
 cp2.has_tariff = True
 cp2.tariff = tariff
@@ -223,12 +223,12 @@ site2.ports['CP'] = cp2
 site2.ports['bessCP'] = besscp2
 site2.ports['loadCP'] = ElectricalPort()
 site2.ports['pvCP'] = ElectricalPort()
-site2.hub_rule = HubNodeRule.Tellegen
+site2.node_rule = NodeRule.Tellegen
 
-ES.add_hub(battery2)
-ES.add_hub(load2)
-ES.add_hub(site2)
-ES.add_hub(solar2)
+ES.add_node_obj(battery2)
+ES.add_node_obj(load2)
+ES.add_node_obj(site2)
+ES.add_node_obj(solar2)
 
 bess_edge2 = Edge()
 bess_edge2.add_vertices(b2, site2.ports['bessCP'])
@@ -242,14 +242,14 @@ ES.add_edge_obj(bess_edge2)
 ES.add_edge_obj(load_edge2)
 ES.add_edge_obj(pv_edge2)
 
-# Create intermediate hub for connecting the two sites to the grid
-pcc = Hub()
+# Create intermediate node for connecting the two sites to the grid
+pcc = Node()
 pcc.ports['site1'] = ElectricalPort()
 pcc.ports['site2'] = ElectricalPort()
 pcc.ports['grid'] = ElectricalPort()
-pcc.hub_rule = HubNodeRule.Tellegen
+pcc.node_rule = NodeRule.Tellegen
 
-ES.add_hub(pcc)
+ES.add_node_obj(pcc)
 
 site1_edge = Edge()
 site1_edge.add_vertices(site1.ports['CP'], pcc.ports['site1'])
