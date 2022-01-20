@@ -3,9 +3,9 @@ import pyomo.environ as en
 import pyomo.network
 import os
 import numpy as np
-from configuration import Units, Flows, FlowConstraint, OptimisationType, HubNodeRule, TransformationRule, ExpansionType
+from configuration import Units, Flows, FlowConstraint, OptimisationType, NodeRule, TransformRule, ExpansionType
 from constants import minutes_per_hour
-from echo_models import ConfigurationError
+from echo_models import ConfigurationError, Path
 import pandas as pd
 
 
@@ -35,14 +35,8 @@ class EchoOptimiser(object):
 
         self.build_model()
         self.apply_constraints()
-        self.apply_expansion_constraints()
         self.build_objective()
         self.optimise()
-
-    def add_port(self, obj):
-        # Constraints relevant to particular assets are added here as part of initialising the port
-        obj.verify_port()
-        obj.initialise_port(self.model)
 
     def build_model(self):
         # Set up the Pyomo model
@@ -52,7 +46,7 @@ class EchoOptimiser(object):
 
         # A small fudge factor for reducing the size of the solution set and
         # achieving a unique optimisation solution
-        self.model.scale_func = en.Param(initialize=self.smallM)
+        self.model.smallM = en.Param(initialize=self.smallM)
         # A bigM value for integer optimisation
         self.model.bigM = en.Param(initialize=self.bigM)
 
@@ -70,84 +64,147 @@ class EchoOptimiser(object):
                 en.Param(self.model.Expansion, initialize=self.ES.discount_factors))
 
         # Add expansion objects
-        self.ES.add_expansions(self.ES.expansion_periods)
+        self.ES.add_asset_expansions(self.ES.expansion_periods)
+        self.ES.add_capacity_expansions()
 
-        # Parameter and Variable Definitions for ports
-        for _, obj in self.ES.port_obj.items():
-            self.add_port(obj)
+        # Initialise port variables/params and add port constraints
+        for _, port_obj in self.ES.port_obj.items():
+            port_obj.verify_port()
+            port_obj.initialise_port(self.model)
 
-        # Verify hubs are set up correctly and initialise hub variables
-        for _, hub_obj in self.ES.hub_obj.items():
-            hub_obj.verify_hub()
-            hub_obj.initialise_hub(self.model)
+        # Initialise node variables/params and add node constraints
+        for _, node_obj in self.ES.node_obj.items():
+            node_obj.verify_node()
+            node_obj.initialise_node(self.model)
 
-        # Initialise edges and add edge constraints
-        for _, edge in self.ES.edge_obj.items():
-            edge.initialise_edge(self.model)
+        # Initialise edge variables/params and add edge constraints
+        for _, edge_obj in self.ES.edge_obj.items():
+            edge_obj.verify_edge()
+            edge_obj.initialise_edge(self.model)
+
+        # Initialise path variables/params
+        for _, path_obj in self.ES.path_obj.items():
+            path_obj.verify_path()
+            path_obj.initialise_path(self.model)
 
     def apply_constraints(self):
-        # Hub constraints
-        for _, obj in self.ES.hub_obj.items():
-            hub_vars = obj.ports
+        self.apply_node_constraints()
+        self.apply_path_constraints()
+        self.apply_expansion_constraints()
 
-            def reliability(model, expansion_interval, time_interval):  # Tellegen hub rule
-                a = 0
-                for _, hv in hub_vars.items():
-                    b = getattr(self.model, hv.port_name)
-                    a += b[expansion_interval, time_interval]
-                return a == 0
+    def apply_node_constraints(self):
 
-            def transform(model, expansion_interval, time_interval):  # Generic transformation hub
-                lhs = 0
-                rhs = 0
-                for _, i in obj.transformation.items():
-                    rhs = i.rhs
-                    for var, weight in i.lhs.items():
-                        tr_rule = i.rule[var]
-                        if tr_rule is TransformationRule.Both:
-                            lhs += getattr(self.model, var.port_name)[expansion_interval, time_interval] * weight
-                        if tr_rule is TransformationRule.NegativeComponent:
-                            lhs += getattr(self.model, var.negative_port_component)[
-                                       expansion_interval, time_interval] * weight
-                        if tr_rule is TransformationRule.PositiveComponent:
-                            lhs += getattr(self.model, var.positive_port_component)[
-                                       expansion_interval, time_interval] * weight
-                return lhs == rhs
+        def reliability(model, p, t):  # Tellegen node rule
+            a = 0
+            for _, port in node_ports.items():
+                b = getattr(self.model, port.port_name)
+                a += b[p, t]
+            return a == 0
 
-            if obj.hub_rule == HubNodeRule.Transform:
-                con_name = 'transformation_con_' + obj.hub_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
-            if obj.hub_rule == HubNodeRule.Tellegen:
-                con_name = 'reliability_con_' + obj.hub_name
+        def transform(model, p, t):  # Generic transformation node
+            lhs = 0
+            rhs = current_transform.rhs
+            num_terms = len(current_transform.weight)
+            for i in range(0, num_terms):
+                transform_rule = current_transform.rule[i]
+                weight = current_transform.weight[i]
+                var = current_transform.lhs[i]
+                if transform_rule is TransformRule.Both:
+                    lhs += getattr(self.model, var.port_name)[p, t] * weight
+                if transform_rule is TransformRule.NegativeComponent:
+                    lhs += getattr(self.model, var.negative_port_component)[p, t] * weight
+                if transform_rule is TransformRule.PositiveComponent:
+                    lhs += getattr(self.model, var.positive_port_component)[p, t] * weight
+            return lhs == rhs
+
+        for _, obj in self.ES.node_obj.items():
+            if obj.node_rule == NodeRule.Transform:
+                for _, current_transform in obj.transformations.items():
+                    con_name = 'transformation_con_' + current_transform.transform_name
+                    setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
+            if obj.node_rule == NodeRule.Tellegen:
+                node_ports = obj.ports
+                con_name = 'reliability_con_' + obj.node_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
+
+    def apply_path_constraints(self):
+
+        if self.ES.path_obj:
+            def sum_sources_to_sink(model, p, t):  # Sum of paths to sink from all sources must equal sink
+                a = 0
+                for path in paths_to_sink:
+                    a += getattr(model, path.flow_value)[p, t]
+                b = getattr(model, path.end_port.positive_port_component)[p, t]
+                return a == b
+
+            for _, sink in self.ES.sinks.items():
+                paths_to_sink = []
+                for l in self.ES.all_paths:
+                    if l[-1] is sink:
+                        # Get path object
+                        p = self.ES.path_obj[tuple(l)]
+                        paths_to_sink.append(p)
+                con_name = 'sum_paths_to_sink_con_' + sink.node_name
+                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_sources_to_sink))
+
+            def sum_paths_from_source(model, p, t):  # Sum of paths from source must equal source
+                a = 0
+                for path in paths_from_source:
+                    a += getattr(model, path.flow_value)[p, t]
+                b = getattr(model, path.start_port.negative_port_component)[p, t]
+                return a*-1 == b
+
+            for _, source in self.ES.sources.items():
+                paths_from_source = []
+                for l in self.ES.all_paths:
+                    if l[0] is source:
+                        p = self.ES.path_obj[tuple(l)]
+                        paths_from_source.append(p)
+                con_name = 'sum_paths_from_source_con_' + source.node_name
+                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_paths_from_source))
 
     def apply_expansion_constraints(self):
 
         def storage_exp_rule(model, expansion_interval):
             a = 0
-            for _, hub in self.ES.asset_expansion_obj.items():
-                if hub.expansion_asset_type == ExpansionType.Storage:
-                    a += getattr(model, hub.hub_installed)[expansion_interval]
-            if type(a) is int:
-                return en.Constraint.Feasible
-            else:
-                return a <= self.ES.global_storage_exp_con
+            for _, node in self.ES.storage_expansion_obj.items():
+                a += getattr(model, node.installed)[expansion_interval]
+            return a <= self.ES.global_storage_exp_con
 
         def gen_exp_rule(model, expansion_interval):
             a = 0
-            for _, hub in self.ES.asset_expansion_obj.items():
-                if hub.expansion_asset_type == ExpansionType.Generation:
-                    a += getattr(model, hub.hub_installed)[expansion_interval]
-            if type(a) is int:
-                return en.Constraint.Feasible
-            else:
-                return a <= self.ES.global_generator_exp_con
+            for _, node in self.ES.gen_expansion_obj.items():
+                a += getattr(model, node.installed)[expansion_interval]
+            return a <= self.ES.global_generator_exp_con
 
-        if self.ES.asset_expansion_obj:
+        def capacity_exp_rule(model, expansion_interval):
+            a = 0
+            for _, obj in self.ES.capacity_exp_obj.items():
+                a += getattr(model, obj.capacity_added)[expansion_interval]
+            return a <= self.ES.global_capacity_exp_con
+
+        def combined_exp_rule(model, expansion_interval):
+            a = 0
+            for _, obj in self.ES.capacity_exp_obj.items():
+                a += getattr(model, obj.capacity_added)[expansion_interval]
+            for _, node in self.ES.storage_expansion_obj.items():
+                a += getattr(model, node.installed)[expansion_interval]
+            for _, node in self.ES.gen_expansion_obj.items():
+                a += getattr(model, node.installed)[expansion_interval]
+            return a <= self.ES.global_combined_asset_capacity_expansion_con
+
+        if self.ES.storage_expansion_obj:
             con_name = 'global_storage_exp_con'
             setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=storage_exp_rule))
+        if self.ES.gen_expansion_obj:
             con_name = 'global_gen_exp_con'
             setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=gen_exp_rule))
+        if self.ES.capacity_exp_obj:
+            con_name = 'global_cap_exp_con'
+            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=capacity_exp_rule))
+        if (self.ES.storage_expansion_obj or self.ES.gen_expansion_obj) and self.ES.capacity_exp_obj:
+            con_name = 'global_combined_asset_capacity_expansion_con'
+            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=combined_exp_rule))
 
     def build_objective(self):
         self.objective = 0
@@ -155,6 +212,9 @@ class EchoOptimiser(object):
             self.objective += obj.add_objective(self.model)
 
         for _, obj in self.ES.edge_obj.items():
+            self.objective += obj.add_objective(self.model)
+
+        for _, obj in self.ES.path_obj.items():
             self.objective += obj.add_objective(self.model)
 
     def optimise(self):
@@ -188,25 +248,28 @@ class EchoOptimiser(object):
             return output
         else:
             if var_obj.is_indexed():
-                return var_obj[expansion].value
+                if type(var_obj[expansion]) is int:  # Param
+                    return var_obj[expansion]
+                else:  # Var
+                    return var_obj[expansion].value
             else:
                 return var_obj.value
 
-    def hub_values(self, hub_obj, expansion_period):
-        """ Returns all values of all ports in a specified hub for a single specified expansion period."""
+    def node_values(self, node_obj, expansion_period):
+        """ Returns all values of all ports in a specified node for a single specified expansion period."""
 
         outputs = {}
-        for name, var_obj in hub_obj.ports.items():
+        for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def hub_life_cycle(self, hub_obj, total_expansion_periods):
-        """ Returns life-cycle variables (installed, retired, replaced, capacity) for all ports in the specified hub,
+    def node_life_cycle(self, node_obj, total_expansion_periods):
+        """ Returns life-cycle variables (installed, retired, replaced, capacity) for all ports in the specified node,
          for all expansion periods. """
 
         output = {'expansion period': [], 'installed': [], 'retired': [], 'replaced': [], 'remaining life': []}
         rows = []
-        for name, var in hub_obj.ports.items():
+        for name, var in node_obj.ports.items():
             for j in range(0, total_expansion_periods):
                 rows.append(name[0:len(name) - (len(name) - 13)])
                 output['expansion period'].append(j)
@@ -240,8 +303,8 @@ class EchoOptimiser(object):
         else:
             output = {'exp': [], 'installed': [], 'active': [], 'retired': [], 'replaced': [], 'remaining life': []}
             rows = []
-            for _, hub in self.ES.asset_expansion_obj.items():
-                for name, var in hub.ports.items():
+            for _, node in self.ES.asset_expansion_obj.items():
+                for name, var in node.ports.items():
                     for j in range(0, total_expansion_periods):
                         rows.append(name[0:len(name) - (len(name) - 13)])
                         output['exp'].append(j)
@@ -256,33 +319,37 @@ class EchoOptimiser(object):
     def edge_life_cycle(self, edge, total_expansion_periods):
         """ Returns life-cycle variables (initial capacity, current capacity, added capacity) for a specified edge object
         over all expansion periods. """
-
-        output = {'initial_edge_capacity': [], 'current_edge_capacity': [], 'capacity_added': []}
+        if total_expansion_periods == 0:
+            raise ConfigurationError('Enter total expansion periods not a single expansion period.')
+        output = {'initial_edge_capacity': [], 'current_edge_capacity': [], 'capacity_added_value': []}
         output['initial_edge_capacity'].append(edge.initial_edge_capacity)
         for j in range(0, total_expansion_periods):
             output['current_edge_capacity'].append(self.values(edge.current_cap, j))
             if edge.expansion_planning is True:
-                output['capacity_added'].append(self.values(edge.cap_add, j))
+                output['capacity_added_value'].append(self.values(edge.cap_add_value, j))
         return output
 
     def get_expansion_ports(self):
-        """ Returns all expansion hub ports in model."""
+        """ Returns all expansion node ports in model."""
 
         output = []
-        for _, exp_hub in self.ES.asset_expansion_obj.items():
-            for _, exp_port in exp_hub.ports.items():
+        for _, exp_node in self.ES.storage_expansion_obj.items():
+            for _, exp_port in exp_node.ports.items():
+                output.append(exp_port)
+        for _, exp_node in self.ES.gen_expansion_obj.items():
+            for _, exp_port in exp_node.ports.items():
                 output.append(exp_port)
         return output
 
-    def test_value_functions(self, hub, total_expansion_periods):
-        """ Tests all value functions for a specified hub."""
+    def test_value_functions(self, node, total_expansion_periods):
+        """ Tests all value functions for a specified node."""
 
-        print('Hub values')
-        print(self.hub_values(hub, 0))
-        print('\nHub life cycle')
-        print(self.hub_life_cycle(hub, total_expansion_periods))
-        p = list(hub.ports.values())[0]
-        p_name = list(hub.ports.keys())[0]
+        print('Node values')
+        print(self.node_values(node, 0))
+        print('\nNode life cycle')
+        print(self.node_life_cycle(node, total_expansion_periods))
+        p = list(node.ports.values())[0]
+        p_name = list(node.ports.keys())[0]
         print('\nPort (', p_name, ') values')
         print(self.values(p.port_name, 0))
         print('\nPort (', p_name, ') life cycle')
@@ -298,14 +365,14 @@ class EchoOptimiser(object):
     def total_export(self, var, expansion_period):
         return sum(self.values(var.negative_port_component, expansion_period))
 
-    def get_expansions_off_hub(self, hub):
-        """ Returns ports that are parts of expansion hubs connected to specified hub."""
+    def get_expansions_off_node(self, node):
+        """ Returns ports that are parts of expansion nodes connected to specified node."""
 
         output = []
-        for exp_p_name in hub.exp_port_names:
-            exp_p = hub.ports[exp_p_name]
+        for exp_p_name in node.exp_port_names:
+            exp_p = node.ports[exp_p_name]
             # Find edge
-            e = self.ES.lookup_edges_from_port(exp_p)
+            e = self.ES.lookup_edge_from_port(exp_p)
             p1 = e.vertices[0]
             p2 = e.vertices[1]
             if exp_p == p1:
@@ -315,7 +382,9 @@ class EchoOptimiser(object):
 
         return output
 
-
+    def check_pos_neg_port(self, port, expansion_period):
+        return self.values(port.positive_port_component, expansion_period) * \
+               self.values(port.negative_port_component, expansion_period)
 
 
 
