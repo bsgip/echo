@@ -1,5 +1,6 @@
 from __future__ import division
 
+import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -9,10 +10,10 @@ from pyomo.util.infeasible import log_infeasible_constraints
 import sys
 
 sys.path.append("../")
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, \
-    OptimisationGraph, Tariff, Hub, Port, Edge, Transform, ElectricalPort, CarbonPort
+from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
+    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, CarbonPort
 from echo_optimiser import EchoOptimiser
-from configuration import HubNodeRule, TransformationRule, FlowConstraint, Flows
+from configuration import NodeRule, TransformRule, FlowConstraint, Flows
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -22,7 +23,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 
 ############################ Define an Example Optimisation Problem ########################################
 
-# Example problem - 2 separate hubs (loads/sites) supplied from a single supply point that is connected to the grid.
+# Example problem - 2 separate nodes (loads/sites) supplied from a single supply point that is connected to the grid.
 # Site 1 has a load + pv
 # Site 2 has the same load + pv
 
@@ -68,6 +69,8 @@ np.set_printoptions(suppress=True)
 expansion_periods = 2
 storage_expansions_per_period = 1
 generator_expansions_per_period = 0
+capacity_expansions_per_period = 0
+combined_asset_capacity_expansions_per_period = 0
 
 # Discounting
 discount_rate = 0
@@ -98,6 +101,7 @@ for ep in range(0, expansion_periods):
 ES = OptimisationGraph()
 ES.global_storage_exp_con = storage_expansions_per_period  # ToDo - better way to carry these parameters
 ES.global_generator_exp_con = generator_expansions_per_period  # ToDo - better way to carry these parameters
+ES.global_combined_asset_capacity_expansion_con = combined_asset_capacity_expansions_per_period
 ES.expansion_periods = expansion_periods
 ES.discount_factors = dr
 
@@ -107,32 +111,32 @@ tariff = Tariff()
 tariff.add_tariff_profile_export(et)
 tariff.add_tariff_profile_import(it)
 
-grid = Hub()
+grid = Node()
 emissions = CarbonPort()
 emissions.flows = Flows.Export
 grid.ports['grid'] = ElectricalPort()
 grid.ports['CO2'] = emissions
 gt = Transform()
 gt.add_rhs(0)
-gt.add_lhs(grid.ports['CO2'], 0.7*4, TransformationRule.Both)
-gt.add_lhs(grid.ports['grid'], -1, TransformationRule.NegativeComponent)
+gt.add_lhs(emissions, TransformRule.Both, 0.7*4)
+gt.add_lhs(grid.ports['grid'], TransformRule.NegativeComponent, -1)
 grid.add_transformation(gt)
-grid.hub_rule = HubNodeRule.Transform
-ES.add_hub(grid)
+grid.node_rule = NodeRule.Transform
+ES.add_node_obj(grid)
 
 # Site 1
 
-load1 = Hub()
+load1 = Node()
 l1 = ElectricalDemand()
 l1.add_demand_profile(d1)
 load1.ports['demand'] = l1
 
-solar1 = Hub()
+solar1 = Node()
 pv1 = ElectricalGeneration()
 pv1.add_generation_profile(gen1)
 solar1.ports['solar'] = pv1
 
-site1 = ElectricalHub()
+site1 = ElectricalNode()
 cp1 = ElectricalPort()
 cp1.has_tariff = True
 cp1.tariff = tariff
@@ -140,15 +144,11 @@ cp1.tariff = tariff
 site1.ports['CP'] = cp1
 site1.ports['loadCP'] = ElectricalPort()
 site1.ports['pvCP'] = ElectricalPort()
-site1.hub_rule = HubNodeRule.Tellegen
-site1.expansion_planning = True
-site1.storage_planning = True
-site1.storage_planning_capex = 0
+site1.node_rule = NodeRule.Tellegen
 
-
-ES.add_hub(load1)
-ES.add_hub(site1)
-ES.add_hub(solar1)
+ES.add_node_obj(load1)
+ES.add_node_obj(site1)
+ES.add_node_obj(solar1)
 
 load_edge1 = Edge()
 load_edge1.add_vertices(site1.ports['loadCP'], l1)
@@ -160,17 +160,17 @@ ES.add_edge_obj(pv_edge1)
 
 # Site 2
 
-load2 = Hub()
+load2 = Node()
 l2 = ElectricalDemand()
 l2.add_demand_profile(d2)
 load2.ports['demand'] = l2
 
-solar2 = Hub()
+solar2 = Node()
 pv2 = ElectricalGeneration()
 pv2.add_generation_profile(gen2)
 solar2.ports['solar'] = pv2
 
-site2 = ElectricalHub()
+site2 = ElectricalNode()
 cp2 = ElectricalPort()
 cp2.has_tariff = True
 cp2.tariff = tariff
@@ -178,14 +178,11 @@ cp2.tariff = tariff
 site2.ports['CP'] = cp2
 site2.ports['loadCP'] = ElectricalPort()
 site2.ports['pvCP'] = ElectricalPort()
-site2.hub_rule = HubNodeRule.Tellegen
-site2.expansion_planning = True
-site2.storage_planning = True
-site1.storage_planning_capex = 0
+site2.node_rule = NodeRule.Tellegen
 
-ES.add_hub(load2)
-ES.add_hub(site2)
-ES.add_hub(solar2)
+ES.add_node_obj(load2)
+ES.add_node_obj(site2)
+ES.add_node_obj(solar2)
 
 load_edge2 = Edge()
 load_edge2.add_vertices(site2.ports['loadCP'], l2)
@@ -196,17 +193,17 @@ pv_edge2.add_vertices(site2.ports['pvCP'], pv2)
 ES.add_edge_obj(load_edge2)
 ES.add_edge_obj(pv_edge2)
 
-# Create intermediate hub for connecting the two sites to the grid
-pcc = Hub()
+# Create intermediate node for connecting the two sites to the grid
+pcc = Node()
 pcc.ports['site1'] = ElectricalPort()
 pcc.ports['site2'] = ElectricalPort()
 pcc.ports['grid'] = ElectricalPort()
-pcc.hub_rule = HubNodeRule.Tellegen
+pcc.node_rule = NodeRule.Tellegen
 pcc.expansion_planning = True
 pcc.storage_planning = True
 site1.storage_planning_capex = 0
 
-ES.add_hub(pcc)
+ES.add_node_obj(pcc)
 
 site1_edge = Edge()
 site1_edge.add_vertices(site1.ports['CP'], pcc.ports['site1'])
@@ -219,6 +216,16 @@ grid_edge.add_vertices(pcc.ports['grid'], grid.ports['grid'])
 ES.add_edge_obj(site1_edge)
 ES.add_edge_obj(site2_edge)
 ES.add_edge_obj(grid_edge)
+
+
+# Expansion planning settings
+site1.expansion_planning = True
+site1.storage_planning = True
+site1.storage_planning_capex = 0
+
+site2.expansion_planning = True
+site2.storage_planning = True
+site1.storage_planning_capex = 0
 
 
 ############################ ----------------------- ########################################
@@ -253,7 +260,7 @@ ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
 
 ax2 = fig.add_subplot(2, 2, 2)
 plt.title('Site1 expansion decisions - planning period 0')
-o = optimiser.get_expansions_off_hub(site1)
+o = optimiser.get_expansions_off_node(site1)
 line1, = ax2.plot(hrs, optimiser.values(o[0].port_name, 0), color=colors[0])
 line2, = ax2.plot(hrs, optimiser.values(o[0].storage_soc_value, 0), color=colors[1])
 ax2.set_xlim([0, len(test_load) / 4])
@@ -290,7 +297,7 @@ ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
 
 ax2 = fig.add_subplot(2, 2, 2)
 plt.title('Site2 expansion decisions - planning period 0')
-o = optimiser.get_expansions_off_hub(site2)
+o = optimiser.get_expansions_off_node(site2)
 line1, = ax2.plot(hrs, optimiser.values(o[0].port_name, 0), color=colors[0])
 line2, = ax2.plot(hrs, optimiser.values(o[0].storage_soc_value, 0), color=colors[1])
 ax2.set_xlim([0, len(test_load) / 4])
@@ -325,7 +332,7 @@ ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
 
 ax2 = fig.add_subplot(2, 2, 2)
 plt.title('PCC expansion decisions - planning period 0')
-o = optimiser.get_expansions_off_hub(pcc)
+o = optimiser.get_expansions_off_node(pcc)
 line1, = ax2.plot(hrs, optimiser.values(o[0].port_name, 0), color=colors[0])
 line2, = ax2.plot(hrs, optimiser.values(o[0].storage_soc_value, 0), color=colors[1])
 ax2.set_xlim([0, len(test_load) / 4])
@@ -339,10 +346,18 @@ ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
 
 ax2 = fig.add_subplot(2, 2, 4)
 plt.title('PCC expansion decisions - planning period 1')
-o = optimiser.get_expansions_off_hub(pcc)
+o = optimiser.get_expansions_off_node(pcc)
 line1, = ax2.plot(hrs, optimiser.values(o[0].port_name, 1), color=colors[0])
 line2, = ax2.plot(hrs, optimiser.values(o[0].storage_soc_value, 1), color=colors[1])
 ax2.set_xlim([0, len(test_load) / 4])
 ax2.set_xlabel('hour')
 ax2.legend([line1, line2], ['EXP 0 action (kW)', 'EXP 0 SOC (kWh)'])
 
+plt.figure()
+options = {"edgecolors": "tab:gray", "node_size": 800, "alpha": 0.9}
+pos = nx.spring_layout(ES)
+nx.draw_networkx_nodes(ES, pos)
+nx.draw_networkx_nodes(ES, pos, nodelist=list(ES.storage_expansion_obj.values()), node_color="tab:red", **options)
+nx.draw_networkx_nodes(ES, pos, nodelist=list(ES.gen_expansion_obj.values()), node_color="tab:orange", **options)
+nx.draw_networkx_edges(ES, pos)
+plt.title('Network layout')
