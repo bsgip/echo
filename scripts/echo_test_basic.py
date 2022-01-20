@@ -9,10 +9,10 @@ from pyomo.util.infeasible import log_infeasible_constraints
 import sys
 
 sys.path.append("../")
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalHub, \
-    OptimisationGraph, Tariff, Hub, Port, Edge, Transform, ElectricalPort, CarbonPort, FlexiblePort
+from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
+    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, CarbonPort, FlexiblePort
 from echo_optimiser import EchoOptimiser
-from configuration import HubNodeRule, TransformationRule, FlowConstraint, Flows
+from configuration import NodeRule, TransformRule, FlowConstraint, Flows
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -101,20 +101,20 @@ tariff = Tariff()
 tariff.add_tariff_profile_export(et)
 tariff.add_tariff_profile_import(it)
 
-grid = Hub()
+grid = Node()
 g = ElectricalPort()
 grid.ports['grid'] = g
 emissions = CarbonPort()
 grid.ports['CO2'] = emissions
 gt = Transform()
 gt.add_rhs(0)
-gt.add_lhs(emissions, 0.7*4, TransformationRule.Both)
-gt.add_lhs(g, -1, TransformationRule.NegativeComponent)
+gt.add_lhs(emissions, TransformRule.Both, 0.7*4)
+gt.add_lhs(g, TransformRule.NegativeComponent, -1)
 grid.add_transformation(gt)
-grid.hub_rule = HubNodeRule.Transform
-ES.add_hub(grid)
+grid.node_rule = NodeRule.Transform
+ES.add_node_obj(grid)
 
-battery1 = Hub()
+battery1 = Node()
 b1 = ElectricalStorage(max_capacity=15.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=5.0,
@@ -126,18 +126,18 @@ b1 = ElectricalStorage(max_capacity=15.0,
 battery1.ports['battery_asset'] = b1
 b1.fixed_storage_capacity = True
 
-load1 = Hub()
+load1 = Node()
 l1 = ElectricalDemand()
 l1.add_demand_profile(d1)
 load1.ports['demand'] = l1
 
-solar1 = Hub()
+solar1 = Node()
 pv1 = ElectricalGeneration()
 pv1.add_generation_profile(gen1)
 solar1.ports['solar'] = pv1
 
-site1 = ElectricalHub()
-site1.hub_rule = HubNodeRule.Tellegen
+site1 = ElectricalNode()
+site1.node_rule = NodeRule.Tellegen
 cp1 = ElectricalPort()
 cp1.has_tariff = True
 cp1.tariff = tariff
@@ -146,10 +146,10 @@ site1.ports['loadCP'] = ElectricalPort()
 site1.ports['bessCP'] = ElectricalPort()
 site1.ports['pvCP'] = ElectricalPort()
 
-ES.add_hub(battery1)
-ES.add_hub(load1)
-ES.add_hub(site1)
-ES.add_hub(solar1)
+ES.add_node_obj(battery1)
+ES.add_node_obj(load1)
+ES.add_node_obj(site1)
+ES.add_node_obj(solar1)
 
 # Create edge objects
 bess_edge1 = Edge()
