@@ -159,8 +159,8 @@ ES.add_edge_obj(grid_edge)
 
 g.path_rule = PathRule.SourceOrSink
 b1.path_rule = PathRule.SourceOrSink
-pv1.path_rule = PathRule.Source
-l1.path_rule = PathRule.Sink
+pv1.path_rule = PathRule.SourceOrSink
+l1.path_rule = PathRule.SourceOrSink
 
 ES.generate_all_paths()
 
