@@ -12,19 +12,13 @@ class OptimisationGraph(Graph):
 
     def __init__(self):
         super(OptimisationGraph, self).__init__()
-        self.port_obj = dict()  #Todo remove this
         self.node_obj = dict()
         self.edge_obj = dict()
         self.path_obj = dict()
 
-    def add_port_obj(self, port_obj):
-        self.port_obj[port_obj.uid] = port_obj
-
     def add_node_obj(self, node_obj):
         self.add_node(node_obj)
         self.node_obj[node_obj.uid] = node_obj
-        for _, port in node_obj.ports.items():  # Add any ports within the node
-            self.add_port_obj(port)
 
     def add_edge_obj(self, edge):
         port1 = edge.vertices[0]
@@ -46,29 +40,20 @@ class OptimisationGraph(Graph):
                     return node
         raise ConfigurationError('Port is not part of any node.')
 
-    def lookup_edge_from_port(self, port):
-        """ Returns edge containing the specified port, if an edge exists."""
-        for _, e in self.edge_obj.items():
-            p1 = e.vertices[0]
-            p2 = e.vertices[1]
-            if (port == p1) or (port == p2):
-                return e
-
     def generate_all_paths(self):
         """ Retrieve all paths between sources/sinks in the model. """
-
         sources = {}
         sinks = {}
         paths = []
-        for _, p in self.port_obj.items():  # Collect info on which ports are sources/sinks/nodes
-            n = self.lookup_node_from_port(p)
-            if p.path_rule == PathRule.Source:
-                sources[p] = n
-            if p.path_rule == PathRule.Sink:
-                sinks[p] = n
-            if p.path_rule == PathRule.SourceOrSink:
-                sources[p] = n
-                sinks[p] = n
+        for _, n in self.node_obj.items():
+            for _, p in n.ports.items():  # Collect info on which ports are sources/sinks/nodes
+                if p.path_rule == PathRule.Source:
+                    sources[p] = n
+                if p.path_rule == PathRule.Sink:
+                    sinks[p] = n
+                if p.path_rule == PathRule.SourceOrSink:
+                    sources[p] = n
+                    sinks[p] = n
 
         for source_port, source_node in sources.items():  # Generate list of paths between sources and sinks
             for sink_port, sink_node in sinks.items():
@@ -287,6 +272,9 @@ class Node(object):
                     "Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def initialise_node(self, model):
+        pass
+
+    def add_objective(self, model):
         pass
 
 

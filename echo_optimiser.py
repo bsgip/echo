@@ -63,17 +63,13 @@ class EchoOptimiser(object):
         setattr(self.model, self.model.dr,
                 en.Param(self.model.Expansion, initialize=self.ES.discount_factors))
 
-        # Initialise port variables/params and add port constraints
-        for _, port_obj in self.ES.port_obj.items():
-            port_obj.verify_port()
-            port_obj.initialise_port(self.model)
-
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
             node_obj.verify_node()
             node_obj.initialise_node(self.model)
-
-
+            for _, port_obj in node_obj.ports.items():
+                port_obj.verify_port()
+                port_obj.initialise_port(self.model)
 
         # Initialise edge variables/params and add edge constraints
         for _, edge_obj in self.ES.edge_obj.items():
@@ -162,14 +158,16 @@ class EchoOptimiser(object):
 
     def build_objective(self):
         self.objective = 0
-        for _, obj in self.ES.port_obj.items():
-            self.objective += obj.add_objective(self.model)
 
-        for _, obj in self.ES.edge_obj.items():
-            self.objective += obj.add_objective(self.model)
+        for _, node_obj in self.ES.node_obj.items():
+            for _, port_obj in node_obj.ports.items():
+                self.objective += port_obj.add_objective(self.model)
 
-        for _, obj in self.ES.path_obj.items():
-            self.objective += obj.add_objective(self.model)
+        for _, edge_obj in self.ES.edge_obj.items():
+            self.objective += edge_obj.add_objective(self.model)
+
+        for _, path_obj in self.ES.path_obj.items():
+            self.objective += path_obj.add_objective(self.model)
 
     def optimise(self):
         def objective_function(model):
