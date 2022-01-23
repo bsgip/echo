@@ -12,7 +12,7 @@ sys.path.append("../")
 from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
     OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, CarbonPort, FlexiblePort
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows
+from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -65,13 +65,9 @@ export_tariff = np.array(([0.0] * 96))
 np.set_printoptions(suppress=True)
 
 ## Set up graph and parameters
-# Setup graph
 ES = OptimisationGraph()
 
 expansion_periods = 1
-storage_expansions_per_period = 0
-generator_expansions_per_period = 0
-
 # Discounting
 discount_rate = 0
 dr = {}
@@ -79,8 +75,6 @@ for ep in range(0, expansion_periods):
     dr[ep] = 1 / ((1 + discount_rate) ** ep)
 
 
-ES.global_storage_exp_con = storage_expansions_per_period  # ToDo - better way to carry these parameters
-ES.global_generator_exp_con = generator_expansions_per_period  # ToDo - better way to carry these parameters
 ES.expansion_periods = expansion_periods
 ES.discount_factors = dr
 
@@ -139,12 +133,12 @@ solar1.ports['solar'] = pv1
 site1 = ElectricalNode()
 site1.node_rule = NodeRule.Tellegen
 cp1 = ElectricalPort()
-cp1.has_tariff = True
-cp1.tariff = tariff
 site1.ports['CP'] = cp1
 site1.ports['loadCP'] = ElectricalPort()
 site1.ports['bessCP'] = ElectricalPort()
 site1.ports['pvCP'] = ElectricalPort()
+cp1.has_tariff = True
+cp1.tariff = tariff
 
 ES.add_node_obj(battery1)
 ES.add_node_obj(load1)
@@ -159,12 +153,21 @@ load_edge1.add_vertices(site1.ports['loadCP'], l1)
 pv_edge1 = Edge()
 pv_edge1.add_vertices(site1.ports['pvCP'], pv1)
 grid_edge = Edge()
-grid_edge.add_vertices(cp1, grid.ports['grid'])
+grid_edge.add_vertices(cp1, g)
 
 ES.add_edge_obj(bess_edge1)
 ES.add_edge_obj(load_edge1)
 ES.add_edge_obj(pv_edge1)
 ES.add_edge_obj(grid_edge)
+
+# Path flows
+
+g.path_rule = PathRule.SourceOrSink
+b1.path_rule = PathRule.SourceOrSink
+pv1.path_rule = PathRule.SourceOrSink
+l1.path_rule = PathRule.SourceOrSink
+
+ES.generate_all_paths()
 
 ############################ ----------------------- ########################################
 
@@ -209,4 +212,68 @@ ax4 = fig.add_subplot(4, 1, 4)
 line1, = ax4.plot(hrs, optimiser.values(emissions.port_name, 0), color=colors[5])
 ax4.set_xlim([0, len(test_load) / 4])
 ax4.set_xlabel('hour'), ax4.set_ylabel('kgCO2e')
+
+
+if ES.path_obj:
+
+    grid_to_load = ES.path_obj[(grid, site1, load1)]
+    grid_to_bess = ES.path_obj[(grid, site1, battery1)]
+    grid_to_pv = ES.path_obj[(grid, site1, solar1)]
+
+    bess_to_load = ES.path_obj[(battery1, site1, load1)]
+    bess_to_grid = ES.path_obj[(battery1, site1, grid)]
+    bess_to_pv = ES.path_obj[(battery1, site1, solar1)]
+
+    pv_to_load = ES.path_obj[(solar1, site1, load1)]
+    pv_to_bess = ES.path_obj[(solar1, site1, battery1)]
+    pv_to_grid = ES.path_obj[solar1, site1, grid]
+
+    load_to_grid = ES.path_obj[load1, site1, grid]
+    load_to_bess = ES.path_obj[load1, site1, battery1]
+    load_to_pv = ES.path_obj[load1, site1, solar1]
+
+    fig = plt.figure(figsize=(14, 7))
+    ax1 = fig.add_subplot(4, 1, 1)
+    line1, = ax1.plot(hrs, optimiser.values(grid_to_load.flow_value, 0), color=colors[0])
+    line2, = ax1.plot(hrs, optimiser.values(bess_to_load.flow_value, 0), color=colors[1])
+    line3, = ax1.plot(hrs, optimiser.values(pv_to_load.flow_value, 0), color=colors[2])
+    line4, = ax1.plot(hrs, connection_point_import, color=colors[3])
+    sum_load = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
+    line5, = ax1.plot(hrs,sum_load, color=colors[4])
+    ax1.lines[0].set_linestyle("--")
+    ax1.lines[4].set_linestyle("--")
+    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+    ax1.legend([line1, line2, line3, line4, line5], ['Grid to load', 'BESS to load', 'Solar to load', 'Total load', 'Total flows to load'])
+    ax1.set_xlim([0, len(test_load) / 4])
+
+    ax1 = fig.add_subplot(4, 1, 2)
+    line1, = ax1.plot(hrs, optimiser.values(grid_to_bess.flow_value, 0), color=colors[0])
+    line2, = ax1.plot(hrs, optimiser.values(pv_to_bess.flow_value, 0), color=colors[1])
+    line3, = ax1.plot(hrs, optimiser.values(b1.positive_port_component, 0), color=colors[2])
+    ax1.lines[2].set_linestyle("--")
+    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+    ax1.legend([line1, line2, line3], ['Grid to BESS', 'Solar to BESS', 'Total BESS imports'])
+    ax1.set_xlim([0, len(test_load) / 4])
+
+    ax1 = fig.add_subplot(4, 1, 3)
+    line1, = ax1.plot(hrs, optimiser.values(bess_to_grid.flow_value, 0), color=colors[0])
+    line2, = ax1.plot(hrs, optimiser.values(pv_to_grid.flow_value, 0), color=colors[1])
+    line3, = ax1.plot(hrs, optimiser.values(g.positive_port_component, 0), color=colors[2])
+    ax1.lines[2].set_linestyle("--")
+    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+    ax1.legend([line1, line2, line3], ['BESS to GRID', 'Solar to GRID', 'Total GRID imports'])
+    ax1.set_xlim([0, len(test_load) / 4])
+
+    ax1 = fig.add_subplot(4, 1, 4)
+    line1, = ax1.plot(hrs, optimiser.values(pv_to_load.flow_value, 0), color=colors[0])
+    line2, = ax1.plot(hrs, optimiser.values(pv_to_bess.flow_value, 0), color=colors[1])
+    line3, = ax1.plot(hrs, optimiser.values(pv_to_grid.flow_value, 0), color=colors[2])
+    sum_solar_export = optimiser.values(pv_to_grid.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
+    line4, = ax1.plot(hrs, sum_solar_export, color=colors[3])
+    line5, = ax1.plot(hrs, connection_point_export*-1, color=colors[4])
+    ax1.lines[4].set_linestyle("--")
+    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+    ax1.legend([line1, line2, line3, line4, line5], ['SOLAR to LOAD', 'SOLAR to BESS', 'SOLAR to GRID', 'SUM', 'SOLAR GENERATION'])
+    ax1.set_xlim([0, len(test_load) / 4])
+
 

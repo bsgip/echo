@@ -6,19 +6,15 @@ import pyomo.environ as en
 from configuration import Units, Flows, FlowConstraint, OptimisationType, NodeRule, TransformRule, \
     ExpansionType, PathRule
 from constants import minutes_per_hour, positive_variable_component, negative_variable_component
-import numpy as np
 
 
 class OptimisationGraph(Graph):
 
     def __init__(self):
         super(OptimisationGraph, self).__init__()
-        self.port_obj = dict()
+        self.port_obj = dict()  #Todo remove this
         self.node_obj = dict()
         self.edge_obj = dict()
-        self.storage_expansion_obj = dict()
-        self.gen_expansion_obj = dict()
-        self.capacity_exp_obj = dict()  # This dict can include edges and ports
         self.path_obj = dict()
 
     def add_port_obj(self, port_obj):
@@ -37,76 +33,10 @@ class OptimisationGraph(Graph):
         node2 = self.lookup_node_from_port(port2)
         self.add_edge(node1, node2)
         self.edge_obj[(node1.uid, node2.uid)] = edge
-        if edge.capacity_expansion is True:
-            self.capacity_exp_obj[edge.uid] = edge
 
     def add_path_obj(self, path_obj):
         path_key = tuple(path_obj.vertices)
         self.path_obj[path_key] = path_obj
-
-    def add_capacity_expansions(self):
-        for _, obj in self.port_obj.items():
-            if obj.capacity_expansion is True:
-                self.capacity_exp_obj[obj.uid] = obj
-        for _, obj in self.edge_obj.items():
-            if obj.capacity_expansion is True:
-                self.capacity_exp_obj[obj.uid] = obj
-
-    def add_asset_expansions(self, expansion_periods):
-        # Asset expansions
-        nodes_to_add = []
-        edges_to_add = []
-        for _, node in self.node_obj.items():
-            if node.expansion_planning:  # Check if the node has expansion planning
-                for i in range(0, self.global_storage_exp_con):
-                    new_asset = Node()
-                    new_asset.expansion_asset = True  # Designate new asset as an expansion asset
-                    if node.storage_planning is True:  # Check if node has storage expansion planning
-                        s = ElectricalStorage(max_capacity=150.0,
-                                              depth_of_discharge_limit=0,
-                                              charging_power_limit=5.0,
-                                              discharging_power_limit=-5.0,
-                                              charging_efficiency=1,
-                                              discharging_efficiency=1,
-                                              throughput_cost=0.018,
-                                              initial_state_of_charge=0)
-                        new_asset.expansion_asset_type = ExpansionType.Storage
-                        s.fixed_storage_capacity = False
-                        s.existing_port = False
-                        self.storage_expansion_obj[new_asset.uid] = new_asset
-                    elif node.generator_planning is True:
-                        # ToDo allow user to specify details eg generation profile
-                        s = ElectricalGeneration()
-                        constant_gen = np.array(([1.0] * 96)) * -1
-                        gen1 = {}
-                        for ep in range(0, expansion_periods):
-                            for j, _ in enumerate(constant_gen):
-                                gen1[(ep, j)] = constant_gen[i]
-                        s.add_generation_profile(gen1)
-                        new_asset.expansion_asset_type = ExpansionType.Generation
-                        s.fixed_capacity = True
-                        s.existing_port = False
-                        self.gen_expansion_obj[new_asset.uid] = new_asset
-                    else:
-                        raise ConfigurationError('Expansion planning is on but no expansion type is set to True.')
-
-                    new_asset.ports['exp_' + str(i)] = s  # Connect new port to new node
-                    s.lifetime = 2
-                    s.installation_capex = node.storage_planning_capex
-                    p = ElectricalPort()  # Make a new port on the expansion node
-                    port_name = 'exp_' + str(i) + '_' + node.node_name
-                    node.ports[port_name] = p
-                    node.exp_port_names.append(port_name)
-                    expansion_edge = Edge()  # Create edge object
-                    expansion_edge.add_vertices(p, s)
-                    edges_to_add.append(expansion_edge)
-                    self.add_port_obj(s)
-                    self.add_port_obj(p)
-                    nodes_to_add.append(new_asset)  # Keep list of new nodes to add to graph outside this loop
-        for i in nodes_to_add:
-            self.add_node_obj(i)
-        for i in edges_to_add:
-            self.add_edge_obj(i)
 
     def lookup_node_from_port(self, port):
         """ Returns node that a specified port belongs to, if the port belongs to a node."""
@@ -176,16 +106,9 @@ class Port(object):
         # Details about any tariffs and incentives
         self.has_tariff = False
         self.tariff = None
-        self.initial_state = 1  # 1 = on, 0 = off
-        self.lifetime = 100  # in planning period units
-        self.existing_port = True  # Existing assets are forced to be installed in the first planning period
-        # Cost per unit capacity - relevant to assets that get installed as part of asset expansion planning problem
         self.installation_capex = 0
-        self.expansion_capex = 0  # Cost per unit capacity expansion - for capacity expansion problems
         self.fixed_opex = 0
         self.var_opex = 0
-        self.replacement_capex = 0
-        self.capacity_expansion = False
         self.path_rule = PathRule.NA
 
     def verify_port(self):
@@ -222,24 +145,7 @@ class Port(object):
             if self.import_constraint_value < 0:
                 raise ConfigurationError('Enter import constraint using positive load convention.')
 
-        if self.capacity_expansion is True and self.existing_port is False:
-            raise ConfigurationError('Import/export capacity expansion can only be applied to an existing port.')
-
-        if self.capacity_expansion is True and (-self.export_constraint_value != self.import_constraint_value):
-            raise ConfigurationError('Capacity expansion can only be applied if import cap = export cap.')
-
-        if self.capacity_expansion is True:
-            if (self.export_constraint_value is None) or (self.import_constraint_value is None):
-                raise ConfigurationError('Import/export cap cannot be None if capacity expansion is on.')
-
-        if self.capacity_expansion is True:
-            if (self.import_constraint is not FlowConstraint.Fixed) or (
-                    self.export_constraint is not FlowConstraint.Fixed):
-                raise ConfigurationError('Capacity expansion can only be applied if import and export constraint is'
-                                         'FlowConstraint.Fixed.')
-
     def initialise_port(self, model):
-
         domain = en.Reals
         if self.flows is Flows.Export:
             domain = en.NonPositiveReals
@@ -250,7 +156,6 @@ class Port(object):
         self.negative_port_component = negative_variable_component + self.port_name
 
         if self.opt_type is OptimisationType.Parameter:
-
             setattr(model, self.port_name,
                     en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
@@ -272,209 +177,38 @@ class Port(object):
 
             setattr(model, self.port_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
-
             setattr(model, self.positive_port_component,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-
             setattr(model, self.negative_port_component,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
 
             con_rule = self.factory_pos_neg_flows(self.port_name, self.positive_port_component,
                                                   self.negative_port_component)
-
             con_name = positive_variable_component + negative_variable_component + self.port_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+
+        # Import/export capacity constraint rules
+        def import_cap_rule(model, p, t):  # Rule for enforcing current capacity on port value
+            return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
+
+        def export_cap_rule(model, p, t):
+            return getattr(model, self.port_name)[p, t] >= self.export_constraint_value
+
+        if self.import_constraint is FlowConstraint.Fixed:
+            con_name = 'import_con_' + self.port_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
+        if self.export_constraint is FlowConstraint.Fixed:
+            con_name = 'export_con_' + self.port_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
         # Tariff variables
         if self.has_tariff:
             self.import_tariff_value = 'import_tariff_' + self.port_name
             self.export_tariff_value = 'export_tariff_' + self.port_name
-            if self.tariff.tariff_optimisation is True:
-                setattr(model, self.import_tariff_value,
-                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals,
-                               bounds=(self.tariff.import_tariff_min, self.tariff.import_tariff_max)))
-                setattr(model, self.export_tariff_value,
-                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals,
-                               bounds=(self.tariff.export_tariff_min, self.tariff.export_tariff_max)))
-            else:
-                setattr(model, self.import_tariff_value,
-                        en.Param(model.Expansion, model.Time, initialize=self.tariff.import_tariff))
-                setattr(model, self.export_tariff_value,
-                        en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
-
-        # # Additional constraint for pos/neg flows
-        # self.pos_indicator = 'pos_indicator_' + self.port_name
-        # setattr(model, self.pos_indicator, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-        # self.neg_indicator = 'neg_indicator_' + self.port_name
-        # setattr(model, self.neg_indicator, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-        #
-        # def pos_rule1(model, p, t):
-        #     return getattr(model, self.pos_indicator)[p, t] <= getattr(model, self.positive_port_component)[p, t] * model.bigM
-        #
-        # def pos_rule2(model, p, t):
-        #     return getattr(model, self.positive_port_component)[p, t] <= getattr(model, self.pos_indicator)[p, t] * model.bigM
-        #
-        # con_name = 'pos_indicator_con1_' + self.port_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=pos_rule1))
-        # con_name = 'pos_indicator_con2_' + self.port_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=pos_rule2))
-        #
-        # def neg_rule1(model, p, t):
-        #     return getattr(model, self.neg_indicator)[p, t] <= -getattr(model, self.negative_port_component)[p, t] * model.bigM
-        #
-        # def neg_rule2(model, p, t):
-        #     return -getattr(model, self.negative_port_component)[p, t] <= getattr(model, self.neg_indicator)[p, t] * model.bigM
-        #
-        # con_name = 'neg_indicator_con1_' + self.port_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=neg_rule1))
-        # con_name = 'neg_indicator_con2_' + self.port_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=neg_rule2))
-        #
-        # def pos_neg_rule(model, p, t):
-        #     return getattr(model, self.pos_indicator)[p, t] + getattr(model, self.neg_indicator)[p, t] <= 1
-        #
-        # con_name = 'pos_neg_rule_' + self.port_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=pos_neg_rule))
-
-        # Import/export capacity constraint rules
-        def cap_added_rule1(model,
-                            p):  # BigM constraints for binary variable indicating whether capacity has been added
-            return getattr(model, self.capacity_added_value)[p] <= getattr(model, self.capacity_added)[p] * model.bigM
-
-        def cap_added_rule2(model, p):
-            return getattr(model, self.capacity_added)[p] <= getattr(model, self.capacity_added_value)[p] * model.bigM
-
-        def current_cap_rule(model, p):  # Rule for updating current capacity based on added capacity
-            if p == 0:
-                return getattr(model, self.current_capacity)[p] == self.initial_capacity + \
-                       getattr(model, self.capacity_added_value)[p]
-            else:
-                return getattr(model, self.current_capacity)[p] == \
-                       getattr(model, self.current_capacity)[p - 1] + getattr(model, self.capacity_added_value)[p]
-
-        def cap_rule_1(model, p, t):  # Rule for enforcing current capacity on port value
-            return getattr(model, self.port_name)[p, t] <= getattr(model, self.current_capacity)[p]
-
-        def cap_rule_2(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= - getattr(model, self.current_capacity)[p]
-
-        # Binary variable for port capacity expansion decisions
-        self.capacity_added = 'capacity_added_' + self.port_name
-        setattr(model, self.capacity_added, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        self.current_capacity = 'current_capacity_' + self.port_name
-        setattr(model, self.current_capacity, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeReals))
-
-        self.capacity_added_value = 'capacity_added_value_' + self.port_name
-        if self.import_constraint is not FlowConstraint.Fixed:
-            self.initial_capacity = model.bigM
-        else:
-            self.initial_capacity = self.import_constraint_value
-
-        if self.capacity_expansion is True:
-            setattr(model, self.capacity_added_value, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeReals))
-        else:
-            setattr(model, self.capacity_added_value, en.Param(model.Expansion, initialize=0))
-
-        con_name = 'current_cap_con_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=current_cap_rule))
-        con_name = 'cap_added_con1_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=cap_added_rule1))
-        con_name = 'cap_added_con2_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=cap_added_rule2))
-        con_name = 'flow_con_1_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
-        con_name = 'flow_con_2_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
-
-        # On/off decision variable and constraints
-        self.active = 'active_' + self.port_name
-        setattr(model, self.active, en.Var(model.Expansion, initialize=self.initial_state, domain=en.Binary))
-
-        def on_off_rule1(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p] * model.bigM
-
-        def on_off_rule2(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= - getattr(model, self.active)[p] * model.bigM
-
-        def on_off_rule_param(model, p, t):  #Todo fix this
-            return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * getattr(model, self.active)[p]
-
-        if self.opt_type is OptimisationType.Variable:
-            con_name = 'on_off_con1_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
-            con_name = 'on_off_con2_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
-        elif self.opt_type is OptimisationType.Parameter and self.existing_port is False:  # ToDo better way of identifying objects like this
-            con_name = 'on_off_con_param_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=on_off_rule_param))
-
-        # Installation decision variable and constraints
-        self.installed = 'installed_' + self.port_name
-        setattr(model, self.installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        def install_once_rule(model):
-            return sum(getattr(model, self.installed)[p] for p in model.Expansion) <= 1
-
-        con_name = 'install_once_' + self.port_name
-        setattr(model, con_name, en.Constraint(rule=install_once_rule))
-
-        def existing_port_rule(model, p):
-            if p == 0:
-                return getattr(model, self.installed)[p] == 1
-            else:
-                return getattr(model, self.installed)[p] == 0
-
-        if self.existing_port:
-            con_name = 'existing_port_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, rule=existing_port_rule))
-
-        def install_before_active_rule(model, p):
-            if p == 0:
-                return getattr(model, self.active)[p] <= getattr(model, self.installed)[p]
-            else:
-                return getattr(model, self.active)[p] <= \
-                       (getattr(model, self.installed)[p] + getattr(model, self.active)[p - 1])
-
-        con_name = 'install_before_run_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=install_before_active_rule))
-
-        # Define retirement, replacement, and lifetime remaining variables
-        self.retire = 'retire_' + self.port_name
-        setattr(model, self.retire, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        self.replace = 'replace_' + self.port_name
-        setattr(model, self.replace, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        self.lifetime_remaining = 'lifetime_remaining_' + self.port_name
-        setattr(model, self.lifetime_remaining,
-                en.Var(model.Expansion, initialize=self.lifetime, domain=en.NonNegativeReals))
-
-        # Define remaining life in terms of active variable and replacement variable
-        def remaining_life_rule(model, p):
-            if p == 0:
-                return getattr(model, self.lifetime_remaining)[p] == self.lifetime
-            else:
-                return getattr(model, self.lifetime_remaining)[p] == \
-                       getattr(model, self.lifetime_remaining)[p - 1] - \
-                       getattr(model, self.active)[p - 1] + \
-                       getattr(model, self.replace)[p - 1] * (self.lifetime + 1)
-
-        con_name = 'remaining_life_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=remaining_life_rule))
-
-        def eol_rule1(model, p):  # Big M Constraint: force either retirement or replacement at end of lifetime
-            return getattr(model, self.lifetime_remaining)[p] <= \
-                   (1 - (getattr(model, self.replace)[p] + getattr(model, self.retire)[p])) * model.bigM
-
-        def eol_rule2(model, p):
-            return (1 - (getattr(model, self.replace)[p] + getattr(model, self.retire)[p])) <= \
-                   getattr(model, self.lifetime_remaining)[p] * model.bigM
-
-        con_name = 'eol_1_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=eol_rule1))
-        con_name = 'eol_2_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=eol_rule2))
+            setattr(model, self.import_tariff_value,
+                    en.Param(model.Expansion, model.Time, initialize=self.tariff.import_tariff))
+            setattr(model, self.export_tariff_value,
+                    en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
 
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
 
@@ -504,28 +238,15 @@ class Port(object):
                 (getattr(model, self.positive_port_component)[p, i] - getattr(model, self.negative_port_component)[
                     p, i]) for p in model.Expansion for i in model.Time) * 0.000001
 
-        # Installation capex
-        objective += sum(getattr(model, self.installed)[p] * getattr(model, model.dr)[p]
-                         for p in model.Expansion) * self.installation_capex
-
-        # Expansion capex
-        objective += sum(getattr(model, self.capacity_added_value)[p] * getattr(model, model.dr)[p]
-                         for p in model.Expansion) * self.expansion_capex
-
-        # Replacement capex
-        objective += sum(getattr(model, self.replace)[p] * getattr(model, model.dr)[p]
-                         for p in model.Expansion) * self.replacement_capex
-
         # Fixed opex
-        objective += sum(getattr(model, self.active)[p] * getattr(model, model.dr)[p]
-                         for p in model.Expansion) * self.fixed_opex
+        objective += sum(
+            (getattr(model, self.positive_port_component)[p, t] - getattr(model, self.negative_port_component)[
+                p, t]) * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
 
         # Variable opex
-        if self.opt_type is OptimisationType.Variable:  # ToDo better way of identifying ports with variable opex
-            objective += sum(
-                (getattr(model, self.positive_port_component)[p, t] - getattr(model, self.negative_port_component)[
-                    p, t]) *
-                getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
+        objective += sum(
+            (getattr(model, self.positive_port_component)[p, t] - getattr(model, self.negative_port_component)[
+                p, t]) * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
 
         return objective
 
@@ -545,16 +266,6 @@ class Node(object):
         self.dynamic_ports = []
         self.node_name = 'node_' + str(self.uid)
         self.transformations = {}
-        # Expansion planning attributes - for nodes that can accommodate expansions on them
-        self.expansion_planning = False  # For identifying nodes which we can connect new expansion assets to
-        self.storage_planning = False
-        self.generator_planning = False
-        self.storage_planning_capex = 0
-        self.exp_port_names = []  # For separating original ports from ports that are part of expansion planning
-        # Expansion asset attributes - for nodes that ARE potential expansion assets
-        self.expansion_asset = False
-        self.expansion_asset_type = ExpansionType.NA
-        # Todo - should nodes have a lifetime? or just ports/edges
 
     def add_dynamic_port(self, port_name):
         pass
@@ -567,52 +278,16 @@ class Node(object):
 
     def verify_node(self):
 
-        if self.expansion_planning is True and self.node_rule is not (NodeRule.Tellegen or NodeRule.Sum):
-            raise ConfigurationError('Expansion planning can only be applied to Tellegen nodes.')
-
         if self.node_rule is NodeRule.NA and len(self.ports) > 1:
             raise ConfigurationError('NodeRule cannot be NA if node has more than one port.')
-
-        if self.expansion_planning is True and self.expansion_asset is True:
-            raise ConfigurationError(
-                'A node cannot both support expansion planning and be an expansion asset.')
 
         if self.node_rule == NodeRule.Transform:
             if not self.transformations:
                 raise ConfigurationError(
                     "Node has Transform rule but Transformation object(s) has not been added to node.")
 
-        if self.expansion_planning is True and (self.storage_planning is False and self.generator_planning is False):
-            raise ConfigurationError('Expansion planning is on but no expansion type is set to True.')
-
-        if self.expansion_asset is True and self.expansion_asset_type is ExpansionType.NA:
-            raise ConfigurationError("Expansion asset type cannot be NA.")
-
     def initialise_node(self, model):
-
-        self.installed = 'installed_node_' + self.node_name
-        setattr(model, self.installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        def installed_node_rule_one(model, p):  # BigM constraints: node is installed if  all ports in node are installed
-            num_ports = 0
-            a = 0
-            for _, port in self.ports.items():
-                a += getattr(model, port.installed)[p]
-                num_ports += 1
-            return (num_ports - a) <= (1 - getattr(model, self.installed)[p]) * model.bigM
-
-        def installed_node_rule_two(model, p):
-            num_ports = 0
-            a = 0
-            for _, port in self.ports.items():
-                a += getattr(model, port.installed)[p]
-                num_ports += 1
-            return (num_ports - a) * model.bigM >= (1 - getattr(model, self.installed)[p])
-
-        con_name = 'installed_node_con1_' + self.node_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=installed_node_rule_one))
-        con_name = 'installed_node_con2_' + self.node_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=installed_node_rule_two))
+        pass
 
 
 # High Level definitions of asset types
@@ -694,10 +369,6 @@ class Storage(Port):
         cap_limit_con_name = 'cap_limit_cons_' + self.port_name
         setattr(model, cap_limit_con_name, en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
-        # # The battery charging efficiency
-        eta_chg = self.charging_efficiency
-        # # The battery discharging efficiency
-        eta_dischg = self.discharging_efficiency
         charging_limit = self.charging_power_limit * (self.interval_duration / minutes_per_hour)
         discharging_limit = self.discharging_power_limit * (self.interval_duration / minutes_per_hour)
 
@@ -825,31 +496,12 @@ class Tariff(object):
     def __init__(self):
         self.import_tariff = None
         self.export_tariff = None
-        self.tariff_optimisation = False
-        self.import_tariff_min = 0
-        self.import_tariff_max = None
-        self.export_tariff_min = 0
-        self.export_tariff_max = None
 
     def add_tariff_profile_import(self, tariff):
         self.import_tariff = tariff
 
     def add_tariff_profile_export(self, tariff):
         self.export_tariff = tariff
-
-    def create_flat_import_tariff(self, value, time_periods, expansion_periods):
-        t = {}
-        for p in range(0, expansion_periods+1):
-            for i in range(0, time_periods):
-                t[p, i] = value
-        self.import_tariff = t
-
-    def create_flat_export_tariff(self, value, time_periods, expansion_periods):
-        t = {}
-        for p in range(0, expansion_periods+1):
-            for i in range(0, time_periods):
-                t[p, i] = value
-        self.export_tariff = t
 
 
 class ElectricalPort(Port):
@@ -882,18 +534,9 @@ class Edge(object):
         self.units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
         self.opt_type = OptimisationType.NA  # Is this a decision variable or a fixed parameter
         self.vertices = None
-        self.has_tariff = False  #Todo should we allow tariffs on edges
+        self.has_tariff = False  # Todo should we allow tariffs on edges
         self.tariff = None
-        self.initial_state = 1  # 1 = on, 0 = off
         self.initial_edge_capacity = 5000000
-        # For expansion planning on existing edges
-        self.capacity_expansion = False
-        # Attributes relevant to edges that ARE possible expansions
-        self.expansion_asset = False
-        self.expansion_asset_type = ExpansionType.Edge
-        # Costs
-        self.installation_capex = 0
-        self.expansion_capex = 0
 
     def add_vertices(self, obj1, obj2):
         self.vertices = (obj1, obj2)
@@ -907,8 +550,6 @@ class Edge(object):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
-        # if (port1.opt_type is OptimisationType.Parameter) and (port2.opt_type is OptimisationType.Parameter):
-        #     raise ConfigurationError('Edge ports are both parameters.')
 
     def initialise_edge(self, model):
 
@@ -924,19 +565,6 @@ class Edge(object):
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
 
-        def installed_edge_rule1(model, p):  # BigM constraints: edge is installed if both vertices are installed
-            a = getattr(model, port1.installed)[p] + getattr(model, port2.installed)[p]
-            return (2 - a) <= (1 - getattr(model, self.installed)[p]) * model.bigM
-
-        def installed_edge_rule2(model, p):
-            a = getattr(model, port1.installed)[p] + getattr(model, port2.installed)[p]
-            return (2 - a) * model.bigM >= (1 - getattr(model, self.installed)[p])
-
-        con_name = 'installed_edge_con1_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=installed_edge_rule1))
-        con_name = 'installed_edge_con2_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=installed_edge_rule2))
-
         # Apply edge capacity constraint on one of the edge vertices
         if port1.opt_type is OptimisationType.Parameter:  # Choose edge vertex that is not a parameter
             selected_port = port2
@@ -944,54 +572,18 @@ class Edge(object):
             selected_port = port1
 
         def cap_rule_1(model, p, t):
-            return getattr(model, selected_port.port_name)[p, t] <= getattr(model, self.current_capacity)[p]
+            return getattr(model, selected_port.port_name)[p, t] <= self.initial_edge_capacity
 
         def cap_rule_2(model, p, t):
-            return getattr(model, selected_port.port_name)[p, t] >= - getattr(model, self.current_capacity)[p]
+            return getattr(model, selected_port.port_name)[p, t] >= - self.initial_edge_capacity
 
         con_name = 'flow_con_1_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
         con_name = 'flow_con_2_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
 
-        def current_cap_rule(model, p):
-            if p == 0:
-                return getattr(model, self.current_capacity)[p] == self.initial_edge_capacity + \
-                       getattr(model, self.capacity_added_value)[p]
-            else:
-                return getattr(model, self.current_capacity)[p] == \
-                       getattr(model, self.current_capacity)[p - 1] + getattr(model, self.capacity_added_value)[p]
-
-        con_name = 'current_cap_con_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=current_cap_rule))
-
-        def cap_added_rule1(model, p):
-            return getattr(model, self.capacity_added_value)[p] <= getattr(model, self.capacity_added)[p] * model.bigM
-
-        def cap_added_rule2(model, p):
-            return getattr(model, self.capacity_added)[p] <= getattr(model, self.capacity_added_value)[p] * model.bigM
-
-        con_name = 'cap_added_con1_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=cap_added_rule1))
-        con_name = 'cap_added_con2_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, rule=cap_added_rule2))
-
     def add_edge_variables(self, model):
-
-        self.installed = 'installed_' + self.edge_name
-        setattr(model, self.installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-
-        self.capacity_added_value = 'capacity_added_value_' + self.edge_name
-        if self.capacity_expansion is False:
-            setattr(model, self.capacity_added_value,en.Param(model.Expansion, initialize=0, domain=en.NonNegativeReals))
-        else:
-            setattr(model, self.capacity_added_value, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeReals))
-
-        self.current_capacity = 'current_capacity_' + self.edge_name
-        setattr(model, self.current_capacity, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeReals))
-
-        self.capacity_added = 'capacity_added_' + self.edge_name
-        setattr(model, self.capacity_added, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        pass
 
     def factory_constraint_edge_builder(self, obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
@@ -1001,18 +593,7 @@ class Edge(object):
         return constraint
 
     def add_objective(self, model):
-        objective = 0
-
-        # Installation capex
-        objective += self.installation_capex * self.initial_edge_capacity
-        # ToDo update to work for expansion planning problems with new edges
-
-        # Edge expansion capex
-        objective += sum(
-            getattr(model, self.capacity_added_value)[p] * getattr(model, model.dr)[p] for p in model.Expansion) * \
-                     (self.expansion_capex)
-
-        return objective
+        pass
 
     def add_initial_edge_capacity(self, initial_capacity):
         self.initial_edge_capacity = initial_capacity

@@ -63,10 +63,6 @@ class EchoOptimiser(object):
         setattr(self.model, self.model.dr,
                 en.Param(self.model.Expansion, initialize=self.ES.discount_factors))
 
-        # Add expansion objects
-        self.ES.add_asset_expansions(self.ES.expansion_periods)
-        self.ES.add_capacity_expansions()
-
         # Initialise port variables/params and add port constraints
         for _, port_obj in self.ES.port_obj.items():
             port_obj.verify_port()
@@ -76,6 +72,8 @@ class EchoOptimiser(object):
         for _, node_obj in self.ES.node_obj.items():
             node_obj.verify_node()
             node_obj.initialise_node(self.model)
+
+
 
         # Initialise edge variables/params and add edge constraints
         for _, edge_obj in self.ES.edge_obj.items():
@@ -90,7 +88,6 @@ class EchoOptimiser(object):
     def apply_constraints(self):
         self.apply_node_constraints()
         self.apply_path_constraints()
-        self.apply_expansion_constraints()
 
     def apply_node_constraints(self):
 
@@ -163,49 +160,6 @@ class EchoOptimiser(object):
                 con_name = 'sum_paths_from_source_con_' + source.node_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_paths_from_source))
 
-    def apply_expansion_constraints(self):
-
-        def storage_exp_rule(model, expansion_interval):
-            a = 0
-            for _, node in self.ES.storage_expansion_obj.items():
-                a += getattr(model, node.installed)[expansion_interval]
-            return a <= self.ES.global_storage_exp_con
-
-        def gen_exp_rule(model, expansion_interval):
-            a = 0
-            for _, node in self.ES.gen_expansion_obj.items():
-                a += getattr(model, node.installed)[expansion_interval]
-            return a <= self.ES.global_generator_exp_con
-
-        def capacity_exp_rule(model, expansion_interval):
-            a = 0
-            for _, obj in self.ES.capacity_exp_obj.items():
-                a += getattr(model, obj.capacity_added)[expansion_interval]
-            return a <= self.ES.global_capacity_exp_con
-
-        def combined_exp_rule(model, expansion_interval):
-            a = 0
-            for _, obj in self.ES.capacity_exp_obj.items():
-                a += getattr(model, obj.capacity_added)[expansion_interval]
-            for _, node in self.ES.storage_expansion_obj.items():
-                a += getattr(model, node.installed)[expansion_interval]
-            for _, node in self.ES.gen_expansion_obj.items():
-                a += getattr(model, node.installed)[expansion_interval]
-            return a <= self.ES.global_combined_asset_capacity_expansion_con
-
-        if self.ES.storage_expansion_obj:
-            con_name = 'global_storage_exp_con'
-            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=storage_exp_rule))
-        if self.ES.gen_expansion_obj:
-            con_name = 'global_gen_exp_con'
-            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=gen_exp_rule))
-        if self.ES.capacity_exp_obj:
-            con_name = 'global_cap_exp_con'
-            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=capacity_exp_rule))
-        if (self.ES.storage_expansion_obj or self.ES.gen_expansion_obj) and self.ES.capacity_exp_obj:
-            con_name = 'global_combined_asset_capacity_expansion_con'
-            setattr(self.model, con_name, en.Constraint(self.model.Expansion, rule=combined_exp_rule))
-
     def build_objective(self):
         self.objective = 0
         for _, obj in self.ES.port_obj.items():
@@ -262,130 +216,3 @@ class EchoOptimiser(object):
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
-
-    def node_life_cycle(self, node_obj, total_expansion_periods):
-        """ Returns life-cycle variables (installed, retired, replaced, capacity) for all ports in the specified node,
-         for all expansion periods. """
-
-        output = {'expansion period': [], 'installed': [], 'retired': [], 'replaced': [], 'remaining life': []}
-        rows = []
-        for name, var in node_obj.ports.items():
-            for j in range(0, total_expansion_periods):
-                rows.append(name[0:len(name) - (len(name) - 13)])
-                output['expansion period'].append(j)
-                output['installed'].append(self.values(var.installed, j))
-                output['retired'].append(self.values(var.retire, j))
-                output['replaced'].append(self.values(var.replace, j))
-                output['remaining life'].append(self.values(var.lifetime_remaining, j))
-        df = pd.DataFrame(output, index=rows)
-        return df
-
-    def port_life_cycle(self, var, total_expansion_periods):
-        """ Returns life-cycle variables (installed, retired, replaced, remaining lifetime) for a specified port
-        over all expansion periods."""
-
-        output = {'expansion period': [], 'installed': [], 'retired': [], 'replaced': [], 'remaining life': []}
-        for j in range(0, total_expansion_periods):
-            output['expansion period'].append(j)
-            output['installed'].append(self.values(var.installed, j))
-            output['retired'].append(self.values(var.retire, j))
-            output['replaced'].append(self.values(var.replace, j))
-            output['remaining life'].append(self.values(var.lifetime_remaining, j))
-        df = pd.DataFrame(output)
-        return df
-
-    def expansion_life_cycle(self, total_expansion_periods):
-        """ Returns life-cycle variables (installed, capacity, active, retired, replaced, lifetime remaining) for
-         all expansion objects in the model, over all expansion periods. """
-
-        if not self.ES.asset_expansion_obj:
-            return print('No asset expansion objects.')
-        else:
-            output = {'exp': [], 'installed': [], 'active': [], 'retired': [], 'replaced': [], 'remaining life': []}
-            rows = []
-            for _, node in self.ES.asset_expansion_obj.items():
-                for name, var in node.ports.items():
-                    for j in range(0, total_expansion_periods):
-                        rows.append(name[0:len(name) - (len(name) - 13)])
-                        output['exp'].append(j)
-                        output['installed'].append(self.values(var.installed, j))
-                        output['active'].append(self.values(var.active, j))
-                        output['retired'].append(self.values(var.retire, j))
-                        output['replaced'].append(self.values(var.replace, j))
-                        output['remaining life'].append(self.values(var.lifetime_remaining, j))
-            df = pd.DataFrame(output, index=rows)
-            return df
-
-    def edge_life_cycle(self, edge, total_expansion_periods):
-        """ Returns life-cycle variables (initial capacity, current capacity, added capacity) for a specified edge object
-        over all expansion periods. """
-        if total_expansion_periods == 0:
-            raise ConfigurationError('Enter total expansion periods not a single expansion period.')
-        output = {'initial_edge_capacity': [], 'current_edge_capacity': [], 'capacity_added_value': []}
-        output['initial_edge_capacity'].append(edge.initial_edge_capacity)
-        for j in range(0, total_expansion_periods):
-            output['current_edge_capacity'].append(self.values(edge.current_cap, j))
-            if edge.expansion_planning is True:
-                output['capacity_added_value'].append(self.values(edge.cap_add_value, j))
-        return output
-
-    def get_expansion_ports(self):
-        """ Returns all expansion node ports in model."""
-
-        output = []
-        for _, exp_node in self.ES.storage_expansion_obj.items():
-            for _, exp_port in exp_node.ports.items():
-                output.append(exp_port)
-        for _, exp_node in self.ES.gen_expansion_obj.items():
-            for _, exp_port in exp_node.ports.items():
-                output.append(exp_port)
-        return output
-
-    def test_value_functions(self, node, total_expansion_periods):
-        """ Tests all value functions for a specified node."""
-
-        print('Node values')
-        print(self.node_values(node, 0))
-        print('\nNode life cycle')
-        print(self.node_life_cycle(node, total_expansion_periods))
-        p = list(node.ports.values())[0]
-        p_name = list(node.ports.keys())[0]
-        print('\nPort (', p_name, ') values')
-        print(self.values(p.port_name, 0))
-        print('\nPort (', p_name, ') life cycle')
-        print(self.port_life_cycle(p, total_expansion_periods))
-        print('\nGet expansion ports')
-        print(self.get_expansion_ports())
-        print('\nExpansion life cycle')
-        print(self.expansion_life_cycle(total_expansion_periods))
-
-    def total_import(self, var, expansion_period):
-        return sum(self.values(var.positive_port_component, expansion_period))
-
-    def total_export(self, var, expansion_period):
-        return sum(self.values(var.negative_port_component, expansion_period))
-
-    def get_expansions_off_node(self, node):
-        """ Returns ports that are parts of expansion nodes connected to specified node."""
-
-        output = []
-        for exp_p_name in node.exp_port_names:
-            exp_p = node.ports[exp_p_name]
-            # Find edge
-            e = self.ES.lookup_edge_from_port(exp_p)
-            p1 = e.vertices[0]
-            p2 = e.vertices[1]
-            if exp_p == p1:
-                output.append(p2)
-            else:
-                output.append(p1)
-
-        return output
-
-    def check_pos_neg_port(self, port, expansion_period):
-        return self.values(port.positive_port_component, expansion_period) * \
-               self.values(port.negative_port_component, expansion_period)
-
-
-
-
