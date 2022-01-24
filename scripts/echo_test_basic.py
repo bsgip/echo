@@ -98,14 +98,6 @@ tariff.add_tariff_profile_import(it)
 grid = Node()
 g = ElectricalPort()
 grid.ports['grid'] = g
-emissions = CarbonPort()
-grid.ports['CO2'] = emissions
-gt = Transform()
-gt.add_rhs(0)
-gt.add_lhs(emissions, TransformRule.Both, 0.7*4)
-gt.add_lhs(g, TransformRule.NegativeComponent, -1)
-grid.add_transformation(gt)
-grid.node_rule = NodeRule.Transform
 ES.add_node_obj(grid)
 
 battery1 = Node()
@@ -178,15 +170,13 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
-optimiser.values(emissions.port_name, 0)
-
 storage_energy_delta = optimiser.values(b1.port_name, 0)
 optimised_connection_point_load = optimiser.values(cp1.port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
 fig = plt.figure(figsize=(14, 7))
-ax1 = fig.add_subplot(4, 1, 1)
+ax1 = fig.add_subplot(3, 1, 1)
 line1, = ax1.plot(hrs, test_load, color=colors[0])
 line2, = ax1.plot(hrs, test_pv, color=colors[1])
 line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
@@ -194,25 +184,19 @@ ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
 ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
 ax1.set_xlim([0, len(test_load) / 4])
 
-ax2 = fig.add_subplot(4, 1, 2)
+ax2 = fig.add_subplot(3, 1, 2)
 line1, = ax2.plot(hrs, import_tariff, color=colors[3])
 line2, = ax2.plot(hrs, export_tariff, color=colors[4])
 ax2.set_xlabel('hour'), ax2.set_ylabel('price')
 ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
 ax2.set_xlim([0, len(test_load) / 4])
 
-ax3 = fig.add_subplot(4, 1, 3)
+ax3 = fig.add_subplot(3, 1, 3)
 line1, = ax3.plot(hrs, optimiser.values(b1.port_name, 0), color=colors[1])
 line2, = ax3.plot(hrs, optimiser.values(b1.storage_soc_value, 0), color=colors[2])
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-
-ax4 = fig.add_subplot(4, 1, 4)
-line1, = ax4.plot(hrs, optimiser.values(emissions.port_name, 0), color=colors[5])
-ax4.set_xlim([0, len(test_load) / 4])
-ax4.set_xlabel('hour'), ax4.set_ylabel('kgCO2e')
-
 
 if ES.path_obj:
 
