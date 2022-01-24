@@ -161,6 +161,10 @@ l1.path_rule = PathRule.SourceOrSink
 
 ES.generate_all_paths()
 
+# bess_to_load_path = ES.path_obj[(battery1, site1, load1)]
+# bess_to_load_path.has_tariff = True
+# bess_to_load_path.tariff = tariff
+
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise

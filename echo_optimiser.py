@@ -123,38 +123,21 @@ class EchoOptimiser(object):
     def apply_path_constraints(self):
 
         if self.ES.path_obj:
-            def sum_sources_to_sink(model, p, t):  # Sum of paths to sink from all sources must equal sink
+
+            def path_flow_rule(model, p, t):
                 a = 0
-                for path in paths_to_sink:
-                    a += getattr(model, path.flow_value)[p, t]
-                b = getattr(model, path.end_port.positive_port_component)[p, t]
-                return a == b
+                for _, path in self.ES.path_obj.items():
+                    if path.vertices[0] is current_node:
+                        a += getattr(model, path.flow_value)[p, t]
+                    if path.vertices[-1] is current_node:
+                        a -= getattr(model, path.flow_value)[p, t]
+                b = getattr(model, current_port.port_name)[p, t]
+                return a == b*-1
 
-            for _, sink in self.ES.sinks.items():
-                paths_to_sink = []
-                for l in self.ES.all_paths:
-                    if l[-1] is sink:
-                        # Get path object
-                        p = self.ES.path_obj[tuple(l)]
-                        paths_to_sink.append(p)
-                con_name = 'sum_paths_to_sink_con_' + sink.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_sources_to_sink))
+            for current_port, current_node in self.ES.sources.items():
+                con_name = 'path_flow_con_' + current_node.node_name
+                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
-            def sum_paths_from_source(model, p, t):  # Sum of paths from source must equal source
-                a = 0
-                for path in paths_from_source:
-                    a += getattr(model, path.flow_value)[p, t]
-                b = getattr(model, path.start_port.negative_port_component)[p, t]
-                return a*-1 == b
-
-            for _, source in self.ES.sources.items():
-                paths_from_source = []
-                for l in self.ES.all_paths:
-                    if l[0] is source:
-                        p = self.ES.path_obj[tuple(l)]
-                        paths_from_source.append(p)
-                con_name = 'sum_paths_from_source_con_' + source.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_paths_from_source))
 
     def build_objective(self):
         self.objective = 0

@@ -646,6 +646,8 @@ class Path(object):
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 
+        # Need to add regularizing term
+        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time)*0.00000001
         return objective
 
 
