@@ -15,6 +15,9 @@ class OptimisationGraph(Graph):
         self.node_obj = dict()
         self.edge_obj = dict()
         self.path_obj = dict()
+        self.sources = []
+        self.sinks = []
+        self.all_paths = []
 
     def add_node_obj(self, node_obj):
         self.add_node(node_obj)
@@ -92,7 +95,6 @@ class Port(object):
         self.has_tariff = False
         self.tariff = None
         self.installation_capex = 0
-        self.fixed_opex = 0
         self.var_opex = 0
         self.path_rule = PathRule.NA
 
@@ -223,11 +225,6 @@ class Port(object):
                 (getattr(model, self.positive_port_component)[p, i] - getattr(model, self.negative_port_component)[
                     p, i]) for p in model.Expansion for i in model.Time) * 0.000001
 
-        # Fixed opex
-        objective += sum(
-            (getattr(model, self.positive_port_component)[p, t] - getattr(model, self.negative_port_component)[
-                p, t]) * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
-
         # Variable opex
         objective += sum(
             (getattr(model, self.positive_port_component)[p, t] - getattr(model, self.negative_port_component)[
@@ -244,25 +241,13 @@ class Node(object):
         self.uid = uuid.uuid4()
         self.node_rule = NodeRule.NA
         self.ports = {}  # 'port_name: port'
-        self.named_ports = []  # A list of ports that are expected to be attached
-        # Included to ensure that ports can be dynamically populated or can have 'fixed' ports used to implement
-        # particular assets like transformations.
-        self.allow_dynamic_ports = False
-        self.dynamic_ports = []
         self.node_name = 'node_' + str(self.uid)
         self.transformations = {}
-
-    def add_dynamic_port(self, port_name):
-        pass
-
-    def add_named_port(self, port_name):
-        pass
 
     def add_transformation(self, transformation_obj):
         self.transformations[transformation_obj.uid] = transformation_obj
 
     def verify_node(self):
-
         if self.node_rule is NodeRule.NA and len(self.ports) > 1:
             raise ConfigurationError('NodeRule cannot be NA if node has more than one port.')
 
@@ -272,9 +257,6 @@ class Node(object):
                     "Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def initialise_node(self, model):
-        pass
-
-    def add_objective(self, model):
         pass
 
 
@@ -530,7 +512,6 @@ class Edge(object):
         self.vertices = (obj1, obj2)
 
     def verify_edge(self):
-
         port1 = self.vertices[0]
         port2 = self.vertices[1]
 
@@ -540,12 +521,6 @@ class Edge(object):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
 
     def initialise_edge(self, model):
-
-        self.add_edge_variables(model)
-        self.add_constraints(model)
-
-    def add_constraints(self, model):
-
         port1 = self.vertices[0]
         port2 = self.vertices[1]
 
@@ -569,9 +544,6 @@ class Edge(object):
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
         con_name = 'flow_con_2_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
-
-    def add_edge_variables(self, model):
-        pass
 
     def factory_constraint_edge_builder(self, obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
@@ -626,7 +598,6 @@ class Path(object):
         self.tariff = tariff
 
     def add_vertices(self, vertex_list):
-
         if type(vertex_list) is not list:
             raise ConfigurationError('Please enter path vertices (nodes) as a list.')
         self.vertices = vertex_list
@@ -635,7 +606,6 @@ class Path(object):
         pass
 
     def initialise_path(self, model):
-
         self.flow_value = 'flow_value_' + self.path_name
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
@@ -646,8 +616,8 @@ class Path(object):
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 
-        # Need to add regularizing term
-        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time)*0.00000001
+        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.000001
+
         return objective
 
 
