@@ -138,6 +138,30 @@ class EchoOptimiser(object):
                 con_name = 'path_flow_con_' + current_node.node_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
+            # def sum_sources_to_sink(model, p, t):  # Sum of paths to sink from all sources must equal sink
+            #     a = 0
+            #     for _, path in self.ES.path_obj.items():
+            #         if path.vertices[-1] is current_sink:
+            #             a += getattr(model, path.flow_value)[p, t]
+            #     b = getattr(model, current_port.positive_port_component)[p, t]
+            #     return a == b
+            #
+            # for current_port, current_sink in self.ES.sinks.items():
+            #     con_name = 'sum_paths_to_sink_con_' + current_port.port_name
+            #     setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_sources_to_sink))
+            #
+            # def sum_paths_from_source(model, p, t):  # Sum of paths from source must equal source
+            #     a = 0
+            #     for _, path in self.ES.path_obj.items():
+            #         if path.vertices[0] is current_source:
+            #             a += getattr(model, path.flow_value)[p, t]
+            #     b = getattr(model, current_port.negative_port_component)[p, t]
+            #     return a == b*-1
+            #
+            # for current_port, current_source in self.ES.sources.items():
+            #     con_name = 'sum_paths_from_source_con_' + current_port.port_name
+            #     setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=sum_paths_from_source))
+
 
     def build_objective(self):
         self.objective = 0
