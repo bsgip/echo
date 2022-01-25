@@ -83,12 +83,14 @@ d1 = {}
 gen1 = {}
 it = {}
 et = {}
+local_tariff_dict = {}
 for ep in range(0, expansion_periods):
     for i, _ in enumerate(connection_point_import):
         d1[(ep, i)] = connection_point_import[i]
         gen1[(ep, i)] = connection_point_export[i]
         it[(ep, i)] = import_tariff[i]
         et[(ep, i)] = export_tariff[i]
+        local_tariff_dict[(ep, i)] = import_tariff[i]*0.5
 
 # Setup components
 tariff = Tariff()
@@ -129,8 +131,6 @@ site1.ports['CP'] = cp1
 site1.ports['loadCP'] = ElectricalPort()
 site1.ports['bessCP'] = ElectricalPort()
 site1.ports['pvCP'] = ElectricalPort()
-cp1.has_tariff = True
-cp1.tariff = tariff
 
 ES.add_node_obj(battery1)
 ES.add_node_obj(load1)
@@ -161,9 +161,23 @@ l1.path_rule = PathRule.SourceOrSink
 
 ES.generate_all_paths()
 
-# bess_to_load_path = ES.path_obj[(battery1, site1, load1)]
-# bess_to_load_path.has_tariff = True
-# bess_to_load_path.tariff = tariff
+# Testing settings
+
+cp1.has_tariff = True
+cp1.tariff = tariff
+
+
+# local_tariff = Tariff()
+# local_tariff.add_tariff_profile_import(local_tariff_dict)
+#
+# grid_to_load = ES.path_obj[(grid, site1, load1)]
+# grid_to_load.has_tariff = True
+# grid_to_load.tariff = tariff
+#
+# grid_to_bess = ES.path_obj[(grid, site1, battery1)]
+# grid_to_bess.has_tariff = True
+# grid_to_bess.tariff = tariff
+
 
 ############################ ----------------------- ########################################
 
@@ -220,48 +234,59 @@ if ES.path_obj:
     load_to_bess = ES.path_obj[load1, site1, battery1]
     load_to_pv = ES.path_obj[load1, site1, solar1]
 
+    flows_from_load = optimiser.values(load_to_grid.flow_value, 0) + optimiser.values(load_to_bess.flow_value, 0) + optimiser.values(load_to_pv.flow_value, 0)
+    flows_to_load = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
+    load_flows = connection_point_import
+
+    flows_from_grid = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(grid_to_bess.flow_value, 0) + optimiser.values(grid_to_pv.flow_value, 0)
+    flows_to_grid = optimiser.values(load_to_grid.flow_value, 0) + optimiser.values(bess_to_grid.flow_value, 0) + optimiser.values(pv_to_grid.flow_value, 0)
+    grid_flows = optimiser.values(g.port_name, 0)
+
+    flows_from_bess = optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(bess_to_grid.flow_value, 0) + optimiser.values(bess_to_pv.flow_value, 0)
+    flows_to_bess = optimiser.values(load_to_bess.flow_value, 0) + optimiser.values(grid_to_bess.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0)
+    bess_flows = optimiser.values(b1.port_name, 0)
+
+    flows_from_pv = optimiser.values(pv_to_load.flow_value, 0) + optimiser.values(pv_to_grid.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0)
+    flows_to_pv = optimiser.values(load_to_pv.flow_value, 0) + optimiser.values(grid_to_pv.flow_value, 0) + optimiser.values(bess_to_pv.flow_value, 0)
+    pv_flows = connection_point_export
+
     fig = plt.figure(figsize=(14, 7))
     ax1 = fig.add_subplot(4, 1, 1)
-    line1, = ax1.plot(hrs, optimiser.values(grid_to_load.flow_value, 0), color=colors[0])
-    line2, = ax1.plot(hrs, optimiser.values(bess_to_load.flow_value, 0), color=colors[1])
-    line3, = ax1.plot(hrs, optimiser.values(pv_to_load.flow_value, 0), color=colors[2])
-    line4, = ax1.plot(hrs, connection_point_import, color=colors[3])
-    sum_load = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
-    line5, = ax1.plot(hrs,sum_load, color=colors[4])
-    ax1.lines[0].set_linestyle("--")
-    ax1.lines[4].set_linestyle("--")
+    line1, = ax1.plot(hrs, flows_to_load, color=colors[0])
+    line2, = ax1.plot(hrs, flows_from_load, color=colors[1])
+    line3, = ax1.plot(hrs, flows_from_load - flows_to_load, color=colors[2])
+    line4, = ax1.plot(hrs, connection_point_import*-1, color=colors[3])
+    ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2, line3, line4, line5], ['Grid to load', 'BESS to load', 'Solar to load', 'Total load', 'Total flows to load'])
+    ax1.legend([line1, line2, line3, line4], ['Flows to load', 'Flows from load', 'Sum of flows', 'Load'])
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 2)
-    line1, = ax1.plot(hrs, optimiser.values(grid_to_bess.flow_value, 0), color=colors[0])
-    line2, = ax1.plot(hrs, optimiser.values(pv_to_bess.flow_value, 0), color=colors[1])
-    line3, = ax1.plot(hrs, optimiser.values(b1.positive_port_component, 0), color=colors[2])
-    ax1.lines[2].set_linestyle("--")
+    line1, = ax1.plot(hrs, flows_to_bess, color=colors[0])
+    line2, = ax1.plot(hrs, flows_from_bess, color=colors[1])
+    line3, = ax1.plot(hrs, flows_from_bess - flows_to_bess, color=colors[2])
+    line4, = ax1.plot(hrs, optimiser.values(b1.port_name, 0)*-1, color=colors[3])
+    ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2, line3], ['Grid to BESS', 'Solar to BESS', 'Total BESS imports'])
+    ax1.legend([line1, line2, line3, line4], ['Flows to bess', 'Flows from bess', 'Sum of flows', 'Bess'])
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 3)
-    line1, = ax1.plot(hrs, optimiser.values(bess_to_grid.flow_value, 0), color=colors[0])
-    line2, = ax1.plot(hrs, optimiser.values(pv_to_grid.flow_value, 0), color=colors[1])
-    line3, = ax1.plot(hrs, optimiser.values(g.positive_port_component, 0), color=colors[2])
-    ax1.lines[2].set_linestyle("--")
+    line1, = ax1.plot(hrs, flows_to_pv, color=colors[0])
+    line2, = ax1.plot(hrs, flows_from_pv, color=colors[1])
+    line3, = ax1.plot(hrs, flows_from_pv - flows_to_pv, color=colors[2])
+    line4, = ax1.plot(hrs, connection_point_export*-1, color=colors[3])
+    ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2, line3], ['BESS to GRID', 'Solar to GRID', 'Total GRID imports'])
+    ax1.legend([line1, line2, line3, line4], ['Flows to pv', 'Flows from pv', 'Sum of flows', 'PV'])
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 4)
-    line1, = ax1.plot(hrs, optimiser.values(pv_to_load.flow_value, 0), color=colors[0])
-    line2, = ax1.plot(hrs, optimiser.values(pv_to_bess.flow_value, 0), color=colors[1])
-    line3, = ax1.plot(hrs, optimiser.values(pv_to_grid.flow_value, 0), color=colors[2])
-    sum_solar_export = optimiser.values(pv_to_grid.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
-    line4, = ax1.plot(hrs, sum_solar_export, color=colors[3])
-    line5, = ax1.plot(hrs, connection_point_export*-1, color=colors[4])
-    ax1.lines[4].set_linestyle("--")
+    line1, = ax1.plot(hrs, flows_to_grid, color=colors[0])
+    line2, = ax1.plot(hrs, flows_from_grid, color=colors[1])
+    line3, = ax1.plot(hrs, flows_from_grid - flows_to_grid, color=colors[2])
+    line4, = ax1.plot(hrs, optimiser.values(g.port_name, 0)*-1, color=colors[3])
+    ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2, line3, line4, line5], ['SOLAR to LOAD', 'SOLAR to BESS', 'SOLAR to GRID', 'SUM', 'SOLAR GENERATION'])
+    ax1.legend([line1, line2, line3, line4], ['Flows to grid', 'Flows from grid', 'Sum of flows', 'Grid'])
     ax1.set_xlim([0, len(test_load) / 4])
-
-
