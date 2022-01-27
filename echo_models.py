@@ -45,33 +45,25 @@ class OptimisationGraph(Graph):
 
     def generate_all_paths(self):
         """ Retrieve all paths between sources/sinks in the model. """
-        sources = {}
-        sinks = {}
-        paths = []
+        all_paths = []
+        sources_or_sinks = {}
         for _, n in self.node_obj.items():
             for _, p in n.ports.items():  # Collect info on which ports are sources/sinks/nodes
-                if p.path_rule == PathRule.Source:
-                    sources[p] = n
-                if p.path_rule == PathRule.Sink:
-                    sinks[p] = n
                 if p.path_rule == PathRule.SourceOrSink:
-                    sources[p] = n
-                    sinks[p] = n
+                    sources_or_sinks[p] = n
 
-        for source_port, source_node in sources.items():  # Generate list of paths between sources and sinks
-            for sink_port, sink_node in sinks.items():
+        for source_port, source_node in sources_or_sinks.items():  # Generate list of paths between sources and sinks
+            for sink_port, sink_node in sources_or_sinks.items():
                 simple_paths = nx.all_simple_paths(self, source_node, sink_node)
                 for i in simple_paths:
                     p = Path()  # Create path objects
                     p.vertices = i
                     p.start_port = source_port
                     p.end_port = sink_port
+                    all_paths.append(i)
                     self.add_path_obj(p)
-                    paths.append(i)
 
-        self.sources = sources
-        self.sinks = sinks
-        self.all_paths = paths
+        self.sources_or_sinks = sources_or_sinks
 
 
 class ConfigurationError(Exception):

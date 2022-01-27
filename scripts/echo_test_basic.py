@@ -83,14 +83,12 @@ d1 = {}
 gen1 = {}
 it = {}
 et = {}
-local_tariff_dict = {}
 for ep in range(0, expansion_periods):
     for i, _ in enumerate(connection_point_import):
         d1[(ep, i)] = connection_point_import[i]
         gen1[(ep, i)] = connection_point_export[i]
         it[(ep, i)] = import_tariff[i]
         et[(ep, i)] = export_tariff[i]
-        local_tariff_dict[(ep, i)] = import_tariff[i]*0.5
 
 # Setup components
 tariff = Tariff()
@@ -163,20 +161,33 @@ ES.generate_all_paths()
 
 # Testing settings
 
-cp1.has_tariff = True
-cp1.tariff = tariff
+# Point tariff on connection point port.
+# cp1.has_tariff = True
+# cp1.tariff = tariff
+
+local_tariff = Tariff()
+local_tariff_dict = {}
+for ep in range(0, expansion_periods):
+    for i, _ in enumerate(import_tariff):
+        local_tariff_dict[(ep, i)] = import_tariff[i]*0.2
+local_tariff.add_tariff_profile_import(local_tariff_dict)
+local_tariff.add_tariff_profile_export(et)
 
 
-# local_tariff = Tariff()
-# local_tariff.add_tariff_profile_import(local_tariff_dict)
-#
-# grid_to_load = ES.path_obj[(grid, site1, load1)]
-# grid_to_load.has_tariff = True
-# grid_to_load.tariff = tariff
-#
-# grid_to_bess = ES.path_obj[(grid, site1, battery1)]
-# grid_to_bess.has_tariff = True
-# grid_to_bess.tariff = tariff
+grid_to_load = ES.path_obj[(grid, site1, load1)]
+grid_to_load.has_tariff = True
+grid_to_load.tariff = local_tariff
+
+grid_to_bess = ES.path_obj[(grid, site1, battery1)]
+grid_to_bess.has_tariff = True
+grid_to_bess.tariff = tariff
+
+# bess_to_load = ES.path_obj[(battery1, site1, load1)]
+# bess_to_load.has_tariff = True
+# bess_to_load.tariff = local_tariff
+
+
+
 
 
 ############################ ----------------------- ########################################
@@ -218,43 +229,25 @@ ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
 
 if ES.path_obj:
 
-    grid_to_load = ES.path_obj[(grid, site1, load1)]
-    grid_to_bess = ES.path_obj[(grid, site1, battery1)]
-    grid_to_pv = ES.path_obj[(grid, site1, solar1)]
+    grid_to_load = optimiser.values(ES.path_obj[(grid, site1, load1)].flow_value,0)
+    grid_to_bess = optimiser.values(ES.path_obj[(grid, site1, battery1)].flow_value,0)
+    bess_to_load = optimiser.values(ES.path_obj[(battery1, site1, load1)].flow_value,0)
+    bess_to_grid = optimiser.values(ES.path_obj[(battery1, site1, grid)].flow_value,0)
+    pv_to_load = optimiser.values(ES.path_obj[(solar1, site1, load1)].flow_value,0)
+    pv_to_bess = optimiser.values(ES.path_obj[(solar1, site1, battery1)].flow_value,0)
+    pv_to_grid = optimiser.values(ES.path_obj[solar1, site1, grid].flow_value,0)
 
-    bess_to_load = ES.path_obj[(battery1, site1, load1)]
-    bess_to_grid = ES.path_obj[(battery1, site1, grid)]
-    bess_to_pv = ES.path_obj[(battery1, site1, solar1)]
-
-    pv_to_load = ES.path_obj[(solar1, site1, load1)]
-    pv_to_bess = ES.path_obj[(solar1, site1, battery1)]
-    pv_to_grid = ES.path_obj[solar1, site1, grid]
-
-    load_to_grid = ES.path_obj[load1, site1, grid]
-    load_to_bess = ES.path_obj[load1, site1, battery1]
-    load_to_pv = ES.path_obj[load1, site1, solar1]
-
-    flows_from_load = optimiser.values(load_to_grid.flow_value, 0) + optimiser.values(load_to_bess.flow_value, 0) + optimiser.values(load_to_pv.flow_value, 0)
-    flows_to_load = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(pv_to_load.flow_value, 0)
-    load_flows = connection_point_import
-
-    flows_from_grid = optimiser.values(grid_to_load.flow_value, 0) + optimiser.values(grid_to_bess.flow_value, 0) + optimiser.values(grid_to_pv.flow_value, 0)
-    flows_to_grid = optimiser.values(load_to_grid.flow_value, 0) + optimiser.values(bess_to_grid.flow_value, 0) + optimiser.values(pv_to_grid.flow_value, 0)
-    grid_flows = optimiser.values(g.port_name, 0)
-
-    flows_from_bess = optimiser.values(bess_to_load.flow_value, 0) + optimiser.values(bess_to_grid.flow_value, 0) + optimiser.values(bess_to_pv.flow_value, 0)
-    flows_to_bess = optimiser.values(load_to_bess.flow_value, 0) + optimiser.values(grid_to_bess.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0)
-    bess_flows = optimiser.values(b1.port_name, 0)
-
-    flows_from_pv = optimiser.values(pv_to_load.flow_value, 0) + optimiser.values(pv_to_grid.flow_value, 0) + optimiser.values(pv_to_bess.flow_value, 0)
-    flows_to_pv = optimiser.values(load_to_pv.flow_value, 0) + optimiser.values(grid_to_pv.flow_value, 0) + optimiser.values(bess_to_pv.flow_value, 0)
-    pv_flows = connection_point_export
+    grid_to_pv = optimiser.values(ES.path_obj[(grid, site1, solar1)].flow_value,0)
+    bess_to_pv = optimiser.values(ES.path_obj[(battery1, site1, solar1)].flow_value,0)
+    load_to_pv = optimiser.values(ES.path_obj[load1, site1, solar1].flow_value,0)
+    load_to_grid = optimiser.values(ES.path_obj[load1, site1, grid].flow_value,0)
+    load_to_bess = optimiser.values(ES.path_obj[load1, site1, battery1].flow_value,0)
 
     fig = plt.figure(figsize=(14, 7))
     ax1 = fig.add_subplot(4, 1, 1)
-    line1, = ax1.plot(hrs, flows_to_load, color=colors[0])
-    line2, = ax1.plot(hrs, flows_from_load, color=colors[1])
-    line3, = ax1.plot(hrs, flows_from_load - flows_to_load, color=colors[2])
+    line1, = ax1.plot(hrs, grid_to_load + bess_to_load + pv_to_load, color=colors[0])
+    line2, = ax1.plot(hrs, load_to_bess + load_to_grid + load_to_pv, color=colors[1])
+    line3, = ax1.plot(hrs, load_to_bess + load_to_grid + load_to_pv -(grid_to_load + bess_to_load + pv_to_load), color=colors[2])
     line4, = ax1.plot(hrs, connection_point_import*-1, color=colors[3])
     ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
@@ -262,9 +255,9 @@ if ES.path_obj:
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 2)
-    line1, = ax1.plot(hrs, flows_to_bess, color=colors[0])
-    line2, = ax1.plot(hrs, flows_from_bess, color=colors[1])
-    line3, = ax1.plot(hrs, flows_from_bess - flows_to_bess, color=colors[2])
+    line1, = ax1.plot(hrs, grid_to_bess + pv_to_bess + load_to_bess, color=colors[0])
+    line2, = ax1.plot(hrs, bess_to_grid + bess_to_load + bess_to_pv, color=colors[1])
+    line3, = ax1.plot(hrs, bess_to_grid + bess_to_load + bess_to_pv - (grid_to_bess + pv_to_bess + load_to_bess), color=colors[2])
     line4, = ax1.plot(hrs, optimiser.values(b1.port_name, 0)*-1, color=colors[3])
     ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
@@ -272,9 +265,9 @@ if ES.path_obj:
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 3)
-    line1, = ax1.plot(hrs, flows_to_pv, color=colors[0])
-    line2, = ax1.plot(hrs, flows_from_pv, color=colors[1])
-    line3, = ax1.plot(hrs, flows_from_pv - flows_to_pv, color=colors[2])
+    line1, = ax1.plot(hrs, bess_to_pv + grid_to_pv + load_to_pv, color=colors[0])
+    line2, = ax1.plot(hrs, pv_to_load + pv_to_bess + pv_to_grid, color=colors[1])
+    line3, = ax1.plot(hrs, pv_to_load + pv_to_bess + pv_to_grid - (bess_to_pv + grid_to_pv + load_to_pv), color=colors[2])
     line4, = ax1.plot(hrs, connection_point_export*-1, color=colors[3])
     ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
@@ -282,9 +275,9 @@ if ES.path_obj:
     ax1.set_xlim([0, len(test_load) / 4])
 
     ax1 = fig.add_subplot(4, 1, 4)
-    line1, = ax1.plot(hrs, flows_to_grid, color=colors[0])
-    line2, = ax1.plot(hrs, flows_from_grid, color=colors[1])
-    line3, = ax1.plot(hrs, flows_from_grid - flows_to_grid, color=colors[2])
+    line1, = ax1.plot(hrs, bess_to_grid + pv_to_grid + load_to_grid, color=colors[0])
+    line2, = ax1.plot(hrs, grid_to_load + grid_to_pv + grid_to_bess, color=colors[1])
+    line3, = ax1.plot(hrs, grid_to_load + grid_to_pv + grid_to_bess - (bess_to_grid + pv_to_grid + load_to_grid), color=colors[2])
     line4, = ax1.plot(hrs, optimiser.values(g.port_name, 0)*-1, color=colors[3])
     ax1.lines[3].set_linestyle("--")
     ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
