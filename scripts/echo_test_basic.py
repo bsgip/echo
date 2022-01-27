@@ -162,32 +162,29 @@ ES.generate_all_paths()
 # Testing settings
 
 # Point tariff on connection point port.
-# cp1.has_tariff = True
-# cp1.tariff = tariff
+cp1.has_tariff = True
+cp1.tariff = tariff
 
-local_tariff = Tariff()
-local_tariff_dict = {}
-for ep in range(0, expansion_periods):
-    for i, _ in enumerate(import_tariff):
-        local_tariff_dict[(ep, i)] = import_tariff[i]*0.2
-local_tariff.add_tariff_profile_import(local_tariff_dict)
-local_tariff.add_tariff_profile_export(et)
+# local_tariff = Tariff()
+# local_tariff_dict = {}
+# for ep in range(0, expansion_periods):
+#     for i, _ in enumerate(import_tariff):
+#         local_tariff_dict[(ep, i)] = import_tariff[i]*0.5
+# local_tariff.add_tariff_profile_import(local_tariff_dict)
+# local_tariff.add_tariff_profile_export(et)
+#
+#
+# grid_to_load = ES.path_obj[(grid, site1, load1)]
+# grid_to_load.has_tariff = True
+# grid_to_load.tariff = tariff
 
-
-grid_to_load = ES.path_obj[(grid, site1, load1)]
-grid_to_load.has_tariff = True
-grid_to_load.tariff = local_tariff
-
-grid_to_bess = ES.path_obj[(grid, site1, battery1)]
-grid_to_bess.has_tariff = True
-grid_to_bess.tariff = tariff
+# grid_to_bess = ES.path_obj[(grid, site1, battery1)]
+# grid_to_bess.has_tariff = True
+# grid_to_bess.tariff = local_tariff
 
 # bess_to_load = ES.path_obj[(battery1, site1, load1)]
 # bess_to_load.has_tariff = True
-# bess_to_load.tariff = local_tariff
-
-
-
+# bess_to_load.tariff = tariff
 
 
 ############################ ----------------------- ########################################

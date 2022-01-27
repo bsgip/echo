@@ -138,36 +138,41 @@ class Port(object):
             setattr(model, self.port_name,
                     en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
-            if type(self) is ElectricalGeneration:
-                setattr(model, self.positive_port_component,
-                        en.Param(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-                setattr(model, self.negative_port_component,
-                        en.Param(model.Expansion, model.Time, initialize=self.initial_value,
-                                 domain=en.NonPositiveReals))
-
-            if type(self) is ElectricalDemand:
-                setattr(model, self.positive_port_component,
-                        en.Param(model.Expansion, model.Time, initialize=self.initial_value,
-                                 domain=en.NonNegativeReals))
-                setattr(model, self.negative_port_component,
-                        en.Param(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
-
         if self.opt_type is OptimisationType.Variable:
-
             setattr(model, self.port_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
-            setattr(model, self.positive_port_component,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            setattr(model, self.negative_port_component,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
 
-            con_rule = self.factory_pos_neg_flows(self.port_name, self.positive_port_component,
-                                                  self.negative_port_component)
-            con_name = positive_variable_component + negative_variable_component + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+        setattr(model, self.positive_port_component,
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+        setattr(model, self.negative_port_component,
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+
+        con_rule = self.factory_pos_neg_flows(self.port_name, self.positive_port_component,
+                                              self.negative_port_component)
+        con_name = positive_variable_component + negative_variable_component + self.port_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+
+        self.is_pos = 'is_pos_' + self.port_name
+        setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        self.is_neg = 'is_neg_' + self.port_name
+        setattr(model, self.is_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        con_name = 'is_pos_con1_' + self.port_name
+        con_rule = self.factory_big_M_one(1, self.positive_port_component, self.is_pos)
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+        con_name = 'is_pos_con2_' + self.port_name
+        con_rule = self.factory_big_M_two(1, self.positive_port_component, self.is_pos)
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+        con_name = 'is_neg_con1_' + self.port_name
+        con_rule = self.factory_big_M_one(-1, self.negative_port_component, self.is_neg)
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+        con_name = 'is_neg_con2_' + self.port_name
+        con_rule = self.factory_big_M_two(-1, self.negative_port_component, self.is_neg)
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Import/export capacity constraint rules
-        def import_cap_rule(model, p, t):  # Rule for enforcing current capacity on port value
+        def import_cap_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
 
         def export_cap_rule(model, p, t):
@@ -198,6 +203,16 @@ class Port(object):
 
         return constraint
 
+    def factory_big_M_one(self, sign, var, indicator):
+        def constraint(model, p, t):
+            return getattr(model, indicator)[p, t] <= getattr(model, var)[p, t] * model.bigM * sign
+        return constraint
+
+    def factory_big_M_two(self, sign, var, indicator):
+        def constraint(model, p, t):
+            return sign * getattr(model, var)[p, t] <= getattr(model, indicator)[p, t] * model.bigM
+        return constraint
+
     def add_initial_value(self, initial_value):
         self.initial_value = initial_value
 
@@ -212,7 +227,7 @@ class Port(object):
                 getattr(model, model.dr)[p]
                 for p in model.Expansion for i in model.Time)
 
-        if self.opt_type is OptimisationType.Variable:  # To ensure either positive or negative component = 0
+        if self.opt_type is OptimisationType.Variable:  # To make positive or negative component = 0
             objective += sum(
                 (getattr(model, self.positive_port_component)[p, i] - getattr(model, self.negative_port_component)[
                     p, i]) for p in model.Expansion for i in model.Time) * 0.000001
@@ -536,6 +551,14 @@ class Edge(object):
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
         con_name = 'flow_con_2_' + self.edge_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
+
+        setattr(model, self.edge_name, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+
+        def edge_var_con(model, p, t):
+            return getattr(model, self.edge_name)[p, t] == getattr(model, self.vertices[0].port_name)[p, t]
+
+        con_name = 'edge_con_' + self.edge_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=edge_var_con))
 
     def factory_constraint_edge_builder(self, obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
