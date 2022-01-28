@@ -171,6 +171,12 @@ class Port(object):
         con_rule = self.factory_big_M_two(-1, self.negative_port_component, self.is_neg)
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
+        def pos_neg_rule(model, p, t):
+            return getattr(model, self.is_pos)[p, t] + getattr(model, self.is_neg)[p, t] <= 1
+
+        con_name = 'pos_neg_con_' + self.port_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=pos_neg_rule))
+
         # Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
