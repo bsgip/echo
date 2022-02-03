@@ -708,6 +708,13 @@ class Path(object):
             raise ConfigurationError('Enter tariff as dictionary.')
         self.tariff = tariff
 
+    def add_tariff_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.tariff = t
+
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
             raise ConfigurationError('Please enter path vertices (nodes) as a list.')
