@@ -734,7 +734,7 @@ class Path(object):
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 
-        # objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.000001
+        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.00000001
 
         return objective
 
