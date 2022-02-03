@@ -11,7 +11,7 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, ES):
+    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.number_of_expansion_intervals = number_of_expansion_intervals
@@ -27,6 +27,7 @@ class EchoOptimiser(object):
         # A better understanding of the sensitivity of these values may be advantageous
         self.bigM = 5000000
         self.smallM = 0.0001
+        self.discount_rate = discount_rate
         self.tariff_edge_pos = None
         self.tariff_edge_neg = None
         self.storage_var_value = None
@@ -36,7 +37,7 @@ class EchoOptimiser(object):
         self.build_model()
         self.apply_constraints()
         self.build_objective()
-        self.optimise()
+        #self.optimise()
 
     def build_model(self):
         # Set up the Pyomo model
@@ -59,9 +60,13 @@ class EchoOptimiser(object):
         else:
             self.model.Expansion = en.RangeSet(0, self.number_of_expansion_intervals - 1)
 
+        dr = {}
+        for ep in range(0, self.number_of_expansion_intervals):
+            dr[ep] = 1 / ((1 + self.discount_rate) ** ep)
+
         self.model.dr = 'discount_rates'
         setattr(self.model, self.model.dr,
-                en.Param(self.model.Expansion, initialize=self.ES.discount_factors))
+                en.Param(self.model.Expansion, initialize=dr))
 
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():

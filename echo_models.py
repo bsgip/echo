@@ -19,17 +19,29 @@ class OptimisationGraph(Graph):
         self.sinks = []
         self.all_paths = []
 
-    def add_node_obj(self, node_obj):
-        self.add_node(node_obj)
-        self.node_obj[node_obj.uid] = node_obj
+    def add_node_obj(self, node):
+        def add_single_node(node_obj):
+            self.add_node(node_obj)
+            self.node_obj[node_obj.uid] = node_obj
+        if type(node) is list:
+            for n in node:
+                add_single_node(n)
+        else:
+            add_single_node(node)
 
     def add_edge_obj(self, edge):
-        port1 = edge.vertices[0]
-        port2 = edge.vertices[1]
-        node1 = self.lookup_node_from_port(port1)
-        node2 = self.lookup_node_from_port(port2)
-        self.add_edge(node1, node2)
-        self.edge_obj[(node1.uid, node2.uid)] = edge
+        def add_single_edge(edge_obj):
+            port1 = edge_obj.vertices[0]
+            port2 = edge_obj.vertices[1]
+            node1 = self.lookup_node_from_port(port1)
+            node2 = self.lookup_node_from_port(port2)
+            self.add_edge(node1, node2)
+            self.edge_obj[(node1.uid, node2.uid)] = edge_obj
+        if type(edge) is list:
+            for e in edge:
+                add_single_edge(e)
+        else:
+            add_single_edge(edge)
 
     def add_path_obj(self, path_obj):
         path_key = tuple(path_obj.vertices)
@@ -86,6 +98,7 @@ class Port(object):
         # Details about any tariffs and incentives
         self.has_tariff = False
         self.tariff = None
+        self.demand_tariff = None
         self.installation_capex = 0
         self.var_opex = 0
         self.path_rule = PathRule.NA
@@ -193,12 +206,28 @@ class Port(object):
 
         # Tariff variables
         if self.has_tariff:
-            self.import_tariff_value = 'import_tariff_' + self.port_name
-            self.export_tariff_value = 'export_tariff_' + self.port_name
-            setattr(model, self.import_tariff_value,
-                    en.Param(model.Expansion, model.Time, initialize=self.tariff.import_tariff))
-            setattr(model, self.export_tariff_value,
-                    en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
+            if self.tariff:
+                self.import_tariff_value = 'import_tariff_' + self.port_name
+                self.export_tariff_value = 'export_tariff_' + self.port_name
+                setattr(model, self.import_tariff_value,
+                        en.Param(model.Expansion, model.Time, initialize=self.tariff.import_tariff))
+                setattr(model, self.export_tariff_value,
+                        en.Param(model.Expansion, model.Time, initialize=self.tariff.export_tariff))
+            if self.demand_tariff:
+                self.max_demand = 'max_demand_' + self.port_name
+                setattr(model, self.max_demand, en.Var(initialize=0, domain=en.NonNegativeReals))
+                self.max_demand_window = 'max_demand_window_' + self.port_name
+                setattr(model, self.max_demand_window, en.Param(model.Expansion, model.Time,
+                                                                initialize=self.demand_tariff.window))
+
+                def max_demand_rule(model, p, t):
+                    return getattr(model, self.max_demand) >= \
+                           (getattr(model, self.positive_port_component)[p, t] - self.demand_tariff.min_demand) * \
+                           getattr(model, self.max_demand_window)[p, t]
+
+                con_name = 'max_val_con_' + self.port_name
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=max_demand_rule))
+
 
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
 
@@ -226,12 +255,16 @@ class Port(object):
 
         objective = 0
         if self.has_tariff:
-            objective += sum(
-                getattr(model, self.import_tariff_value)[p, i] * getattr(model, self.positive_port_component)[p, i] *
-                getattr(model, model.dr)[p] +
-                getattr(model, self.export_tariff_value)[p, i] * getattr(model, self.negative_port_component)[p, i] *
-                getattr(model, model.dr)[p]
-                for p in model.Expansion for i in model.Time)
+            if self.tariff:
+                objective += sum(
+                    getattr(model, self.import_tariff_value)[p, i] * getattr(model, self.positive_port_component)[p, i] *
+                    getattr(model, model.dr)[p] +
+                    getattr(model, self.export_tariff_value)[p, i] * getattr(model, self.negative_port_component)[p, i] *
+                    getattr(model, model.dr)[p]
+                    for p in model.Expansion for i in model.Time)
+
+            if self.demand_tariff:
+                objective += getattr(model, self.max_demand) * self.demand_tariff.demand_charge
 
         if self.opt_type is OptimisationType.Variable:  # To make positive or negative component = 0
             objective += sum(
@@ -256,6 +289,13 @@ class Node(object):
         self.ports = {}  # 'port_name: port'
         self.node_name = 'node_' + str(self.uid)
         self.transformations = {}
+        self.named_ports = []
+
+    def add_named_electrical_ports(self, name_list):
+        if type(name_list) is not list:
+            return ConfigurationError('Please enter named ports as list of port names.')
+        for name in name_list:
+            self.ports[name] = ElectricalPort()
 
     def add_transformation(self, transformation_obj):
         self.transformations[transformation_obj.uid] = transformation_obj
@@ -303,7 +343,7 @@ class Storage(Port):
                  charging_efficiency,
                  discharging_efficiency,
                  throughput_cost,
-                 initial_state_of_charge=0
+                 initial_state_of_charge
                  ):
         super(Storage, self).__init__()
         self.storage = True
@@ -328,7 +368,7 @@ class Storage(Port):
         self.throughput_cost = throughput_cost
         # Initial state of charge
         self.initial_state_of_charge = initial_state_of_charge
-        self.interval_duration = 15  # ToDo update so this relates to time periods
+        self.interval_duration = 60  # ToDo update so this relates to time periods
         self.fixed_storage_capacity = True
 
     def initialise_port(self, model):
@@ -432,6 +472,13 @@ class ElectricalDemand(Sink):
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
+    def add_demand_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.add_initial_value(t)
+
 
 class ElectricalGeneration(Source):
 
@@ -443,6 +490,13 @@ class ElectricalGeneration(Source):
     def add_generation_profile(self, generation):
         self.add_initial_value(generation)
 
+    def add_generation_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.add_initial_value(t)
+
 
 class ElectricalStorage(Storage):
     def __init__(self,
@@ -453,7 +507,7 @@ class ElectricalStorage(Storage):
                  charging_efficiency,
                  discharging_efficiency,
                  throughput_cost,
-                 initial_state_of_charge=0
+                 initial_state_of_charge
                  ):
         super(ElectricalStorage, self).__init__(max_capacity,
                                                 depth_of_discharge_limit,
@@ -462,7 +516,7 @@ class ElectricalStorage(Storage):
                                                 charging_efficiency,
                                                 discharging_efficiency,
                                                 throughput_cost,
-                                                initial_state_of_charge=0)
+                                                initial_state_of_charge)
         self.units = Units.KW
 
 
@@ -485,6 +539,41 @@ class Tariff(object):
 
     def add_tariff_profile_export(self, tariff):
         self.export_tariff = tariff
+
+    def add_import_tariff_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.import_tariff = t
+
+    def add_export_tariff_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.export_tariff = t
+
+
+class DemandTariff(object):
+
+    def __init__(self,
+                 window,
+                 expansion_periods,
+                 demand_charge,
+                 min_demand
+                 ):
+        self.window = None
+        self.add_window(window, expansion_periods)
+        self.demand_charge = demand_charge
+        self.min_demand = min_demand
+
+    def add_window(self, array, expansion_periods):
+        window = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                window[(ep, i)] = array[i]
+        self.window = window
 
 
 class ElectricalPort(Port):
@@ -511,12 +600,13 @@ class CarbonPort(Port):
 
 class Edge(object):
 
-    def __init__(self):
+    def __init__(self,
+                 vertices):
         self.uid = uuid.uuid4()
         self.edge_name = 'edge_' + str(self.uid)
         self.units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
         self.opt_type = OptimisationType.NA  # Is this a decision variable or a fixed parameter
-        self.vertices = None
+        self.vertices = vertices
         self.has_tariff = False  # Todo should we allow tariffs on edges
         self.tariff = None
         self.initial_edge_capacity = 5000000
@@ -637,7 +727,7 @@ class Path(object):
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 
-        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.000001
+        # objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.000001
 
         return objective
 
