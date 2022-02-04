@@ -170,7 +170,7 @@ class EchoOptimiser(object):
             def no_flow_through_rule(model, p, t):
                 return getattr(model, current_node.inflow)[p, t] + getattr(model, current_node.outflow)[p, t] <= 1
 
-            for current_port, current_node in self.ES.sources_or_sinks.items():
+            for current_port, current_node in self.ES.sources_and_sinks.items():
                 con_name = 'path_flow_con_' + current_node.node_name
                 setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 

@@ -58,14 +58,20 @@ class OptimisationGraph(Graph):
     def generate_all_paths(self):
         """ Retrieve all paths between sources/sinks in the model. """
         all_paths = []
-        sources_or_sinks = {}
+        sources = {}
+        sinks = {}
         for _, n in self.node_obj.items():
             for _, p in n.ports.items():  # Collect info on which ports are sources/sinks/nodes
                 if p.path_rule == PathRule.SourceOrSink:
-                    sources_or_sinks[p] = n
+                    sources[p] = n
+                    sinks[p] = n
+                if p.path_rule == PathRule.Source:
+                    sources[p] = n
+                if p.path_rule == PathRule.Sink:
+                    sinks[p] = n
 
-        for source_port, source_node in sources_or_sinks.items():  # Generate list of paths between sources and sinks
-            for sink_port, sink_node in sources_or_sinks.items():
+        for source_port, source_node in sources.items():  # Generate list of paths between sources and sinks
+            for sink_port, sink_node in sinks.items():
                 simple_paths = nx.all_simple_paths(self, source_node, sink_node)
                 for i in simple_paths:
                     p = Path()  # Create path objects
@@ -75,7 +81,12 @@ class OptimisationGraph(Graph):
                     all_paths.append(i)
                     self.add_path_obj(p)
 
-        self.sources_or_sinks = sources_or_sinks
+        sources_and_sinks = {}
+        sources_and_sinks.update(sources)
+        sources_and_sinks.update(sinks)
+        self.sources_and_sinks = sources_and_sinks
+        self.sources = sources
+        self.sinks = sinks
 
 
 class ConfigurationError(Exception):
@@ -409,11 +420,14 @@ class Storage(Port):
 
         def SOC_rule(model, p, t):
             if t == 0:
-                return getattr(model, self.storage_soc_value)[p, t] \
-                       == self.initial_state_of_charge + getattr(model, self.port_name)[p, t]
+                return getattr(model, self.storage_soc_value)[p, t] == self.initial_state_of_charge + \
+                       getattr(model, self.positive_port_component)[p, t] * self.charging_efficiency + \
+                       getattr(model, self.negative_port_component)[p, t] * (1/self.discharging_efficiency)
+
             else:
-                return getattr(model, self.storage_soc_value)[p, t] \
-                       == getattr(model, self.storage_soc_value)[p, t - 1] + getattr(model, self.port_name)[p, t]
+                return getattr(model, self.storage_soc_value)[p, t] == getattr(model, self.storage_soc_value)[p, t-1] + \
+                       getattr(model, self.positive_port_component)[p, t] * self.charging_efficiency + \
+                       getattr(model, self.negative_port_component)[p, t] * (1 / self.discharging_efficiency)
 
         soc_con = 'soc_limit_' + self.port_name
         setattr(model, soc_con, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
@@ -734,7 +748,8 @@ class Path(object):
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 
-        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * 0.00000001
+        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * \
+                     0.00000001
 
         return objective
 
