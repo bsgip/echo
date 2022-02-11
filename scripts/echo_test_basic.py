@@ -8,11 +8,14 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 import sys
 
+from objectives import ObjectiveSet, ThroughputCost, PeakPositivePower
+
 sys.path.append("../")
 from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, CarbonPort, FlexiblePort, DemandTariff
+    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
+from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule, OptimiserObjectiveSet, \
+    OptimiserObjective
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -72,9 +75,9 @@ ES = OptimisationGraph()
 ES.expansion_periods = expansion_periods
 
 # Setup components
-tariff = Tariff()
-tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods=expansion_periods)
-tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods=expansion_periods)
+# tariff = Tariff()
+# tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods=expansion_periods)
+# tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods=expansion_periods)
 
 grid = Node()
 grid.add_named_electrical_ports(['grid'])
@@ -85,7 +88,7 @@ b1 = ElectricalStorage(max_capacity=15.0,
                        charging_power_limit=5.0,
                        discharging_power_limit=-5.0,
                        charging_efficiency=1,
-                       discharging_efficiency=1,
+                       discharging_efficiency=0.5,
                        throughput_cost=0.018, #0.018
                        initial_state_of_charge=0.0)
 battery1.ports['battery_asset'] = b1
@@ -115,46 +118,47 @@ pv_edge1 = Edge(vertices=[site1.ports['pvCP'], pv1])
 grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
 ES.add_edge_obj([bess_edge1, load_edge1, pv_edge1, grid_edge])
+#ES.add_node_obj(grid)
 
 # Path flows
 
-grid.ports['grid'].path_rule = PathRule.SourceOrSink
-b1.path_rule = PathRule.SourceOrSink
-pv1.path_rule = PathRule.SourceOrSink
-l1.path_rule = PathRule.SourceOrSink
-
-ES.generate_all_paths()
+# grid.ports['grid'].path_rule = PathRule.SourceOrSink
+# b1.path_rule = PathRule.SourceOrSink
+# pv1.path_rule = PathRule.SourceOrSink
+# l1.path_rule = PathRule.SourceOrSink
+#
+# ES.generate_all_paths()
 
 # Testing settings
 
 # Point tariff on connection point port.
-# dc = DemandTariff(
-#     window=[0] + [1] + [0]*94,
-#     expansion_periods=expansion_periods,
-#     demand_charge=1.0,
-#     min_demand=0.0
-# )
+dc = DemandTariff(
+    window=[0] + [1] + [0]*94,
+    expansion_periods=expansion_periods,
+    demand_charge=1.0,
+    min_demand=0.0
+)
+
+cp1.has_tariff = True
+cp1.demand_tariff = dc
+
+
+
+# local_tariff = Tariff()
+# local_tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods)
+# local_tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods)
 #
-# cp1.has_tariff = True
-# cp1.tariff = tariff
-# cp1.demand_tariff = dc
-
-
-local_tariff = Tariff()
-local_tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods)
-local_tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods)
-
-flat_tariff = Tariff()
-flat_tariff.add_import_tariff_profile_from_array([0.5]*96, expansion_periods)
-flat_tariff.add_export_tariff_profile_from_array([0]*96, expansion_periods)
-
-grid_to_load = ES.path_obj[(grid, site1, load1)]
-grid_to_load.has_tariff = True
-grid_to_load.tariff = local_tariff
-
-grid_to_bess = ES.path_obj[(grid, site1, battery1)]
-grid_to_bess.has_tariff = True
-grid_to_bess.tariff = flat_tariff
+# flat_tariff = Tariff()
+# flat_tariff.add_import_tariff_profile_from_array([0.5]*96, expansion_periods)
+# flat_tariff.add_export_tariff_profile_from_array([0]*96, expansion_periods)
+#
+# grid_to_load = ES.path_obj[(grid, site1, load1)]
+# grid_to_load.has_tariff = True
+# grid_to_load.tariff = local_tariff
+#
+# grid_to_bess = ES.path_obj[(grid, site1, battery1)]
+# grid_to_bess.has_tariff = True
+# grid_to_bess.tariff = flat_tariff
 
 # bess_to_load = ES.path_obj[(battery1, site1, load1)]
 # bess_to_load.has_tariff = True
@@ -195,7 +199,7 @@ ax2.set_xlim([0, len(test_load) / 4])
 
 ax3 = fig.add_subplot(3, 1, 3)
 line1, = ax3.plot(hrs, optimiser.values(b1.port_name, 0), color=colors[1])
-line2, = ax3.plot(hrs, optimiser.values(b1.storage_soc_value, 0), color=colors[2])
+line2, = ax3.plot(hrs, optimiser.values(b1.soc_value, 0), color=colors[2])
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])

@@ -21,27 +21,21 @@ class EchoOptimiser(object):
         self.optimiser_engine = os.environ.get('OPTIMISER_ENGINE')  # Default to ipopt since that is easiest to install
         self.optimiser_engine_executable = os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
 
-        self.use_bool_vars = True
-
         # These values have been arbitrarily chosen
         # A better understanding of the sensitivity of these values may be advantageous
         self.bigM = 5000000
         self.smallM = 0.0001
         self.discount_rate = discount_rate
-        self.tariff_edge_pos = None
-        self.tariff_edge_neg = None
-        self.storage_var_value = None
-        self.storage_soc_value = None
-        self.var_names = list()
 
         self.build_model()
         self.apply_constraints()
         self.build_objective()
-        #self.optimise()
 
     def build_model(self):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
+        self.model.interval_duration = self.interval_duration
+        self.model.number_of_intervals = self.number_of_intervals
 
         #### Bias Values ####
 
@@ -65,8 +59,7 @@ class EchoOptimiser(object):
             dr[ep] = 1 / ((1 + self.discount_rate) ** ep)
 
         self.model.dr = 'discount_rates'
-        setattr(self.model, self.model.dr,
-                en.Param(self.model.Expansion, initialize=dr))
+        setattr(self.model, self.model.dr, en.Param(self.model.Expansion, initialize=dr))
 
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
@@ -110,9 +103,9 @@ class EchoOptimiser(object):
                 if transform_rule is TransformRule.Both:
                     lhs += getattr(self.model, var.port_name)[p, t] * weight
                 if transform_rule is TransformRule.NegativeComponent:
-                    lhs += getattr(self.model, var.negative_port_component)[p, t] * weight
+                    lhs += getattr(self.model, var.neg)[p, t] * weight
                 if transform_rule is TransformRule.PositiveComponent:
-                    lhs += getattr(self.model, var.positive_port_component)[p, t] * weight
+                    lhs += getattr(self.model, var.pos)[p, t] * weight
             return lhs == rhs
 
         for _, obj in self.ES.node_obj.items():
@@ -171,8 +164,8 @@ class EchoOptimiser(object):
                 return getattr(model, current_node.inflow)[p, t] + getattr(model, current_node.outflow)[p, t] <= 1
 
             for current_port, current_node in self.ES.sources_and_sinks.items():
-                con_name = 'path_flow_con_' + current_node.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
+                setattr(self.model, f"path_flow_con_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
                 current_node.inflow = 'inflow_' + current_node.node_name
                 setattr(self.model, current_node.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
@@ -182,25 +175,25 @@ class EchoOptimiser(object):
                 setattr(self.model, current_node.outflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
                                                                 domain=en.Binary))
 
-                con_name = 'import_path_con_one_' + current_node.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_one))
+                setattr(self.model, f"import_path_con_one_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_one))
 
-                con_name = 'import_path_con_two_' + current_node.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_two))
+                setattr(self.model, f"import_path_con_two_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_two))
 
-                con_name = 'export_path_con_one_' + current_node.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_one))
+                setattr(self.model, f"export_path_con_one_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_one))
 
-                con_name = 'export_path_con_two_' + current_node.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_two))
+                setattr(self.model, f"export_path_con_two_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_two))
 
-                con_name = 'non_tellegen_node_con_' + current_node.node_name
-                setattr(self.model, con_name,
+                setattr(self.model, f"non_tellegen_node_con_{current_node.node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=no_flow_through_rule))
 
     def build_objective(self):
         self.objective = 0
 
+        # Walk through graph objects and pick up objectives as defined on nodes/ports/edges/paths
         for _, node_obj in self.ES.node_obj.items():
             for _, port_obj in node_obj.ports.items():
                 self.objective += port_obj.add_objective(self.model)
