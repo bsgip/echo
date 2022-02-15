@@ -28,7 +28,6 @@ SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None #os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
 
 
-
 def test_simple_controlled_load_does_minimum_energy_action():
 
     expansion_periods = 1
@@ -41,15 +40,11 @@ def test_simple_controlled_load_does_minimum_energy_action():
     grid.add_named_electrical_ports(['grid'])
 
     controlled_load = Node()
-    cl = ControlledLoad()
-    cl.max_power = 5.0
-    cl.min_power = 0.0
-    cl.min_utilisation = 5.0/60.0
+    cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0/60.0)
     controlled_load.ports['cload'] = cl
 
-    edge = Edge(vertices=[grid.ports['grid'], cl])
     system.add_node_obj([grid, controlled_load])
-    system.add_edge_obj(edge)
+    system.connect_ports_and_create_edge(grid.ports['grid'], cl)
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -60,6 +55,7 @@ def test_simple_controlled_load_does_minimum_energy_action():
     )
 
     # minimise imports
+    grid.ports['grid'].constrain_pos_neg(optimiser.model)
     optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
@@ -75,7 +71,6 @@ def test_simple_controlled_load_does_minimum_energy_action():
         #assert optimiser.values(grid.ports['grid'].port_name, 0)[i] == optimiser.values(cl.port_name, 0)[i]*-1
 
 
-
 def test_simple_controlled_load_does_minimum_power_action():
 
     expansion_periods = 1
@@ -88,15 +83,11 @@ def test_simple_controlled_load_does_minimum_power_action():
     grid.add_named_electrical_ports(['grid'])
 
     controlled_load = Node()
-    cl = ControlledLoad()
-    cl.max_power = 5.0
-    cl.min_power = 2.0
-    cl.min_utilisation = 5.0/60.0
+    cl = ControlledLoad(max_power=5.0, min_power=2.0, min_utilisation=5.0/60.0, max_utilisation=None)
     controlled_load.ports['cload'] = cl
 
-    edge = Edge(vertices=[grid.ports['grid'], cl])
     system.add_node_obj([grid, controlled_load])
-    system.add_edge_obj(edge)
+    system.connect_ports_and_create_edge(grid.ports['grid'], cl)
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -107,6 +98,7 @@ def test_simple_controlled_load_does_minimum_power_action():
     )
 
     # minimise imports
+    grid.ports['grid'].constrain_pos_neg(optimiser.model)
     optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
@@ -132,11 +124,7 @@ def test_simple_controlled_load_limited_to_max_energy():
     grid.add_named_electrical_ports(['grid'])
 
     controlled_load = Node()
-    cl = ControlledLoad()
-    cl.max_power = 5.0
-    cl.min_power = 0.0
-    cl.min_utilisation = 5.0/60.0
-    cl.max_utilisation = 5.0/30.0
+    cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0/60.0, max_utilisation=5.0/30.0)
     controlled_load.ports['cload'] = cl
 
     edge = Edge(vertices=[grid.ports['grid'], cl])
@@ -152,6 +140,7 @@ def test_simple_controlled_load_limited_to_max_energy():
     )
 
     # maximise imports
+    grid.ports['grid'].constrain_pos_neg(optimiser.model)
     optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)*-1
 
@@ -168,9 +157,7 @@ def test_simple_controlled_load_limited_to_max_energy():
         #assert grid_export[i] == load_import[i]
 
 
-
 def test_simple_controlled_load_limited_to_max_power():
-
 
     expansion_periods = 1
     time_periods = 48
@@ -182,11 +169,7 @@ def test_simple_controlled_load_limited_to_max_power():
     grid.add_named_electrical_ports(['grid'])
 
     controlled_load = Node()
-    cl = ControlledLoad()
-    cl.max_power = 5.0
-    cl.min_power = 0.0
-    cl.min_utilisation = 5.0/60.0
-    cl.max_utilisation = None
+    cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0/60.0, max_utilisation=None)
     controlled_load.ports['cload'] = cl
 
     edge = Edge(vertices=[grid.ports['grid'], cl])
@@ -202,6 +185,7 @@ def test_simple_controlled_load_limited_to_max_power():
     )
 
     # maximise imports
+    grid.ports['grid'].constrain_pos_neg(optimiser.model)
     optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)*-1
 

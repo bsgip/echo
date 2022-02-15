@@ -573,14 +573,16 @@ class ElectricalPort(Port):
 
 class ControlledLoadOrGen(Port):
 
-    def __init__(self):
+    def __init__(self,
+                 max_power,
+                 min_power,
+                 min_utilisation,
+                 max_utilisation):
         super(ControlledLoadOrGen, self).__init__()
-        self.min_utilisation = None   # Per time unit (minute)
-        self.max_utilisation = None
-        self.max_power = 0.0
-        self.min_power = 0.0
-        self.flows = Flows.Import
-        self.import_constraint = FlowConstraint.NoConstraint
+        self.min_utilisation = min_utilisation   # Per time unit (minute)
+        self.max_utilisation = max_utilisation
+        self.max_power = max_power
+        self.min_power = min_power
         self.opt_type = OptimisationType.Variable
         self.units = Units.KW
 
@@ -600,7 +602,7 @@ class ControlledLoadOrGen(Port):
         setattr(model, f"cons_{self.port_name}_max_power",
                 en.Constraint(model.Expansion, model.Time, rule=max_power_rule))
 
-        if self.min_utilisation:
+        if self.min_utilisation is not None:
             def sum_of_energy_must_be_greater_than_min(model):
                 return sum(getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
                            for p in model.Expansion for i in model.Time) >= \
@@ -609,7 +611,7 @@ class ControlledLoadOrGen(Port):
             setattr(model, f"cons_{self.port_name}_min_utilisation_req",
                     en.Constraint(rule=sum_of_energy_must_be_greater_than_min))
 
-        if self.max_utilisation:
+        if self.max_utilisation is not None:
             def sum_of_energy_must_be_less_than_max(model):
                 return sum(getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
                            for p in model.Expansion for i in model.Time) <= \
@@ -628,14 +630,40 @@ class ControlledLoadOrGen(Port):
 
 class ControlledLoad(ControlledLoadOrGen):
 
-    def __init__(self):
-        super(ControlledLoad, self).__init__()
+    def __init__(self,
+                 max_power,
+                 min_power,
+                 min_utilisation,
+                 max_utilisation
+                 ):
+        super(ControlledLoad, self).__init__(max_power,
+                                             min_power,
+                                             min_utilisation,
+                                             max_utilisation)
+
+    def verify_port(self):
+        if self.max_power < 0 or self.min_power < 0:
+            raise ConfigurationError(
+                'For controlled load asset, enter max and min power using positive load convention (i.e. positive).')
 
 
 class ControlledGen(ControlledLoadOrGen):
 
-    def __init__(self):
-        super(ControlledGen, self).__init__()
+    def __init__(self,
+                 max_power,
+                 min_power,
+                 min_utilisation,
+                 max_utilisation
+                 ):
+        super(ControlledGen, self).__init__(max_power,
+                                            min_power,
+                                            max_utilisation,
+                                            min_utilisation)
+
+    def verify_port(self):
+        if self.max_power > 0 or self.min_power > 0:
+            raise ConfigurationError(
+                'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
 
 
 class ElectricVehicle(Storage):
