@@ -237,6 +237,7 @@ class Port(object):
         con_name = positive_variable_component + negative_variable_component + self.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
+        # Todo simplify this
         con_name = 'is_pos_con1_' + self.port_name
         con_rule = self.factory_big_M_one(1, self.pos, self.is_pos)
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
@@ -405,29 +406,26 @@ class Storage(Port):
 
         setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
-        charging_limit = self.charging_power_limit * (model.interval_duration / minutes_per_hour)
-        discharging_limit = self.discharging_power_limit * (model.interval_duration / minutes_per_hour)
-
         def charging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= charging_limit
+            return getattr(model, self.port_name)[p, t] <= self.charging_power_limit
 
         setattr(model, f"charge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=charging_limit_rule))
 
         def discharging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= discharging_limit
+            return getattr(model, self.port_name)[p, t] >= self.discharging_power_limit
 
         setattr(model, f"discharge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=discharging_limit_rule))
 
         def SOC_rule(model, p, t):
             if t == 0:
                 return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.pos)[p, t] * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (1 / self.discharging_efficiency)
+                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
+                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
 
             else:
                 return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
-                       getattr(model, self.pos)[p, t] * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (1 / self.discharging_efficiency)
+                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
+                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
 
         setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
@@ -669,6 +667,63 @@ class ElectricVehicle(Storage):
                 t[(ep, i)] = array[i]
         self.fixed_states = t
 
+
+class Inverter(ElectricalNode):
+
+    def __init__(self,
+                 max_import,
+                 max_export,
+                 dc_ac_efficiency,
+                 ac_dc_efficiency):
+        super(Inverter, self).__init__()
+        self.dc_ac_efficiency = dc_ac_efficiency
+        self.ac_dc_efficiency = ac_dc_efficiency
+        self.dc_ports = {}
+        self.ac_port = None
+        self.max_inverter_import = max_import
+        self.max_inverter_export = max_export
+        self.node_rule = NodeRule.Custom #Todo fix this
+
+    def add_dc_port(self, port_name):
+        p = ElectricalPort()
+        self.dc_ports[port_name] = p
+        self.ports[port_name] = p
+
+    def add_ac_port(self, port_name):
+        if self.ac_port:
+            raise ConfigurationError('AC port already specified for this inverter.')
+        else:
+            p = ElectricalPort()
+            p.set_flow_constraints(max_export=self.max_inverter_export, max_import=self.max_inverter_import)
+            self.ac_port = p
+            self.ports[port_name] = p
+
+    def initialise_node(self, model):
+
+        # Make sure all ports have pos/neg constraint
+        for port in self.ports.values():
+            port.constrain_pos_neg(model)
+
+        # Apply max power constraints to ac node
+
+
+
+        # Apply efficiency constraints
+        def inverter_ac_output_must_track_efficiency(model, p, t):
+            dc_pos = 0
+            dc_neg = 0
+            for dc_port in self.dc_ports.values():
+                dc_pos += getattr(model, dc_port.pos)[p, t]
+                dc_neg += getattr(model, dc_port.neg)[p, t]
+
+            return getattr(model, self.ac_port.pos)[p, t] * self.ac_dc_efficiency + \
+                   getattr(model, self.ac_port.neg)[p, t] / self.dc_ac_efficiency == - (dc_pos + dc_neg)
+
+        setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
+            model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
+
+
+
 class EVChargingStation(ElectricalNode):
 
     def __init__(self,
@@ -801,6 +856,7 @@ class Path(object):
         self.end_port = None
         self.fcas_raise = False
         self.fcas_lower = False
+        self.fcas_duration = 10.0
 
     def add_tariff(self, tariff):
         if type(tariff) is not dict:
@@ -886,9 +942,6 @@ class DemandTariff(object):
             for i in range(0, len(array)):
                 window[(ep, i)] = array[i]
         self.window = window
-
-
-
 
 
 

@@ -64,11 +64,11 @@ class EchoOptimiser(object):
 
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
-            node_obj.verify_node()
-            node_obj.initialise_node(self.model)
             for _, port_obj in node_obj.ports.items():
                 port_obj.verify_port()
                 port_obj.initialise_port(self.model)
+            node_obj.verify_node()
+            node_obj.initialise_node(self.model)
 
         # Initialise edge variables/params and add edge constraints
         for _, edge_obj in self.ES.edge_obj.items():
@@ -97,7 +97,7 @@ class EchoOptimiser(object):
                 if connecting_edge:
                     return connecting_edge.vertices[1]
 
-        def contingency_rule_1(model, node1, node2, var, flow_constraint):
+        def contingency_power_limited_by_flow_constraints(model, node1, node2, var, flow_constraint):
             def constraint(model, p, t):
                 a = 0
                 for _, other_path in model.path_obj.items():  # Check if the path includes [...node1, node2...]
@@ -123,23 +123,23 @@ class EchoOptimiser(object):
                     importing_port = get_port_on_path(node2, node1)
 
                     if exporting_port.export_constraint_value is not None:
-                        con_rule = contingency_rule_1(self.model, node1, node2, path_obj.contingency_raise,
-                                                      exporting_port.export_constraint_value*-1)
+                        con_rule = contingency_power_limited_by_flow_constraints(self.model, node1, node2, path_obj.contingency_raise,                                                       exporting_port.export_constraint_value*-1)
                         setattr(self.model, f"cont_raise_con_one_{exporting_port.port_name}",
                                 en.Constraint(self.model.Expansion, self.model.Time, rule=con_rule))
                     if importing_port.import_constraint_value is not None:
-                        con_rule = contingency_rule_1(self.model, node1, node2, path_obj.contingency_raise,
+                        con_rule = contingency_power_limited_by_flow_constraints(self.model, node1, node2, path_obj.contingency_raise,
                                                       importing_port.import_constraint_value)
                         setattr(self.model, f"cont_raise_con_one_{importing_port.port_name}",
                                 en.Constraint(self.model.Expansion, self.model.Time, rule=con_rule))
 
                 # Meet SOC constraint on contingency providing asset, if applicable
                 if hasattr(path_obj.start_port, 'soc_value'):
-                    def contingency_rule_3(model, p, t):
-                        return getattr(model, path_obj.contingency_raise)[p, t] <= getattr(model, path_obj.start_port.soc_value)[p, t]
+                    def contingency_energy_limited_soc(model, p, t):
+                        return getattr(model, path_obj.contingency_raise)[p, t] * path_obj.fcas_duration / 60 <= \
+                               getattr(model, path_obj.start_port.soc_value)[p, t]
 
-                    setattr(self.model, f"cont_raise_con_three_{path_obj.path_name}",
-                            en.Constraint(self.model.Expansion, self.model.Time, rule=contingency_rule_3))
+                    setattr(self.model, f"cont_raise_soc_lim_{path_obj.path_name}",
+                            en.Constraint(self.model.Expansion, self.model.Time, rule=contingency_energy_limited_soc))
 
             if path_obj.fcas_lower:
                 path_obj.contingency_lower = 'contingency_lower_' + path_obj.path_name
@@ -156,12 +156,12 @@ class EchoOptimiser(object):
                     importing_port = get_port_on_path(node2, node1)
 
                     if exporting_port.export_constraint_value is not None:
-                        con_rule = contingency_rule_1(self.model, node1, node2, path_obj.contingency_lower,
+                        con_rule = contingency_power_limited_by_flow_constraints(self.model, node1, node2, path_obj.contingency_lower,
                                                       exporting_port.export_constraint_value*-1)
                         setattr(self.model, f"cont_lower_con_one_{exporting_port.port_name}",
                                 en.Constraint(self.model.Expansion, self.model.Time, rule=con_rule))
                     if importing_port.import_constraint_value is not None:
-                        con_rule = contingency_rule_1(self.model, node1, node2, path_obj.contingency_lower,
+                        con_rule = contingency_power_limited_by_flow_constraints(self.model, node1, node2, path_obj.contingency_lower,
                                                       importing_port.import_constraint_value)
                         setattr(self.model, f"cont_lower_con_one_{importing_port.port_name}",
                                 en.Constraint(self.model.Expansion, self.model.Time, rule=con_rule))
@@ -169,12 +169,12 @@ class EchoOptimiser(object):
                 # Meet SOC constraint on contingency providing asset, if applicable
                 # Todo this won't work if we are also optimising the asset capacity
                 if hasattr(path_obj.start_port, 'soc_value'):
-                    def contingency_rule_3(model, p, t):
-                        return getattr(model, path_obj.contingency_lower)[p, t] <= \
+                    def contingency_energy_limited_soc(model, p, t):
+                        return getattr(model, path_obj.contingency_lower)[p, t] * path_obj.fcas_duration / 60 <= \
                                path_obj.start_port.max_capacity - getattr(model, path_obj.start_port.soc_value)[p, t]
 
-                    setattr(self.model, f"cont_lower_con_three_{path_obj.path_name}",
-                            en.Constraint(self.model.Expansion, self.model.Time, rule=contingency_rule_3))
+                    setattr(self.model, f"cont_lower_soc_lim_{path_obj.path_name}",
+                            en.Constraint(self.model.Expansion, self.model.Time, rule=contingency_energy_limited_soc))
 
     def apply_node_constraints(self):
 
