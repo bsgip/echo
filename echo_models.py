@@ -16,7 +16,6 @@ class OptimisationGraph(Graph):
         self.edge_obj = dict()
         self.path_obj = dict()
         self.sources_or_sinks = []
-        self.all_paths = []
 
     def add_node_obj(self, node):
         def add_single_node(node_obj):
@@ -41,6 +40,10 @@ class OptimisationGraph(Graph):
                 add_single_edge(e)
         else:
             add_single_edge(edge)
+
+    def connect_ports_and_create_edge(self, port1, port2):
+        e = Edge(vertices=(port1, port2))
+        self.add_edge_obj(e)
 
     def add_path_obj(self, path_obj):
         path_key = tuple(path_obj.vertices)
@@ -104,11 +107,17 @@ class Port(object):
         self.export_constraint = FlowConstraint.NA
         self.export_constraint_value = None
         # Details about any tariffs and incentives
-        self.has_tariff = False
         self.tariff = None
         self.demand_tariff = None
         self.installation_capex = 0
         self.path_rule = PathRule.NA
+        self.fixed_states = None
+
+    def set_flow_constraints(self, max_import, max_export):
+        self.import_constraint = FlowConstraint.Fixed
+        self.import_constraint_value = max_import
+        self.export_constraint = FlowConstraint.Fixed
+        self.export_constraint_value = max_export
 
     def verify_port(self):
         """ Used to verify that a port has been set up appropriately"""
@@ -145,10 +154,7 @@ class Port(object):
                 raise ConfigurationError('Enter import constraint using positive load convention.')
 
     def initialise_port(self, model):
-        self.create_vars(model)
-        self.apply_constraints(model)
 
-    def create_vars(self, model):
         domain = en.Reals
         if self.flows is Flows.Export:
             domain = en.NonPositiveReals
@@ -162,6 +168,56 @@ class Port(object):
         if self.opt_type is OptimisationType.Variable:
             setattr(model, self.port_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
+
+        if self.demand_tariff:
+            self.max_demand = 'max_demand_' + self.port_name
+            setattr(model, self.max_demand, en.Var(initialize=0, domain=en.NonNegativeReals))
+
+            def max_demand_rule(model, p, t):
+                return getattr(model, self.max_demand) >= \
+                       (getattr(model, self.pos)[p, t] - self.demand_tariff.min_demand) * \
+                       self.demand_tariff.window[p, t]
+            setattr(model, f"cons_{self.port_name}_max_demand", en.Constraint(model.Expansion, model.Time,
+                                                                             rule=max_demand_rule))
+        if self.tariff:   # Automatically apply pos/neg constraint if there is a tariff on the port
+            self.constrain_pos_neg(model)
+
+        # On/off decision variable and constraints
+        self.active = 'active_' + self.port_name
+        setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        def on_off_rule1(model, p, t):
+            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * model.bigM
+
+        def on_off_rule2(model, p, t):
+            return getattr(model, self.port_name)[p, t] >= - getattr(model, self.active)[p, t] * model.bigM
+
+        def on_off_fixed_states(model, p, t):
+            return getattr(model, self.active)[p, t] == self.fixed_states[p, t]
+
+        setattr(model, f"on_off_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
+        setattr(model, f"on_off_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
+
+        if self.fixed_states:
+            setattr(model, f"on_off_fixed_states_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_fixed_states))
+
+
+
+        #Import/export capacity constraint rules
+        def import_cap_rule(model, p, t):
+            return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
+
+        def export_cap_rule(model, p, t):
+            return getattr(model, self.port_name)[p, t] >= self.export_constraint_value
+
+        if self.import_constraint is FlowConstraint.Fixed:
+            con_name = 'import_con_' + self.port_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
+        if self.export_constraint is FlowConstraint.Fixed:
+            con_name = 'export_con_' + self.port_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
+
+    def constrain_pos_neg(self, model):
 
         self.pos = positive_variable_component + self.port_name
         self.neg = negative_variable_component + self.port_name
@@ -177,37 +233,7 @@ class Port(object):
         self.is_neg = 'is_neg_' + self.port_name
         setattr(model, self.is_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
-        if self.has_tariff:
-            if self.demand_tariff:
-                self.max_demand = 'max_demand_' + self.port_name
-                setattr(model, self.max_demand, en.Var(initialize=0, domain=en.NonNegativeReals))
-
-    def apply_constraints(self, model):
-        # Import/export capacity constraint rules
-        def import_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
-
-        def export_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.export_constraint_value
-
-        if self.import_constraint is FlowConstraint.Fixed:
-            con_name = 'import_con_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
-        if self.export_constraint is FlowConstraint.Fixed:
-            con_name = 'export_con_' + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
-
-        if self.demand_tariff:
-            def max_demand_rule(model, p, t):
-                return getattr(model, self.max_demand) >= \
-                       (getattr(model, self.pos)[p, t] - self.demand_tariff.min_demand) * \
-                       self.demand_tariff.window[p, t]
-            setattr(model, f"cons_{self.port_name}_max_demand", en.Constraint(model.Expansion, model.Time,
-                                                                             rule=max_demand_rule))
-
-
-        con_rule = self.factory_pos_neg_flows(self.port_name, self.pos,
-                                              self.neg)
+        con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
         con_name = positive_variable_component + negative_variable_component + self.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
@@ -255,15 +281,15 @@ class Port(object):
     def add_objective(self, model):
         objective = 0
 
-        if self.has_tariff:
-            if self.tariff:
-                objective += sum(self.tariff.import_tariff[p, i] *
-                   getattr(model, self.pos)[p, i] * getattr(model, model.dr)[p] +
-                   self.tariff.export_tariff[p, i] *
-                   getattr(model, self.neg)[p, i] * getattr(model, model.dr)[p]
-                   for p in model.Expansion for i in model.Time)
-            if self.demand_tariff:
-                objective += getattr(model, self.max_demand) * self.demand_tariff.demand_charge
+        if self.tariff:
+            objective += sum(self.tariff.import_tariff[p, i] *
+               getattr(model, self.pos)[p, i] * getattr(model, model.dr)[p] +
+               self.tariff.export_tariff[p, i] *
+               getattr(model, self.neg)[p, i] * getattr(model, model.dr)[p]
+               for p in model.Expansion for i in model.Time)
+
+        if self.demand_tariff:
+            objective += getattr(model, self.max_demand) * self.demand_tariff.demand_charge
 
         return objective
 
@@ -361,6 +387,7 @@ class Storage(Port):
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
+        self.constrain_pos_neg(model)
 
         self.soc_value = 'storage_soc_' + self.port_name
         setattr(model, self.soc_value,
@@ -376,8 +403,7 @@ class Storage(Port):
         def cap_limit(model, p, t):  # Ensure SOC is within max capacity
             return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_storage_capacity)
 
-        cap_limit_con_name = 'cap_limit_cons_' + self.port_name
-        setattr(model, cap_limit_con_name, en.Constraint(model.Expansion, model.Time, rule=cap_limit))
+        setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
         charging_limit = self.charging_power_limit * (model.interval_duration / minutes_per_hour)
         discharging_limit = self.discharging_power_limit * (model.interval_duration / minutes_per_hour)
@@ -385,14 +411,12 @@ class Storage(Port):
         def charging_limit_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] <= charging_limit
 
-        con_name = 'charge_limit_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=charging_limit_rule))
+        setattr(model, f"charge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=charging_limit_rule))
 
         def discharging_limit_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] >= discharging_limit
 
-        con_name = 'discharge_limit_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=discharging_limit_rule))
+        setattr(model, f"discharge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=discharging_limit_rule))
 
         def SOC_rule(model, p, t):
             if t == 0:
@@ -405,8 +429,7 @@ class Storage(Port):
                        getattr(model, self.pos)[p, t] * self.charging_efficiency + \
                        getattr(model, self.neg)[p, t] * (1 / self.discharging_efficiency)
 
-        soc_con = 'soc_limit_' + self.port_name
-        setattr(model, soc_con, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
+        setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
     def calc_capacity(self):
         capacity = self.max_capacity
@@ -492,7 +515,7 @@ class ElectricalGeneration(Source):
             def gen_less_than_max_gen(model, p, t):
                 return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
 
-            setattr(model, f"cons_{self.port_name}_curtailment", en.Constraint(model.time, rule=gen_less_than_max_gen))
+            setattr(model, f"cons_{self.port_name}_curtailment", en.Constraint(model.Expansion, model.Time, rule=gen_less_than_max_gen))
         else:
             # TODO This could be simplified to only set solar_p as a Param on initialisation
             def gen_equal_max_gen(model, p, t):
@@ -530,6 +553,13 @@ class ElectricalNode(Node):
     def __init__(self):
         super(ElectricalNode, self).__init__()
         self.units = Units.KW
+
+
+class ElectricalTellegenNode(ElectricalNode):
+
+    def __init__(self):
+        super(ElectricalTellegenNode, self).__init__()
+        self.node_rule = NodeRule.Tellegen
 
 
 class ElectricalPort(Port):
@@ -610,6 +640,71 @@ class ControlledGen(ControlledLoadOrGen):
         super(ControlledGen, self).__init__()
 
 
+class ElectricVehicle(Storage):
+    
+    def __init__(self,
+                 max_capacity,
+                 depth_of_discharge_limit,
+                 charging_power_limit,
+                 discharging_power_limit,
+                 charging_efficiency,
+                 discharging_efficiency,
+                 throughput_cost,
+                 initial_state_of_charge
+                 ):
+        super(ElectricVehicle, self).__init__(max_capacity,
+                                                depth_of_discharge_limit,
+                                                charging_power_limit,
+                                                discharging_power_limit,
+                                                charging_efficiency,
+                                                discharging_efficiency,
+                                                throughput_cost,
+                                                initial_state_of_charge)
+        self.units = Units.KW
+
+    def add_usage_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.fixed_states = t
+
+class EVChargingStation(ElectricalNode):
+
+    def __init__(self,
+                 max_export_power,
+                 max_import_power,
+                 num_chargers,
+                 charger_max_export,
+                 charger_max_import):
+        super(EVChargingStation, self).__init__()
+        self.num_chargers = num_chargers
+        self.add_charging_ports(self.num_chargers, charger_max_export, charger_max_import)
+        self.max_export_power = max_export_power
+        self.max_import_power = max_import_power
+
+    def add_charging_ports(self, num_chargers, charger_max_export, charger_max_import):
+        for i in range(num_chargers):
+            evc = EVCharger(
+                export_constraint_value=charger_max_export,
+                import_constraint_value=charger_max_import)
+            charging_port_name = str(i)
+            self.ports[charging_port_name] = evc
+
+
+class EVCharger(ElectricalPort):
+
+    def __init__(self,
+                 export_constraint_value,
+                 import_constraint_value
+                 ):
+        super(EVCharger, self).__init__()
+        self.flows = Flows.Both
+        self.export_constraint = FlowConstraint.Fixed
+        self.export_constraint_value = export_constraint_value
+        self.import_constraint = FlowConstraint.Fixed
+        self.import_constraint_value = import_constraint_value
+
 
 class Edge(object):
 
@@ -620,7 +715,6 @@ class Edge(object):
         self.units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
         self.opt_type = OptimisationType.NA  # Is this a decision variable or a fixed parameter
         self.vertices = vertices
-        self.has_tariff = False  # Todo should we allow tariffs on edges?
         self.tariff = None
         self.initial_edge_capacity = 5000000
 
@@ -657,10 +751,8 @@ class Edge(object):
         def cap_rule_2(model, p, t):
             return getattr(model, selected_port.port_name)[p, t] >= - self.initial_edge_capacity
 
-        con_name = 'flow_con_1_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
-        con_name = 'flow_con_2_' + self.edge_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
+        setattr(model, f"flow_con1_{self.edge_name}", en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
+        setattr(model, f"flow_con2_{self.edge_name}", en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
 
     def factory_constraint_edge_builder(self, obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
@@ -669,6 +761,7 @@ class Edge(object):
         return constraint
 
     def add_objective(self, model):
+        # Todo add edge tariffs here
         return 0
 
     def add_initial_edge_capacity(self, initial_capacity):
@@ -700,13 +793,14 @@ class Path(object):
 
     def __init__(self):
         self.vertices = []
-        self.has_tariff = False
         self.tariff = None
         self.uid = uuid.uuid4()
         self.path_name = 'path_' + str(self.uid)
         self.units = Units.KW
         self.start_port = None
         self.end_port = None
+        self.fcas_raise = False
+        self.fcas_lower = False
 
     def add_tariff(self, tariff):
         if type(tariff) is not dict:
@@ -732,10 +826,11 @@ class Path(object):
         self.flow_value = 'flow_value_' + self.path_name
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
+
     def add_objective(self, model):
         objective = 0
 
-        if self.has_tariff is True:
+        if self.tariff:
             objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
                              for p in model.Expansion for t in model.Time)
 

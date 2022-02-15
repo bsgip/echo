@@ -80,17 +80,19 @@ ES.expansion_periods = expansion_periods
 # tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods=expansion_periods)
 
 grid = Node()
-grid.add_named_electrical_ports(['grid'])
+g = ElectricalPort()
+grid.ports['grid'] = g
+
 
 battery1 = Node()
-b1 = ElectricalStorage(max_capacity=15.0,
+b1 = ElectricalStorage(max_capacity=1000.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=5.0,
                        discharging_power_limit=-5.0,
                        charging_efficiency=1,
-                       discharging_efficiency=0.5,
+                       discharging_efficiency=1,
                        throughput_cost=0.018, #0.018
-                       initial_state_of_charge=0.0)
+                       initial_state_of_charge=1000.0)
 battery1.ports['battery_asset'] = b1
 
 load1 = Node()
@@ -118,35 +120,49 @@ pv_edge1 = Edge(vertices=[site1.ports['pvCP'], pv1])
 grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
 ES.add_edge_obj([bess_edge1, load_edge1, pv_edge1, grid_edge])
-#ES.add_node_obj(grid)
 
 # Path flows
 
-# grid.ports['grid'].path_rule = PathRule.SourceOrSink
-# b1.path_rule = PathRule.SourceOrSink
-# pv1.path_rule = PathRule.SourceOrSink
-# l1.path_rule = PathRule.SourceOrSink
-#
-# ES.generate_all_paths()
+grid.ports['grid'].path_rule = PathRule.SourceOrSink
+b1.path_rule = PathRule.SourceOrSink
+pv1.path_rule = PathRule.SourceOrSink
+l1.path_rule = PathRule.SourceOrSink
+ES.generate_all_paths()
 
 # Testing settings
 
-# Point tariff on connection point port.
-dc = DemandTariff(
-    window=[0] + [1] + [0]*94,
-    expansion_periods=expansion_periods,
-    demand_charge=1.0,
-    min_demand=0.0
-)
-
-cp1.has_tariff = True
-cp1.demand_tariff = dc
+# # Point tariff on connection point port.
+# dc = DemandTariff(
+#     window=[0] + [1] + [0]*94,
+#     expansion_periods=expansion_periods,
+#     demand_charge=1.0,
+#     min_demand=0.0
+# )
 
 
+battery_to_grid = ES.path_obj[(battery1, site1, grid)]
+battery_to_grid.fcas_raise = True
+#battery_to_grid.fcas_lower = True
 
 # local_tariff = Tariff()
 # local_tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods)
 # local_tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods)
+#
+# cp1.has_tariff = True
+# cp1.tariff = local_tariff
+# cp1.export_constraint = FlowConstraint.Fixed
+# cp1.export_constraint_value = -10
+# cp1.import_constraint = FlowConstraint.Fixed
+# cp1.import_constraint_value = 10
+
+site1.ports['bessCP'].import_constraint = FlowConstraint.Fixed
+site1.ports['bessCP'].import_constraint_value = 4
+
+g.import_constraint = FlowConstraint.Fixed
+g.import_constraint_value = 10
+
+
+
 #
 # flat_tariff = Tariff()
 # flat_tariff.add_import_tariff_profile_from_array([0.5]*96, expansion_periods)
@@ -169,10 +185,17 @@ cp1.demand_tariff = dc
 
 # Invoke the optimiser and optimise
 optimiser = EchoOptimiser(15, 96, expansion_periods, discount_rate, ES)
+
 optimiser.build_objective()
+
+optimiser.objective = sum(getattr(optimiser.model, battery_to_grid.contingency_raise)[p, t]
+                          for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
+
 optimiser.optimise()
 
 log_infeasible_constraints(optimiser.model)
+
+print(optimiser.values(battery_to_grid.contingency_raise,0))
 
 ############################ Analyse the Optimisation ########################################
 

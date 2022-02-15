@@ -102,7 +102,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
 
 
 
-def test_hybrid_inverter_limits_battery_discharge_rate():
+def test_hybrid_inverter_limits_path_flows():
 
     expansion_periods = 1
     time_periods = 48
@@ -158,6 +158,12 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
     system.add_edge_obj([bess_edge, load_edge, pv_edge, grid_edge, inv_edge])
 
+    grid.ports['grid'].path_rule = PathRule.SourceOrSink
+    b1.path_rule = PathRule.SourceOrSink
+    pv1.path_rule = PathRule.SourceOrSink
+    l1.path_rule = PathRule.SourceOrSink
+    system.generate_all_paths()
+
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
@@ -171,5 +177,12 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
 
     optimiser.optimise()
 
+    bess_to_load = optimiser.values(system.path_obj[(battery, inverter, cp, load)].flow_value, 0)
+    bess_to_grid = optimiser.values(system.path_obj[(battery, inverter, cp, grid)].flow_value, 0)
+    solar_to_load = optimiser.values(system.path_obj[(solar, inverter, cp, load)].flow_value, 0)
+    solar_to_grid = optimiser.values(system.path_obj[(solar, inverter, cp, grid)].flow_value, 0)
+
+    # Check all flows through inverter respect inverter limits
     for i in range(time_periods):
-        np.testing.assert_almost_equal(optimiser.values(cp.ports['grid'].port_name, 0)[i], 1.0)
+        np.testing.assert_almost_equal(bess_to_load[i] + bess_to_grid[i] + solar_to_load[i] + solar_to_grid[i],
+                inverter.ports['cp'].export_constraint_value*-1)
