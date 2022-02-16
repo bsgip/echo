@@ -1,0 +1,126 @@
+import numpy as np
+import pytest
+
+from echo_models import *
+from echo_optimiser import EchoOptimiser
+from configuration import *
+from objectives import *
+
+import os
+
+SOLVER = os.environ.get('OPTIMISER_ENGINE','cplex')
+SOLVER_EXECUTABLE = None
+
+
+
+N_INTERVALS = 48
+
+
+def test_peak_positive_power_objective():
+
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    grid = Node()
+    grid.add_named_electrical_ports(['grid'])
+
+    battery1 = Node()
+    b1 = ElectricalStorage(max_capacity=10,
+                           depth_of_discharge_limit=0,
+                           charging_power_limit=2.0,
+                           discharging_power_limit=-2.0,
+                           charging_efficiency=1,
+                           discharging_efficiency=1,
+                           initial_state_of_charge=0.0)
+    battery1.ports['battery'] = b1
+
+    load1 = Node()
+    l1 = ElectricalDemand()
+    l1.add_demand_profile_from_array([0.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
+    load1.ports['demand'] = l1
+
+    site1 = ElectricalTellegenNode()
+    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    cp1 = site1.ports['cp']
+
+    system.add_node_obj([grid, battery1, load1, site1])
+    system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site1.ports['load'], l1)
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
+
+    peak_pos_power = PeakPositivePower(component=cp1)
+    system.objective_set = ObjectiveSet(objective_list=[peak_pos_power])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system
+    )
+
+    optimiser.optimise()
+
+    sto_p = optimiser.values(b1.port_name, 0)
+
+    # Check that battery minimises peak pos power (import) by discharging when load is > 0
+    for i in range(6, N_INTERVALS):
+        assert sto_p[i] == -0.25
+
+
+def test_peak_negative_power_objective():
+
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    grid = Node()
+    grid.add_named_electrical_ports(['grid'])
+
+    battery1 = Node()
+    b1 = ElectricalStorage(max_capacity=10,
+                           depth_of_discharge_limit=0,
+                           charging_power_limit=2.0,
+                           discharging_power_limit=-2.0,
+                           charging_efficiency=1,
+                           discharging_efficiency=1,
+                           initial_state_of_charge=0.0)
+    battery1.ports['battery'] = b1
+
+    load1 = Node()
+    l1 = ElectricalPort()
+    l1.opt_type = OptimisationType.Parameter
+    l1.add_initial_value_from_array([-2.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
+    load1.ports['demand'] = l1
+
+    site1 = ElectricalTellegenNode()
+    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    cp1 = site1.ports['cp']
+
+    system.add_node_obj([grid, battery1, load1, site1])
+    system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site1.ports['load'], l1)
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
+
+    peak_neg_power = PeakNegativePower(component=cp1)
+    system.objective_set = ObjectiveSet(objective_list=[peak_neg_power])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system
+    )
+
+    optimiser.optimise()
+
+    sto_p = optimiser.values(b1.port_name, 0)
+
+    # Check that battery absorbs negative load to minimise peak negative power
+    assert sum(sto_p[0:6]) == 2*6

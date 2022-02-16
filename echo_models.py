@@ -261,6 +261,14 @@ class Port(object):
     def add_initial_value(self, initial_value):
         self.initial_value = initial_value
 
+    def add_initial_value_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.add_initial_value(t)
+
+
     def add_objective(self, model):
         objective = 0
         return objective
