@@ -1,32 +1,13 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
-
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
-
 from echo_models import *
 from echo_optimiser import EchoOptimiser
 from configuration import *
-from objectives import *
-
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
 
-
-import pytest
 
 def test_hybrid_inverter_limits_battery_discharge_rate():
 
@@ -46,7 +27,6 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=48.0)
     battery.ports['battery_asset'] = b1
 
@@ -85,7 +65,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
         ES=system
     )
 
-    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()
@@ -113,7 +93,6 @@ def test_hybrid_inverter_limits_path_flows():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=48.0)
     battery.ports['battery_asset'] = b1
 
@@ -159,7 +138,7 @@ def test_hybrid_inverter_limits_path_flows():
         ES=system
     )
 
-    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()
