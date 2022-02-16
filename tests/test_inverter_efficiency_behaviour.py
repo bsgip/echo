@@ -10,12 +10,10 @@ from datetime import time, datetime
 # from c3x.neon.objectives import Objective, ObjectiveSet
 # from c3x.neon.optimiser import Optimiser
 
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff, ElectricalTellegenNode, \
-    Inverter
+from echo_models import *
 from echo_optimiser import EchoOptimiser
 from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
-
+from objectives import *
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
 from hypothesis import given, settings
