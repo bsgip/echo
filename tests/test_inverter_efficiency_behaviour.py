@@ -85,7 +85,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
 
     # Minimise import
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
 
     optimiser.optimise()
@@ -164,7 +164,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
 
     # Minimise import
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
 
     optimiser.optimise()
