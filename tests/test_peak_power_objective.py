@@ -10,12 +10,10 @@ from datetime import time, datetime
 # from c3x.neon.objectives import Objective, ObjectiveSet
 # from c3x.neon.optimiser import Optimiser
 
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff, ElectricalTellegenNode, \
-    Inverter, ControlledLoad
+from echo_models import *
 from echo_optimiser import EchoOptimiser
 from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
-
+from objectives import *
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
 from hypothesis import given, settings
@@ -46,6 +44,11 @@ def test_controlled_load_with_peak_power_objective():
     system.add_node_obj([grid, controlled_load])
     system.connect_ports_and_create_edge(grid.ports['grid'], cl)
 
+    quad_power = QuadraticPower(component=grid.ports['grid'])
+    objective_set = ObjectiveSet(objective_list=[quad_power])
+
+    system.objective_set = objective_set
+
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
@@ -53,10 +56,6 @@ def test_controlled_load_with_peak_power_objective():
         discount_rate=0,
         ES=system
     )
-
-    # Quadratic power objective
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, i] * getattr(optimiser.model, grid.ports['grid'].port_name)[p, i]
-                   for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
     optimiser.optimise()
 
