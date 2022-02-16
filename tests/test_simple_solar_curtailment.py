@@ -1,24 +1,7 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
-
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
 
 from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
-from objectives import *
-
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
@@ -53,8 +36,6 @@ def test_solar_generation_limited_by_inverter_size():
     system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
     system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
 
-
-
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
@@ -63,7 +44,7 @@ def test_solar_generation_limited_by_inverter_size():
         ES=system
     )
 
-    optimiser.model.objective = sum(getattr(optimiser.model, pv1.port_name)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, pv1.port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)
 
     optimiser.optimise()
@@ -111,7 +92,7 @@ def test_non_curtailable_system_not_curtailed():
     )
 
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.model.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)
 
     optimiser.optimise()
@@ -161,7 +142,7 @@ def test_curtailable_system_curtailed():
     )
 
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.model.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)
 
     optimiser.optimise()
