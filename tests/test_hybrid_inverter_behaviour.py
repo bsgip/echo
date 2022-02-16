@@ -10,11 +10,10 @@ from datetime import time, datetime
 # from c3x.neon.objectives import Objective, ObjectiveSet
 # from c3x.neon.optimiser import Optimiser
 
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff, Inverter, \
-    ElectricalTellegenNode
+from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
+from configuration import *
+from objectives import *
 
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
@@ -86,7 +85,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
         ES=system
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
+    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()
@@ -160,7 +159,7 @@ def test_hybrid_inverter_limits_path_flows():
         ES=system
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
+    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()
