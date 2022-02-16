@@ -1,31 +1,12 @@
 import numpy as np
-import pandas as pd
-import pyomo.environ as en
-from datetime import time, datetime
 
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
-
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff, \
-    ControlledLoad
+from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
-
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
-SOLVER_EXECUTABLE = None #os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
+SOLVER_EXECUTABLE = None
 
 
 def test_simple_controlled_load_does_minimum_energy_action():
