@@ -106,9 +106,6 @@ class Port(object):
         self.import_constraint_value = None
         self.export_constraint = FlowConstraint.NA
         self.export_constraint_value = None
-        # Details about any tariffs and incentives
-        self.tariff = None
-        self.demand_tariff = None
         self.installation_capex = 0
         self.path_rule = PathRule.NA
         self.fixed_states = None
@@ -169,19 +166,6 @@ class Port(object):
             setattr(model, self.port_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
-        if self.demand_tariff:
-            self.max_demand = 'max_demand_' + self.port_name
-            setattr(model, self.max_demand, en.Var(initialize=0, domain=en.NonNegativeReals))
-
-            def max_demand_rule(model, p, t):
-                return getattr(model, self.max_demand) >= \
-                       (getattr(model, self.pos)[p, t] - self.demand_tariff.min_demand) * \
-                       self.demand_tariff.window[p, t]
-            setattr(model, f"cons_{self.port_name}_max_demand", en.Constraint(model.Expansion, model.Time,
-                                                                             rule=max_demand_rule))
-        if self.tariff:   # Automatically apply pos/neg constraint if there is a tariff on the port
-            self.constrain_pos_neg(model)
-
         # On/off decision variable and constraints
         self.active = 'active_' + self.port_name
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
@@ -200,8 +184,6 @@ class Port(object):
 
         if self.fixed_states:
             setattr(model, f"on_off_fixed_states_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_fixed_states))
-
-
 
         #Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
@@ -281,17 +263,6 @@ class Port(object):
 
     def add_objective(self, model):
         objective = 0
-
-        if self.tariff:
-            objective += sum(self.tariff.import_tariff[p, i] *
-               getattr(model, self.pos)[p, i] * getattr(model, model.dr)[p] +
-               self.tariff.export_tariff[p, i] *
-               getattr(model, self.neg)[p, i] * getattr(model, model.dr)[p]
-               for p in model.Expansion for i in model.Time)
-
-        if self.demand_tariff:
-            objective += getattr(model, self.max_demand) * self.demand_tariff.demand_charge
-
         return objective
 
 
@@ -447,6 +418,7 @@ class Storage(Port):
 
         objective = 0
 
+        # Todo get rid of this
         objective += sum(
             (getattr(model, self.pos)[p, t] - getattr(model, self.neg)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.throughput_cost / 2.0
@@ -732,9 +704,7 @@ class Inverter(ElectricalNode):
         for port in self.ports.values():
             port.constrain_pos_neg(model)
 
-        # Apply max power constraints to ac node
-
-
+        # Todo apply max power constraints to ac node
 
         # Apply efficiency constraints
         def inverter_ac_output_must_track_efficiency(model, p, t):
@@ -749,7 +719,6 @@ class Inverter(ElectricalNode):
 
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
-
 
 
 class EVChargingStation(ElectricalNode):
@@ -876,15 +845,12 @@ class Path(object):
 
     def __init__(self):
         self.vertices = []
-        self.tariff = None
+        self.tariff = None  #Todo migrate path tariffs to an objective class
         self.uid = uuid.uuid4()
         self.path_name = 'path_' + str(self.uid)
         self.units = Units.KW
         self.start_port = None
         self.end_port = None
-        self.fcas_raise = False
-        self.fcas_lower = False
-        self.fcas_duration = 10.0
 
     def add_tariff(self, tariff):
         if type(tariff) is not dict:
@@ -910,7 +876,6 @@ class Path(object):
         self.flow_value = 'flow_value_' + self.path_name
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
-
     def add_objective(self, model):
         objective = 0
 
@@ -922,59 +887,5 @@ class Path(object):
                      0.00000001
 
         return objective
-
-
-class Tariff(object):
-
-    def __init__(self):
-        self.import_tariff = None
-        self.export_tariff = None
-
-    def add_tariff_profile_import(self, tariff):
-        self.import_tariff = tariff
-
-    def add_tariff_profile_export(self, tariff):
-        self.export_tariff = tariff
-
-    def add_import_tariff_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.import_tariff = t
-
-    def add_export_tariff_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.export_tariff = t
-
-
-class DemandTariff(object):
-
-    def __init__(self,
-                 window,
-                 expansion_periods,
-                 demand_charge,
-                 min_demand
-                 ):
-        self.window = None
-        self.add_window(window, expansion_periods)
-        self.demand_charge = demand_charge
-        self.min_demand = min_demand
-
-    def add_window(self, array, expansion_periods):
-        window = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                window[(ep, i)] = array[i]
-        self.window = window
-
-
-
-
-
-
 
 
