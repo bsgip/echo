@@ -329,7 +329,6 @@ class Storage(Port):
                  discharging_power_limit,
                  charging_efficiency,
                  discharging_efficiency,
-                 throughput_cost,
                  initial_state_of_charge
                  ):
         super(Storage, self).__init__()
@@ -349,9 +348,6 @@ class Storage(Port):
         self.discharging_efficiency = discharging_efficiency
         # Derived Values
         self.capacity = self.calc_capacity()
-        # Throughput Cost
-        # ToDo - Should this be related to the Levelised cost of energy (LCOE)
-        self.throughput_cost = throughput_cost
         # Initial state of charge
         self.initial_state_of_charge = initial_state_of_charge
         self.fixed_storage_capacity = True
@@ -415,14 +411,9 @@ class Storage(Port):
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
-
         objective = 0
 
-        # Todo get rid of this
-        objective += sum(
-            (getattr(model, self.pos)[p, t] - getattr(model, self.neg)[p, t]) *
-            getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.throughput_cost / 2.0
-
+        # To get unique solution
         objective += sum(
             getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
             getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
@@ -503,7 +494,6 @@ class ElectricalStorage(Storage):
                  discharging_power_limit,
                  charging_efficiency,
                  discharging_efficiency,
-                 throughput_cost,
                  initial_state_of_charge
                  ):
         super(ElectricalStorage, self).__init__(max_capacity,
@@ -512,7 +502,6 @@ class ElectricalStorage(Storage):
                                                 discharging_power_limit,
                                                 charging_efficiency,
                                                 discharging_efficiency,
-                                                throughput_cost,
                                                 initial_state_of_charge)
         self.units = Units.KW
 
@@ -647,7 +636,6 @@ class ElectricVehicle(Storage):
                  discharging_power_limit,
                  charging_efficiency,
                  discharging_efficiency,
-                 throughput_cost,
                  initial_state_of_charge
                  ):
         super(ElectricVehicle, self).__init__(max_capacity,
@@ -656,7 +644,6 @@ class ElectricVehicle(Storage):
                                                 discharging_power_limit,
                                                 charging_efficiency,
                                                 discharging_efficiency,
-                                                throughput_cost,
                                                 initial_state_of_charge)
         self.units = Units.KW
 
