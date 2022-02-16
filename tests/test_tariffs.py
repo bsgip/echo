@@ -1,19 +1,10 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
+import pytest
 
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
-
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff
+from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
+from configuration import *
+from objectives import *
 
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
@@ -26,7 +17,6 @@ SOLVER = os.environ.get('OPTIMISER_ENGINE','cplex')
 SOLVER_EXECUTABLE = None
 
 
-import pytest
 
 @pytest.mark.solver('milp')
 @pytest.mark.parametrize(
@@ -69,7 +59,6 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
                            discharging_power_limit=-2.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=0.0)
     battery1.ports['battery'] = b1
 
@@ -79,20 +68,10 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     load1.ports['demand'] = l1
 
     dc_window = [0] * 24 + [1] * 12 + [0] * 12
-    tariff = DemandTariff(
-        window=dc_window,
-        demand_charge=1.0,
-        min_demand=minimum_demand,
-        expansion_periods=expansion_periods
-    )
 
-    site1 = ElectricalNode()
+    site1 = ElectricalTellegenNode()
     site1.add_named_electrical_ports(['cp', 'load', 'bess'])
-    site1.node_rule = NodeRule.Tellegen
     cp1 = site1.ports['cp']
-
-    cp1.has_tariff = True
-    cp1.demand_tariff = tariff
 
     system.add_node_obj([grid, battery1, load1, site1])
 
@@ -101,6 +80,16 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
     system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
+
+    demand_charge = DemandTariffObjective(
+        component=cp1,
+        window=dc_window,
+        demand_charge=1.0,
+        min_demand=minimum_demand,
+        expansion_periods=expansion_periods
+    )
+    throughput_cost = ThroughputCost(component=b1, rate=0.0001)
+    system.objective_set = ObjectiveSet(objective_list=[demand_charge, throughput_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -113,9 +102,9 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     optimiser.optimise()
 
     np.testing.assert_array_almost_equal(optimiser.values(cp1.pos, 0)[24:36],
-                                         np.ones(12) * max(demand - battery_capacity / 12, min(minimum_demand, demand)))
+                                         np.ones(12) * max(demand - battery_capacity / 6, min(minimum_demand, demand)))
     np.testing.assert_array_almost_equal(optimiser.values(b1.neg, 0)[24:36],
-                                         np.ones(12) * max(-battery_capacity / 12, min(minimum_demand - demand, 0.0)))
+                                         np.ones(12) * max(-battery_capacity / 6, min(minimum_demand - demand, 0.0)))
 
 
 @pytest.mark.solver('milp')
@@ -131,20 +120,6 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     interval_duration = 30
     battery_power = 2
 
-    import_tariff = [1.0] * 24 + [1.05] * 24
-    dc_window = [0] * 24 + [1] * 12 + [0] * 12
-
-    it = Tariff()
-    it.add_import_tariff_profile_from_array(import_tariff, expansion_periods)
-    it.add_export_tariff_profile_from_array([0]*time_periods, expansion_periods)
-
-    dc = DemandTariff(
-        window=dc_window,
-        demand_charge=10.0,
-        min_demand=minimum_demand,
-        expansion_periods=expansion_periods
-    )
-
     system = OptimisationGraph()
 
     grid = Node()
@@ -157,7 +132,6 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
                            discharging_power_limit=-battery_power,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.2,
                            initial_state_of_charge=0.0)
     battery1.ports['battery'] = b1
 
@@ -168,14 +142,9 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     pv1.export_constraint_value = 0
     solar.ports['solar'] = pv1
 
-    site1 = ElectricalNode()
+    site1 = ElectricalTellegenNode()
     site1.add_named_electrical_ports(['cp', 'load', 'bess', 'pv'])
-    site1.node_rule = NodeRule.Tellegen
     cp1 = site1.ports['cp']
-
-    cp1.has_tariff = True
-    cp1.tariff = it
-    cp1.demand_tariff = dc
 
     load1 = Node()
     l1 = ElectricalDemand()
@@ -190,6 +159,21 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     system.add_node_obj([grid, battery1, site1, solar, load1])
     system.add_edge_obj([bess_edge1, load_edge1, pv_edge, grid_edge])
 
+    import_tariff = ImportTariff(component=cp1,
+                                 tariff_array=[1.0] * 24 + [1.05] * 24,
+                                 expansion_periods=expansion_periods)
+
+    demand_charge = DemandTariffObjective(component=cp1,
+                                          window=[0] * 24 + [1] * 12 + [0] * 12,
+                                          expansion_periods=expansion_periods,
+                                          demand_charge=10.0,
+                                          min_demand=minimum_demand
+                                          )
+
+    throughput_cost = ThroughputCost(component=b1, rate=0.2)
+
+    system.objective_set = ObjectiveSet(objective_list=[import_tariff, demand_charge, throughput_cost])
+
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
@@ -200,12 +184,11 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
 
     optimiser.optimise()
 
-
     # Check that we reduce minimum demand appropriately during the demand period
     max_gross_demand = max(demand_period_demand)
-    max_net_demand = max(0.0, max_gross_demand - battery_power/2)
+    max_net_demand = max(0.0, max_gross_demand - battery_power)
 
-    expected_import = np.maximum(np.subtract(demand_period_demand, battery_power/2), max_net_demand)
+    expected_import = np.maximum(np.subtract(demand_period_demand, battery_power), max_net_demand)
     expected_import = np.minimum(expected_import, demand_period_demand)
     expected_discharge = expected_import - demand_period_demand
     np.testing.assert_array_almost_equal(optimiser.values(cp1.pos, 0)[24:36],
@@ -238,7 +221,6 @@ def test_system_path_flows_adjust_to_path_tariffs():
                            discharging_power_limit=-battery_power,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=0.0)
     battery1.ports['battery'] = b1
 
@@ -265,13 +247,13 @@ def test_system_path_flows_adjust_to_path_tariffs():
     l1.path_rule = PathRule.SourceOrSink
     system.generate_all_paths()
 
-    tariff = Tariff()
-    tariff.add_import_tariff_profile_from_array([0] * 24 + [1] * 24, expansion_periods)
-    tariff.add_export_tariff_profile_from_array([0]*time_periods, expansion_periods)
-
     grid_to_load = system.path_obj[(grid, site1, load1)]
-    grid_to_load.has_tariff = True
-    grid_to_load.tariff = tariff
+
+    path_tariff = PathTariff(component=grid_to_load,
+                             tariff_array=[0] * 24 + [1] * 24,
+                             expansion_periods=expansion_periods)
+
+    system.objective_set = ObjectiveSet(objective_list=[path_tariff])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -284,13 +266,12 @@ def test_system_path_flows_adjust_to_path_tariffs():
     optimiser.optimise()
 
     # Check that grid to load flow is minimised in period of path tariff > 0
-    net_load = demand - battery_power/2
+    net_load = demand - battery_power
     grid_to_load_vals = optimiser.values(grid_to_load.flow_value, 0)
     np.testing.assert_array_almost_equal(grid_to_load_vals[24:36], np.ones(12) * net_load)
 
 
 def test_path_flows_respect_port_constraints():
-
 
     expansion_periods = 1
     time_periods = 48
@@ -310,7 +291,6 @@ def test_path_flows_respect_port_constraints():
                            discharging_power_limit=-battery_power,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.2,
                            initial_state_of_charge=0.0)
     battery.ports['battery'] = b1
 
@@ -344,6 +324,11 @@ def test_path_flows_respect_port_constraints():
     l1.path_rule = PathRule.SourceOrSink
     pv1.path_rule = PathRule.SourceOrSink
     system.generate_all_paths()
+
+    tp_cost = ThroughputCost(component=b1,
+                             rate=0.2)
+
+    system.objective_set = ObjectiveSet(objective_list=[tp_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
