@@ -1,23 +1,8 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
-
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
 
 from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
 from objectives import *
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
@@ -66,44 +51,3 @@ def test_controlled_load_with_peak_power_objective():
 
     for i in range(N_INTERVALS):
         assert root_p[i] == cl_p[i]
-
-
-
-    #
-    #
-    # controlled_load = ControlledLoad(name='cl', min_power=0.0, max_power=5.0, min_utilisation=5.0/60.0)
-    #
-    # system = Junction(
-    #     name='root',
-    #     connections=[
-    #         controlled_load
-    #     ]
-    # )
-    #
-    # model = ConcreteModel()
-    #
-    # model.time = en.RangeSet(0, N_INTERVALS - 1)
-    # model.interval_duration = [30.0] * N_INTERVALS
-    # model.big_m = 1000000
-    #
-    # df = pd.DataFrame({'sol_p_max': [-float(i) for i in range(N_INTERVALS)]})
-    #
-    # system_initial_state = {}
-    # options = Options()
-    #
-    # system.initialise_model(model, df.to_dict(), system_initial_state, options)
-    # system.apply_constraints(model, system)
-    #
-    # ObjectiveSet(objectives=[QuadraticPower(component='root')]).set_objective(model)
-    #
-    # solver = SolverFactory(SOLVER, executable=SOLVER_EXECUTABLE)
-    # result = solver.solve(model, tee=True)
-    #
-    # root_p = model.root_p.extract_values()
-    # cl_p = model.cl_p.extract_values()
-    #
-    # np.testing.assert_array_almost_equal(list(cl_p.values()), [2 * 10.0 / N_INTERVALS] * 48)
-    #
-    # for i in range(N_INTERVALS):
-    #     assert root_p[i] == cl_p[i]
-    #
