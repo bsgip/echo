@@ -1,24 +1,9 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
-
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
 
 from echo_models import *
 from echo_optimiser import EchoOptimiser
 from configuration import *
 from objectives import *
-
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
@@ -35,7 +20,6 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
 
     grid = Node()
     grid.add_named_electrical_ports(['grid'])
-    g = grid.ports['grid']
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -44,7 +28,6 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=1.0)
     battery.ports['battery_asset'] = b1
 
@@ -123,7 +106,6 @@ def test_negative_contingency_maximisation_curtails_solar():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=1.0)
     battery.ports['battery_asset'] = b1
 
@@ -208,7 +190,6 @@ def test_negative_contingency_calculation_with_no_available_energy():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=0.0)
     battery.ports['battery_asset'] = b1
 
