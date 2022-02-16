@@ -193,14 +193,14 @@ class EchoOptimiser(object):
                         en.Constraint(self.model.Expansion, self.model.Time, rule=no_flow_through_rule))
 
     def build_objective(self):
-        self.model.objective = 0
+        self.objective = 0
         if hasattr(self.ES, 'objective_set'):
             self.ES.objective_set.initialise_objective(self.model)
-            self.ES.objective_set.set_objective(self.model)
+            self.ES.objective_set.set_objective(self.model, self)
 
     def optimise(self):
         def objective_function(model):
-            return self.model.objective
+            return self.objective
 
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
 
