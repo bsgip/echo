@@ -10,11 +10,10 @@ from datetime import time, datetime
 # from c3x.neon.objectives import Objective, ObjectiveSet
 # from c3x.neon.optimiser import Optimiser
 
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff, ElectricalTellegenNode, \
-    Inverter
+from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
+from configuration import *
+from objectives import *
 
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
@@ -36,6 +35,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
 
     grid = Node()
     grid.add_named_electrical_ports(['grid'])
+    g = grid.ports['grid']
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -81,7 +81,12 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     system.generate_all_paths()
 
     bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
-    bess_to_g.fcas_raise = True
+    contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
+
+    system.objective_set = ObjectiveSet(objective_list=[
+        contingency_neg
+    ]
+    )
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -91,12 +96,9 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
         ES=system
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, bess_to_g.contingency_raise)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
-
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_raise, 0)*-1
+    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
 
     for i in range(time_periods // 2):
         np.testing.assert_almost_equal(cont_neg_p[i], -1.0)
@@ -159,7 +161,12 @@ def test_negative_contingency_maximisation_curtails_solar():
     system.generate_all_paths()
 
     bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
-    bess_to_g.fcas_raise = True
+    contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
+
+    system.objective_set = ObjectiveSet(objective_list=[
+        contingency_neg
+    ]
+    )
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -169,12 +176,9 @@ def test_negative_contingency_maximisation_curtails_solar():
         ES=system
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, bess_to_g.contingency_raise)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
-
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_raise, 0)*-1
+    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
 
     for i in range(time_periods // 2):
@@ -242,7 +246,12 @@ def test_negative_contingency_calculation_with_no_available_energy():
     system.generate_all_paths()
 
     bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
-    bess_to_g.fcas_raise = True
+    contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
+
+    system.objective_set = ObjectiveSet(objective_list=[
+        contingency_neg
+    ]
+    )
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -252,12 +261,9 @@ def test_negative_contingency_calculation_with_no_available_energy():
         ES=system
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, bess_to_g.contingency_raise)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
-
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_raise, 0)*-1
+    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(cont_neg_p[i], 0.0, 5)  #Had to update to 5dp
