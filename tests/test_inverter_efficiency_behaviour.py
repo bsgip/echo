@@ -1,23 +1,6 @@
 import numpy as np
-import pandas as pd
-from datetime import time, datetime
-
-# from c3x.neon.objectives.tariffs.demand import DemandTariff, DemandTariffVersion, DemandCharge, DemandTariffObjective, \
-#     Window, TimePeriod, Day
-# from c3x.neon.objectives.throughput import ThroughputCost
-# from c3x.neon.objectives.tariffs import ImportTariff
-# from c3x.neon.models import Junction, Storage, Load, Gen
-# from c3x.neon.objectives import Objective, ObjectiveSet
-# from c3x.neon.optimiser import Optimiser
-
 from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule
-from objectives import *
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import floats
-from hypothesis import given, settings
-
 
 import os
 
@@ -44,7 +27,6 @@ def test_hybrid_inverter_dc_ac_efficiency():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=48.0)
     battery.ports['battery_asset'] = b1
 
@@ -85,7 +67,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
 
     # Minimise import
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
 
     optimiser.optimise()
@@ -123,7 +105,6 @@ def test_hybrid_inverter_dc_dc_efficiency():
                            discharging_power_limit=-5.0,
                            charging_efficiency=1,
                            discharging_efficiency=1,
-                           throughput_cost=0.0,
                            initial_state_of_charge=0.0)
     battery.ports['battery_asset'] = b1
 
@@ -164,17 +145,14 @@ def test_hybrid_inverter_dc_dc_efficiency():
 
     # Minimise import
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.model.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
 
     optimiser.optimise()
 
     root_p = optimiser.values(grid.ports['grid'].neg, 0)
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
-    cp_p = optimiser.values(cp.ports['grid'].port_name, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
     sto_p = optimiser.values(b1.port_name, 0)
-    sto_soc = optimiser.values(b1.soc_value, 0)
 
     for i in range(N_INTERVALS//2):
         np.testing.assert_almost_equal(root_p[i], 0.0, 5) # Had to add 5dp
