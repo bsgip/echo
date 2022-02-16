@@ -2,7 +2,7 @@ from typing import List, Union
 
 import pyomo.environ as en
 
-from echo_models import Port
+from echo_models import Port, ConfigurationError
 
 
 class Objective(object):
@@ -18,6 +18,11 @@ class PeakPositivePower(Objective):
                  component):
         super(PeakPositivePower, self).__init__(component)
 
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Peak Power objective must be applied to port component.')
+
     def create_params(self, model):
         pass
 
@@ -29,7 +34,7 @@ class PeakPositivePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_pos) >= getattr(model, self.component.port_name)[p, t]
 
-        setattr(model, f"max_val_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
+        setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
         return getattr(model, self.component.max_pos)
@@ -40,6 +45,11 @@ class PeakNegativePower(Objective):
     def __init__(self,
                  component):
         super(PeakNegativePower, self).__init__(component)
+
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Peak Power objective must be applied to port component.')
 
     def create_params(self, model):
         pass
@@ -52,7 +62,7 @@ class PeakNegativePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_neg) <= getattr(model, self.component.port_name)[p, t]
 
-        setattr(model, f"max_val_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
+        setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
         return getattr(model, self.component.max_neg)*-1
@@ -76,8 +86,14 @@ class ImportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.import_tariff = t
 
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Import Tariff objective must be applied to port component.')
+
     def create_params(self, model):
-        pass
+        self.component.import_tariff = 'import_tariff_' + self.component.port_name
+        setattr(model, self.component.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff))
 
     def create_vars(self, model):
         pass
@@ -87,8 +103,8 @@ class ImportTariff(Objective):
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.pos)[p, t] * self.import_tariff[p, t] * model.dr[p, t]
-                   for p in model.Expansion for t in model.Time)
+        return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.component.import_tariff)[p, t] *
+                   getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
 
 class ExportTariff(Objective):
@@ -109,6 +125,11 @@ class ExportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.export_tariff = t
 
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Export Tariff objective must be applied to port component.')
+
     def create_params(self, model):
         pass
 
@@ -120,8 +141,46 @@ class ExportTariff(Objective):
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.neg)[p, t] * self.export_tariff[p, t] * model.dr[p, t]
+        return sum(getattr(model, self.component.neg)[p, t] * self.export_tariff[p, t] * model.dr[p]
                    for p in model.Expansion for t in model.Time)
+
+
+class PathTariff(Objective):
+
+    def __init__(self,
+                 component,
+                 tariff_array,
+                 expansion_periods
+                 ):
+        super(PathTariff, self).__init__(component)
+        self.path_tariff = {}
+        self.create_tariff_dict(tariff_array, expansion_periods)
+
+    def create_tariff_dict(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.path_tariff = t
+
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'flow_value'):
+            raise ConfigurationError('Path Tariff objective must be applied to path component.')
+
+    def create_params(self, model):
+        self.component.path_tariff = 'path_tariff_' + self.component.path_name
+        setattr(model, self.component.path_tariff, en.Param(model.Expansion, model.Time, initialize=self.path_tariff))
+
+    def create_vars(self, model):
+        pass
+
+    def apply_constraints(self, model):
+        pass
+
+    def objective_expr(self, model):
+        return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.component.path_tariff)[p, t] *
+                   getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
 
 class DemandTariffObjective(Objective):
@@ -145,6 +204,11 @@ class DemandTariffObjective(Objective):
             for i in range(0, len(array)):
                 window[(ep, i)] = array[i]
         self.window = window
+
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Demand Tariff objective must be applied to port component.')
 
     def create_params(self, model):
         pass
@@ -176,6 +240,11 @@ class ThroughputCost(Objective):
         super(ThroughputCost, self).__init__(component)
         self.rate = rate
 
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Throughput Cost objective must be applied to port component.')
+
     def create_params(self, model):
         pass
 
@@ -197,6 +266,11 @@ class QuadraticPower(Objective):
     def __init__(self,
                  component):
         super(QuadraticPower, self).__init__(component)
+
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'port_name'):
+            raise ConfigurationError('Quadratic Power objective must be applied to port component.')
 
     def create_params(self, model):
         pass
@@ -224,7 +298,10 @@ class ContingencyNegative(Objective):
         super(ContingencyNegative, self).__init__(component)
         self.duration = duration
 
-        # component should be a path
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'flow_value'):
+            raise ConfigurationError('Contingency objective must be applied to path component.')
 
     def create_params(self, model):
         pass
@@ -302,7 +379,10 @@ class ContingencyPositive(Objective):
         super(ContingencyPositive, self).__init__(component)
         self.duration = duration
 
-        # Component should be a path
+    def verify_objective(self):
+        """ Check objectives all reference an object of the correct type"""
+        if not hasattr(self.component, 'flow_value'):
+            raise ConfigurationError('Contingency objective must be applied to path component.')
 
     def create_params(self, model):
         pass
@@ -376,21 +456,20 @@ class ObjectiveSet(object):
     def __init__(self,
                  objective_list):
         self.objectives = objective_list
-        self.verify_objectives()
-
-    def verify_objectives(self):
-        pass
 
     def initialise_objective(self, model):
         for obj in self.objectives:
+            obj.verify_objective()
             obj.create_params(model)
             obj.create_vars(model)
             obj.apply_constraints(model)
 
-    def set_objective(self, model):
-        def objective(model):
+    def set_objective(self, model, optimiser):
+        def objective_rule(model):
             return sum(obj.objective_expr(model) for obj in self.objectives)
-        model.objective += objective(model)
+#        model.objective = en.Objective(rule=objective, sense=en.minimize)
+        optimiser.objective += objective_rule(model)
+
 
 
 
