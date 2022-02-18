@@ -57,26 +57,19 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    pv1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
-
-    bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
+    system.create_path_objects(source_sink_list=[grid, battery, solar, load])
+    bess_to_g = system.paths[(battery, inverter, cp, grid)]
     contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
 
-    system.objective_set = ObjectiveSet(objective_list=[
-        contingency_neg
-    ]
-    )
+    objective_set = ObjectiveSet(objective_list=[contingency_neg])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -136,16 +129,12 @@ def test_negative_contingency_maximisation_curtails_solar():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    pv1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
+    system.create_path_objects(source_sink_list=[grid, battery,solar, load])
 
-    bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
+    bess_to_g = system.paths[(battery, inverter, cp, grid)]
     contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
 
-    system.objective_set = ObjectiveSet(objective_list=[
+    objective_set = ObjectiveSet(objective_list=[
         contingency_neg
     ]
     )
@@ -155,7 +144,8 @@ def test_negative_contingency_maximisation_curtails_solar():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -220,16 +210,12 @@ def test_negative_contingency_calculation_with_no_available_energy():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    pv1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
+    system.create_path_objects(source_sink_list=[grid, battery,solar, load])
 
-    bess_to_g = system.path_obj[(battery, inverter, cp, grid)]
+    bess_to_g = system.paths[(battery, inverter, cp, grid)]
     contingency_neg = ContingencyNegative(component=bess_to_g, duration=10.0)
 
-    system.objective_set = ObjectiveSet(objective_list=[
+    objective_set = ObjectiveSet(objective_list=[
         contingency_neg
     ]
     )
@@ -239,7 +225,8 @@ def test_negative_contingency_calculation_with_no_available_energy():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set = objective_set
     )
 
     optimiser.optimise()

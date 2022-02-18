@@ -11,11 +11,12 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES):
+    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES, objective_set):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.number_of_expansion_intervals = number_of_expansion_intervals
         self.ES = ES
+        self.objective_set = objective_set
 
         # Configure the optimiser through setting appropriate environmental variables.
         self.optimiser_engine = os.environ.get('OPTIMISER_ENGINE')  # Default to ipopt since that is easiest to install
@@ -36,8 +37,7 @@ class EchoOptimiser(object):
         self.model = en.ConcreteModel()
         self.model.interval_duration = self.interval_duration
         self.model.number_of_intervals = self.number_of_intervals
-        self.model.path_obj = self.ES.path_obj
-        self.model.ES = self.ES
+        self.model.paths = self.ES.paths #Todo better way of making all path variables available for constructing objectives
 
         #### Bias Values ####
 
@@ -56,6 +56,7 @@ class EchoOptimiser(object):
         else:
             self.model.Expansion = en.RangeSet(0, self.number_of_expansion_intervals - 1)
 
+        # Setup discounting
         dr = {}
         for ep in range(0, self.number_of_expansion_intervals):
             dr[ep] = 1 / ((1 + self.discount_rate) ** ep)
@@ -76,10 +77,9 @@ class EchoOptimiser(object):
             edge_obj.verify_edge()
             edge_obj.initialise_edge(self.model)
 
-        # Initialise path variables/params
-        for _, path_obj in self.ES.path_obj.items():
-            path_obj.verify_path()
-            path_obj.initialise_path(self.model)
+        # Initialise paths
+        for _, path in self.ES.paths.items():
+            path.initialise_path(self.model)
 
     def apply_constraints(self):
         self.apply_node_constraints()
@@ -122,11 +122,11 @@ class EchoOptimiser(object):
 
     def apply_path_constraints(self):
 
-        if self.ES.path_obj:
+        if self.ES.paths:
 
             def path_flow_rule(model, p, t):
                 a = 0
-                for _, path in self.ES.path_obj.items():
+                for _, path in self.ES.paths.items():
                     if path.vertices[0] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                     if path.vertices[-1] is current_node:
@@ -136,28 +136,28 @@ class EchoOptimiser(object):
 
             def import_paths_rule_one(model, p, t):
                 a = 0
-                for _, path in self.ES.path_obj.items():
+                for _, path in self.ES.paths.items():
                     if path.vertices[-1] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                 return a <= getattr(model, current_node.inflow)[p, t] * self.model.bigM
 
             def import_paths_rule_two(model, p, t):
                 a = 0
-                for _, path in self.ES.path_obj.items():
+                for _, path in self.ES.paths.items():
                     if path.vertices[-1] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                 return getattr(model, current_node.inflow)[p, t] <= a * self.model.bigM
 
             def export_paths_rule_one(model, p, t):
                 a = 0
-                for _, path in self.ES.path_obj.items():
+                for _, path in self.ES.paths.items():
                     if path.vertices[0] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                 return a <= getattr(model, current_node.outflow)[p, t] * self.model.bigM
 
             def export_paths_rule_two(model, p, t):
                 a = 0
-                for _, path in self.ES.path_obj.items():
+                for _, path in self.ES.paths.items():
                     if path.vertices[0] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                 return getattr(model, current_node.outflow)[p, t] <= a * self.model.bigM
@@ -165,7 +165,13 @@ class EchoOptimiser(object):
             def no_flow_through_rule(model, p, t):
                 return getattr(model, current_node.inflow)[p, t] + getattr(model, current_node.outflow)[p, t] <= 1
 
-            for current_port, current_node in self.ES.sources_and_sinks.items():
+            sources_and_sinks = self.ES.get_sources_and_sinks()
+            for current_node in sources_and_sinks:
+                # Assuming source/sink nodes only have one port - will not work for multi-commodity networks
+                if len(current_node.ports) != 1:
+                    raise ConfigurationError('Source/sink nodes with more than one port are not supported.')
+                for _, port in current_node.ports.items():
+                    current_port = port
                 setattr(self.model, f"path_flow_con_{current_node.node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
@@ -194,9 +200,10 @@ class EchoOptimiser(object):
 
     def build_objective(self):
         self.objective = 0
-        if hasattr(self.ES, 'objective_set'):
-            self.ES.objective_set.initialise_objective(self.model)
-            self.ES.objective_set.set_objective(self.model, self)
+        if hasattr(self, 'objective_set'):
+            if self.objective_set is not None:
+                self.objective_set.initialise_objective(self.model)
+                self.objective_set.set_objective(self.model, self)
 
     def optimise(self):
         def objective_function(model):

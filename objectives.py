@@ -313,21 +313,10 @@ class ContingencyNegative(Objective):
 
     def apply_constraints(self, model):
 
-        # Todo better way of getting this info
-        def get_port_on_path(node1, node2):
-            """ Gets port on node1 that forms edge connecting node1 and node2 """
-            connecting_edge = model.ES.edge_obj.get((node1.uid, node2.uid))
-            if connecting_edge:
-                return connecting_edge.vertices[0]
-            else:
-                connecting_edge = model.ES.edge_obj.get((node2.uid, node1.uid))
-                if connecting_edge:
-                    return connecting_edge.vertices[1]
-
         def contingency_power_limited_by_flow_constraints(model, node1, node2, var, flow_constraint):
             def constraint(model, p, t):
                 a = 0
-                for _, other_path in model.path_obj.items():  # Check if the path includes [...node1, node2...]
+                for _, other_path in model.paths.items():  # Check if the path includes [...node1, node2...]
                     if (node1 in other_path.vertices) and (node2 in other_path.vertices):
                         b = other_path.vertices.index(node1)
                         c = other_path.vertices.index(node2)
@@ -340,8 +329,8 @@ class ContingencyNegative(Objective):
         for i in range(0, len(self.component.vertices) - 1):
             node1 = self.component.vertices[i]
             node2 = self.component.vertices[i + 1]
-            exporting_port = get_port_on_path(node1, node2)
-            importing_port = get_port_on_path(node2, node1)
+            exporting_port = self.component.edge_ports[i][0]
+            importing_port = self.component.edge_ports[i][1]
 
             if exporting_port.export_constraint_value is not None:
                 con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
@@ -353,7 +342,7 @@ class ContingencyNegative(Objective):
                 con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
                                                                          self.component.contingency_neg,
                                                                          importing_port.import_constraint_value)
-                setattr(model, f"cont_neg_con_one_{importing_port.port_name}",
+                setattr(model, f"cont_neg_con_two_{importing_port.port_name}",
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
@@ -393,35 +382,25 @@ class ContingencyPositive(Objective):
                 en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def apply_constraints(self, model):
-        def get_port_on_path(node1, node2):
-            """ Gets port on node1 that forms edge connecting node1 and node2 """
-            connecting_edge = model.ES.edge_obj.get((node1.uid, node2.uid))
-            if connecting_edge:
-                return connecting_edge.vertices[0]
-            else:
-                connecting_edge = model.ES.edge_obj.get((node2.uid, node1.uid))
-                if connecting_edge:
-                    return connecting_edge.vertices[1]
 
         def contingency_power_limited_by_flow_constraints(model, node1, node2, var, flow_constraint):
             def constraint(model, p, t):
                 a = 0
-                for _, other_path in model.path_obj.items():  # Check if the path includes [...node1, node2...]
+                for _, other_path in model.paths.items():  # Check if the path includes [...node1, node2...]
                     if (node1 in other_path.vertices) and (node2 in other_path.vertices):
                         b = other_path.vertices.index(node1)
                         c = other_path.vertices.index(node2)
-                        if b + 1 == c:
+                        if b - 1 == c:
                             a += getattr(model, other_path.flow_value)[p, t]
                 return getattr(model, var)[p, t] <= (flow_constraint - a)
             return constraint
 
         # Iterate through vertices on path to pick up any port constraints along path
-        reverse_path = model.ES.path_obj[tuple(self.component.vertices[::-1])]
-        for i in range(0, len(reverse_path.vertices) - 1):
+        for i in range(0, len(self.component.vertices) - 1):
             node1 = self.component.vertices[i]
             node2 = self.component.vertices[i + 1]
-            exporting_port = get_port_on_path(node1, node2)
-            importing_port = get_port_on_path(node2, node1)
+            exporting_port = self.component.edge_ports[i][0]
+            importing_port = self.component.edge_ports[i][1]
 
             if exporting_port.export_constraint_value is not None:
                 con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
@@ -433,7 +412,7 @@ class ContingencyPositive(Objective):
                 con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
                                                                          self.component.contingency_pos,
                                                                          importing_port.import_constraint_value)
-                setattr(model, f"cont_pos_con_one_{importing_port.port_name}",
+                setattr(model, f"cont_pos_con_two_{importing_port.port_name}",
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
@@ -448,7 +427,6 @@ class ContingencyPositive(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.component.contingency_pos)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)*-1
-
 
 
 class ObjectiveSet(object):

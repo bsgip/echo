@@ -3,9 +3,8 @@ import uuid
 import networkx as nx
 from networkx import Graph
 import pyomo.environ as en
-from configuration import Units, Flows, FlowConstraint, OptimisationType, NodeRule, TransformRule, \
-    ExpansionType, PathRule
-from constants import minutes_per_hour, positive_variable_component, negative_variable_component
+from configuration import *
+from constants import *
 
 
 class OptimisationGraph(Graph):
@@ -14,8 +13,7 @@ class OptimisationGraph(Graph):
         super(OptimisationGraph, self).__init__()
         self.node_obj = dict()
         self.edge_obj = dict()
-        self.path_obj = dict()
-        self.sources_or_sinks = []
+        self.paths = {}
 
     def add_node_obj(self, node):
         def add_single_node(node_obj):
@@ -45,10 +43,6 @@ class OptimisationGraph(Graph):
         e = Edge(vertices=(port1, port2))
         self.add_edge_obj(e)
 
-    def add_path_obj(self, path_obj):
-        path_key = tuple(path_obj.vertices)
-        self.path_obj[path_key] = path_obj
-
     def lookup_node_from_port(self, port):
         """ Returns node that a specified port belongs to, if the port belongs to a node."""
         for _, node in self.node_obj.items():
@@ -57,36 +51,54 @@ class OptimisationGraph(Graph):
                     return node
         raise ConfigurationError('Port is not part of any node.')
 
-    def generate_all_paths(self):
-        """ Retrieve all paths between sources/sinks in the model. """
-        all_paths = []
-        sources = {}
-        sinks = {}
-        for _, n in self.node_obj.items():
-            for _, p in n.ports.items():  # Collect info on which ports are sources/sinks/nodes
-                if p.path_rule == PathRule.SourceOrSink:
-                    sources[p] = n
-                    sinks[p] = n
-                if p.path_rule == PathRule.Source:
-                    sources[p] = n
-                if p.path_rule == PathRule.Sink:
-                    sinks[p] = n
+    def get_port_on_path(self, node1, node2):
+        """ Gets port on node1 that forms edge connecting node1 and node2 """
+        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
+        if connecting_edge:
+            return connecting_edge.vertices[0]
+        else:
+            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
+            if connecting_edge:
+                return connecting_edge.vertices[1]
 
-        for source_port, source_node in sources.items():  # Generate list of paths between sources and sinks
-            for sink_port, sink_node in sinks.items():
-                simple_paths = nx.all_simple_paths(self, source_node, sink_node)
-                for i in simple_paths:
-                    p = Path()  # Create path objects
-                    p.vertices = i
-                    p.start_port = source_port
-                    p.end_port = sink_port
-                    all_paths.append(i)
-                    self.add_path_obj(p)
+    def get_ports_on_edge_from_nodes(self, node1, node2):
+        """ Gets edge ports from node1, node2 """
+        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
+        if connecting_edge:
+            node1_port = connecting_edge.vertices[0]
+            node2_port = connecting_edge.vertices[1]
+            return node1_port, node2_port
+        else:
+            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
+            if connecting_edge:
+                node1_port = connecting_edge.vertices[1]
+                node2_port = connecting_edge.vertices[0]
+                return node1_port, node2_port
 
-        sources_and_sinks = {}
-        sources_and_sinks.update(sources)
-        sources_and_sinks.update(sinks)
-        self.sources_and_sinks = sources_and_sinks
+    def get_sources_and_sinks(self):
+        sources_or_sinks = set()
+        for _, path in self.paths.items():
+            sources_or_sinks.add(path.vertices[0])
+            sources_or_sinks.add(path.vertices[-1])
+        return sources_or_sinks
+
+    def create_path_objects(self, source_sink_list):
+        all_paths = {}
+        for source_node in source_sink_list:
+            for sink_node in source_sink_list:
+                if source_node is not sink_node:
+                    simple_paths = nx.all_simple_paths(self, source_node, sink_node)
+                    simple_edges = nx.all_simple_edge_paths(self, source_node, sink_node)
+                    for vertex_list, edge_list in zip(simple_paths, simple_edges):
+                        p = Path(vertices=vertex_list)  # Create path objects
+                        for edge in edge_list:
+                            edge_obj = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
+                            p.edge_ports.append(edge_obj)
+                        p.start_port = p.edge_ports[0][0]
+                        p.end_port = p.edge_ports[-1][-1]
+                        all_paths[tuple(vertex_list)] = p
+
+        self.paths = all_paths
 
 
 class ConfigurationError(Exception):
@@ -107,8 +119,6 @@ class Port(object):
         self.export_constraint = FlowConstraint.NA
         self.export_constraint_value = None
         self.installation_capex = 0
-        self.path_rule = PathRule.NA
-        self.fixed_states = None
 
     def set_flow_constraints(self, max_import, max_export):
         self.import_constraint = FlowConstraint.Fixed
@@ -166,26 +176,7 @@ class Port(object):
             setattr(model, self.port_name,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
-        # On/off decision variable and constraints
-        self.active = 'active_' + self.port_name
-        setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-
-        def on_off_rule1(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * model.bigM
-
-        def on_off_rule2(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= - getattr(model, self.active)[p, t] * model.bigM
-
-        def on_off_fixed_states(model, p, t):
-            return getattr(model, self.active)[p, t] == self.fixed_states[p, t]
-
-        setattr(model, f"on_off_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
-        setattr(model, f"on_off_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
-
-        if self.fixed_states:
-            setattr(model, f"on_off_fixed_states_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_fixed_states))
-
-        #Import/export capacity constraint rules
+        # Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
 
@@ -204,40 +195,28 @@ class Port(object):
         self.pos = positive_variable_component + self.port_name
         self.neg = negative_variable_component + self.port_name
 
-        setattr(model, self.pos,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-        setattr(model, self.neg,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+        setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+        setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
 
         self.is_pos = 'is_pos_' + self.port_name
         setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-
-        self.is_neg = 'is_neg_' + self.port_name
-        setattr(model, self.is_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
         con_name = positive_variable_component + negative_variable_component + self.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
-        # Todo simplify this
-        con_name = 'is_pos_con1_' + self.port_name
-        con_rule = self.factory_big_M_one(1, self.pos, self.is_pos)
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
-        con_name = 'is_pos_con2_' + self.port_name
-        con_rule = self.factory_big_M_two(1, self.pos, self.is_pos)
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
-        con_name = 'is_neg_con1_' + self.port_name
-        con_rule = self.factory_big_M_one(-1, self.neg, self.is_neg)
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
-        con_name = 'is_neg_con2_' + self.port_name
-        con_rule = self.factory_big_M_two(-1, self.neg, self.is_neg)
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+        def only_pos_or_neg_one(model, p, t):
+            return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
 
-        def pos_neg_rule(model, p, t):
-            return getattr(model, self.is_pos)[p, t] + getattr(model, self.is_neg)[p, t] <= 1
+        def only_pos_or_neg_two(model, p, t):
+            return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1)* model.bigM
 
-        con_name = 'pos_neg_con_' + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=pos_neg_rule))
+        setattr(model, f"pos_neg_con1_{self.port_name}",
+                en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
+
+        setattr(model, f"pos_neg_con2_{self.port_name}",
+                en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
+
 
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
 
@@ -246,16 +225,6 @@ class Port(object):
                    (getattr(model, pos_name)[expansion_interval, time_interval] +
                     getattr(model, neg_name)[expansion_interval, time_interval])
 
-        return constraint
-
-    def factory_big_M_one(self, sign, var, indicator):
-        def constraint(model, p, t):
-            return getattr(model, indicator)[p, t] <= getattr(model, var)[p, t] * model.bigM * sign
-        return constraint
-
-    def factory_big_M_two(self, sign, var, indicator):
-        def constraint(model, p, t):
-            return sign * getattr(model, var)[p, t] <= getattr(model, indicator)[p, t] * model.bigM
         return constraint
 
     def add_initial_value(self, initial_value):
@@ -677,7 +646,7 @@ class Inverter(ElectricalNode):
         self.ac_port = None
         self.max_inverter_import = max_import
         self.max_inverter_export = max_export
-        self.node_rule = NodeRule.Custom #Todo fix this
+        self.node_rule = NodeRule.Custom # Todo fix this
 
     def add_dc_port(self, port_name):
         p = ElectricalPort()
@@ -698,8 +667,6 @@ class Inverter(ElectricalNode):
         # Make sure all ports have pos/neg constraint
         for port in self.ports.values():
             port.constrain_pos_neg(model)
-
-        # Todo apply max power constraints to ac node
 
         # Apply efficiency constraints
         def inverter_ac_output_must_track_efficiency(model, p, t):
@@ -838,26 +805,14 @@ class Transform(object):
 class Path(object):
     """ A path is a list of connected nodes."""
 
-    def __init__(self):
-        self.vertices = []
-        self.tariff = None  #Todo migrate path tariffs to an objective class
+    def __init__(self, vertices):
+        self.edge_ports = []
+        self.vertices = vertices
         self.uid = uuid.uuid4()
         self.path_name = 'path_' + str(self.uid)
         self.units = Units.KW
         self.start_port = None
         self.end_port = None
-
-    def add_tariff(self, tariff):
-        if type(tariff) is not dict:
-            raise ConfigurationError('Enter tariff as dictionary.')
-        self.tariff = tariff
-
-    def add_tariff_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.tariff = t
 
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
@@ -873,10 +828,6 @@ class Path(object):
 
     def add_objective(self, model):
         objective = 0
-
-        if self.tariff:
-            objective += sum(getattr(model, self.flow_value)[p, t] * self.tariff.import_tariff[p, t] \
-                             for p in model.Expansion for t in model.Time)
 
         objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * \
                      0.00000001

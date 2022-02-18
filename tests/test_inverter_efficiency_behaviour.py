@@ -62,7 +62,8 @@ def test_hybrid_inverter_dc_ac_efficiency():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # Minimise import
@@ -140,7 +141,8 @@ def test_hybrid_inverter_dc_dc_efficiency():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # Minimise import

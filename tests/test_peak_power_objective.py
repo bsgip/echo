@@ -32,14 +32,13 @@ def test_controlled_load_with_peak_power_objective():
     quad_power = QuadraticPower(component=grid.ports['grid'])
     objective_set = ObjectiveSet(objective_list=[quad_power])
 
-    system.objective_set = objective_set
-
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()

@@ -2,6 +2,7 @@ import numpy as np
 
 from echo_models import *
 from echo_optimiser import EchoOptimiser
+from objectives import *
 
 import os
 
@@ -41,7 +42,8 @@ def test_solar_generation_limited_by_inverter_size():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     optimiser.objective = sum(getattr(optimiser.model, pv1.port_name)[p, t]
@@ -88,7 +90,8 @@ def test_non_curtailable_system_not_curtailed():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
@@ -138,7 +141,8 @@ def test_curtailable_system_curtailed():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     grid.ports['grid'].constrain_pos_neg(optimiser.model)

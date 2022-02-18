@@ -32,7 +32,8 @@ def test_simple_controlled_load_does_minimum_energy_action():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # minimise imports
@@ -75,7 +76,8 @@ def test_simple_controlled_load_does_minimum_power_action():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # minimise imports
@@ -117,7 +119,8 @@ def test_simple_controlled_load_limited_to_max_energy():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # maximise imports
@@ -162,7 +165,8 @@ def test_simple_controlled_load_limited_to_max_power():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     # maximise imports

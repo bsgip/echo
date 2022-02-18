@@ -52,14 +52,15 @@ def test_peak_positive_power_objective():
     system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
 
     peak_pos_power = PeakPositivePower(component=cp1)
-    system.objective_set = ObjectiveSet(objective_list=[peak_pos_power])
+    objective_set = ObjectiveSet(objective_list=[peak_pos_power])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -108,14 +109,15 @@ def test_peak_negative_power_objective():
     system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
 
     peak_neg_power = PeakNegativePower(component=cp1)
-    system.objective_set = ObjectiveSet(objective_list=[peak_neg_power])
+    objective_set = ObjectiveSet(objective_list=[peak_neg_power])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()

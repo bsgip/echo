@@ -37,13 +37,6 @@ class NodeRule(object):
     Transform = 4
 
 
-class PathRule(object):
-    NA = 0
-    SourceOrSink = 1
-    Source = 2
-    Sink = 3
-
-
 class TransformRule(object):
 
     NA = 0

@@ -89,14 +89,15 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
         expansion_periods=expansion_periods
     )
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
-    system.objective_set = ObjectiveSet(objective_list=[demand_charge, throughput_cost])
+    objective_set = ObjectiveSet(objective_list=[demand_charge, throughput_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -172,14 +173,15 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
 
     throughput_cost = ThroughputCost(component=b1, rate=0.2)
 
-    system.objective_set = ObjectiveSet(objective_list=[import_tariff, demand_charge, throughput_cost])
+    objective_set = ObjectiveSet(objective_list=[import_tariff, demand_charge, throughput_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -242,25 +244,23 @@ def test_system_path_flows_adjust_to_path_tariffs():
 
     system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
+    system.create_path_objects(source_sink_list=[grid, battery1, load1])
 
-    grid_to_load = system.path_obj[(grid, site1, load1)]
+    grid_to_load = system.paths[(grid, site1, load1)]
 
     path_tariff = PathTariff(component=grid_to_load,
                              tariff_array=[0] * 24 + [1] * 24,
                              expansion_periods=expansion_periods)
 
-    system.objective_set = ObjectiveSet(objective_list=[path_tariff])
+    objective_set = ObjectiveSet(objective_list=[path_tariff])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
@@ -319,36 +319,32 @@ def test_path_flows_respect_port_constraints():
     system.add_node_obj([grid, battery, site, solar, load])
     system.add_edge_obj([bess_edge1, load_edge1, pv_edge, grid_edge])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    pv1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
+    system.create_path_objects(source_sink_list=[grid, battery, solar, load])
 
     tp_cost = ThroughputCost(component=b1,
                              rate=0.2)
 
-    system.objective_set = ObjectiveSet(objective_list=[tp_cost])
+    objective_set = ObjectiveSet(objective_list=[tp_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=objective_set
     )
 
     optimiser.optimise()
 
-
     # Check solar flows are zero
-    solar_to_bess = system.path_obj[(solar, site, battery)]
-    solar_to_load = system.path_obj[(solar, site, load)]
-    solar_to_grid = system.path_obj[(solar, site, grid)]
+    solar_to_bess = system.paths[(solar, site, battery)]
+    solar_to_load = system.paths[(solar, site, load)]
+    solar_to_grid = system.paths[(solar, site, grid)]
 
-    bess_to_solar = system.path_obj[(battery, site, solar)]
-    load_to_solar = system.path_obj[(load, site, solar)]
-    grid_to_solar = system.path_obj[(battery, site, solar)]
+    bess_to_solar = system.paths[(battery, site, solar)]
+    load_to_solar = system.paths[(load, site, solar)]
+    grid_to_solar = system.paths[(battery, site, solar)]
 
     np.testing.assert_array_almost_equal(optimiser.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3)
     np.testing.assert_array_almost_equal(optimiser.values(solar_to_load.flow_value, 0), [0] * time_periods, 3)

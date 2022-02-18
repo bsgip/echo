@@ -62,7 +62,8 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
@@ -124,18 +125,15 @@ def test_hybrid_inverter_limits_path_flows():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    grid.ports['grid'].path_rule = PathRule.SourceOrSink
-    b1.path_rule = PathRule.SourceOrSink
-    pv1.path_rule = PathRule.SourceOrSink
-    l1.path_rule = PathRule.SourceOrSink
-    system.generate_all_paths()
+    system.create_path_objects(source_sink_list=[grid, solar, battery, load])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
-        ES=system
+        ES=system,
+        objective_set=None
     )
 
     optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
@@ -143,10 +141,10 @@ def test_hybrid_inverter_limits_path_flows():
 
     optimiser.optimise()
 
-    bess_to_load = optimiser.values(system.path_obj[(battery, inverter, cp, load)].flow_value, 0)
-    bess_to_grid = optimiser.values(system.path_obj[(battery, inverter, cp, grid)].flow_value, 0)
-    solar_to_load = optimiser.values(system.path_obj[(solar, inverter, cp, load)].flow_value, 0)
-    solar_to_grid = optimiser.values(system.path_obj[(solar, inverter, cp, grid)].flow_value, 0)
+    bess_to_load = optimiser.values(system.paths[(battery, inverter, cp, load)].flow_value, 0)
+    bess_to_grid = optimiser.values(system.paths[(battery, inverter, cp, grid)].flow_value, 0)
+    solar_to_load = optimiser.values(system.paths[(solar, inverter, cp, load)].flow_value, 0)
+    solar_to_grid = optimiser.values(system.paths[(solar, inverter, cp, grid)].flow_value, 0)
 
     # Check all flows through inverter respect inverter limits
     for i in range(time_periods):
