@@ -125,7 +125,7 @@ def test_hybrid_inverter_limits_path_flows():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    system.create_path_objects(source_sink_list=[grid, solar, battery, load])
+    system.create_path_objects(sources=[grid, solar, battery, load], sinks=[grid, solar, battery, load])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,

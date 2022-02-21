@@ -11,11 +11,10 @@ import sys
 from objectives import ObjectiveSet, ThroughputCost, PeakPositivePower
 
 sys.path.append("../")
-from echo_models import ElectricalDemand, ElectricalGeneration, ElectricalStorage, ElectricalNode, \
-    OptimisationGraph, Tariff, Node, Port, Edge, Transform, ElectricalPort, DemandTariff
+from echo_models import *
 from echo_optimiser import EchoOptimiser
-from configuration import NodeRule, TransformRule, FlowConstraint, Flows, PathRule, OptimiserObjectiveSet, \
-    OptimiserObjective
+from configuration import *
+from objectives import *
 from networkx import Graph, draw
 
 # set up seaborn the way you like
@@ -74,33 +73,32 @@ discount_rate = 0
 ES = OptimisationGraph()
 ES.expansion_periods = expansion_periods
 
-# Setup components
-# tariff = Tariff()
-# tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods=expansion_periods)
-# tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods=expansion_periods)
-
 grid = Node()
+grid.path_rule = PathRule.SourceOrSink
 g = ElectricalPort()
 grid.ports['grid'] = g
 
 
 battery1 = Node()
+battery1.path_rule = PathRule.SourceOrSink
 b1 = ElectricalStorage(max_capacity=1000.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=5.0,
                        discharging_power_limit=-5.0,
                        charging_efficiency=1,
                        discharging_efficiency=1,
-                       throughput_cost=0.018, #0.018
-                       initial_state_of_charge=1000.0)
+                       initial_state_of_charge=1.0)
 battery1.ports['battery_asset'] = b1
 
+
 load1 = Node()
+load1.path_rule = PathRule.SourceOrSink
 l1 = ElectricalDemand()
 l1.add_demand_profile_from_array(connection_point_import, expansion_periods)
 load1.ports['demand'] = l1
 
 solar1 = Node()
+solar1.path_rule = PathRule.SourceOrSink
 pv1 = ElectricalGeneration()
 pv1.add_generation_profile_from_array(connection_point_export, expansion_periods)
 solar1.ports['solar'] = pv1
@@ -121,81 +119,30 @@ grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
 ES.add_edge_obj([bess_edge1, load_edge1, pv_edge1, grid_edge])
 
-# Path flows
-
-grid.ports['grid'].path_rule = PathRule.SourceOrSink
-b1.path_rule = PathRule.SourceOrSink
-pv1.path_rule = PathRule.SourceOrSink
-l1.path_rule = PathRule.SourceOrSink
-ES.generate_all_paths()
-
 # Testing settings
 
-# # Point tariff on connection point port.
-# dc = DemandTariff(
-#     window=[0] + [1] + [0]*94,
-#     expansion_periods=expansion_periods,
-#     demand_charge=1.0,
-#     min_demand=0.0
-# )
-
-
-battery_to_grid = ES.path_obj[(battery1, site1, grid)]
-battery_to_grid.fcas_raise = True
-#battery_to_grid.fcas_lower = True
-
-# local_tariff = Tariff()
-# local_tariff.add_import_tariff_profile_from_array(import_tariff, expansion_periods)
-# local_tariff.add_export_tariff_profile_from_array(export_tariff, expansion_periods)
-#
-# cp1.has_tariff = True
-# cp1.tariff = local_tariff
-# cp1.export_constraint = FlowConstraint.Fixed
-# cp1.export_constraint_value = -10
-# cp1.import_constraint = FlowConstraint.Fixed
-# cp1.import_constraint_value = 10
-
-site1.ports['bessCP'].import_constraint = FlowConstraint.Fixed
-site1.ports['bessCP'].import_constraint_value = 4
-
-g.import_constraint = FlowConstraint.Fixed
-g.import_constraint_value = 10
-
-
-
-#
-# flat_tariff = Tariff()
-# flat_tariff.add_import_tariff_profile_from_array([0.5]*96, expansion_periods)
-# flat_tariff.add_export_tariff_profile_from_array([0]*96, expansion_periods)
-#
-# grid_to_load = ES.path_obj[(grid, site1, load1)]
-# grid_to_load.has_tariff = True
-# grid_to_load.tariff = local_tariff
-#
-# grid_to_bess = ES.path_obj[(grid, site1, battery1)]
-# grid_to_bess.has_tariff = True
-# grid_to_bess.tariff = flat_tariff
-
-# bess_to_load = ES.path_obj[(battery1, site1, load1)]
-# bess_to_load.has_tariff = True
-# bess_to_load.tariff = tariff
+battery_to_load = [battery1, site1, load1]
+path_tariff = PathTariff(component=battery_to_load,
+                         tariff_array=[0.1] * 96,
+                         expansion_periods=expansion_periods)
 
 
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(15, 96, expansion_periods, discount_rate, ES)
+optimiser = EchoOptimiser(interval_duration=15,
+                          number_of_intervals=96,
+                          number_of_expansion_intervals=expansion_periods,
+                          discount_rate=discount_rate,
+                          ES=ES,
+                          objective_set=ObjectiveSet(objective_list=[path_tariff]))
 
 optimiser.build_objective()
-
-optimiser.objective = sum(getattr(optimiser.model, battery_to_grid.contingency_raise)[p, t]
-                          for p in optimiser.model.Expansion for t in optimiser.model.Time)*-1
 
 optimiser.optimise()
 
 log_infeasible_constraints(optimiser.model)
 
-print(optimiser.values(battery_to_grid.contingency_raise,0))
 
 ############################ Analyse the Optimisation ########################################
 

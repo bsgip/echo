@@ -244,7 +244,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
 
     system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
-    system.create_path_objects(source_sink_list=[grid, battery1, load1])
+    system.create_path_objects(sources=[grid, battery1, load1], sinks=[grid, battery1, load1])
 
     grid_to_load = system.paths[(grid, site1, load1)]
 
@@ -319,7 +319,7 @@ def test_path_flows_respect_port_constraints():
     system.add_node_obj([grid, battery, site, solar, load])
     system.add_edge_obj([bess_edge1, load_edge1, pv_edge, grid_edge])
 
-    system.create_path_objects(source_sink_list=[grid, battery, solar, load])
+    system.create_path_objects(sources=[grid, battery, solar, load], sinks=[grid, battery, solar, load])
 
     tp_cost = ThroughputCost(component=b1,
                              rate=0.2)

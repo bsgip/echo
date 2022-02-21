@@ -43,6 +43,23 @@ class OptimisationGraph(Graph):
         e = Edge(vertices=(port1, port2))
         self.add_edge_obj(e)
 
+    def connect_two_nodes_create_edges_create_ports(self, node1, node2):
+        """ """
+        p1 = ElectricalPort()
+        node1.ports[p1.uid] = p1
+        self.add_node_obj(node1) # updates
+        p2 = ElectricalPort()
+        node2.ports[p2.uid] = p2
+        self.add_node_obj(node2) # updates
+        self.connect_ports_and_create_edge(p1, p2)
+
+    def connect_port_to_node_create_edges_create_port(self, port, node):
+        """ """
+        p = ElectricalPort()
+        node.ports[p.uid] = p
+        self.add_node_obj(node) # updates
+        self.connect_ports_and_create_edge(port, p)
+
     def lookup_node_from_port(self, port):
         """ Returns node that a specified port belongs to, if the port belongs to a node."""
         for _, node in self.node_obj.items():
@@ -50,6 +67,19 @@ class OptimisationGraph(Graph):
                 if port == p:
                     return node
         raise ConfigurationError('Port is not part of any node.')
+
+    def check_node_connection(self, node1, node2):
+        """ Checks if there is an existing edge between two nodes"""
+        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
+        if connecting_edge:
+            return True
+        else:
+            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
+            if connecting_edge:
+                return True
+            else:
+                return False
+
 
     def get_port_on_path(self, node1, node2):
         """ Gets port on node1 that forms edge connecting node1 and node2 """
@@ -82,10 +112,10 @@ class OptimisationGraph(Graph):
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
 
-    def create_path_objects(self, source_sink_list):
+    def create_path_objects(self, sources, sinks):
         all_paths = {}
-        for source_node in source_sink_list:
-            for sink_node in source_sink_list:
+        for source_node in sources:
+            for sink_node in sinks:
                 if source_node is not sink_node:
                     simple_paths = nx.all_simple_paths(self, source_node, sink_node)
                     simple_edges = nx.all_simple_edge_paths(self, source_node, sink_node)
@@ -217,7 +247,6 @@ class Port(object):
         setattr(model, f"pos_neg_con2_{self.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
 
-
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
 
         def constraint(model, expansion_interval, time_interval):
@@ -236,7 +265,6 @@ class Port(object):
             for i in range(0, len(array)):
                 t[(ep, i)] = array[i]
         self.add_initial_value(t)
-
 
     def add_objective(self, model):
         objective = 0
@@ -408,6 +436,7 @@ class Storage(Port):
 
 
 class ElectricalDemand(Sink):
+    """ Fixed electrical demand"""
 
     def __init__(self):
         super(ElectricalDemand, self).__init__()
@@ -426,6 +455,7 @@ class ElectricalDemand(Sink):
 
 
 class ElectricalGeneration(Source):
+    """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
 
     def __init__(self):
         super(ElectricalGeneration, self).__init__()
@@ -484,7 +514,6 @@ class ElectricalStorage(Storage):
 
 
 class ElectricalNode(Node):
-    """A node that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
 
     def __init__(self):
         super(ElectricalNode, self).__init__()
@@ -492,6 +521,7 @@ class ElectricalNode(Node):
 
 
 class ElectricalTellegenNode(ElectricalNode):
+    """A node that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
 
     def __init__(self):
         super(ElectricalTellegenNode, self).__init__()
@@ -499,6 +529,7 @@ class ElectricalTellegenNode(ElectricalNode):
 
 
 class ElectricalPort(Port):
+    """ Flexible port """
 
     def __init__(self):
         super(ElectricalPort, self).__init__()
@@ -510,6 +541,8 @@ class ElectricalPort(Port):
 
 
 class ControlledLoadOrGen(Port):
+    """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
+    The load/generation must be operated within the min and max utilisation (per time unit). """
 
     def __init__(self,
                  max_power,
@@ -604,35 +637,37 @@ class ControlledGen(ControlledLoadOrGen):
                 'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
 
 
-class ElectricVehicle(Storage):
-    
-    def __init__(self,
-                 max_capacity,
-                 depth_of_discharge_limit,
-                 charging_power_limit,
-                 discharging_power_limit,
-                 charging_efficiency,
-                 discharging_efficiency,
-                 initial_state_of_charge
-                 ):
-        super(ElectricVehicle, self).__init__(max_capacity,
-                                                depth_of_discharge_limit,
-                                                charging_power_limit,
-                                                discharging_power_limit,
-                                                charging_efficiency,
-                                                discharging_efficiency,
-                                                initial_state_of_charge)
-        self.units = Units.KW
-
-    def add_usage_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.fixed_states = t
+# class ElectricVehicle(Storage):
+#
+#     def __init__(self,
+#                  max_capacity,
+#                  depth_of_discharge_limit,
+#                  charging_power_limit,
+#                  discharging_power_limit,
+#                  charging_efficiency,
+#                  discharging_efficiency,
+#                  initial_state_of_charge
+#                  ):
+#         super(ElectricVehicle, self).__init__(max_capacity,
+#                                                 depth_of_discharge_limit,
+#                                                 charging_power_limit,
+#                                                 discharging_power_limit,
+#                                                 charging_efficiency,
+#                                                 discharging_efficiency,
+#                                                 initial_state_of_charge)
+#         self.units = Units.KW
+#
+#     def add_usage_profile_from_array(self, array, expansion_periods):
+#         t = {}
+#         for ep in range(0, expansion_periods):
+#             for i in range(0, len(array)):
+#                 t[(ep, i)] = array[i]
+#         self.fixed_states = t
 
 
 class Inverter(ElectricalNode):
+    """ An inverter is a node with one AC port and at least one DC port.
+    Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
 
     def __init__(self,
                  max_import,
@@ -664,12 +699,10 @@ class Inverter(ElectricalNode):
 
     def initialise_node(self, model):
 
-        # Make sure all ports have pos/neg constraint
-        for port in self.ports.values():
+        for port in self.ports.values(): # Make sure all ports have pos/neg constraint
             port.constrain_pos_neg(model)
 
-        # Apply efficiency constraints
-        def inverter_ac_output_must_track_efficiency(model, p, t):
+        def inverter_ac_output_must_track_efficiency(model, p, t): # Apply efficiency constraints
             dc_pos = 0
             dc_neg = 0
             for dc_port in self.dc_ports.values():
@@ -684,6 +717,7 @@ class Inverter(ElectricalNode):
 
 
 class EVChargingStation(ElectricalNode):
+    # Todo is this a tellegen node?
 
     def __init__(self,
                  max_export_power,
@@ -705,8 +739,13 @@ class EVChargingStation(ElectricalNode):
             charging_port_name = str(i)
             self.ports[charging_port_name] = evc
 
+    def initialise_node(self, model):
+        # Todo apply max power constraints
+        pass
+
 
 class EVCharger(ElectricalPort):
+    """ An EV Charger is a flexible electrical port with import/export constraints."""
 
     def __init__(self,
                  export_constraint_value,
@@ -721,6 +760,8 @@ class EVCharger(ElectricalPort):
 
 
 class Edge(object):
+    """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
+    the edge value is equal to the flow from x->y plus the flow from y->x. """
 
     def __init__(self,
                  vertices):
@@ -730,7 +771,6 @@ class Edge(object):
         self.opt_type = OptimisationType.NA  # Is this a decision variable or a fixed parameter
         self.vertices = vertices
         self.tariff = None
-        self.initial_edge_capacity = 5000000
 
     def add_vertices(self, obj1, obj2):
         self.vertices = (obj1, obj2)
@@ -753,21 +793,6 @@ class Edge(object):
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
 
-        # Apply edge capacity constraint on one of the edge vertices
-        if port1.opt_type is OptimisationType.Parameter:  # Choose edge vertex that is not a parameter
-            selected_port = port2
-        else:
-            selected_port = port1
-
-        def cap_rule_1(model, p, t):
-            return getattr(model, selected_port.port_name)[p, t] <= self.initial_edge_capacity
-
-        def cap_rule_2(model, p, t):
-            return getattr(model, selected_port.port_name)[p, t] >= - self.initial_edge_capacity
-
-        setattr(model, f"flow_con1_{self.edge_name}", en.Constraint(model.Expansion, model.Time, rule=cap_rule_1))
-        setattr(model, f"flow_con2_{self.edge_name}", en.Constraint(model.Expansion, model.Time, rule=cap_rule_2))
-
     def factory_constraint_edge_builder(self, obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
             return getattr(model, obj1)[expansion_interval, time_interval] + \
@@ -782,6 +807,7 @@ class Edge(object):
         self.initial_edge_capacity = initial_capacity
 
 
+# Todo keep this?
 class Transform(object):
     """ An object for carrying a generic linear node transformation."""
 
@@ -803,7 +829,7 @@ class Transform(object):
 
 
 class Path(object):
-    """ A path is a list of connected nodes."""
+    """ A path is a sequence of distinct vertices (nodes). """
 
     def __init__(self, vertices):
         self.edge_ports = []
@@ -829,6 +855,7 @@ class Path(object):
     def add_objective(self, model):
         objective = 0
 
+        # To get a unique solution
         objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * \
                      0.00000001
 
