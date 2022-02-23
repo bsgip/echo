@@ -3,7 +3,7 @@ class Units(object):
 
     NA = 0  # Used for initialisation but optimisation will fail if units not set prior to execution.
     KW = 1  # Instantaneous electrical power
-    CO = 2  # CO2 emissions
+    CO2 = 2  # CO2 emissions
     KWT = 3  # Thermal
 
 

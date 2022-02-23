@@ -1,5 +1,5 @@
 import random
-import time
+import time as time_
 import timeit
 import numpy as np
 from matplotlib.pyplot import figure
@@ -124,7 +124,7 @@ def test_many_node_system_no_objective():
 
     nx.draw(system, with_labels=True)
 
-    start = time.time()
+    start = time_.time()
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
         number_of_intervals=time_periods,
@@ -136,7 +136,7 @@ def test_many_node_system_no_objective():
 
     optimiser.optimise()
 
-    end = time.time()
+    end = time_.time()
     print('Total nodes: ', system.number_of_nodes())
     print('Time taken to construct echo optimiser and optimise: ', end-start)
 
@@ -258,7 +258,7 @@ def test_many_node_system_with_objectives():
         ImportTariff(component=g, tariff_array=[0.1] * 24 + [0.2] * 24, expansion_periods=expansion_periods)
     ])
 
-    start = time.time()
+    start = time_.time()
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -271,7 +271,7 @@ def test_many_node_system_with_objectives():
 
     optimiser.optimise()
 
-    end = time.time()
+    end = time_.time()
     print('Total nodes: ', system.number_of_nodes())
     print('Time taken to construct echo optimiser and optimise: ', end-start)
 
@@ -400,7 +400,7 @@ def test_many_node_system_with_path_tracing():
 
     system.create_path_objects(sources=sources, sinks=sinks)
 
-    start = time.time()
+    start = time_.time()
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -413,7 +413,7 @@ def test_many_node_system_with_path_tracing():
 
     optimiser.optimise()
 
-    end = time.time()
+    end = time_.time()
     print('Total nodes: ', system.number_of_nodes())
     print('Total paths: ', len(system.paths))
     print('Time taken to construct echo optimiser and optimise: ', end-start)

@@ -95,24 +95,27 @@ class EchoOptimiser(object):
             return a == 0
 
         def transform(model, p, t):  # Generic transformation node
-            lhs = 0
-            rhs = current_transform.rhs
-            num_terms = len(current_transform.weight)
-            for i in range(0, num_terms):
-                transform_rule = current_transform.rule[i]
-                weight = current_transform.weight[i]
-                var = current_transform.lhs[i]
-                if transform_rule is TransformRule.Both:
-                    lhs += getattr(self.model, var.port_name)[p, t] * weight
-                if transform_rule is TransformRule.NegativeComponent:
-                    lhs += getattr(self.model, var.neg)[p, t] * weight
-                if transform_rule is TransformRule.PositiveComponent:
-                    lhs += getattr(self.model, var.pos)[p, t] * weight
+            def unpack_transform(x):
+                expr = 0
+                for term in x:
+                    transform_rule = term['rule']
+                    weight = term['weight']
+                    var = term['var']
+                    if transform_rule is TransformRule.Both:
+                        expr += getattr(self.model, var.port_name)[p, t] * weight
+                    if transform_rule is TransformRule.NegativeComponent:
+                        expr += getattr(self.model, var.neg)[p, t] * weight
+                    if transform_rule is TransformRule.PositiveComponent:
+                        expr += getattr(self.model, var.pos)[p, t] * weight
+                return expr
+            rhs = unpack_transform(current_transform.rhs)
+            lhs = unpack_transform(current_transform.lhs)
             return lhs == rhs
 
         for _, obj in self.ES.node_obj.items():
             if obj.node_rule == NodeRule.Transform:
                 for _, current_transform in obj.transformations.items():
+                    current_transform.initialise_transform(self.model)
                     con_name = 'transformation_con_' + current_transform.transform_name
                     setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
             if obj.node_rule == NodeRule.Tellegen:
@@ -134,69 +137,44 @@ class EchoOptimiser(object):
                 b = getattr(model, current_port.port_name)[p, t]
                 return a == b*-1
 
-            def import_paths_rule_one(model, p, t):
+            def only_inflow_or_outflow_one(model, p, t):
                 a = 0
                 for _, path in self.ES.paths.items():
                     if path.vertices[-1] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
                 return a <= getattr(model, current_node.inflow)[p, t] * self.model.bigM
 
-            def import_paths_rule_two(model, p, t):
-                a = 0
-                for _, path in self.ES.paths.items():
-                    if path.vertices[-1] is current_node:
-                        a += getattr(model, path.flow_value)[p, t]
-                return getattr(model, current_node.inflow)[p, t] <= a * self.model.bigM
-
-            def export_paths_rule_one(model, p, t):
+            def only_inflow_or_outflow_two(model, p, t):
                 a = 0
                 for _, path in self.ES.paths.items():
                     if path.vertices[0] is current_node:
                         a += getattr(model, path.flow_value)[p, t]
-                return a <= getattr(model, current_node.outflow)[p, t] * self.model.bigM
-
-            def export_paths_rule_two(model, p, t):
-                a = 0
-                for _, path in self.ES.paths.items():
-                    if path.vertices[0] is current_node:
-                        a += getattr(model, path.flow_value)[p, t]
-                return getattr(model, current_node.outflow)[p, t] <= a * self.model.bigM
-
-            def no_flow_through_rule(model, p, t):
-                return getattr(model, current_node.inflow)[p, t] + getattr(model, current_node.outflow)[p, t] <= 1
+                return a <= (1 - getattr(model, current_node.inflow)[p, t]) * self.model.bigM
 
             sources_and_sinks = self.ES.get_sources_and_sinks()
             for current_node in sources_and_sinks:
-                # Assuming source/sink nodes only have one port - will not work for multi-commodity networks
-                if len(current_node.ports) != 1:
-                    raise ConfigurationError('Source/sink nodes with more than one port are not supported.')
-                for _, port in current_node.ports.items():
-                    current_port = port
-                setattr(self.model, f"path_flow_con_{current_node.node_name}",
+                # Find a path that contains this node so that we pick up the right port
+                for k, v in self.ES.paths.items():
+                    if current_node is k[0]:
+                        current_port = v.edge_ports[0][0]
+
+                    elif current_node is k[-1]:
+                        current_port = v.edge_ports[-1][-1]
+
+                assert current_port in current_node.ports.values()
+
+                setattr(self.model, f"path_flow_con1_{current_node.node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
                 current_node.inflow = 'inflow_' + current_node.node_name
                 setattr(self.model, current_node.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
                                                                 domain=en.Binary))
 
-                current_node.outflow = 'outflow_' + current_node.node_name
-                setattr(self.model, current_node.outflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
-                                                                domain=en.Binary))
+                setattr(self.model, f"path_flow_con2_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_one))
 
-                setattr(self.model, f"import_path_con_one_{current_node.node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_one))
-
-                setattr(self.model, f"import_path_con_two_{current_node.node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=import_paths_rule_two))
-
-                setattr(self.model, f"export_path_con_one_{current_node.node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_one))
-
-                setattr(self.model, f"export_path_con_two_{current_node.node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=export_paths_rule_two))
-
-                setattr(self.model, f"non_tellegen_node_con_{current_node.node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=no_flow_through_rule))
+                setattr(self.model, f"path_flow_con3_{current_node.node_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_two))
 
     def build_objective(self):
         self.objective = 0

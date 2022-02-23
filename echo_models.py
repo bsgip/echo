@@ -121,15 +121,17 @@ class OptimisationGraph(Graph):
                     simple_edges = nx.all_simple_edge_paths(self, source_node, sink_node)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
                         p = Path(vertices=vertex_list)  # Create path objects
+                        p.units = Units.KW
                         for edge in edge_list:
                             edge_obj = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
+                            assert edge_obj[0].units == Units.KW
+                            assert edge_obj[1].units == Units.KW
                             p.edge_ports.append(edge_obj)
                         p.start_port = p.edge_ports[0][0]
                         p.end_port = p.edge_ports[-1][-1]
                         all_paths[tuple(vertex_list)] = p
 
         self.paths = all_paths
-
 
 class ConfigurationError(Exception):
     pass
@@ -291,6 +293,16 @@ class Node(object):
 
     def add_transformation(self, transformation_obj):
         self.transformations[transformation_obj.uid] = transformation_obj
+
+    def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
+        # Create appropriate transformation
+        t = Transform()
+        if carbon_port not in self.ports.values():
+            self.ports['CO2'] = carbon_port
+        t.add_lhs_term(carbon_port, TransformRule.Both, 1)
+        t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
         if self.node_rule is NodeRule.NA and len(self.ports) > 1:
@@ -540,6 +552,30 @@ class ElectricalPort(Port):
         self.units = Units.KW
 
 
+class CarbonSource(Port):
+    """ For doing carbon emissions from an asset (node) """
+
+    def __init__(self):
+        super(CarbonSource, self).__init__()
+        self.flows = Flows.Export
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+        self.units = Units.CO2
+
+
+
+
+class CarbonSink(Port):
+    """ For sinking carbon emissions (node) """
+
+    def __init__(self):
+        super(CarbonSink, self).__init__()
+        self.flows = Flows.Import
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+        self.units = Units.CO2
+
+
 class ControlledLoadOrGen(Port):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
     The load/generation must be operated within the min and max utilisation (per time unit). """
@@ -637,32 +673,16 @@ class ControlledGen(ControlledLoadOrGen):
                 'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
 
 
-# class ElectricVehicle(Storage):
-#
-#     def __init__(self,
-#                  max_capacity,
-#                  depth_of_discharge_limit,
-#                  charging_power_limit,
-#                  discharging_power_limit,
-#                  charging_efficiency,
-#                  discharging_efficiency,
-#                  initial_state_of_charge
-#                  ):
-#         super(ElectricVehicle, self).__init__(max_capacity,
-#                                                 depth_of_discharge_limit,
-#                                                 charging_power_limit,
-#                                                 discharging_power_limit,
-#                                                 charging_efficiency,
-#                                                 discharging_efficiency,
-#                                                 initial_state_of_charge)
-#         self.units = Units.KW
-#
-#     def add_usage_profile_from_array(self, array, expansion_periods):
-#         t = {}
-#         for ep in range(0, expansion_periods):
-#             for i in range(0, len(array)):
-#                 t[(ep, i)] = array[i]
-#         self.fixed_states = t
+class CarbonSinkNode(Node):
+
+    def __init__(self):
+        super(CarbonSinkNode, self).__init__()
+        self.node_rule = NodeRule.Custom
+
+    def verify_node(self):
+        for port in self.ports.values():
+            if port.units is not Units.CO2:
+                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
 
 
 class Inverter(ElectricalNode):
@@ -807,25 +827,38 @@ class Edge(object):
         self.initial_edge_capacity = initial_capacity
 
 
-# Todo keep this?
 class Transform(object):
     """ An object for carrying a generic linear node transformation."""
 
     def __init__(self):
         self.uid = uuid.uuid4()
         self.transform_name = 'transform_' + str(self.uid)
-        self.rhs = 0
+        self.rhs = []
         self.lhs = []
-        self.weight = []
-        self.rule = []
 
-    def add_rhs(self, val):
-        self.rhs = val
+    def add_rhs_term(self, var, rule, weight):
+        term = {'var': var, 'rule': rule, 'weight': weight}
+        self.rhs.append(term)
 
-    def add_lhs(self, var, rule, weight):
-        self.lhs.append(var)
-        self.rule.append(rule)
-        self.weight.append(weight)
+    def add_lhs_term(self, var, rule, weight):
+        term = {'var': var, 'rule': rule, 'weight': weight}
+        self.lhs.append(term)
+
+    def initialise_transform(self, model):
+        # Check if we need to create pos/neg components
+        for i in range(len(self.lhs)):
+            rule = self.lhs[i]['rule']
+            if rule is not TransformRule.Both:
+                var = self.lhs[i]['var']
+                if not hasattr(var, 'pos'):
+                    var.constrain_pos_neg(model)
+            rule = self.rhs[i]['rule']
+            if rule is not TransformRule.Both:
+                var = self.rhs[i]['var']
+                if not hasattr(var, 'pos'):
+                    var.constrain_pos_neg(model)
+
+
 
 
 class Path(object):

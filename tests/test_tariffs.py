@@ -81,15 +81,14 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
 
     system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
-    demand_charge = DemandTariffObjective(
-        component=cp1,
-        window=dc_window,
-        demand_charge=1.0,
-        min_demand=minimum_demand,
-        expansion_periods=expansion_periods
-    )
+    demand_tariff = DemandTariffObjective(component=cp1,
+                                          demand_charges=[DemandCharge(rate=1.0, window_array=dc_window, min_demand=minimum_demand)],
+                                          excess_demand_charge=0.0,
+                                          off_peak_demand_charge=0.0,
+                                          expansion_periods=expansion_periods)
+
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
-    objective_set = ObjectiveSet(objective_list=[demand_charge, throughput_cost])
+    objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -164,16 +163,15 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
                                  tariff_array=[1.0] * 24 + [1.05] * 24,
                                  expansion_periods=expansion_periods)
 
-    demand_charge = DemandTariffObjective(component=cp1,
-                                          window=[0] * 24 + [1] * 12 + [0] * 12,
-                                          expansion_periods=expansion_periods,
-                                          demand_charge=10.0,
-                                          min_demand=minimum_demand
-                                          )
+    demand_tariff = DemandTariffObjective(component=cp1,
+                                          demand_charges=[DemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)],
+                                          excess_demand_charge=0.0,
+                                          off_peak_demand_charge=0.0,
+                                          expansion_periods=expansion_periods)
 
     throughput_cost = ThroughputCost(component=b1, rate=0.2)
 
-    objective_set = ObjectiveSet(objective_list=[import_tariff, demand_charge, throughput_cost])
+    objective_set = ObjectiveSet(objective_list=[import_tariff, demand_tariff, throughput_cost])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
