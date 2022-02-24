@@ -153,9 +153,16 @@ class Port(object):
         self.installation_capex = 0
 
     def set_flow_constraints(self, max_import, max_export):
-        self.import_constraint = FlowConstraint.Fixed
+        if max_import is not None:
+            self.import_constraint = FlowConstraint.Fixed
+        else:
+            self.import_constraint = FlowConstraint.NoConstraint
         self.import_constraint_value = max_import
-        self.export_constraint = FlowConstraint.Fixed
+
+        if max_export is not None:
+            self.export_constraint = FlowConstraint.Fixed
+        else:
+            self.export_constraint = FlowConstraint.NoConstraint
         self.export_constraint_value = max_export
 
     def verify_port(self):

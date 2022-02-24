@@ -134,8 +134,7 @@ class EchoOptimiser(object):
                         a += getattr(model, path.flow_value)[p, t]
                     if path.vertices[-1] is current_node:
                         a -= getattr(model, path.flow_value)[p, t]
-                b = getattr(model, current_port.port_name)[p, t]
-                return a == b*-1
+                return a == getattr(model, current_port.port_name)[p, t] * -1
 
             def only_inflow_or_outflow_one(model, p, t):
                 a = 0
@@ -157,10 +156,8 @@ class EchoOptimiser(object):
                 for k, v in self.ES.paths.items():
                     if current_node is k[0]:
                         current_port = v.edge_ports[0][0]
-
                     elif current_node is k[-1]:
                         current_port = v.edge_ports[-1][-1]
-
                 assert current_port in current_node.ports.values()
 
                 setattr(self.model, f"path_flow_con1_{current_node.node_name}",
@@ -178,10 +175,16 @@ class EchoOptimiser(object):
 
     def build_objective(self):
         self.objective = 0
+        # Add objectives defined in the objective set
         if hasattr(self, 'objective_set'):
             if self.objective_set is not None:
                 self.objective_set.initialise_objective(self.model)
                 self.objective_set.set_objective(self.model, self)
+
+        # Add any other costs that are defined on graph nodes/ports
+        for _, node_obj in self.ES.node_obj.items():
+            for _, port_obj in node_obj.ports.items():
+                self.objective += port_obj.add_objective(self.model)
 
     def optimise(self):
         def objective_function(model):
