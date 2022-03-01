@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 import networkx as nx
 from networkx import Graph
@@ -80,7 +81,6 @@ class OptimisationGraph(Graph):
             else:
                 return False
 
-
     def get_port_on_path(self, node1, node2):
         """ Gets port on node1 that forms edge connecting node1 and node2 """
         connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
@@ -133,6 +133,7 @@ class OptimisationGraph(Graph):
 
         self.paths = all_paths
 
+
 class ConfigurationError(Exception):
     pass
 
@@ -151,6 +152,7 @@ class Port(object):
         self.export_constraint = FlowConstraint.NA
         self.export_constraint_value = None
         self.installation_capex = 0
+        self.active_periods = None
 
     def set_flow_constraints(self, max_import, max_export):
         if max_import is not None:
@@ -229,6 +231,19 @@ class Port(object):
             con_name = 'export_con_' + self.port_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
+        if self.active_periods is not None:
+            self.active = 'active_' + self.port_name
+            setattr(model, self.active, en.Param(model.Expansion, model.Time, initialize=self.active_periods, domain=en.Binary))
+
+            def on_off_rule1(model, p, t):
+                return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * model.bigM
+
+            def on_off_rule2(model, p, t):
+                return getattr(model, self.port_name)[p, t] >= - getattr(model, self.active)[p, t] * model.bigM
+
+            setattr(model, f"active_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
+            setattr(model, f"active_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
+
     def constrain_pos_neg(self, model):
 
         self.pos = positive_variable_component + self.port_name
@@ -274,6 +289,13 @@ class Port(object):
             for i in range(0, len(array)):
                 t[(ep, i)] = array[i]
         self.add_initial_value(t)
+
+    def add_active_periods_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.active_periods = t
 
     def add_objective(self, model):
         objective = 0
@@ -323,6 +345,9 @@ class Node(object):
     def initialise_node(self, model):
         pass
 
+    def num_ports(self):
+        return len(self.ports)
+
 
 # High Level definitions of asset types
 class Source(Port):
@@ -341,6 +366,16 @@ class Sink(Port):
         super(Sink, self).__init__()
         self.flows = Flows.Import
         self.opt_type = OptimisationType.Parameter
+
+    def add_sink_profile(self, electrical_demand):
+        self.add_initial_value(electrical_demand)
+
+    def add_sink_profile_from_array(self, array, expansion_periods):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.add_initial_value(t)
 
 
 class Storage(Port):
@@ -570,10 +605,8 @@ class CarbonSource(Port):
         self.units = Units.CO2
 
 
-
-
 class CarbonSink(Port):
-    """ For sinking carbon emissions (node) """
+    """ For sinking carbon emissions into an aggregation node """
 
     def __init__(self):
         super(CarbonSink, self).__init__()
@@ -581,6 +614,29 @@ class CarbonSink(Port):
         self.import_constraint = FlowConstraint.NoConstraint
         self.opt_type = OptimisationType.Variable
         self.units = Units.CO2
+
+
+class CarbonAggregation(Node):
+
+    def __init__(self):
+        super(CarbonAggregation, self).__init__()
+        aggregation_port = CarbonSink()
+        self.ports['sum'] = aggregation_port
+        setattr(self, 'sum', aggregation_port)
+
+    def add_aggregation_transformation(self):
+        # Create appropriate transformation
+        t = Transform()
+        for port_name, port_obj in self.ports.items():
+            if port_name is not 'sum':
+                t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
+        t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
+
+    def verify_node(self):
+        self.add_aggregation_transformation()
+        super(CarbonAggregation, self).verify_node()
 
 
 class ControlledLoadOrGen(Port):
@@ -786,6 +842,16 @@ class EVCharger(ElectricalPort):
         self.import_constraint_value = import_constraint_value
 
 
+class ElectricVehicle(Node):
+
+    def __init__(self):
+        super(ElectricVehicle, self).__init__()
+        self.units = Units.KW
+
+    def initialise_node(self, model):
+        super(ElectricVehicle, self).initialise_node(model)
+
+
 class Edge(object):
     """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x. """
@@ -859,6 +925,8 @@ class Transform(object):
                 var = self.lhs[i]['var']
                 if not hasattr(var, 'pos'):
                     var.constrain_pos_neg(model)
+
+        for i in range(len(self.rhs)):
             rule = self.rhs[i]['rule']
             if rule is not TransformRule.Both:
                 var = self.rhs[i]['var']
@@ -901,4 +969,82 @@ class Path(object):
 
         return objective
 
+# BZ assets
 
+class GasBoiler(Node):
+
+    """ Gas boiler converts gas to thermal energy """
+
+    def __init__(self,
+                 gas_to_heat_efficiency):
+        super(GasBoiler, self).__init__()
+        self.gas_to_heat_efficiency = gas_to_heat_efficiency
+        gp = GasPort()
+        gp.flows = Flows.Import
+        self.ports['gas'] = gp
+        hp = ThermalPort()
+        hp.flows = Flows.Export
+        self.ports['heat'] = hp
+        self.add_boiler_transformation(gp, hp, gas_to_heat_efficiency)
+
+    def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
+        # Create appropriate transformation
+        t = Transform()
+        t.add_lhs_term(heat_port, TransformRule.NegativeComponent, -1)
+        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, gas_to_heat_efficiency)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
+
+class Chiller(Node):
+    """ A chiller is a node that imports electricity and heat, where the amount of heat imported depends on
+    a defined coefficient of performance (cop), which is unitless (kW of cooling per kW electrical) """
+
+    def __init__(self,
+                 cop):
+        super(Chiller, self).__init__()
+        self.cop = cop
+        ep = ElectricalPort()
+        ep.flows = Flows.Import
+        self.ports['elec'] = ep
+        cp = ThermalPort()
+        cp.flows = Flows.Export
+        self.ports['cooling'] = cp
+        self.add_chiller_transformation(ep, cp, cop)
+
+    def add_chiller_transformation(self, elec_port, cooling_port, cop):
+        # Create appropriate transformation
+        t = Transform()
+        t.add_lhs_term(cooling_port, TransformRule.NegativeComponent, -1)
+        t.add_rhs_term(elec_port, TransformRule.PositiveComponent, cop)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
+
+class ThermalLoad(Sink):
+    """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
+
+    def __init__(self):
+        super(ThermalLoad, self).__init__()
+        self.units = Units.KWT
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+
+class GasPort(Port):
+
+    def __init__(self):
+        super(GasPort, self).__init__()
+        self.units = Units.J
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+
+class ThermalPort(Port):
+
+    def __init__(self):
+        super(ThermalPort, self).__init__()
+        self.units = Units.KWT
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
