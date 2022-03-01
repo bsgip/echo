@@ -20,6 +20,7 @@ class Objective(object):
                  component):
         self.component = component
 
+
 class ObjectiveSet(object):
 
     def __init__(self,
@@ -66,6 +67,9 @@ class PeakPositivePower(Objective):
     def objective_expr(self, model):
         return getattr(model, self.component.max_pos)
 
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.max_pos, expansion_period)
+
 
 class PeakNegativePower(Objective):
 
@@ -93,6 +97,9 @@ class PeakNegativePower(Objective):
 
     def objective_expr(self, model):
         return getattr(model, self.component.max_neg)*-1
+
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.max_neg, expansion_period)*-1
 
 
 class ImportTariff(Objective):
@@ -133,6 +140,10 @@ class ImportTariff(Objective):
         return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.component.import_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.pos, expansion_period) * \
+               optimiser.values(self.component.import_tariff, expansion_period)
+
 
 class ExportTariff(Objective):
 
@@ -158,6 +169,8 @@ class ExportTariff(Objective):
             raise ConfigurationError('Export Tariff objective must be applied to port component.')
 
     def create_params(self, model):
+        self.component.export_tariff = 'export_tariff_' + self.component.port_name
+        setattr(model, self.component.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff))
         pass
 
     def create_vars(self, model):
@@ -168,46 +181,12 @@ class ExportTariff(Objective):
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.neg)[p, t] * self.export_tariff[p, t] * getattr(model, model.dr)[p]
-                   for p in model.Expansion for t in model.Time)
+        return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.component.export_tariff)[p, t] *
+                   getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-
-class CarbonPrice(Objective):
-
-        def __init__(self,
-                     component,
-                     tariff_array,
-                     expansion_periods
-                     ):
-            super(CarbonPrice, self).__init__(component)
-            self.export_tariff = {}
-            self.create_tariff_dict(tariff_array, expansion_periods)
-
-        def create_tariff_dict(self, array, expansion_periods):
-            t = {}
-            for ep in range(0, expansion_periods):
-                for i in range(0, len(array)):
-                    t[(ep, i)] = array[i]
-            self.export_tariff = t
-
-        def verify_objective(self):
-            """ Check objectives all reference an object of the correct type"""
-            if not hasattr(self.component, 'port_name'):
-                raise ConfigurationError('Carbon price objective must be applied to port component.')
-
-        def create_params(self, model):
-            pass
-
-        def create_vars(self, model):
-            pass
-
-        def apply_constraints(self, model):
-            if not hasattr(self.component, 'pos'):
-                self.component.constrain_pos_neg(model)
-
-        def objective_expr(self, model):
-            return sum(getattr(model, self.component.neg)[p, t] * self.export_tariff[p, t] * getattr(model, model.dr)[p]
-                       for p in model.Expansion for t in model.Time)*-1
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.neg, expansion_period) * \
+               optimiser.values(self.component.export_tariff, expansion_period)
 
 
 class PathTariff(Objective):
@@ -215,11 +194,12 @@ class PathTariff(Objective):
     def __init__(self,
                  component,
                  tariff_array,
-                 expansion_periods
+                 expansion_periods: int=1
                  ):
         super(PathTariff, self).__init__(component)
         self.path_tariff = {}
         self.create_tariff_dict(tariff_array, expansion_periods)
+        self.uid = uuid.uuid4()
 
     def create_tariff_dict(self, array, expansion_periods):
         t = {}
@@ -234,7 +214,7 @@ class PathTariff(Objective):
             raise ConfigurationError('Path Tariff objective must be applied to path component.')
 
     def create_params(self, model):
-        self.component.path_tariff = 'path_tariff_' + self.component.path_name
+        self.component.path_tariff = 'path_tariff_' + str(self.uid)
         setattr(model, self.component.path_tariff, en.Param(model.Expansion, model.Time, initialize=self.path_tariff))
 
     def create_vars(self, model):
@@ -246,6 +226,10 @@ class PathTariff(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.component.path_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.flow_value, expansion_period) * \
+               optimiser.values(self.component.path_tariff, expansion_period)
 
 
 class ThroughputCost(Objective):
@@ -276,6 +260,10 @@ class ThroughputCost(Objective):
             (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
 
+    def objective_val(self, optimiser, expansion_period):
+        return (optimiser.values(self.component.pos, expansion_period) -
+                optimiser.values(self.component.neg, expansion_period)) * self.rate
+
 
 class QuadraticPower(Objective):
 
@@ -302,6 +290,10 @@ class QuadraticPower(Objective):
         return sum(
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.port_name, expansion_period) * \
+               optimiser.values(self.component.port_name, expansion_period)
 
 
 class ContingencyNegative(Objective):
@@ -374,6 +366,9 @@ class ContingencyNegative(Objective):
         return sum(getattr(model, self.component.contingency_neg)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)
 
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.contingency_neg, expansion_period)
+
 
 class ContingencyPositive(Objective):
     """ FCAS lower """
@@ -443,6 +438,9 @@ class ContingencyPositive(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.component.contingency_pos)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)*-1
+
+    def objective_val(self, optimiser, expansion_period):
+        return optimiser.values(self.component.contingency_pos, expansion_period) * -1
 
 
 # From neon

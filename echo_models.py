@@ -628,7 +628,7 @@ class CarbonAggregation(Node):
         # Create appropriate transformation
         t = Transform()
         for port_name, port_obj in self.ports.items():
-            if port_name is not 'sum':
+            if port_name != 'sum':
                 t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
         t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
         self.add_transformation(t)

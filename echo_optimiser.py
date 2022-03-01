@@ -210,14 +210,17 @@ class EchoOptimiser(object):
             max_planning_period = 0
             for index in var_obj:
                 if index[0] == expansion:
-                    output[index[1]] = var_obj[index].value
+                    try:
+                        output[index[1]] = var_obj[index].value
+                    except AttributeError:
+                        output[index[1]] = var_obj[index]
                 max_planning_period = max(max_planning_period, index[0])
             if expansion > max_planning_period:
                 raise ConfigurationError('Expansion period is not in range.')
             return output
         else:
             if var_obj.is_indexed():
-                if type(var_obj[expansion]) is int:  # Param
+                if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
                     return var_obj[expansion]
                 else:  # Var
                     return var_obj[expansion].value
@@ -231,3 +234,6 @@ class EchoOptimiser(object):
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
+
+    def get_objective_value(self, objective_obj, expansion_period: int):
+        return objective_obj.objective_val(optimiser=self, expansion_period=expansion_period)
