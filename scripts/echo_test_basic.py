@@ -74,31 +74,31 @@ ES = OptimisationGraph()
 ES.expansion_periods = expansion_periods
 
 grid = Node()
-grid.path_rule = PathRule.SourceOrSink
+
 g = ElectricalPort()
 grid.ports['grid'] = g
 
 
 battery1 = Node()
-battery1.path_rule = PathRule.SourceOrSink
-b1 = ElectricalStorage(max_capacity=1000.0,
+
+b1 = ElectricalStorage(max_capacity=15.0,
                        depth_of_discharge_limit=0,
-                       charging_power_limit=5.0,
-                       discharging_power_limit=-5.0,
+                       charging_power_limit=1.25,
+                       discharging_power_limit=-1.25,
                        charging_efficiency=1,
                        discharging_efficiency=1,
-                       initial_state_of_charge=1.0)
+                       initial_state_of_charge=0.0)
 battery1.ports['battery_asset'] = b1
 
 
 load1 = Node()
-load1.path_rule = PathRule.SourceOrSink
+
 l1 = ElectricalDemand()
 l1.add_demand_profile_from_array(connection_point_import, expansion_periods)
 load1.ports['demand'] = l1
 
 solar1 = Node()
-solar1.path_rule = PathRule.SourceOrSink
+
 pv1 = ElectricalGeneration()
 pv1.add_generation_profile_from_array(connection_point_export, expansion_periods)
 solar1.ports['solar'] = pv1
@@ -121,11 +121,21 @@ ES.add_edge_obj([bess_edge1, load_edge1, pv_edge1, grid_edge])
 
 # Testing settings
 
-battery_to_load = [battery1, site1, load1]
-path_tariff = PathTariff(component=battery_to_load,
-                         tariff_array=[0.1] * 96,
-                         expansion_periods=expansion_periods)
+# battery_to_load = [battery1, site1, load1]
+# path_tariff = PathTariff(component=battery_to_load,
+#                          tariff_array=[0.1] * 96,
+#                          expansion_periods=expansion_periods)
 
+it = ImportTariff(component=site1.ports['CP'],
+                             tariff_array=import_tariff,
+                             expansion_periods=expansion_periods)
+et = ExportTariff(component=site1.ports['CP'],
+                             tariff_array=export_tariff,
+                             expansion_periods=expansion_periods)
+
+throughput_cost = ThroughputCost(component=b1, rate=0.009)
+
+objective_set = ObjectiveSet(objective_list=[it, et, throughput_cost])
 
 ############################ ----------------------- ########################################
 
@@ -135,9 +145,7 @@ optimiser = EchoOptimiser(interval_duration=15,
                           number_of_expansion_intervals=expansion_periods,
                           discount_rate=discount_rate,
                           ES=ES,
-                          objective_set=ObjectiveSet(objective_list=[path_tariff]))
-
-optimiser.build_objective()
+                          objective_set=objective_set)
 
 optimiser.optimise()
 
@@ -174,7 +182,7 @@ ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
 
-if ES.path_obj:
+if ES.paths:
 
     grid_to_load = optimiser.values(ES.path_obj[(grid, site1, load1)].flow_value,0)
     grid_to_bess = optimiser.values(ES.path_obj[(grid, site1, battery1)].flow_value,0)

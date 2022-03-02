@@ -209,20 +209,21 @@ class Port(object):
         elif self.flows is Flows.Import:
             domain = en.NonNegativeReals
 
+        self.p = 'p_' + self.port_name
         if self.opt_type is OptimisationType.Parameter:
-            setattr(model, self.port_name,
+            setattr(model, self.p,
                     en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         if self.opt_type is OptimisationType.Variable:
-            setattr(model, self.port_name,
+            setattr(model, self.p,
                     en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         # Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
+            return getattr(model, self.p)[p, t] <= self.import_constraint_value
 
         def export_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.export_constraint_value
+            return getattr(model, self.p)[p, t] >= self.export_constraint_value
 
         if self.import_constraint is FlowConstraint.Fixed:
             con_name = 'import_con_' + self.port_name
@@ -236,10 +237,10 @@ class Port(object):
             setattr(model, self.active, en.Param(model.Expansion, model.Time, initialize=self.active_periods, domain=en.Binary))
 
             def on_off_rule1(model, p, t):
-                return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * model.bigM
+                return getattr(model, self.p)[p, t] <= getattr(model, self.active)[p, t] * model.bigM
 
             def on_off_rule2(model, p, t):
-                return getattr(model, self.port_name)[p, t] >= - getattr(model, self.active)[p, t] * model.bigM
+                return getattr(model, self.p)[p, t] >= - getattr(model, self.active)[p, t] * model.bigM
 
             setattr(model, f"active_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
             setattr(model, f"active_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
@@ -255,7 +256,7 @@ class Port(object):
         self.is_pos = 'is_pos_' + self.port_name
         setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
-        con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
+        con_rule = self.factory_pos_neg_flows(self.p, self.pos, self.neg)
         con_name = positive_variable_component + negative_variable_component + self.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
@@ -343,7 +344,8 @@ class Node(object):
                     "Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def initialise_node(self, model):
-        pass
+        for port_name, port_obj in self.ports.items():
+            setattr(self, str(port_name), port_obj)
 
     def num_ports(self):
         return len(self.ports)
@@ -366,16 +368,6 @@ class Sink(Port):
         super(Sink, self).__init__()
         self.flows = Flows.Import
         self.opt_type = OptimisationType.Parameter
-
-    def add_sink_profile(self, electrical_demand):
-        self.add_initial_value(electrical_demand)
-
-    def add_sink_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
 
 
 class Storage(Port):
@@ -433,12 +425,12 @@ class Storage(Port):
         setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
         def charging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.charging_power_limit
+            return getattr(model, self.p)[p, t] <= self.charging_power_limit
 
         setattr(model, f"charge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=charging_limit_rule))
 
         def discharging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.discharging_power_limit
+            return getattr(model, self.p)[p, t] >= self.discharging_power_limit
 
         setattr(model, f"discharge_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=discharging_limit_rule))
 
@@ -501,11 +493,7 @@ class ElectricalDemand(Sink):
         self.add_initial_value(electrical_demand)
 
     def add_demand_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        self.add_initial_value_from_array(array, expansion_periods)
 
 
 class ElectricalGeneration(Source):
@@ -521,27 +509,24 @@ class ElectricalGeneration(Source):
         self.add_initial_value(generation)
 
     def add_generation_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        self.add_initial_value_from_array(array, expansion_periods)
 
     def initialise_port(self, model):
-        self.port_name_max = 'port_max_' + self.port_name
-        setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
+        self.p_max = 'port_max_' + self.port_name
+        self.p = 'p_' + self.port_name
+        setattr(model, self.p_max, en.Param(model.Expansion, model.Time,
                                                     initialize=self.initial_value, domain=en.NonPositiveReals))
-        setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
+        setattr(model, self.p, en.Var(model.Expansion, model.Time,
                                               initialize=self.initial_value))
         if self.curtailable:
             def gen_less_than_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
+                return getattr(model, self.p)[p, t] >= getattr(model, self.p_max)[p, t]
 
             setattr(model, f"cons_{self.port_name}_curtailment", en.Constraint(model.Expansion, model.Time, rule=gen_less_than_max_gen))
         else:
             # TODO This could be simplified to only set solar_p as a Param on initialisation
             def gen_equal_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] == getattr(model, self.port_name_max)[p, t]
+                return getattr(model, self.p)[p, t] == getattr(model, self.p_max)[p, t]
 
             setattr(model, f"cons_{self.port_name}_curtailment",
                     en.Constraint(model.Expansion, model.Time, rule=gen_equal_max_gen))
@@ -622,7 +607,6 @@ class CarbonAggregation(Node):
         super(CarbonAggregation, self).__init__()
         aggregation_port = CarbonSink()
         self.ports['sum'] = aggregation_port
-        setattr(self, 'sum', aggregation_port)
 
     def add_aggregation_transformation(self):
         # Create appropriate transformation
@@ -635,7 +619,7 @@ class CarbonAggregation(Node):
         self.node_rule = NodeRule.Transform
 
     def verify_node(self):
-        self.add_aggregation_transformation()
+        self.add_aggregation_transformation()  #todo better way of adding transformation at right time
         super(CarbonAggregation, self).verify_node()
 
 
@@ -661,20 +645,20 @@ class ControlledLoadOrGen(Port):
         super(ControlledLoadOrGen, self).initialise_port(model)
 
         def min_power_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.min_power
+            return getattr(model, self.p)[p, t] >= self.min_power
 
         setattr(model, f"cons_{self.port_name}_min_power",
                 en.Constraint(model.Expansion, model.Time, rule=min_power_rule))
 
         def max_power_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.max_power
+            return getattr(model, self.p)[p, t] <= self.max_power
 
         setattr(model, f"cons_{self.port_name}_max_power",
                 en.Constraint(model.Expansion, model.Time, rule=max_power_rule))
 
         if self.min_utilisation is not None:
             def sum_of_energy_must_be_greater_than_min(model):
-                return sum(getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
+                return sum(getattr(model, self.p)[p, i] * model.interval_duration / 60.0
                            for p in model.Expansion for i in model.Time) >= \
                        self.min_utilisation * self.max_power * model.interval_duration * model.number_of_intervals / 60.0
 
@@ -683,7 +667,7 @@ class ControlledLoadOrGen(Port):
 
         if self.max_utilisation is not None:
             def sum_of_energy_must_be_less_than_max(model):
-                return sum(getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
+                return sum(getattr(model, self.p)[p, i] * model.interval_duration / 60.0
                            for p in model.Expansion for i in model.Time) <= \
                        self.max_utilisation * self.max_power * model.interval_duration * model.number_of_intervals / 60.0
 
@@ -691,11 +675,7 @@ class ControlledLoadOrGen(Port):
                     en.Constraint(rule=sum_of_energy_must_be_less_than_max))
 
     def add_demand_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        self.add_initial_value_from_array(array, expansion_periods)
 
 
 class ControlledLoad(ControlledLoadOrGen):
@@ -734,18 +714,6 @@ class ControlledGen(ControlledLoadOrGen):
         if self.max_power > 0 or self.min_power > 0:
             raise ConfigurationError(
                 'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
-
-
-class CarbonSinkNode(Node):
-
-    def __init__(self):
-        super(CarbonSinkNode, self).__init__()
-        self.node_rule = NodeRule.Custom
-
-    def verify_node(self):
-        for port in self.ports.values():
-            if port.units is not Units.CO2:
-                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
 
 
 class Inverter(ElectricalNode):
@@ -882,7 +850,7 @@ class Edge(object):
         port1 = self.vertices[0]
         port2 = self.vertices[1]
 
-        con_rule1 = self.factory_constraint_edge_builder(port1.port_name, port2.port_name)
+        con_rule1 = self.factory_constraint_edge_builder(port1.p, port2.p)
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
 
@@ -932,8 +900,6 @@ class Transform(object):
                 var = self.rhs[i]['var']
                 if not hasattr(var, 'pos'):
                     var.constrain_pos_neg(model)
-
-
 
 
 class Path(object):
@@ -995,9 +961,10 @@ class GasBoiler(Node):
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
 
+
 class Chiller(Node):
     """ A chiller is a node that imports electricity and heat, where the amount of heat imported depends on
-    a defined coefficient of performance (cop), which is unitless (kW of cooling per kW electrical) """
+    a defined coefficient of performance (cop), which is unit-less (kW of cooling per kW electrical) """
 
     def __init__(self,
                  cop):
@@ -1019,6 +986,7 @@ class Chiller(Node):
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
 
+
 class ThermalLoad(Sink):
     """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
 
@@ -1029,6 +997,7 @@ class ThermalLoad(Sink):
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
 
+
 class GasPort(Port):
 
     def __init__(self):
@@ -1038,6 +1007,7 @@ class GasPort(Port):
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
         self.opt_type = OptimisationType.Variable
+
 
 class ThermalPort(Port):
 

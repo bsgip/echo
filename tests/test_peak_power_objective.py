@@ -43,8 +43,8 @@ def test_controlled_load_with_peak_power_objective():
 
     optimiser.optimise()
 
-    root_p = optimiser.values(grid.ports['grid'].port_name, 0)*-1
-    cl_p = optimiser.values(cl.port_name, 0)
+    root_p = optimiser.values(grid.ports['grid'].p, 0)*-1
+    cl_p = optimiser.values(cl.p, 0)
 
     np.testing.assert_array_almost_equal(list(cl_p), [2 * 10.0 / N_INTERVALS] * 48)
 

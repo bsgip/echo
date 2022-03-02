@@ -129,7 +129,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     optimiser.optimise()
 
     cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    sol_p = optimiser.values(pv1.p, 0)
 
     # for i in range(0, 1):
     #     assert cont_pos_p[i] == pytest.approx(2.0, rel=utils.RELATIVE_TOLERANCE,

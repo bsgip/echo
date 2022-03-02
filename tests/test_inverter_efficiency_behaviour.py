@@ -73,12 +73,12 @@ def test_hybrid_inverter_dc_ac_efficiency():
 
     optimiser.optimise()
 
-    root_p = optimiser.values(grid.ports['grid'].port_name, 0) * -1
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
-    cp_p = optimiser.values(cp.ports['grid'].port_name, 0)
-    sol_p = optimiser.values(pv1.port_name,0)
-    sto_p = optimiser.values(b1.port_name,0)
-    sto_soc = optimiser.values(b1.soc_value,0)
+    root_p = optimiser.values(grid.ports['grid'].p, 0) * -1
+    inv_p = optimiser.values(inverter.ports['cp'].p, 0)
+    cp_p = optimiser.values(cp.ports['grid'].p, 0)
+    sol_p = optimiser.values(pv1.p, 0)
+    sto_p = optimiser.values(b1.p, 0)
+    sto_soc = optimiser.values(b1.soc_value, 0)
     # With the chosen objective, it doesn't matter if the energy is sourced from solar or battery,
     # but each interval should be importing at 1.0
     # TODO Test for preferencing solar gen vs storage
@@ -153,8 +153,8 @@ def test_hybrid_inverter_dc_dc_efficiency():
     optimiser.optimise()
 
     root_p = optimiser.values(grid.ports['grid'].neg, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
-    sto_p = optimiser.values(b1.port_name, 0)
+    sol_p = optimiser.values(pv1.p, 0)
+    sto_p = optimiser.values(b1.p, 0)
 
     for i in range(N_INTERVALS//2):
         np.testing.assert_almost_equal(root_p[i], 0.0, 5) # Had to add 5dp

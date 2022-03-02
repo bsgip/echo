@@ -104,9 +104,14 @@ system.connect_ports_and_create_edge(inverter.ports['pv'], solar.ports['pv'])
 
 # Create objectives/tariffs
 throughput_cost = ThroughputCost(component=b, rate=0.000001)
-peak_power_obj = PeakNegativePower(component=grid.ports['grid'])
 
-objective_set = ObjectiveSet(objective_list=[peak_power_obj, throughput_cost])
+peak_power_obj = PeakPositivePower(component=connection_point.ports['grid'])
+
+import_tariff = ImportTariff(component=connection_point.ports['grid'],
+                             tariff_array=import_tariff_array,
+                             expansion_periods=expansion_periods)
+
+objective_set = ObjectiveSet(objective_list=[import_tariff])
 
 
 ############################ ----------------------- ########################################
@@ -126,9 +131,9 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
+storage_energy_delta = optimiser.values(b.p, 0)
 storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
+optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].p, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
@@ -136,9 +141,9 @@ fig = plt.figure(figsize=(14, 7))
 ax1 = fig.add_subplot(3, 1, 1)
 line1, = ax1.plot(hrs, test_load, color=colors[0])
 line2, = ax1.plot(hrs, test_pv, color=colors[1])
-#line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
+line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
 ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line2], ['Load', 'PV'], ncol=2)
+ax1.legend([line1, line2, line3], ['Load', 'PV', 'Optimised connection point'], ncol=2)
 ax1.set_xlim([0, len(test_load) / 4])
 
 ax2 = fig.add_subplot(3, 1, 2)

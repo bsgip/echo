@@ -151,7 +151,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     optimiser.optimise()
 
     cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    sol_p = optimiser.values(pv1.p, 0)
 
     for i in range(time_periods // 2):
         np.testing.assert_almost_equal(cont_neg_p[i], -5.0)

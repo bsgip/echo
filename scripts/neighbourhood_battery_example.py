@@ -187,9 +187,9 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
+storage_energy_delta = optimiser.values(b.p, 0)
 storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
+optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].p, 0)
 
 optimiser.get_objective_value(rnetwork[0], 0)
 optimiser.get_objective_value(throughput_cost, 0)

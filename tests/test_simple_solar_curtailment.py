@@ -46,13 +46,13 @@ def test_solar_generation_limited_by_inverter_size():
         objective_set=None
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, pv1.port_name)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, pv1.p)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time)
 
     optimiser.optimise()
 
-    sol_p = optimiser.values(pv1.port_name, 0)
-    inv_p = optimiser.values(inverter.ports['cp'].port_name,0)
+    sol_p = optimiser.values(pv1.p, 0)
+    inv_p = optimiser.values(inverter.ports['cp'].p,0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], max(-i, -5.0))
@@ -100,9 +100,9 @@ def test_non_curtailable_system_not_curtailed():
 
     optimiser.optimise()
 
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
-    root_p = optimiser.values(grid.ports['grid'].port_name, 0)
+    inv_p = optimiser.values(inverter.ports['cp'].p, 0)
+    sol_p = optimiser.values(pv1.p, 0)
+    root_p = optimiser.values(grid.ports['grid'].p, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], -5.0)
@@ -151,8 +151,8 @@ def test_curtailable_system_curtailed():
 
     optimiser.optimise()
 
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    inv_p = optimiser.values(inverter.ports['cp'].p, 0)
+    sol_p = optimiser.values(pv1.p, 0)
     root_p = optimiser.values(grid.ports['grid'].neg, 0)
 
     for i in range(N_INTERVALS):

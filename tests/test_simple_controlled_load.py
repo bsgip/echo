@@ -38,19 +38,19 @@ def test_simple_controlled_load_does_minimum_energy_action():
 
     # minimise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
+    optimiser.objective = sum(getattr(optimiser.model, cl.p)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
     optimiser.optimise()
     grid_export = optimiser.values(grid.ports['grid'].neg, 0)
-    load_import = optimiser.values(cl.port_name, 0)
+    load_import = optimiser.values(cl.p, 0)
 
     np.testing.assert_almost_equal(sum(grid_export)*-1 * 30.0 / 60.0, 10.0)
     #assert sum(optimiser.values(grid.ports['grid'].neg, 0))*-1 * 30.0 / 60.0 == 10.0
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(grid_export[i], load_import[i]*-1)
-        #assert optimiser.values(grid.ports['grid'].port_name, 0)[i] == optimiser.values(cl.port_name, 0)[i]*-1
+        #assert optimiser.values(grid.ports['grid'].p, 0)[i] == optimiser.values(cl.p, 0)[i]*-1
 
 
 def test_simple_controlled_load_does_minimum_power_action():
@@ -82,13 +82,13 @@ def test_simple_controlled_load_does_minimum_power_action():
 
     # minimise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
+    optimiser.objective = sum(getattr(optimiser.model, cl.p)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
     optimiser.optimise()
 
     grid_export = optimiser.values(grid.ports['grid'].neg, 0) * -1
-    load_import = optimiser.values(cl.port_name, 0)
+    load_import = optimiser.values(cl.p, 0)
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(load_import[i], 2.0)
@@ -125,13 +125,13 @@ def test_simple_controlled_load_limited_to_max_energy():
 
     # maximise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
+    optimiser.objective = sum(getattr(optimiser.model, cl.p)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)*-1
 
     optimiser.optimise()
 
     grid_export = optimiser.values(grid.ports['grid'].neg, 0) * -1
-    load_import = optimiser.values(cl.port_name, 0)
+    load_import = optimiser.values(cl.p, 0)
 
     #assert sum(load_import) * 30.0 / 60.0 == 20.0
     np.testing.assert_almost_equal(sum(load_import) * 30.0 / 60.0, 20.0)
@@ -171,13 +171,13 @@ def test_simple_controlled_load_limited_to_max_power():
 
     # maximise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
+    optimiser.objective = sum(getattr(optimiser.model, cl.p)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)*-1
 
     optimiser.optimise()
 
     grid_export = optimiser.values(grid.ports['grid'].neg, 0) * -1
-    load_import = optimiser.values(cl.port_name, 0)
+    load_import = optimiser.values(cl.p, 0)
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(load_import[i], 5.0)
