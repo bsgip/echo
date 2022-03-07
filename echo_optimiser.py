@@ -11,7 +11,7 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES, objective_set):
+    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES, objective_set, optimiser_engine=None):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.number_of_expansion_intervals = number_of_expansion_intervals
@@ -19,7 +19,10 @@ class EchoOptimiser(object):
         self.objective_set = objective_set
 
         # Configure the optimiser through setting appropriate environmental variables.
-        self.optimiser_engine = os.environ.get('OPTIMISER_ENGINE')  # Default to ipopt since that is easiest to install
+        if optimiser_engine:
+            self.optimiser_engine = optimiser_engine
+        else:
+            self.optimiser_engine = 'cplex' if not os.environ.get('OPTIMISER_ENGINE') else os.environ.get('OPTIMISER_ENGINE') # Default to cplex, as we seem to want quadratic costs
         self.optimiser_engine_executable = os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
 
         # These values have been arbitrarily chosen
@@ -193,7 +196,7 @@ class EchoOptimiser(object):
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
 
         # Set the path to the solver
-        if self.optimiser_engine == 'cplex':
+        if (self.optimiser_engine == 'cplex') and self.optimiser_engine_executable:
             opt = SolverFactory(self.optimiser_engine, executable=self.optimiser_engine_executable)
         else:
             opt = SolverFactory(self.optimiser_engine)

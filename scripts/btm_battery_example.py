@@ -122,7 +122,7 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
                           number_of_expansion_intervals=expansion_periods,
                           discount_rate=discount_rate,
                           ES=system,
-                          objective_set=objective_set)
+                          objective_set=objective_set, optimiser_engine='cplex')
 
 optimiser.optimise()
 
