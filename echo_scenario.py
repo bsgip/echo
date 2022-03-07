@@ -12,25 +12,39 @@ import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 import seaborn as sns
 
-def get_connection_point_info(network_file):
-    # Load the raw e-JSON data.
-    with open(network_file) as f:
-        netw_jsn = json.load(f)
+# def get_connection_point_info(network_file):
+#     # Load the raw e-JSON data.
+#     with open(network_file) as f:
+#         netw_jsn = json.load(f)
+#
+#     # Create an empty network.
+#     netw = sgt.Network()
+#
+#     # Parse the e-JSON data into the empty network.
+#     sgt_e_json.parse_e_json(netw, netw_jsn)
+#
+#     # extract connection point information
+#     con_point_df = pd.concat([pd.DataFrame(data=[[zip.id(), zip.n_phases(), zip.bus().v_base()],], columns=['id','n_phases','vbase']) for zip in netw.zips()], ignore_index=True)
+#     con_point_df ['LV/MV'] = con_point_df['vbase'].apply(lambda x: 'LV' if x <= 1. else 'MV')
+#     return con_point_df
 
-    # Create an empty network.
-    netw = sgt.Network()
+def create_site_from_dict(site_dict):
+    load_profile = site_dict['load_profile']
+    export_tariff = site_dict['export_tariff']
+    import_tariff = site_dict['import_tariff']
 
-    # Parse the e-JSON data into the empty network.
-    sgt_e_json.parse_e_json(netw, netw_jsn)
+    keys = site_dict.keys()
+    pv_profile = None if 'pv_profile' not in keys else site_dict['pv_profile']
+    evs = None if (('evs' not in keys) or (len(site_dict['evs'])==0)) else site_dict['evs']
+    battery = None if 'battery' not in keys else site_dict['battery']
+    connection_constraint = None if 'connection_constraint' not in keys else site_dict['connection_constraint']
 
-    # extract connection point information
-    con_point_df = pd.concat([pd.DataFrame(data=[[zip.id(), zip.n_phases(), zip.bus().v_base()],], columns=['id','n_phases','vbase']) for zip in netw.zips()], ignore_index=True)
-    con_point_df ['LV/MV'] = con_point_df['vbase'].apply(lambda x: 'LV' if x <= 1. else 'MV')
-    return con_point_df
+    site, objective_set, node_uid_dict = create_site(load_profile, export_tariff, import_tariff, pv_profile, battery, evs)
+    return site, objective_set, node_uid_dict
 
-
-def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1):
+def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1, connection_constraint=None):
     # todo: add inverter params as inputs
+    # todo: constraint on grid connection
 
     num_time_periods = len(load_profile)
 
@@ -157,18 +171,26 @@ def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, bat
 
     return site, objective_set, node_uid_dict
 
+def extract_site_results(optimiser, site, node_uid_dict):
+    keys = node_uid_dict.keys()
+    battery = None
+    if 'battery' in keys:
+        battery = dict()
+        battery['SOC'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].soc_value, 0)
+        battery['delta'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].port_name, 0)
+    ev_names = [name for name in keys if 'ev' in name]
+    evs = []
+    for ev_name in ev_names:
+        ev = dict()
+        ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
+        ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
+        evs.append(ev)
+
+    aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
+    return aggregate_load, battery, evs
 
 
 if __name__=="__main__":
-    # network_file = '../data/ausnet_a.json'
-    # con_point_df = get_connection_point_info(network_file)
-
-    # num_sites = len(con_point_df)       # 1 site per connected load in original data file
-
-    # PV_percent = 0.2                    # percentage of sites with PV
-    # bat_percent = 0.1                   # percentage of sites with battery
-
-
     # define some tariffs
     # Tariffs are in $ / kwh
     import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
@@ -222,13 +244,6 @@ if __name__=="__main__":
     # store these so as arrays of size (num_evs, time_periods)
     evs = [ev1, ev2]
 
-    # so a single site could be defined as a dictionary
-    # storing data as a dict and saving and loading ??
-    example_site_dict = {'name':'test_site_1', 'load_profile':test_load,
-                        'pv_profile':test_pv, 'battery':battery,
-                        'evs':evs}
-
-
     ## Set up hyper params
     time_periods = len(test_load)
     interval_duration = 15
@@ -258,9 +273,13 @@ if __name__=="__main__":
                    'axes.facecolor': 'white', 'grid.color': '.8', 'grid.linestyle': u'-', 'grid.linewidth': 0.5})
 
 
-    storage_energy_delta = optimiser.values(test_site_1.node_obj[node_uid_dict_1['battery']].ports['bess'].port_name, 0)
-    storage_energy_soc = optimiser.values(test_site_1.node_obj[node_uid_dict_1['battery']].ports['bess'].soc_value, 0)
-    optimised_connection_point_load = optimiser.values(test_site_1.node_obj[node_uid_dict_1['connection_point']].ports['grid'].port_name, 0)
+    aggregate_load, battery_res, _ = extract_site_results(optimiser, test_site_1, node_uid_dict_1)
+
+
+
+    storage_energy_delta = battery_res['delta']
+    storage_energy_soc = battery_res['SOC']
+    optimised_connection_point_load = aggregate_load
 
     colors = sns.color_palette()
     hrs = np.arange(0, len(test_load)) / 4
@@ -312,10 +331,12 @@ if __name__=="__main__":
 
     log_infeasible_constraints(optimiser.model)
 
+    aggregate_load_2, battery_res_2, _ = extract_site_results(optimiser_2, test_site_2, node_uid_dict_2)
 
-    storage_energy_delta_2 = optimiser_2.values(test_site_2.node_obj[node_uid_dict_2['battery']].ports['bess'].port_name, 0)
-    storage_energy_soc_2 = optimiser_2.values(test_site_2.node_obj[node_uid_dict_2['battery']].ports['bess'].soc_value, 0)
-    optimised_connection_point_load_2 = optimiser_2.values(test_site_2.node_obj[node_uid_dict_2['connection_point']].ports['grid'].port_name, 0)
+    storage_energy_delta_2 = battery_res_2['delta']
+    storage_energy_soc_2 = battery_res_2['SOC']
+    optimised_connection_point_load_2 = aggregate_load_2
+
 
     colors = sns.color_palette()
     hrs = np.arange(0, len(test_load)) / 4
@@ -342,10 +363,15 @@ if __name__=="__main__":
     ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
     plt.show()
 
+
+    # so a single site could be defined as a dictionary
+    # storing data as a dict and saving and loading ??
+    test_site_3_dict = {'name':'test_site_3', 'load_profile':test_load,
+                        'pv_profile':test_pv, 'battery':battery,
+                        'evs':evs, 'export_tariff':export_tariff_array,
+                         'import_tariff':import_tariff_array}
     ### create a test site with 1 battery, pv, and 2 evs
-    test_site_3, test_objective_set_3, node_uid_dict_3 = create_site(load_profile=test_load, expansion_periods=expansion_periods,
-                                           export_tariff=export_tariff_array, import_tariff=import_tariff_array,
-                                           pv_profile=test_pv, battery=battery, evs=evs)
+    test_site_3, test_objective_set_3, node_uid_dict_3 = create_site_from_dict(test_site_3_dict)
 
     # Invoke the optimiser and optimise
     optimiser_3 = EchoOptimiser(interval_duration=interval_duration,
@@ -359,11 +385,14 @@ if __name__=="__main__":
 
     log_infeasible_constraints(optimiser.model)
 
-    storage_energy_delta_3 = optimiser_3.values(test_site_3.node_obj[node_uid_dict_3['battery']].ports['bess'].port_name, 0)
-    storage_energy_soc_3 = optimiser_3.values(test_site_3.node_obj[node_uid_dict_3['battery']].ports['bess'].soc_value, 0)
-    optimised_connection_point_load_3 = optimiser_3.values(test_site_3.node_obj[node_uid_dict_3['connection_point']].ports['grid'].port_name, 0)
-    vehicle1_storage = optimiser_3.values(test_site_3.node_obj[node_uid_dict_3['ev1']].ports['ev'].soc_value, 0)
-    vehicle2_storage = optimiser_3.values(test_site_3.node_obj[node_uid_dict_3['ev2']].ports['ev'].soc_value, 0)
+    aggregate_load_3, battery_res_3, evs_res = extract_site_results(optimiser_3, test_site_3, node_uid_dict_3)
+
+    storage_energy_delta_3 = battery_res_3['delta']
+    storage_energy_soc_3 = battery_res_3['SOC']
+    optimised_connection_point_load_3 = aggregate_load_3
+
+    vehicle1_storage = evs_res[0]['SOC']
+    vehicle2_storage = evs_res[1]['SOC']
 
     colors = sns.color_palette()
     hrs = np.arange(0, len(test_load)) / 4
@@ -407,3 +436,11 @@ if __name__=="__main__":
 
     plt.tight_layout()
     plt.show()
+
+    # network_file = '../data/ausnet_a.json'
+    # con_point_df = get_connection_point_info(network_file)
+
+    # num_sites = len(con_point_df)       # 1 site per connected load in original data file
+
+    # PV_percent = 0.2                    # percentage of sites with PV
+    # bat_percent = 0.1                   # percentage of sites with battery
