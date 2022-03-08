@@ -11,22 +11,29 @@ from echo_optimiser import EchoOptimiser
 import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 import seaborn as sns
+import cmath
 
-# def get_connection_point_info(network_file):
-#     # Load the raw e-JSON data.
-#     with open(network_file) as f:
-#         netw_jsn = json.load(f)
-#
-#     # Create an empty network.
-#     netw = sgt.Network()
-#
-#     # Parse the e-JSON data into the empty network.
-#     sgt_e_json.parse_e_json(netw, netw_jsn)
-#
-#     # extract connection point information
-#     con_point_df = pd.concat([pd.DataFrame(data=[[zip.id(), zip.n_phases(), zip.bus().v_base()],], columns=['id','n_phases','vbase']) for zip in netw.zips()], ignore_index=True)
-#     con_point_df ['LV/MV'] = con_point_df['vbase'].apply(lambda x: 'LV' if x <= 1. else 'MV')
-#     return con_point_df
+def get_connection_point_info(network_file):
+    # Load the raw e-JSON data.
+    with open(network_file) as f:
+        netw_jsn = json.load(f)
+
+    # Create an empty network.
+    netw = sgt.Network()
+
+    # Parse the e-JSON data into the empty network.
+    sgt_e_json.parse_e_json(netw, netw_jsn)
+
+    # extract connection point information
+    con_point_df = pd.concat([
+        pd.DataFrame(
+            data=[[zip.id(), zip.n_phases(), zip.bus().v_base(), zip.s_const()],],
+            columns=['id','n_phases','v_base','s_const'])
+        for zip in netw.zips()], ignore_index=True)
+    con_point_df ['LV/MV'] = con_point_df['v_base'].apply(lambda x: 'LV' if x <= 1. else 'MV')
+    con_point_df['sum_power'] = con_point_df['s_const'].apply(lambda x: cmath.polar(np.array(x).sum())[0])  # add to>
+
+    return con_point_df
 
 def create_site_from_dict(site_dict):
     load_profile = site_dict['load_profile']
@@ -35,7 +42,13 @@ def create_site_from_dict(site_dict):
 
     keys = site_dict.keys()
     pv_profile = None if 'pv_profile' not in keys else site_dict['pv_profile']
-    evs = None if (('evs' not in keys) or (len(site_dict['evs'])==0)) else site_dict['evs']
+
+    evs = None
+    if 'evs' in keys:
+        if (site_dict['evs'] is not None) and (len(site_dict['evs']) > 0):
+            evs = site_dict['evs']
+    # evs = None if (('evs' not in keys) or (len(site_dict['evs'])==0)) else site_dict['evs']
+
     battery = None if 'battery' not in keys else site_dict['battery']
     connection_constraint = None if 'connection_constraint' not in keys else site_dict['connection_constraint']
 
@@ -437,10 +450,3 @@ if __name__=="__main__":
     plt.tight_layout()
     plt.show()
 
-    # network_file = '../data/ausnet_a.json'
-    # con_point_df = get_connection_point_info(network_file)
-
-    # num_sites = len(con_point_df)       # 1 site per connected load in original data file
-
-    # PV_percent = 0.2                    # percentage of sites with PV
-    # bat_percent = 0.1                   # percentage of sites with battery
