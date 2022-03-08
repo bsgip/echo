@@ -60,7 +60,7 @@ class PeakPositivePower(Objective):
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
-            return getattr(model, self.component.max_pos) >= getattr(model, self.component.p)[p, t]
+            return getattr(model, self.component.max_pos) >= getattr(model, self.component.port_name)[p, t]
 
         setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
@@ -86,14 +86,14 @@ class PeakNegativePower(Objective):
         pass
 
     def create_vars(self, model):
-        self.component.max_neg = 'max_neg' + self.component.p
+        self.component.max_neg = 'max_neg' + self.component.port_name
         setattr(model, self.component.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
-            return getattr(model, self.component.max_neg) <= getattr(model, self.component.p)[p, t]
+            return getattr(model, self.component.max_neg) <= getattr(model, self.component.port_name)[p, t]
 
-        setattr(model, f"max_neg_con_{self.component.p}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
+        setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
         return getattr(model, self.component.max_neg)*-1
@@ -126,7 +126,7 @@ class ImportTariff(Objective):
             raise ConfigurationError('Import Tariff objective must be applied to port component.')
 
     def create_params(self, model):
-        self.component.import_tariff = 'import_tariff_' + self.component.p
+        self.component.import_tariff = 'import_tariff_' + self.component.port_name
         setattr(model, self.component.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff))
 
     def create_vars(self, model):
@@ -169,7 +169,7 @@ class ExportTariff(Objective):
             raise ConfigurationError('Export Tariff objective must be applied to port component.')
 
     def create_params(self, model):
-        self.component.export_tariff = 'export_tariff_' + self.component.p
+        self.component.export_tariff = 'export_tariff_' + self.component.port_name
         setattr(model, self.component.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff))
         pass
 
@@ -288,12 +288,12 @@ class QuadraticPower(Objective):
 
     def objective_expr(self, model):
         return sum(
-            (getattr(model, self.component.p)[p, t] * getattr(model, self.component.p)[p, t]) *
+            (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
     def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.component.p, expansion_period) * \
-               optimiser.values(self.component.p, expansion_period)
+        return optimiser.values(self.component.port_name, expansion_period) * \
+               optimiser.values(self.component.port_name, expansion_period)
 
 
 class ContingencyNegative(Objective):

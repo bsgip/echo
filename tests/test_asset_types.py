@@ -31,7 +31,7 @@ def test_gas_boiler_operation():
 
     heating_load = Node()
     hl = ThermalLoad()
-    hl.add_initial_value_from_array([5]*time_periods, expansion_periods)
+    hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([gas_mains, boiler, heating_load])
@@ -49,12 +49,12 @@ def test_gas_boiler_operation():
 
     optimiser.optimise()
 
-    print('mains gas: ', optimiser.values(gas_mains.ports['mains'].p, 0))
-    print('boiler input (gas): ', optimiser.values(boiler.ports['gas'].p, 0))
-    print('boiler output (heat): ', optimiser.values(boiler.ports['heat'].p, 0))
+    print('mains gas: ', optimiser.values(gas_mains.ports['mains'].port_name, 0))
+    print('boiler input (gas): ', optimiser.values(boiler.ports['gas'].port_name, 0))
+    print('boiler output (heat): ', optimiser.values(boiler.ports['heat'].port_name, 0))
     print('heating load: ', hl.initial_value.values())
 
-    gas_mains = optimiser.values(gas_mains.ports['mains'].p, 0)
+    gas_mains = optimiser.values(gas_mains.ports['mains'].port_name, 0)
     hl_p = hl.initial_value
 
     for i in range(time_periods):
@@ -76,7 +76,7 @@ def test_chiller_operation():
 
     cooling_load = Node()
     cl = ThermalLoad()
-    cl.add_initial_value_from_array([5]*time_periods, expansion_periods)
+    cl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -94,12 +94,12 @@ def test_chiller_operation():
 
     optimiser.optimise()
 
-    print('mains gas: ', optimiser.values(grid.ports['grid'].p, 0))
-    print('chiller input (elec): ', optimiser.values(chiller.ports['elec'].p, 0))
-    print('chiller output (cooling): ', optimiser.values(chiller.ports['cooling'].p, 0))
+    print('mains gas: ', optimiser.values(grid.ports['grid'].port_name, 0))
+    print('chiller input (elec): ', optimiser.values(chiller.ports['elec'].port_name, 0))
+    print('chiller output (cooling): ', optimiser.values(chiller.ports['cooling'].port_name, 0))
     print('cooling load: ', cl.initial_value.values())
 
-    grid_import = optimiser.values(grid.ports['grid'].p, 0)
+    grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
     cl_p = cl.initial_value
 
     for i in range(time_periods):
@@ -164,9 +164,9 @@ def test_carbon_aggregation():
 
     optimiser.optimise()
 
-    grid_emissions = optimiser.values(grid.ports['CO2'].p, 0)
-    bess_emissions = optimiser.values(battery1.ports['CO2'].p, 0)
-    aggr = optimiser.values(carbon_aggr.ports['sum'].p, 0)
+    grid_emissions = optimiser.values(grid.ports['CO2'].port_name, 0)
+    bess_emissions = optimiser.values(battery1.ports['CO2'].port_name, 0)
+    aggr = optimiser.values(carbon_aggr.ports['sum'].port_name, 0)
 
     for i in range(time_periods):
         assert aggr[i]*-1 == grid_emissions[i] + bess_emissions[i]
