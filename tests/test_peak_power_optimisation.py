@@ -65,11 +65,11 @@ def test_peak_positive_power_objective():
 
     optimiser.optimise()
 
-    sto_p = optimiser.values(b1.p, 0)
+    sto_p = optimiser.values(b1.port_name, 0)
 
     # Check that battery minimises peak pos power (import) by discharging when load is > 0
     for i in range(6, N_INTERVALS):
-        np.testing.assert_almost_equal(sto_p[i], -0.25, 7)
+        assert sto_p[i] == -0.25
 
 
 def test_peak_negative_power_objective():
@@ -122,7 +122,7 @@ def test_peak_negative_power_objective():
 
     optimiser.optimise()
 
-    sto_p = optimiser.values(b1.p, 0)
+    sto_p = optimiser.values(b1.port_name, 0)
 
     # Check that battery absorbs negative load to minimise peak negative power
     assert sum(sto_p[0:6]) == 2*6

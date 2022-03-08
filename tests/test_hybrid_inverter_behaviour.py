@@ -66,13 +66,13 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
         objective_set=None
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].p)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()
 
     for i in range(time_periods):
-        np.testing.assert_almost_equal(optimiser.values(cp.ports['grid'].p, 0)[i], 1.0)
+        np.testing.assert_almost_equal(optimiser.values(cp.ports['grid'].port_name, 0)[i], 1.0)
 
 
 
@@ -136,7 +136,7 @@ def test_hybrid_inverter_limits_path_flows():
         objective_set=None
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].p)[p, t]
+    optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
                               for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
 
     optimiser.optimise()

@@ -162,9 +162,9 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(ev1.p, 0)
+storage_energy_delta = optimiser.values(ev1.port_name, 0)
 storage_energy_soc = optimiser.values(ev1.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].p, 0)
+optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
@@ -195,7 +195,7 @@ ax3.legend([line1, line2], ['EV1 usage', 'EV2 usage'])
 ax3 = fig.add_subplot(4, 1, 4)
 line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
 line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-line3, = ax3.plot(hrs, optimiser.values(ev2.p, 0), color=colors[3])
+line3, = ax3.plot(hrs, optimiser.values(ev2.port_name, 0), color=colors[3])
 line4, = ax3.plot(hrs, optimiser.values(ev2.soc_value, 0), color=colors[4])
 
 ax3.set_xlim([0, len(test_load) / 4])

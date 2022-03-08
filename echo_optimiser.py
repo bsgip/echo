@@ -93,7 +93,7 @@ class EchoOptimiser(object):
         def reliability(model, p, t):  # Tellegen node rule
             a = 0
             for _, port in node_ports.items():
-                b = getattr(self.model, port.p)
+                b = getattr(self.model, port.port_name)
                 a += b[p, t]
             return a == 0
 
@@ -105,7 +105,7 @@ class EchoOptimiser(object):
                     weight = term['weight']
                     var = term['var']
                     if transform_rule is TransformRule.Both:
-                        expr += getattr(self.model, var.p)[p, t] * weight
+                        expr += getattr(self.model, var.port_name)[p, t] * weight
                     if transform_rule is TransformRule.NegativeComponent:
                         expr += getattr(self.model, var.neg)[p, t] * weight
                     if transform_rule is TransformRule.PositiveComponent:
@@ -137,7 +137,7 @@ class EchoOptimiser(object):
                         a += getattr(model, path.flow_value)[p, t]
                     if path.vertices[-1] is current_node:
                         a -= getattr(model, path.flow_value)[p, t]
-                return a == getattr(model, current_port.p)[p, t] * -1
+                return a == getattr(model, current_port.port_name)[p, t] * -1
 
             def only_inflow_or_outflow_one(model, p, t):
                 a = 0
@@ -235,7 +235,7 @@ class EchoOptimiser(object):
 
         outputs = {}
         for name, var_obj in node_obj.ports.items():
-            outputs[name] = self.values(var_obj.p, expansion_period)
+            outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
     def get_objective_value(self, objective_obj, expansion_period: int):
