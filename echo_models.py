@@ -244,7 +244,7 @@ class Port(object):
             con_name = 'export_con_' + self.port_name
             self.export_con_val = f"export_con_val_{self.port_name}"
             constraint_array = generate_array_cons(self.export_constraint_value)
-            setattr(model, self.export_con_val, en.Param(initialize=constraint_array, domain=en.NonPositiveReals))
+            setattr(model, self.export_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
 
