@@ -220,16 +220,32 @@ class Port(object):
 
         # Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
-            return getattr(model, self.p)[p, t] <= self.import_constraint_value
+            return getattr(model, self.p)[p, t] <= getattr(model, self.import_con_val)[p, t]
 
         def export_cap_rule(model, p, t):
-            return getattr(model, self.p)[p, t] >= self.export_constraint_value
+            return getattr(model, self.p)[p, t] >= getattr(model, self.export_con_val)[p, t]
+
+        def generate_array_cons(val):
+            d = {}
+            if (type(val) is int) or (type(val) is float):
+                for i in model.Time:
+                    d[(0, i)] = val
+            else:
+                for i in model.Time:
+                    d[(0, i)] = val[i]
+            return d
 
         if self.import_constraint is FlowConstraint.Fixed:
             con_name = 'import_con_' + self.port_name
+            self.import_con_val = f"import_con_val_{self.port_name}"
+            constraint_array = generate_array_cons(self.import_constraint_value)
+            setattr(model, self.import_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonNegativeReals))
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
         if self.export_constraint is FlowConstraint.Fixed:
             con_name = 'export_con_' + self.port_name
+            self.export_con_val = f"export_con_val_{self.port_name}"
+            constraint_array = generate_array_cons(self.export_constraint_value)
+            setattr(model, self.export_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
         if self.active_periods is not None:
@@ -403,6 +419,7 @@ class Storage(Port):
         self.initial_state_of_charge = initial_state_of_charge
         self.fixed_storage_capacity = True
         self.var_opex = 0
+        self.regularise = False
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
@@ -465,10 +482,11 @@ class Storage(Port):
         objective = 0
 
         # To get unique solution
-        objective += sum(
-            getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
-            getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
-            for p in model.Expansion for t in model.Time) * 0.0000001
+        if self.regularise is True:
+            objective += sum(
+                getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
+                getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
+                for p in model.Expansion for t in model.Time) * 0.0000001
 
         # Storage capex
         objective += getattr(model, self.optimised_storage_capacity) * self.installation_capex
