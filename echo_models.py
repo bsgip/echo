@@ -194,12 +194,23 @@ class Port(object):
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
         if self.export_constraint_value is not None:
-            if self.export_constraint_value > 0:
-                raise ConfigurationError('Enter export constraint using positive load convention.')
+            if type(self.export_constraint_value) is int or type(self.export_constraint_value) is float:
+                if self.export_constraint_value > 0:
+                    raise ConfigurationError('Enter export constraint using positive load convention.')
+            else:
+                for i in self.export_constraint_value:
+                    if i > 0:
+                        raise ConfigurationError('Enter export constraint using positive load convention.')
 
         if self.import_constraint_value is not None:
-            if self.import_constraint_value < 0:
-                raise ConfigurationError('Enter import constraint using positive load convention.')
+            if type(self.import_constraint_value) is int or type(self.import_constraint_value) is float:
+                if self.import_constraint_value < 0:
+                    raise ConfigurationError('Enter import constraint using positive load convention.')
+            else:
+                for i in self.import_constraint_value:
+                    if i < 0:
+                        raise ConfigurationError('Enter import constraint using positive load convention.')
+
 
     def initialise_port(self, model):
 
@@ -219,10 +230,10 @@ class Port(object):
 
         # Import/export capacity constraint rules
         def import_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.import_constraint_value
+            return getattr(model, self.port_name)[p, t] <= getattr(model, self.import_con_val)[p, t]
 
         def export_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.export_constraint_value
+            return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
 
         def generate_array_cons(val):
             d = {}
