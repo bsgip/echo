@@ -13,6 +13,72 @@ from pyomo.util.infeasible import log_infeasible_constraints
 import seaborn as sns
 import cmath
 
+
+def retrieve_value(dict, key):
+    out = None
+    if key in dict.keys():
+        out = dict[key]
+        if hasattr(out, '__len__'):
+            if len(out)==0:
+                out = None
+    return out
+
+
+# ev3 = {'name':'ev3','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
+#            'charging_power_limit':10., 'discharging_power_limit':0, 'charging_efficiency':1,
+#            'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_model': 'V0G'}
+
+def preprocess_evs(evs, interval_duration):
+    """
+    Does an initial pass of all evs and checks their charging mode. If V1G or V2G then makes sure that their constraints
+    are consistent. If V0G then performs this charging a
+    :param evs: list of ev dicts
+    :param interval duration: time span for each interval
+    :return:
+    """
+    ev_name_check(evs)
+    return True
+
+def V0G_charging(ev, interval_duration):
+    available = ev['available']                         # bool
+    usage = ev['usage']                                 # kW
+    charge_limit = ev['charging_power_limit']           # kW
+    max_capacity = ev['max_capacity']                   # kWh
+    initial_soc = ev['initial_state_of_charge']         # kWh
+    charging_efficiency = ev['charging_efficiency']     # ratio
+    tod_charging = retrieve_value(ev, 'tod_charging')   # bool flag
+    if tod_charging is not None:
+        available = available * tod_charging
+    T = len(available)
+    soc = np.zeros((T+1,))
+    soc[0] = initial_soc
+    delta = np.zeros((T,))
+
+    for t in range(T):
+        if available[t] and (soc[t] < max_capacity):        # available to charge and not at max capacity
+            delta[t] = min(charge_limit, (max_capacity - soc[t])/charging_efficiency/(interval_duration/60))
+            soc[t+1] = soc[t] + delta[t] * (interval_duration/60) * charging_efficiency
+        else:   # if not available then it might be on a trip and using power
+            soc[t+1] = soc[t] - usage[t] * (interval_duration/60)
+
+    success = True if (soc.min() >= 0) else False
+
+    return success, soc[:-1], delta
+
+def ev_name_check(evs):
+    """
+    Checks if all evs have unique names and raises and error if they do not
+    :param evs: list of ev dicts
+    """
+    names = []
+    if evs:
+        for ev in evs:
+            names.append(ev['name'])
+        if len(set(names)) != len(names):
+            raise Exception('Not all evs have unique names')
+
+
+
 def get_connection_point_info(network_file):
     # Load the raw e-JSON data.
     with open(network_file) as f:
@@ -42,22 +108,33 @@ def create_site_from_dict(site_dict):
 
     keys = site_dict.keys()
     pv_profile = None if 'pv_profile' not in keys else site_dict['pv_profile']
-
-    evs = None
-    if 'evs' in keys:
-        if (site_dict['evs'] is not None) and (len(site_dict['evs']) > 0):
-            evs = site_dict['evs']
-    # evs = None if (('evs' not in keys) or (len(site_dict['evs'])==0)) else site_dict['evs']
-
+    evs = retrieve_value(site_dict, 'evs')
     battery = None if 'battery' not in keys else site_dict['battery']
-    connection_constraint = None if 'connection_constraint' not in keys else site_dict['connection_constraint']
+    site_max_import = retrieve_value(site_dict, 'site_max_import')
+    site_max_export = retrieve_value(site_dict, 'site_max_export')
 
-    site, objective_set, node_uid_dict = create_site(load_profile, export_tariff, import_tariff, pv_profile, battery, evs)
+    site, objective_set, node_uid_dict = create_site(load_profile=load_profile, export_tariff=export_tariff,
+                                                     import_tariff=import_tariff, pv_profile=pv_profile,
+                                                     battery=battery, evs=evs,
+                                                     site_max_export=site_max_export, site_max_import=site_max_import)
     return site, objective_set, node_uid_dict
 
-def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1, connection_constraint=None):
+def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1,
+                site_max_export=None, site_max_import=None):
     # todo: add inverter params as inputs
     # todo: constraint on grid connection
+    # todo: deal with convenience and time of day charging
+
+    # check evs have unique names
+    ev_name_check(evs)
+
+    # First we need to deal with any evs that are V0G charged and merge them with the load
+    if evs:
+        for ev in evs:
+            charge_model = retrieve_value(ev, 'charge_model')
+            if charge_model=='V0G':
+                # do something
+                t = 1
 
     num_time_periods = len(load_profile)
 
@@ -68,8 +145,10 @@ def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, bat
     grid = ecm.Node()       # connection point to grid
     grid.add_named_electrical_ports(['grid'])
 
+
     connection_point = ecm.ElectricalTellegenNode()      # summation node
     connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])
+    connection_point.ports['grid'].set_flow_constraints(max_import=site_max_import,max_export=site_max_export)
     if evs is not None:
         connection_point.add_named_electrical_ports(['ev'+str(i) for i in range(len(evs))])
         for i, ev in enumerate(evs):
@@ -119,7 +198,7 @@ def create_site(load_profile, export_tariff, import_tariff, pv_profile=None, bat
         nodes_list.append(solar)
         node_uid_dict['solar'] = solar.uid
 
-    if evs is not None:
+    if evs:
         ev_cps = []
         vehicles = []
         trips = []
@@ -376,15 +455,19 @@ if __name__=="__main__":
     ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
     plt.show()
 
-
+    connection_import_constraint=15
     # so a single site could be defined as a dictionary
     # storing data as a dict and saving and loading ??
+    site_max_import_array = 15*np.ones(test_load.shape)
+    site_max_import_array[:5] =5
     test_site_3_dict = {'name':'test_site_3', 'load_profile':test_load,
                         'pv_profile':test_pv, 'battery':battery,
                         'evs':evs, 'export_tariff':export_tariff_array,
-                         'import_tariff':import_tariff_array}
+                         'import_tariff':import_tariff_array,
+                        'site_max_import':site_max_import_array, 'site_max_export':-5}
     ### create a test site with 1 battery, pv, and 2 evs
     test_site_3, test_objective_set_3, node_uid_dict_3 = create_site_from_dict(test_site_3_dict)
+
 
     # Invoke the optimiser and optimise
     optimiser_3 = EchoOptimiser(interval_duration=interval_duration,
@@ -449,4 +532,28 @@ if __name__=="__main__":
 
     plt.tight_layout()
     plt.show()
+
+    plt.plot(aggregate_load_3)
+    plt.show()
+
+    ## testing V0G --- convenience and time signal --- charging
+    # a third vehicle that will be either convenience of time of use
+    # the 'charge_model' flag can take values 'V0G', 'V1G', or 'V2G'
+
+    tod_charging = np.ones(available2.shape)
+    tod_charging[20:30] = 0.
+    ev3 = {'name':'ev3','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
+           'charging_power_limit':10., 'discharging_power_limit':0, 'charging_efficiency':1,
+           'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_model': 'V0G', 'tod_charging':tod_charging}
+
+    # define test site 4 to have 1 ev and 1 battery and some solar and ev to V0G charge ?
+
+    test_site_4_dict = {'name':'test_site_3', 'load_profile':test_load,
+                        'pv_profile':test_pv, 'battery':battery,
+                        'evs':[ev3], 'export_tariff':export_tariff_array,
+                         'import_tariff':import_tariff_array}
+
+    success, ev_soc, ev_delta = V0G_charging(ev3, interval_duration)
+
+    test_site_4, test_objective_set_4, node_uid_dict_4 = create_site_from_dict(test_site_4_dict)
 
