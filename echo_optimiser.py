@@ -202,7 +202,8 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        opt.solve(self.model, tee=True, symbolic_solver_labels=True)
+        results = opt.solve(self.model, tee=True, symbolic_solver_labels=True)
+        self.opt_status = results['Solver'][0]
 
     def values(self, variable_name, expansion):
         """ Returns the value of a single specified variable during a single specified expansion period."""
