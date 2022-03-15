@@ -122,7 +122,7 @@ def test_many_node_system_no_objective():
     system.add_node_obj(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
-    nx.draw(system, with_labels=True)
+    # nx.draw(system, with_labels=True)
 
     start = time_.time()
     optimiser = EchoOptimiser(
@@ -251,7 +251,7 @@ def test_many_node_system_with_objectives():
     system.add_node_obj(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
-    nx.draw(system, with_labels=True)
+    # nx.draw(system, with_labels=True)
 
     objective_set = ObjectiveSet(objective_list=[
         PeakNegativePower(component=g),
@@ -386,7 +386,7 @@ def test_many_node_system_with_path_tracing():
     system.add_node_obj(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
-    nx.draw(system, with_labels=True)
+    # nx.draw(system, with_labels=True)
 
     #Generate list of source/sink nodes
 
@@ -400,7 +400,6 @@ def test_many_node_system_with_path_tracing():
 
     system.create_path_objects(sources=sources, sinks=sinks)
 
-    start = time_.time()
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -411,10 +410,11 @@ def test_many_node_system_with_path_tracing():
         objective_set=None
     )
 
+    start = time_.time()
     optimiser.optimise()
 
     end = time_.time()
     print('Total nodes: ', system.number_of_nodes())
     print('Total paths: ', len(system.paths))
-    print('Time taken to construct echo optimiser and optimise: ', end-start)
+    print('Time taken to optimise: ', end-start)
 
