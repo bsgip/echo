@@ -14,6 +14,7 @@ import seaborn as sns
 import cmath
 
 # todo: check that feasible solution is found optimiser_3.opt_status['termination condition']
+# todo: what happens if there is nothing to optimise???
 # todo: if import/export site constraint is infeasible, then shoudl rerun without these but record
 # todo: what to do when various constraints / charging is not achieved
 # <TerminationCondition.infeasible: 'infeasible'>
@@ -27,7 +28,7 @@ def retrieve_value(dict, key):
                 out = None
     return out
 
-def process_site(site_dict, interval_duration, time_periods, expansion_periods, discount_rate, optimiser_engine='cplex'):
+def process_site(site_dict, interval_duration, time_periods, expansion_periods, discount_rate, optimiser_engine='cplex', opt_display=False):
     """
     :param evs: list of ev dicts
     :param interval duration: time span for each interval
