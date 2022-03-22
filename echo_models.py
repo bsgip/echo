@@ -443,7 +443,6 @@ class Storage(Port):
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
-        self.constrain_pos_neg(model)
 
         self.soc_value = 'storage_soc_' + self.port_name
         setattr(model, self.soc_value,
@@ -482,7 +481,19 @@ class Storage(Port):
                        getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
                        getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
 
-        setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
+        def SOC_rule_perfect_efficiency(model, p, t):
+            if t == 0:
+                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
+                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+            else:
+                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
+                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+
+        if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
+            setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
+        else:
+            self.constrain_pos_neg(model)
+            setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
     def calc_capacity(self):
         capacity = self.max_capacity
@@ -510,11 +521,6 @@ class Storage(Port):
 
         # Storage capex
         objective += getattr(model, self.optimised_storage_capacity) * self.installation_capex
-
-        # Variable opex
-        objective += sum(
-            (getattr(model, self.pos)[p, t] - getattr(model, self.neg)[
-                p, t]) * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
 
         return objective
 
