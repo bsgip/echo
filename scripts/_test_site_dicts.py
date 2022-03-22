@@ -140,9 +140,9 @@ t1 = time.time()
 for i in range(100):
     site_dict = scenario['sites'][i]
     if (site_dict['battery'] is not None) or (site_dict['evs'] is not None):      # then there is an asset to optimise
-        ecs.create_site_from_dict(site_dict)
+        ecs.create_echo_site_from_dict(site_dict)
         ### create a test site with 1 battery, pv, and 2 evs
-        echo_site, objective_set, node_uid_dict = ecs.create_site_from_dict(site_dict)
+        echo_site, objective_set, node_uid_dict = ecs.create_echo_site_from_dict(site_dict)
 
         # Invoke the optimiser and optimise
         optimiser = EchoOptimiser(interval_duration=scenario['interval_duration'],
