@@ -14,10 +14,21 @@ import seaborn as sns
 import cmath
 
 # todo: check that feasible solution is found optimiser_3.opt_status['termination condition']
-# todo: what happens if there is nothing to optimise???
 # todo: if import/export site constraint is infeasible, then shoudl rerun without these but record
 # todo: what to do when various constraints / charging is not achieved
+# todo: battery self consumption strategy if optimisation fails
 # <TerminationCondition.infeasible: 'infeasible'>
+
+# Process for V1G/V2G ev charging
+# Try optimised charging with network constraint
+# if this fails try optimised charging without network constraint
+# if this fails try convenience charging
+
+# Process for TOU charging
+# Try TOU charging
+# if this fails try convenience charging
+
+# 'site_max_import':site_max_import_array, 'site_max_export':-5}
 
 def retrieve_value(dict, key):
     out = None
@@ -28,16 +39,27 @@ def retrieve_value(dict, key):
                 out = None
     return out
 
-def process_site(site_dict, interval_duration, time_periods, expansion_periods, discount_rate, optimiser_engine='cplex', opt_display=False):
+def process_site(site_dict, interval_duration, time_periods, expansion_periods=1, discount_rate=0, optimiser_engine='cplex', opt_display=False):
     """
-    :param evs: list of ev dicts
-    :param interval duration: time span for each interval
+    Process a site
+    :param site_dict:
+    :param interval_duration:
+    :param time_periods:
+    :param expansion_periods:
+    :param discount_rate:
+    :param optimiser_engine:
+    :param opt_display:
     :return:
     """
 
     evs = site_dict['evs']
     ev_name_check(evs)
-    # split evs
+
+    # protecting any outside variables from overwrite
+    site_dict['load_profile'] = 1 * site_dict['load_profile']
+    load_profile_save = 1 * site_dict['load_profile']
+
+    #################### split evs ####################################
     evs_opt = None
     evs_V0G = None
     if evs is not None:
@@ -45,51 +67,73 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods, 
             evs_opt = [ev for ev in evs if (retrieve_value(ev, 'charge_mode') != 'V0G')]
             evs_V0G = [ev for ev in evs if (retrieve_value(ev, 'charge_mode') == 'V0G')]
 
-    # process any convenience charge evs
+    ##### process any convenience charge evs        #######
     if evs_V0G is not None:
-        load_profile_save=1*site_dict['load_profile']
         for ev in evs_V0G:
             success, ev_soc, ev_delta = V0G_charging(ev, interval_duration)
             ev['delta'] = ev_delta
             ev['SOC'] = ev_soc
-            ev['charge_success'] = success
+            if retrieve_value(ev, 'tod_charging') is not None:
+                if success:
+                    ev['charge_status'] = 'TOD success'
+                else:   # attempt conv
+                    success, ev_soc, ev_delta = V0G_charging(ev, interval_duration, force_conv=True)
+                    ev['charge_status'] = 'convenience success' if success else 'charge failed'
+
+            else:
+                ev['charge_status'] = 'convenience success' if success else 'charge failed'
+
             site_dict['load_profile'] += ev_delta
 
-    # check that any V1G cars have charge discharge limit of 0from
+    ###### check that any V1G evs have charge discharge limit of 0 ############
     if evs_opt:
         for ev in evs_opt:
             if (retrieve_value(ev, 'charge_mode') == 'V1G') and ev['discharging_power_limit'] != 0.0:
                 print('\n ev with name '+ ev['name'] + ' is V1G but discharge limit was not zero, setting to zero \n')
                 ev['discharging_power_limit'] = 0.
 
-    # set up echo site optimisation model
-    # only keep V1G and V2G evs for echo site optimisation
-    site_dict['evs'] = evs_opt
+    ############ check if there are any optimisable assets at site and optimise ###################
+    if (retrieve_value(site_dict,'battery')) or (evs_opt):
+        # set up echo site optimisation model
+        # only keep V1G and V2G evs for echo site optimisation
+        site_dict['evs'] = evs_opt
 
-    echo_site, objective_set, node_uid_dict = create_echo_site_from_dict(site_dict)
-    # Invoke the optimiser and optimise
-    optimiser = EchoOptimiser(interval_duration=interval_duration,
-                              number_of_intervals=time_periods,
-                              number_of_expansion_intervals=expansion_periods,
-                              discount_rate=discount_rate,
-                              ES=echo_site,
-                              objective_set=objective_set, optimiser_engine=optimiser_engine)
+        echo_site, objective_set, node_uid_dict = create_echo_site_from_dict(site_dict)
+        # Invoke the optimiser and optimise
+        optimiser = EchoOptimiser(interval_duration=interval_duration,
+                                  number_of_intervals=time_periods,
+                                  number_of_expansion_intervals=expansion_periods,
+                                  discount_rate=discount_rate,
+                                  ES=echo_site,
+                                  objective_set=objective_set, optimiser_engine=optimiser_engine)
 
-    optimiser.optimise()
-    log_infeasible_constraints(optimiser.model)
+        optimiser.optimise(tee=opt_display)
+        log_infeasible_constraints(optimiser.model)
 
-    # add results into the site dictionary for returning
-    site_dict = append_optim_results_to_dict(optimiser, echo_site, node_uid_dict, site_dict)
+        # add results into the site dictionary for returning
+        site_dict = append_optim_results_to_dict(optimiser, echo_site, node_uid_dict, site_dict)
 
-    # combine back together the V1G, V2G and V0G evs
-    if evs_V0G is not None:
+        # combine back together the V1G, V2G and V0G evs
+        if evs_V0G is not None:
+            site_dict['evs'] = site_dict['evs'] + evs_V0G
+
+    else:       ### no optimisable assets so combine everything to get aggregate
+        # load profile already includes loads from V0G evs
+        site_dict['aggregate_load'] = site_dict['load_profile'] + site_dict['pv_profile']
         site_dict['load_profile'] = load_profile_save
-        site_dict['evs'] = site_dict['evs'] + evs_V0G
+        # check site connection constraints not exceeded
+        site_dict['status'] = 'OK'
+        if retrieve_value(site_dict, 'site_max_import'):
+            if site_dict['aggregate_load'] > retrieve_value(site_dict, 'site_max_import'):
+                site_dict['status'] = 'constraints exceeded'
+        if retrieve_value(site_dict, 'site_max_export'):
+            if site_dict['aggregate_load'] < retrieve_value(site_dict, 'site_max_export'):
+                site_dict['status'] = 'constraints exceeded'
 
-
+    site_dict['load_profile'] = load_profile_save # restore load profile to just be load and not V0G cars
     return site_dict
 
-def V0G_charging(ev, interval_duration):
+def V0G_charging(ev, interval_duration, force_conv=False):
     available = ev['available']                         # bool
     usage = ev['usage']                                 # kW
     charge_limit = ev['charging_power_limit']           # kW
@@ -97,7 +141,7 @@ def V0G_charging(ev, interval_duration):
     initial_soc = ev['initial_state_of_charge']         # kWh
     charging_efficiency = ev['charging_efficiency']     # ratio
     tod_charging = retrieve_value(ev, 'tod_charging')   # bool flag
-    if tod_charging is not None:
+    if (tod_charging is not None) and (not force_conv):
         available = available * tod_charging
     T = len(available)
     soc = np.zeros((T+1,))
@@ -602,9 +646,6 @@ if __name__=="__main__":
     plt.tight_layout()
     plt.show()
 
-    plt.plot(aggregate_load_3)
-    plt.show()
-
     ## testing V0G --- convenience and time signal --- charging
     # a third vehicle that will be either convenience of time of use
     # the 'charge_model' flag can take values 'V0G', 'V1G', or 'V2G'
@@ -631,7 +672,7 @@ if __name__=="__main__":
                          'import_tariff':import_tariff_array}
 
     # process a site with both V0G and V2G/V1G evs
-    test_site_4_dict = process_site(test_site_4_dict, interval_duration, time_periods, expansion_periods, discount_rate)
+    test_site_4_dict = process_site(test_site_4_dict, interval_duration, time_periods)
 
     storage_energy_delta = test_site_4_dict['battery']['delta']
     storage_energy_soc = test_site_4_dict['battery']['SOC']
@@ -682,6 +723,19 @@ if __name__=="__main__":
     plt.tight_layout()
     plt.show()
 
-    plt.plot(test_site_4_dict['evs'][0]['SOC'])
-    plt.plot(vehicle1_storage)
+
+    # define test site 5 to have no optimisable assets
+    test_site_5_dict = {'name':'test_site_5', 'load_profile':test_load,
+                        'pv_profile':test_pv, 'battery':None,
+                        'evs':None, 'export_tariff':export_tariff_array,
+                         'import_tariff':import_tariff_array}
+
+    test_site_5_dict = process_site(test_site_5_dict, interval_duration, time_periods)
+
+    plt.plot(test_site_5_dict['load_profile'],label='load')
+    plt.plot(test_site_5_dict['pv_profile'], label='pv')
+    plt.plot(test_site_5_dict['aggregate_load'], label='aggregate')
+    plt.legend()
+    plt.title('Test site 5: no optimisable assets')
     plt.show()
+
