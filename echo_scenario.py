@@ -12,6 +12,8 @@ import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 import seaborn as sns
 import cmath
+import pickle
+from tqdm import tqdm
 
 # todo: check that feasible solution is found optimiser_3.opt_status['termination condition']
 # todo: if import/export site constraint is infeasible, then shoudl rerun without these but record
@@ -28,7 +30,104 @@ import cmath
 # Try TOU charging
 # if this fails try convenience charging
 
-# 'site_max_import':site_max_import_array, 'site_max_export':-5}
+class EchoScenario:
+    def __init__(self, network_file=None, name='default_name', description=None):
+        self.name = name
+        self.description = description
+        self.sites = None
+        self.num_sites = None
+        self.network = None
+        self.connection_point_df = None
+        self.interval_duration = None
+        self.time_periods = None
+        self.aggregate_loads = None
+        self.processing_errors = None
+        # load network model
+        if network_file:
+            self.load_network_model(network_file)
+
+    def load_network_model(self, network_file):
+        # Load the raw e-JSON data.
+        with open(network_file) as f:
+            netw_jsn = json.load(f)
+
+        # Create an empty network.
+        netw = sgt.Network()
+
+        # Parse the e-JSON data into the empty network.
+        sgt_e_json.parse_e_json(netw, netw_jsn)
+
+        # extract connection point information
+        con_point_df = pd.concat([
+            pd.DataFrame(
+                data=[[zip.id(), zip.n_phases(), zip.bus().v_base(), zip.s_const()], ],
+                columns=['id', 'n_phases', 'v_base', 's_const'])
+            for zip in netw.zips()], ignore_index=True)
+        con_point_df['LV/MV'] = con_point_df['v_base'].apply(lambda x: 'LV' if x <= 1. else 'MV')
+        con_point_df['sum_power'] = con_point_df['s_const'].apply(
+            lambda x: cmath.polar(np.array(x).sum())[0])  # add to>
+
+        self.network_file = network_file
+        self.network = netw
+        self.connection_point_df = con_point_df
+        self.num_sites = len(con_point_df)
+
+    def get_connection_point_info(self):
+        return self.connection_point_df
+
+    def add_site_data(self, sites):
+        assert self.network is not None, 'load a network before adding site data'
+        assert len(sites) == self.num_sites, 'len(sites) must equal len(self.connection_point_df)'
+        self.sites = sites
+        # todo: add check that time series data has correct length
+
+    def save(self, file_name):
+        # save_dict = {'name': self.name, 'network_file':self.network_file,
+        #              'num_sites':self.num_sites, 'description':self.description,
+        #              'interval_duration':self.interval_duration, 'time_periods':self.time_periods,
+        #              'aggregate_loads':self.aggregate_loads}
+        save_dict = vars(self)
+        del save_dict['network']
+        with open(file_name, 'wb') as handle:
+            pickle.dump(save_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, file_name):
+        with open(file_name, 'rb') as handle:
+            load_dict = pickle.load(handle)
+
+        self.load_network_model(load_dict['network_file'])
+        for key in load_dict:
+            setattr(self, key, load_dict[key])
+        # self.name = load_dict['name']
+        # self.load_network_model(load_dict['network_file'])
+        # self.description = load_dict['description']
+        # self.interval_duration = load_dict['interval_duration']
+        # self.time_periods = load_dict['time_periods']
+        # self.aggregate_loads = load_dict['aggregate_loads']
+
+    def optimise_sites(self, time_periods, interval_duration, log_file=None, reprocess=False):
+        self.time_periods = time_periods
+        self.interval_duration = interval_duration
+        aggregate_loads = []
+        processing_errors = []
+        # todo: implement the log file
+        # todo: implement reprocess=False
+        for i in tqdm(range(self.num_sites), desc='Optimising sites', file=log_file):
+            try:
+                self.sites[i] = process_site(self.sites[i], interval_duration, time_periods)
+                self.sites[i]['processed'] = True
+                processing_errors.append(False)
+            except:
+                self.sites[i]['processed'] = False
+                processing_errors.append(True)
+
+            # todo: add site status checks and recording
+            # todo: what are some other things we want to have all site summaries of?
+            aggregate_loads.append(self.sites[i]['aggregate_load'])
+
+        self.aggregate_loads=aggregate_loads
+        self.processing_errors = processing_errors
+        return processing_errors
 
 def retrieve_value(dict, key):
     out = None
@@ -119,7 +218,11 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
 
     else:       ### no optimisable assets so combine everything to get aggregate
         # load profile already includes loads from V0G evs
-        site_dict['aggregate_load'] = site_dict['load_profile'] + site_dict['pv_profile']
+        if retrieve_value(site_dict, 'pv_profile') is not None:
+            site_dict['aggregate_load'] = site_dict['load_profile'] + site_dict['pv_profile']
+        else:
+            site_dict['aggregate_load'] = load_profile_save
+
         site_dict['load_profile'] = load_profile_save
         # check site connection constraints not exceeded
         site_dict['status'] = 'OK'
@@ -171,28 +274,6 @@ def ev_name_check(evs):
         if len(set(names)) != len(names):
             raise Exception('Not all evs have unique names')
 
-
-def get_connection_point_info(network_file):
-    # Load the raw e-JSON data.
-    with open(network_file) as f:
-        netw_jsn = json.load(f)
-
-    # Create an empty network.
-    netw = sgt.Network()
-
-    # Parse the e-JSON data into the empty network.
-    sgt_e_json.parse_e_json(netw, netw_jsn)
-
-    # extract connection point information
-    con_point_df = pd.concat([
-        pd.DataFrame(
-            data=[[zip.id(), zip.n_phases(), zip.bus().v_base(), zip.s_const()],],
-            columns=['id','n_phases','v_base','s_const'])
-        for zip in netw.zips()], ignore_index=True)
-    con_point_df ['LV/MV'] = con_point_df['v_base'].apply(lambda x: 'LV' if x <= 1. else 'MV')
-    con_point_df['sum_power'] = con_point_df['s_const'].apply(lambda x: cmath.polar(np.array(x).sum())[0])  # add to>
-
-    return con_point_df
 
 def create_echo_site_from_dict(site_dict):
     load_profile = site_dict['load_profile']
