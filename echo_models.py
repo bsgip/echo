@@ -466,13 +466,27 @@ class Storage(Port):
         self.fixed_storage_capacity = True
         self.var_opex = 0
         self.regularise = False
+        self.enable_min_soc_slack = False
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
 
         self.soc_value = 'storage_soc_' + self.port_name
-        setattr(model, self.soc_value,
-                en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        if not self.enable_min_soc_slack:
+            setattr(model, self.soc_value,
+                    en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        else:
+            setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(None, self.max_capacity)))
+
+
+        def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
+            return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
+
+        if self.slack is True:
+            self.min_soc_slack = 'min_soc_slack_' + self.port_name
+            setattr(model, self.min_soc_slack,
+                    en.Var(initialize=0, domain=en.NonNegativeReals))
+            setattr(model, "min_soc_con", en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
 
         self.optimised_storage_capacity = 'optimised_storage_capacity_' + self.port_name
         if self.fixed_storage_capacity is False:
@@ -547,6 +561,9 @@ class Storage(Port):
 
         # Storage capex
         objective += getattr(model, self.optimised_storage_capacity) * self.installation_capex
+
+        if self.enable_min_soc_slack:
+            objective += getattr(model, self.min_soc_slack) * model.bigM
 
         return objective
 
