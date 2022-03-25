@@ -155,7 +155,7 @@ class Port(object):
         self.active_periods = None
         self.slack = False
 
-    def set_flow_constraints(self, max_import, max_export):
+    def set_flow_constraints(self, max_import, max_export, slack=False):
         if max_import is not None:
             self.import_constraint = FlowConstraint.Fixed
         else:
@@ -167,6 +167,7 @@ class Port(object):
         else:
             self.export_constraint = FlowConstraint.NoConstraint
         self.export_constraint_value = max_export
+        self.slack = slack
 
     def verify_port(self):
         """ Used to verify that a port has been set up appropriately"""
