@@ -463,6 +463,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
 
             vehicle = ecm.Node()
             vehicle.ports['ev'] = ev_storage
+            vehicle.ports['ev'].enable_min_soc_slack = True
 
             trip = ecm.Node()
             us_port = ecm.ElectricalDemand()

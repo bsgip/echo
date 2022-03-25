@@ -482,11 +482,12 @@ class Storage(Port):
         def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
             return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
 
-        if self.slack is True:
+        if self.enable_min_soc_slack is True:
+            con_name = 'min_soc_con_' + self.port_name
             self.min_soc_slack = 'min_soc_slack_' + self.port_name
             setattr(model, self.min_soc_slack,
                     en.Var(initialize=0, domain=en.NonNegativeReals))
-            setattr(model, "min_soc_con", en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
 
         self.optimised_storage_capacity = 'optimised_storage_capacity_' + self.port_name
         if self.fixed_storage_capacity is False:
@@ -563,7 +564,7 @@ class Storage(Port):
         objective += getattr(model, self.optimised_storage_capacity) * self.installation_capex
 
         if self.enable_min_soc_slack:
-            objective += getattr(model, self.min_soc_slack) * model.bigM
+            objective += getattr(model, self.min_soc_slack) * model.bigM * 10  # we want this to be more important than import/export constraints
 
         return objective
 
