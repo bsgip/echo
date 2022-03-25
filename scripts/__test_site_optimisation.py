@@ -59,7 +59,7 @@ evs = [ev1, ev2, ev3, ev4]
 # evs=None
 
 # site_max_import_array = 23*np.ones(load_profile.shape)
-site_max_import_array = 20*np.ones(load_profile.shape)
+site_max_import_array = 23*np.ones(load_profile.shape)
 # site_max_import_array = None
 
 site_dict = {'name':'test_site', 'load_profile':load_profile,
