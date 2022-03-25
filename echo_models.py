@@ -153,6 +153,7 @@ class Port(object):
         self.export_constraint_value = None
         self.installation_capex = 0
         self.active_periods = None
+        self.slack = False
 
     def set_flow_constraints(self, max_import, max_export):
         if max_import is not None:
@@ -235,6 +236,14 @@ class Port(object):
         def export_cap_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
 
+        def import_cap_rule_slack(model, p, t):
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t] <= \
+                   getattr(model, self.import_con_val)[p, t]
+
+        def export_cap_rule_slack(model, p, t):
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t] >= \
+                   getattr(model, self.export_con_val)[p, t]
+
         def generate_array_cons(val):
             d = {}
             if (type(val) is int) or (type(val) is float):
@@ -250,14 +259,27 @@ class Port(object):
             self.import_con_val = f"import_con_val_{self.port_name}"
             constraint_array = generate_array_cons(self.import_constraint_value)
             setattr(model, self.import_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonNegativeReals))
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
+
+            if self.slack is True:
+                self.import_slack = 'import_slack_' + self.port_name
+                setattr(model, self.import_slack,
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
+            else:
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
         if self.export_constraint is FlowConstraint.Fixed:
             con_name = 'export_con_' + self.port_name
             self.export_con_val = f"export_con_val_{self.port_name}"
             constraint_array = generate_array_cons(self.export_constraint_value)
             setattr(model, self.export_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
+            if self.slack is True:
+                self.export_slack = 'export_slack_' + self.port_name
+                setattr(model, self.export_slack,
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
+            else:
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
         if self.active_periods is not None:
             self.active = 'active_' + self.port_name
@@ -327,6 +349,9 @@ class Port(object):
 
     def add_objective(self, model):
         objective = 0
+        if self.slack is True:
+            objective += -1*sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in model.Time)*model.bigM
+            objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in model.Time) * model.bigM
         return objective
 
 
@@ -568,7 +593,7 @@ class ElectricalGeneration(Source):
         setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
                                                     initialize=self.initial_value, domain=en.NonPositiveReals))
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
-                                              initialize=self.initial_value))
+                                              initialize=self.initial_value, domain=en.NonPositiveReals))
         if self.curtailable:
             def gen_less_than_max_gen(model, p, t):
                 return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
