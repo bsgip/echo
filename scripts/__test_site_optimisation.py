@@ -58,8 +58,8 @@ evs = [ev1, ev2, ev3, ev4]
 # if no evs at site then do
 # evs=None
 
-site_max_import_array = 23*np.ones(load_profile.shape)
-# site_max_import_array = 20*np.ones(load_profile.shape)
+# site_max_import_array = 23*np.ones(load_profile.shape)
+site_max_import_array = 20*np.ones(load_profile.shape)
 # site_max_import_array = None
 
 site_dict = {'name':'test_site', 'load_profile':load_profile,
@@ -81,7 +81,7 @@ export_violation = site_dict['export_violation']
 import_violation = site_dict['import_violation']
 
 print('Maximum import violation was {} kW'.format(import_violation.max()))
-print('Maximum export violation was {} kW'.format(export_violation.min()))
+print('Maximum export violation was {} kW \n'.format(export_violation.min()))
 
 
 for i in range(4):
