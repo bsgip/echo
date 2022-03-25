@@ -92,7 +92,9 @@ for i in range(4):
         str = ''
     print('\t Specified charging method was '+ retrieve_value(site_dict['evs'][i], 'charge_mode') + str)
     print('\t Charging status was: ' + retrieve_value(site_dict['evs'][i], 'charge_status'))
+    print('\t Infeasibility in charge was {} kWh'.format(site_dict['evs'][i]['charge_infeasibility']))
     print('\n')
+
 
 import matplotlib.pyplot as plt
 import seaborn as sns

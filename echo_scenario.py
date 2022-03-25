@@ -15,20 +15,6 @@ import cmath
 import pickle
 from tqdm import tqdm
 
-# todo: check that feasible solution is found optimiser_3.opt_status['termination condition']
-# todo: if import/export site constraint is infeasible, then shoudl rerun without these but record
-# todo: what to do when various constraints / charging is not achieved
-# todo: battery self consumption strategy if optimisation fails
-# <TerminationCondition.infeasible: 'infeasible'>
-
-# Process for V1G/V2G ev charging
-# Try optimised charging with network constraint
-# if this fails try optimised charging without network constraint
-# if this fails try convenience charging
-
-# Process for TOU charging
-# Try TOU charging
-# if this fails try convenience charging
 
 class EchoScenario:
     def __init__(self, network_file=None, name='default_name', description=None):
@@ -173,13 +159,14 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
             ev['SOC'] = ev_soc
             if retrieve_value(ev, 'tod_charging') is not None:
                 if success:
-                    ev['charge_status'] = 'TOD success'
+                    ev['charge_status'] = 'success'
                 else:   # attempt conv
                     success, ev_soc, ev_delta = V0G_charging(ev, interval_duration, force_conv=True)
-                    ev['charge_status'] = 'convenience success' if success else 'charge infeasible'
+                    ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
 
             else:
-                ev['charge_status'] = 'convenience success' if success else 'charge infeasible'
+                ev['charge_status'] = 'success' if success else 'infeasible'
+            ev['charge_infeasibility'] = max(-ev_soc.min(),0)
 
             site_dict['load_profile'] += ev_delta
 
@@ -208,52 +195,16 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
 
         optimiser.optimise(tee=opt_display)
         log_infeasible_constraints(optimiser.model)
+        # add results into the site dictionary for returning
         site_dict = append_optim_results_to_dict(optimiser, echo_site, node_uid_dict, site_dict)
-        # todo: check to see if the site_max_import and site_max_export is exceeded
 
-        # todo: if infeasible even after slack variable on import and export then fall back to convenience charging all evs
-        if not ('infeasible' in optimiser.opt_status['Termination condition']):      # a feasible solution was found
-            # add results into the site dictionary for returning
+        if ('infeasible' in optimiser.opt_status['Termination condition']):      # a feasible solution was found
+            for ev in site_dict['evs']:
+                ev['charge_status'] = 'infeasible'
 
-
-            if site_dict['evs'] is not None:
-                for ev in site_dict['evs']:
-                    ev['charge_status'] = ev['charge_mode'] + ' success'
-
-            # combine back together the V1G, V2G and V0G evs
-            if evs_V0G is not None:
-                site_dict['evs'] = site_dict['evs'] + evs_V0G
-
-        # todo: new checks for infeasibility
-        # else: # optimiser could not find a feasible solution
-        #     # Try convenience charging all evs and resolve just for battery
-        #     if evs_opt is not None:
-        #         for ev in evs_opt:
-        #             success, ev_soc, ev_delta = V0G_charging(ev, interval_duration, force_conv=True)
-        #             ev['charge_status'] = 'convenience success' if success else 'charge infeasible'
-        #             ev['delta'] = ev_delta
-        #             ev['SOC'] = ev_soc
-        #             site_dict['load_profile'] += ev_delta
-        #
-        #         site_dict['evs'] = []
-        #
-        #         if site_dict['battery'] is not None:        # now rerun battery
-        #             echo_site, objective_set, node_uid_dict = create_echo_site_from_dict(site_dict)
-        #             # Invoke the optimiser and optimise
-        #             optimiser = EchoOptimiser(interval_duration=interval_duration,
-        #                                       number_of_intervals=time_periods,
-        #                                       number_of_expansion_intervals=expansion_periods,
-        #                                       discount_rate=discount_rate,
-        #                                       ES=echo_site,
-        #                                       objective_set=objective_set, optimiser_engine=optimiser_engine)
-        #
-        #             optimiser.optimise(tee=opt_display)
-                # if not ('infeasible' in optimiser.opt_status['Termination condition']):
-                #     site_dict = append_optim_results_to_dict(optimiser, echo_site, node_uid_dict, site_dict)
-                # else:
-                #     optimise_flag = False
-                # site_dict['evs'] = evs_opt + evs_V0G   # append all evs back to site
-
+        # combine back together the V1G, V2G and V0G evs
+        if evs_V0G is not None:
+            site_dict['evs'] = site_dict['evs'] + evs_V0G
 
     else:       ### no optimisable assets  so combine everything to get aggregate
         # load profile already includes loads from V0G evs
@@ -266,39 +217,15 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
         # todo: fix up constraint violation reporting
         site_dict['status'] = 'OK'
         if retrieve_value(site_dict, 'site_max_import') is not None:
-            if safe_greater(site_dict['aggregate_load'], site_dict['site_max_import']):
-                site_dict['status'] = 'constraints exceeded'
+            site_dict['import_violation'] = max((site_dict['aggregate_load'] - site_dict['site_max_import']).max(),0)
+
         if retrieve_value(site_dict, 'site_max_export') is not None:
-            if safe_less(site_dict['aggregate_load'],site_dict['site_max_export']):
-                site_dict['status'] = 'constraints exceeded'
+            site_dict['export_violation'] = max(-(site_dict['aggregate_load'] - site_dict['site_max_export']).min(),0)
+
 
     site_dict['load_profile'] = load_profile_save # restore load profile to just be load and not V0G cars
 
     return site_dict
-
-def safe_greater(var1, var2):
-    a = hasattr(var1, '__len__')
-    b = hasattr(var2, '__len__')
-    if a and b:
-        return (var1 > var2).any()
-    elif a:
-        return (var1.max() > var2)
-    elif b:
-        return (var1 > var2.min())
-    else:
-        return (var1 > var2)
-
-def safe_less(var1, var2):
-    a = hasattr(var1, '__len__')
-    b = hasattr(var2, '__len__')
-    if a and b:
-        return (var1 < var2).any()
-    elif a:
-        return (var1.min() < var2)
-    elif b:
-        return (var1 < var2.max())
-    else:
-        return (var1 < var2)
 
 def V0G_charging(ev, interval_duration, force_conv=False):
     available = ev['available']                         # bool
@@ -518,6 +445,9 @@ def extract_site_results(optimiser, site, node_uid_dict):
         ev['name'] = ev_name
         ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
         ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
+        ev['charge_infeasibility'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].min_soc_slack, 0)
+        ev['charge_status'] = 'success' if (ev['charge_infeasibility'] == 0) else 'infeasible'
+
         evs.append(ev)
 
     import_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
@@ -537,10 +467,9 @@ def append_optim_results_to_dict(optimiser, site, node_uid_dict, site_dict):
                 if name==site_dict['evs'][i]['name']:
                     site_dict['evs'][i]['SOC'] = ev['SOC']
                     site_dict['evs'][i]['delta'] = ev['delta']
-                    if 'infeasible' in optimiser.opt_status['Termination condition']:
-                        site_dict['evs'][i]['charge_success'] = False
-                    else:
-                        site_dict['evs'][i]['charge_success'] = True
+                    site_dict['evs'][i]['charge_infeasibility'] = ev['charge_infeasibility']
+                    site_dict['evs'][i]['charge_status'] = ev['charge_status']
+
     site_dict['aggregate_load'] = aggregate_load
     site_dict['import_violation'] = import_violation
     site_dict['export_violation'] = export_violation
