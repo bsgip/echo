@@ -133,8 +133,8 @@ def test_slack_vars_take_up_slack_when_forced_to():
 
     inverter = ElectricalTellegenNode()
     inverter.add_named_electrical_ports(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
-    inverter.ports['cp'].slack = True
+    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
+
 
     system.add_node_obj([grid, solar, inverter])
 
