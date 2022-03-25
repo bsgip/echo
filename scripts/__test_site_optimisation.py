@@ -80,8 +80,8 @@ print(retrieve_value(site_dict,'opt_status'))
 export_violation = site_dict['export_violation']
 import_violation = site_dict['import_violation']
 
-print('Maximum import violation was {} kW'.format(import_violation.max()))
-print('Maximum export violation was {} kW \n'.format(export_violation.min()))
+print('Import constraint violation was {} kW'.format(import_violation))
+print('Export constraint violation was {} kW \n'.format(export_violation))
 
 
 for i in range(4):
