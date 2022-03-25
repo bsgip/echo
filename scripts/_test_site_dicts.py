@@ -145,13 +145,6 @@ t2 = time.time()
 print('\n')
 print('Time to optimise all sites for {} intervals of {} minutes was {} minutes'.format(time_periods, interval_duration,np.round((t2-t1)/60),1))
 print('Number of sites failed to be processed was ',np.array(processing_errors).sum())
-# saving and loading example
 
 
-# for i in range(num_timesteps):
-#     for load in variable_loads:
-#         network.zips().set_s_const(load.time_series[i])
-#     network.solve_power_flow()
-#
-#     for bus in network.buses():
-#         store_some_data(bus.v())
+results_df = scenario.results_to_df()
