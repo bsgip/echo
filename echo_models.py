@@ -238,11 +238,11 @@ class Port(object):
             return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
 
         def import_cap_rule_slack(model, p, t):
-            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t] <= \
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack) <= \
                    getattr(model, self.import_con_val)[p, t]
 
         def export_cap_rule_slack(model, p, t):
-            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t] >= \
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack) >= \
                    getattr(model, self.export_con_val)[p, t]
 
         def generate_array_cons(val):
@@ -264,7 +264,7 @@ class Port(object):
             if self.slack is True:
                 self.import_slack = 'import_slack_' + self.port_name
                 setattr(model, self.import_slack,
-                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+                        en.Var(initialize=0, domain=en.NonPositiveReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
             else:
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
@@ -277,7 +277,7 @@ class Port(object):
             if self.slack is True:
                 self.export_slack = 'export_slack_' + self.port_name
                 setattr(model, self.export_slack,
-                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+                        en.Var(initialize=0, domain=en.NonNegativeReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
             else:
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
@@ -351,8 +351,8 @@ class Port(object):
     def add_objective(self, model):
         objective = 0
         if self.slack is True:
-            objective += -1*sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in model.Time)*model.bigM
-            objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in model.Time) * model.bigM
+            objective += -1 * getattr(model, self.import_slack) * model.bigM
+            objective += getattr(model, self.export_slack) * model.bigM
         return objective
 
 
