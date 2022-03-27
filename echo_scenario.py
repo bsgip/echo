@@ -1,20 +1,19 @@
 import json
-import sys
 import pandas as pd
 import numpy as np
 import sgt
 import sgt_e_json
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import pickle
+import seaborn as sns
+import cmath
+
 ## echo and optimisation imports
 import echo_models as ecm
 from echo_optimiser import EchoOptimiser
 import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
-import seaborn as sns
-import cmath
-import pickle
-from tqdm import tqdm
-
 
 class EchoScenario:
     def __init__(self, network_file=None, name='default_name', description=None):
@@ -34,6 +33,7 @@ class EchoScenario:
 
     def load_network_model(self, network_file):
         # Load the raw e-JSON data.
+        print('Importing network data')
         with open(network_file) as f:
             netw_jsn = json.load(f)
 
@@ -57,6 +57,7 @@ class EchoScenario:
         self.network = netw
         self.connection_point_df = con_point_df
         self.num_sites = len(con_point_df)
+        print('Finished importing network data')
 
     def get_connection_point_info(self):
         return self.connection_point_df
@@ -64,8 +65,32 @@ class EchoScenario:
     def add_site_data(self, sites):
         assert self.network is not None, 'load a network before adding site data'
         assert len(sites) == self.num_sites, 'len(sites) must equal len(self.connection_point_df)'
+        # check sites for consistency
+        # print('Adding site data and checking that all time series data is the same length as the first sites load profile')
+        lp = retrieve_value(sites[0], 'load_profile')
+        assert lp is not None, 'site 0 has no load_profile'
+        time_periods = len(retrieve_value(sites[0], 'load_profile'))
+        for i, site in enumerate(sites):
+            lp = retrieve_value(site, 'load_profile')
+            assert lp is not None, 'site {} has no load profile'.format(i)
+            assert len(lp)==time_periods, 'site {} load_profile should have length {} (same as first site)'.format(i, time_periods)
+            pv = retrieve_value(site, 'pv_profile')
+            if pv is not None:
+                assert len(pv)==time_periods, 'site {} pv profile should have length {}'.format(i, time_periods)
+            evs = retrieve_value(site, 'evs')
+            if evs is not None:
+                for j, ev in enumerate(evs):
+                    name = retrieve_value(ev, 'name')
+                    assert name is not None, 'site {} ev {} must have name'.format(i, j)
+                    usage = retrieve_value(ev, 'usage')
+                    assert usage is not None, 'site {} ev {} with name {} must have usage'.format(i, j, name)
+                    assert len(usage)==time_periods, 'site {}, ev {} with name {} usage should have length {}'.format(i, j, name, time_periods)
+                    available = retrieve_value(ev, 'available')
+                    assert available is not None, 'site {} ev {} with name {} must have available'.format(i, name, j)
+                    assert len(available)==time_periods, 'site {}, ev {} with name {} available should have length {}'.format(i, j, name, time_periods)
+
         self.sites = sites
-        # todo: add check that time series data has correct length
+        # print('Finished adding site data')
 
     def save(self, file_name):
         save_dict = vars(self)
@@ -97,7 +122,6 @@ class EchoScenario:
                 self.sites[i]['processed'] = False
                 processing_errors.append(True)
 
-            # todo: add site status checks and recording
             # todo: what are some other things we want to have all site summaries of?
             aggregate_loads.append(self.sites[i]['aggregate_load'])
 

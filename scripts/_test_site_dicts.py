@@ -64,7 +64,7 @@ available2 = np.array(([1] * 10 + [0] * 10 + [1] * 28 + [0] * 48) * days)
 usage2 = np.array(([0.0] * 10 + [0.4] * 10 + [0.0] * 28 + [0.5] * 48) * days)
 
 # second vehicle is V1G
-ev2 = {'name': 'ev2', 'available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit': 0,
+ev2 = {'name': 'ev2', 'available': available2,'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit': 0,
        'charging_power_limit': 10., 'discharging_power_limit': 0, 'charging_efficiency': 1,
        'discharging_efficiency': 1, 'initial_state_of_charge': 0.0}
 
@@ -102,7 +102,7 @@ for i, r in con_point_df.iterrows():
             which_ev = np.random.rand()
             if which_ev > 0.75:
                 tmp = ev1.copy()
-                tmp['name'] = tmp['name'] + '_' + str(k)        # todo: a less hacky way of ensuring names arent the same
+                tmp['name'] = tmp['name'] + '_' + str(k)
                 evs.append(tmp)
             elif which_ev > 0.5:
                 tmp = ev2.copy()
