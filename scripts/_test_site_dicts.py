@@ -124,7 +124,8 @@ for i, r in con_point_df.iterrows():
     site = {'name': names[i], 'load_profile': l,
                     'pv_profile': pv, 'battery': b,
                     'evs': evs, 'export_tariff': export_tariff_array,
-                    'import_tariff': import_tariff_array}
+                    'import_tariff': import_tariff_array,
+                    'site_max_import': 40, 'site_max_export': -20}
 
     # add teh site to the list of sites
     sites.append(site)
