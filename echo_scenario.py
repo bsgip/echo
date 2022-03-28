@@ -1,13 +1,16 @@
 import json
 import pandas as pd
 import numpy as np
-import sgt
-import sgt_e_json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle
 import seaborn as sns
 import cmath
+
+# import sgt and sgt-e-json for power flows
+import sgt
+import sgt_e_json
+# sgt.set_message_log_level(sgt.LogLevel.NONE)
 
 ## echo and optimisation imports
 import echo_models as ecm
@@ -118,12 +121,13 @@ class EchoScenario:
                 self.sites[i] = process_site(self.sites[i], interval_duration, time_periods)
                 self.sites[i]['processed'] = True
                 processing_errors.append(False)
+                aggregate_loads.append(self.sites[i]['aggregate_load'])
             except:
                 self.sites[i]['processed'] = False
                 processing_errors.append(True)
-
+                aggregate_loads.append(np.array([]))
             # todo: what are some other things we want to have all site summaries of?
-            aggregate_loads.append(self.sites[i]['aggregate_load'])
+
 
         self.aggregate_loads=aggregate_loads
         self.processing_errors = processing_errors
@@ -238,7 +242,7 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
             site_dict['aggregate_load'] = load_profile_save
 
         site_dict['load_profile'] = load_profile_save
-        # todo: fix up constraint violation reporting
+
         site_dict['status'] = 'OK'
         if retrieve_value(site_dict, 'site_max_import') is not None:
             site_dict['import_violation'] = max((site_dict['aggregate_load'] - site_dict['site_max_import']).max(),0)
@@ -337,8 +341,8 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
 
     connection_point = ecm.ElectricalTellegenNode()      # summation node
     connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])
-    connection_point.ports['grid'].set_flow_constraints(max_import=site_max_import,max_export=site_max_export)
-    connection_point.ports['grid'].slack = True         # todo test this and refactor
+    if (site_max_import is not None) or (site_max_export is not None):
+        connection_point.ports['grid'].set_flow_constraints(max_import=site_max_import,max_export=site_max_export, slack=True)
 
     if evs_opt is not None:
         connection_point.add_named_electrical_ports(['ev'+str(i) for i in range(len(evs))])
@@ -474,8 +478,16 @@ def extract_site_results(optimiser, site, node_uid_dict):
 
         evs.append(ev)
 
-    import_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
-    export_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
+    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
+        import_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
+    else:
+        import_violation = 0.
+
+    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
+        export_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
+    else:
+        export_violation = 0.
+
     aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
     return aggregate_load, battery, evs, import_violation, export_violation
 

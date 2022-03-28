@@ -91,6 +91,7 @@ num_evs = has_ev.astype(int) * np.random.poisson(ev_mean, (num_sites,))
 names = con_point_df.id.to_numpy()
 # for i, r in con_point_df.iterrows():
 
+
 sites = []
 for i, r in con_point_df.iterrows():
     b = battery.copy() if has_battery[i] else None
