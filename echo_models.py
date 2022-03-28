@@ -351,8 +351,10 @@ class Port(object):
     def add_objective(self, model):
         objective = 0
         if self.slack is True:
-            objective += -1 * getattr(model, self.import_slack) * model.bigM
-            objective += getattr(model, self.export_slack) * model.bigM
+            if hasattr(self, 'import_slack'):
+                objective += -1 * getattr(model, self.import_slack) * model.bigM
+            if hasattr(self, 'export_slack'):
+                objective += getattr(model, self.export_slack) * model.bigM
         return objective
 
 

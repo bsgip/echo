@@ -128,7 +128,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
-    pv1.curtailable = False
+    pv1.curtailable = True
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
@@ -156,4 +156,4 @@ def test_slack_vars_take_up_slack_when_forced_to():
     sol_p = optimiser.values(pv1.port_name, 0)
 
     for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(inv_export_slack[i], max(0, -1*sol_p[i]-5))
+        np.testing.assert_almost_equal(inv_export_slack, max(0, -1*sol_p[i]-5))

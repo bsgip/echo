@@ -532,7 +532,7 @@ class TimePeriod(object):
 
 class Window(object):
 
-    def __init__(self, time_periods: List[TimePeriod]):
+    def  __init__(self, time_periods: List[TimePeriod]):
         self.time_periods = time_periods
 
     @validator('time_periods')
@@ -595,7 +595,7 @@ class DemandTariffObjective(Objective):
                     raise ConfigurationError('Enter pandas date_range in demandtariffobjective if using time periods to define tariffs.')
                 dc.window_obj_to_bool(self.df, self.expansion_periods)
                 dc.create_params(model)
-            elif dc.window_array:
+            elif dc.window_array is not None:
                 dc.window_array_to_bool(self.expansion_periods)
                 dc.create_params(model)
             else:
