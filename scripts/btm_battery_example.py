@@ -119,7 +119,7 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
                           ES=system,
                           objective_set=objective_set, optimiser_engine='cplex')
 
-optimiser.optimise()
+optimiser.optimise(tee=True)
 
 log_infeasible_constraints(optimiser.model)
 

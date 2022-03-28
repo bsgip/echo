@@ -189,7 +189,7 @@ class EchoOptimiser(object):
             for _, port_obj in node_obj.ports.items():
                 self.objective += port_obj.add_objective(self.model)
 
-    def optimise(self):
+    def optimise(self, tee=False):
         def objective_function(model):
             return self.objective
 
@@ -202,7 +202,7 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        results = opt.solve(self.model, tee=True, symbolic_solver_labels=True)
+        results = opt.solve(self.model, tee=False, symbolic_solver_labels=True)
         self.opt_status = results['Solver'][0]
 
     def values(self, variable_name, expansion):

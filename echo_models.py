@@ -153,8 +153,9 @@ class Port(object):
         self.export_constraint_value = None
         self.installation_capex = 0
         self.active_periods = None
+        self.slack = False
 
-    def set_flow_constraints(self, max_import, max_export):
+    def set_flow_constraints(self, max_import, max_export, slack=False):
         if max_import is not None:
             self.import_constraint = FlowConstraint.Fixed
         else:
@@ -166,6 +167,7 @@ class Port(object):
         else:
             self.export_constraint = FlowConstraint.NoConstraint
         self.export_constraint_value = max_export
+        self.slack = slack
 
     def verify_port(self):
         """ Used to verify that a port has been set up appropriately"""
@@ -235,6 +237,14 @@ class Port(object):
         def export_cap_rule(model, p, t):
             return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
 
+        def import_cap_rule_slack(model, p, t):
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack) <= \
+                   getattr(model, self.import_con_val)[p, t]
+
+        def export_cap_rule_slack(model, p, t):
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack) >= \
+                   getattr(model, self.export_con_val)[p, t]
+
         def generate_array_cons(val):
             d = {}
             if (type(val) is int) or (type(val) is float):
@@ -250,14 +260,27 @@ class Port(object):
             self.import_con_val = f"import_con_val_{self.port_name}"
             constraint_array = generate_array_cons(self.import_constraint_value)
             setattr(model, self.import_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonNegativeReals))
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
+
+            if self.slack is True:
+                self.import_slack = 'import_slack_' + self.port_name
+                setattr(model, self.import_slack,
+                        en.Var(initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
+            else:
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
         if self.export_constraint is FlowConstraint.Fixed:
             con_name = 'export_con_' + self.port_name
             self.export_con_val = f"export_con_val_{self.port_name}"
             constraint_array = generate_array_cons(self.export_constraint_value)
             setattr(model, self.export_con_val, en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
+            if self.slack is True:
+                self.export_slack = 'export_slack_' + self.port_name
+                setattr(model, self.export_slack,
+                        en.Var(initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
+            else:
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
         if self.active_periods is not None:
             self.active = 'active_' + self.port_name
@@ -327,6 +350,11 @@ class Port(object):
 
     def add_objective(self, model):
         objective = 0
+        if self.slack is True:
+            if hasattr(self, 'import_slack'):
+                objective += -1 * getattr(model, self.import_slack) * model.bigM
+            if hasattr(self, 'export_slack'):
+                objective += getattr(model, self.export_slack) * model.bigM
         return objective
 
 
@@ -440,14 +468,28 @@ class Storage(Port):
         self.fixed_storage_capacity = True
         self.var_opex = 0
         self.regularise = False
+        self.enable_min_soc_slack = False
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
-        self.constrain_pos_neg(model)
 
         self.soc_value = 'storage_soc_' + self.port_name
-        setattr(model, self.soc_value,
-                en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        if not self.enable_min_soc_slack:
+            setattr(model, self.soc_value,
+                    en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        else:
+            setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(None, self.max_capacity)))
+
+
+        def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
+            return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
+
+        if self.enable_min_soc_slack is True:
+            con_name = 'min_soc_con_' + self.port_name
+            self.min_soc_slack = 'min_soc_slack_' + self.port_name
+            setattr(model, self.min_soc_slack,
+                    en.Var(initialize=0, domain=en.NonNegativeReals))
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
 
         self.optimised_storage_capacity = 'optimised_storage_capacity_' + self.port_name
         if self.fixed_storage_capacity is False:
@@ -482,7 +524,19 @@ class Storage(Port):
                        getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
                        getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
 
-        setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
+        def SOC_rule_perfect_efficiency(model, p, t):
+            if t == 0:
+                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
+                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+            else:
+                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
+                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+
+        if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
+            setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
+        else:
+            self.constrain_pos_neg(model)
+            setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
     def calc_capacity(self):
         capacity = self.max_capacity
@@ -511,10 +565,8 @@ class Storage(Port):
         # Storage capex
         objective += getattr(model, self.optimised_storage_capacity) * self.installation_capex
 
-        # Variable opex
-        objective += sum(
-            (getattr(model, self.pos)[p, t] - getattr(model, self.neg)[
-                p, t]) * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.var_opex
+        if self.enable_min_soc_slack:
+            objective += getattr(model, self.min_soc_slack) * model.bigM * 10  # we want this to be more important than import/export constraints
 
         return objective
 
@@ -562,7 +614,7 @@ class ElectricalGeneration(Source):
         setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
                                                     initialize=self.initial_value, domain=en.NonPositiveReals))
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
-                                              initialize=self.initial_value))
+                                              initialize=self.initial_value, domain=en.NonPositiveReals))
         if self.curtailable:
             def gen_less_than_max_gen(model, p, t):
                 return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
