@@ -6,6 +6,20 @@ import numpy as np
 import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
 export_tariff_array = np.array(([0.1] * 96))
 
+peak_rate = 2.0
+peak_window = [0]*28 + [1]*8 + [0]*32 + [1]*12 + [0]*16
+
+from objectives import DemandCharge
+peak_charge = DemandCharge(rate=peak_rate, window_array=peak_window, min_demand=0.0)
+
+# shoulder usage
+shoulder_rate = 1.0
+shoulder_window = [0]*36 + [1]*32 + [0]*12 + [1]*8 + [0]*8
+
+shoulder_charge = DemandCharge(rate=shoulder_rate, window_array=shoulder_window, min_demand=0.0)
+print(len(shoulder_window))
+demand_tariff_list = [peak_charge, shoulder_charge]
+
 load_profile = np.array(
     [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
      2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
@@ -64,9 +78,10 @@ site_max_import_array = 23*np.ones(load_profile.shape)
 
 site_dict = {'name':'test_site', 'load_profile':load_profile,
                     'pv_profile':pv_profile, 'battery':battery,
-                    'evs':evs, 'export_tariff':export_tariff_array,
+                    'evs':evs, 'export_tariff':None,
                      'import_tariff':import_tariff_array,
-                    'site_max_import':site_max_import_array, 'site_max_export':-20}
+                    'site_max_import':site_max_import_array, 'site_max_export':-20,
+             'demand_tariff_list':demand_tariff_list}
 
 from echo_scenario import process_site
 site_dict = process_site(site_dict, interval_duration, time_periods)

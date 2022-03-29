@@ -420,15 +420,16 @@ def create_echo_site_from_dict(site_dict):
     battery = None if 'battery' not in keys else site_dict['battery']
     site_max_import = retrieve_value(site_dict, 'site_max_import')
     site_max_export = retrieve_value(site_dict, 'site_max_export')
+    demand_tariff_list = retrieve_value(site_dict, 'demand_tariff_list')
 
     site, objective_set, node_uid_dict = create_echo_site(load_profile=load_profile, export_tariff=export_tariff,
                                                           import_tariff=import_tariff, pv_profile=pv_profile,
-                                                          battery=battery, evs=evs,
+                                                          battery=battery, evs=evs, demand_tariff_list=demand_tariff_list,
                                                           site_max_export=site_max_export, site_max_import=site_max_import)
     return site, objective_set, node_uid_dict
 
 def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1,
-                     site_max_export=None, site_max_import=None):
+                     site_max_export=None, site_max_import=None, demand_tariff_list=None):
 
     # check evs have unique names
     ev_name_check(evs)
@@ -567,10 +568,23 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             site.connect_ports_and_create_edge(ev_cp.ports['ev'], vehicle.ports['ev'])
             site.connect_ports_and_create_edge(ev_cp.ports['usage'], trip.ports['usage'])
 
-    import_cost = obj.ImportTariff(connection_point.ports['grid'], import_tariff, expansion_periods)
-    export_cost = obj.ExportTariff(connection_point.ports['grid'], export_tariff, expansion_periods)
+    objective_list=[]
+    if import_tariff is not None:
+        import_cost = obj.ImportTariff(connection_point.ports['grid'], import_tariff, expansion_periods)
+        objective_list.append(import_cost)
+    if export_tariff is not None:
+        export_cost = obj.ExportTariff(connection_point.ports['grid'], export_tariff, expansion_periods)
+        objective_list.append(export_cost)
+    if demand_tariff_list is not None:
+        demand_tariff = obj.DemandTariffObjective(component=connection_point.ports['grid'],
+                                              demand_charges=demand_tariff_list,
+                                              excess_demand_charge=0.0,
+                                              off_peak_demand_charge=0.0)
+        objective_list.append(demand_tariff)
 
-    objective_set = obj.ObjectiveSet(objective_list=[export_cost, import_cost])
+    assert len(objective_list) > 0, 'At least one tariff needs to be specified'
+
+    objective_set = obj.ObjectiveSet(objective_list=objective_list)
 
     return site, objective_set, node_uid_dict
 
