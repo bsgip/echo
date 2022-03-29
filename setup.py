@@ -26,6 +26,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=None,
+    packages=setuptools.find_packages(),
     classifiers=[
     ],
     install_requires=install_requires,
