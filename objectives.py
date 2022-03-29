@@ -22,6 +22,7 @@ class Objective(object):
 
 
 class ObjectiveSet(object):
+    """ Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
 
     def __init__(self,
                  objective_list):
@@ -41,6 +42,7 @@ class ObjectiveSet(object):
         optimiser.objective += objective_rule(model)
 
 class PeakPositivePower(Objective):
+    """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
 
     def __init__(self,
                  component):
@@ -72,6 +74,7 @@ class PeakPositivePower(Objective):
 
 
 class PeakNegativePower(Objective):
+    """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
 
     def __init__(self,
                  component):
@@ -103,6 +106,8 @@ class PeakNegativePower(Objective):
 
 
 class ImportTariff(Objective):
+    """ The ImportTariff objective applies a tariff, defined as an array of prices,
+     to the positive (importing) component of the specified port."""
 
     def __init__(self,
                  component,
@@ -146,6 +151,8 @@ class ImportTariff(Objective):
 
 
 class ExportTariff(Objective):
+    """ The ExportTariff objective applies a tariff, defined as an array of prices,
+     to the negative (exporting) component of the specified port."""
 
     def __init__(self,
                  component,
@@ -190,6 +197,7 @@ class ExportTariff(Objective):
 
 
 class PathTariff(Objective):
+    """ The PathTariff objective applies a tariff, specified as an array of prices, to flows on a specified path."""
 
     def __init__(self,
                  component,
@@ -233,6 +241,7 @@ class PathTariff(Objective):
 
 
 class ThroughputCost(Objective):
+    """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
 
     def __init__(self,
                  component,
@@ -266,6 +275,7 @@ class ThroughputCost(Objective):
 
 
 class QuadraticPower(Objective):
+    """ The QuadraticPower objective minimises flow^2 at a specified port."""
 
     def __init__(self,
                  component):
@@ -297,7 +307,6 @@ class QuadraticPower(Objective):
 
 
 class ContingencyNegative(Objective):
-
     """ FCAS Raise """
 
     def __init__(self,
@@ -371,7 +380,7 @@ class ContingencyNegative(Objective):
 
 
 class ContingencyPositive(Objective):
-    """ FCAS lower """
+    """ FCAS Lower """
 
     def __init__(self,
                  component,
@@ -461,6 +470,7 @@ class Day(Enum):
 
 
 class TimePeriod(object):
+    """ Used to specify tariffs according to times/days rather than specifying them directly as arrays."""
 
     def __init__(self,
                  start_time: time,
@@ -531,6 +541,8 @@ class TimePeriod(object):
 
 
 class Window(object):
+    """ A window contains one or many time periods over which a demand charge applies.
+    These time periods should be non-overlapping"""
 
     def  __init__(self, time_periods: List[TimePeriod]):
         self.time_periods = time_periods
@@ -552,6 +564,7 @@ class Window(object):
 
 
 class DemandTariffObjective(Objective):
+    """ A demand tariff objective contains a set of one or more demand charges."""
 
     def __init__(self,
                  component,
@@ -637,7 +650,7 @@ class DemandTariffObjective(Objective):
 
 
 class DemandCharge(object):
-    """ A demand charge is a rate that applies to the maximum demand over a specified time window."""
+    """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
 
     def __init__(self,
                  rate,

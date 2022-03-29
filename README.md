@@ -6,7 +6,7 @@ Clone the repo, set up a virtual environment (python 3.7+).
 Run the command `pip install .[test,validation]` to install the required packages.
 
 ## Solver
-The cplex solver (non-linear mixed integer) has been tested.
+The cplex solver (linear mixed integer) has been tested.
 It requires a license but is free for academic users. To install, follow instructions [here](https://www.ibm.com/products/ilog-cplex-optimization-studio).
 
 ## Documentation
