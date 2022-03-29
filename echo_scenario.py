@@ -6,17 +6,23 @@ from tqdm import tqdm
 import pickle
 import seaborn as sns
 import cmath
+import lzma
 
 # import sgt and sgt-e-json for power flows
 import sgt
 import sgt_e_json
-# sgt.set_message_log_level(sgt.LogLevel.NONE)
+sgt.set_message_log_level(sgt.LogLevel.NONE)
+sgt.set_warning_log_level(sgt.LogLevel.NONE)
 
 ## echo and optimisation imports
 import echo_models as ecm
 from echo_optimiser import EchoOptimiser
 import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
+
+
+# todo: EV initial charge
+# todo: battery initial charge
 
 class EchoScenario:
     def __init__(self, network_file=None, name='default_name', description=None):
@@ -133,13 +139,122 @@ class EchoScenario:
         self.processing_errors = processing_errors
         return processing_errors
 
-    def results_to_df(self):
-        if aggregate_load is not None:
+    def aggregate_load_df(self):
+        if self.aggregate_loads is not None:
             names = [site['name'] for site in self.sites]
             df = pd.DataFrame.from_dict(dict(zip(names, self.aggregate_loads)))
             return df
         else:
             return None
+
+    def run_power_flows(self, power_factor=0.93, save_pickle_file=None):
+        assert self.aggregate_loads is not None, "Aggregate loads need to be calculated first"
+        zips = {z.id(): z for z in self.network.zips()}
+        agg_loads_df = self.aggregate_load_df()
+
+        # get bus names
+        bus_name = []
+        for bus in self.network.buses():
+            bus_name += [bus.id() + '.' + str(phase) for phase in bus.phases()]
+
+        # get branch names
+        branch_name_0 = []
+        branch_name_1 = []
+        transformer_names = []
+        for branch in self.network.branches():
+            branch_name_0 += [branch.id() + '.' + str(phase) for phase in branch.phases_0()]
+            branch_name_1 += [branch.id() + '.' + str(phase) for phase in branch.phases_1()]
+            if branch.component_type() == 'transformer':
+                transformer_names.append(branch.id())
+
+        status = []
+        v_pu_list = []
+        br_power_0_list = []
+        br_power_1_list = []
+        br_current_0_list = []
+        br_current_1_list = []
+
+        for t in tqdm(agg_loads_df.index, desc='Running power flows'):
+            # set the loads
+            for zid in agg_loads_df.columns:
+                # divide by 1000 to go from kW to MW
+                set_zip_total_power(zips[zid], agg_loads_df.at[t, zid] / 1000, pf=power_factor)
+
+            # run the power flow
+            ss = self.network.solve_power_flow()
+            status.append(ss)
+
+            # get the bus voltages
+            v_pu = []
+            for bus in self.network.buses():
+                v_base = bus.v_base()
+                v_pu += [abs(x) / v_base for x in bus.v()]
+            v_pu_list.append(v_pu)
+
+            # get branch
+            br_power_0 = []
+            br_power_1 = []
+            br_current_0 = []
+            br_current_1 = []
+            for branch in self.network.branches():
+                br_power = branch.s_term()
+                br_power_0 += br_power[0]
+                br_power_1 += br_power[1]
+                br_current = branch.i_term()
+                br_current_0 += br_current[0]
+                br_current_1 += br_current[1]
+            br_power_0_list.append(br_power_0)
+            br_power_1_list.append(br_power_1)
+            br_current_1_list.append(br_current_1)
+            br_current_0_list.append(br_current_0)
+
+        bus_voltage_df = pd.DataFrame(data=v_pu_list, columns=bus_name)
+        branch_power_0_df = pd.DataFrame(data=br_power_0_list, columns=branch_name_0)
+        branch_power_1_df = pd.DataFrame(data=br_power_1_list, columns=branch_name_1)
+        branch_current_0_df = pd.DataFrame(data=br_current_0_list, columns=branch_name_0)
+        branch_current_1_df = pd.DataFrame(data=br_current_1_list, columns=branch_name_1)
+
+        power_flow_results = {'status':status, 'bus_voltage':bus_voltage_df,'branch_power_0':branch_power_0_df,
+                  'branch_power_1':branch_power_1_df, 'branch_current_0':branch_current_0_df,
+                  'branch_current_1':branch_current_1_df, 'transformer_names':transformer_names}
+
+        if save_pickle_file is not None:
+            with lzma.open(save_pickle_file + '.lzma', 'wb') as handle:
+                pickle.dump(power_flow_results, handle, protocol=4)
+
+        return power_flow_results
+
+
+def get_s(p, pf=0.93):
+    '''
+    Get complex power s
+
+    Args:
+        p: the power (numpy array or scalar)
+        pf: the power factor
+
+    Returns:
+        the complex power
+    '''
+
+    q = np.sqrt(pow(p, 2) * (1.0 / pow(pf, 2) - 1.0)) # q = abs(p) * q_fact
+    return p + 1j * q
+
+def set_zip_total_power(zip_, p, pf=0.93):
+    '''
+    Set the total power of a zip (load).
+
+    Args:
+        zip_: the zip object
+        p: the total power
+        pf: the power factor
+    '''
+
+    # n_ph = zip_.n_phases()        # for some reason this isn't always working out
+    n_ph = zip_.n_comps()
+    s_per_ph = get_s(p / n_ph, pf)
+    s = [s_per_ph] * n_ph
+    zip_.set_s_const(s)
 
 
 def retrieve_value(dict, key):
