@@ -516,6 +516,9 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
         for ev in evs_opt:
             available = ev['available']
             usage = ev['usage']
+            soc_conserv = retrieve_value(ev, 'soc_conserv')
+            soc_conserv_cost = retrieve_value(ev, 'soc_conserv_cost')
+
             if len(available) != num_time_periods:
                     raise Exception(ev['name']+' available must have same length as load_profile')
             if len(usage) != num_time_periods:
@@ -535,6 +538,11 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             vehicle = ecm.Node()
             vehicle.ports['ev'] = ev_storage
             vehicle.ports['ev'].enable_min_soc_slack = True
+            if soc_conserv is not None:
+                assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
+                vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
+                vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost # dollars per kwh
+                vehicle.ports['ev'].available = available
 
             trip = ecm.Node()
             us_port = ecm.ElectricalDemand()
