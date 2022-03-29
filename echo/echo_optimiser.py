@@ -5,7 +5,7 @@ import os
 import numpy as np
 from configuration import Units, Flows, FlowConstraint, OptimisationType, NodeRule, TransformRule, ExpansionType
 from constants import minutes_per_hour
-from echo_models import ConfigurationError, Path
+from .echo_models import ConfigurationError, Path
 import pandas as pd
 
 

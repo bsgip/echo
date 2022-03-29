@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 
 
-from echo_models import Port, ConfigurationError
+from .echo_models import Port, ConfigurationError
 
 
 class Objective(object):

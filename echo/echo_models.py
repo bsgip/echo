@@ -4,8 +4,8 @@ from typing import Optional
 import networkx as nx
 from networkx import Graph
 import pyomo.environ as en
-from configuration import *
-from constants import *
+from .configuration import *
+from .constants import *
 
 
 class OptimisationGraph(Graph):
