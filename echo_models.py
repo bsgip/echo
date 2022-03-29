@@ -468,7 +468,12 @@ class Storage(Port):
         self.fixed_storage_capacity = True
         self.var_opex = 0
         self.regularise = False
+        # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
         self.enable_min_soc_slack = False
+        # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
+        self.soc_conserv = None
+        self.soc_conserv_cost = None
+        self.available = None
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
@@ -480,6 +485,19 @@ class Storage(Port):
         else:
             setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(None, self.max_capacity)))
 
+        def soc_conservative_rule(model, p, t): # a rule for enforcing conservativness while plugged in
+            if self.available[t]:
+                return getattr(model, self.soc_value)[p,t] + getattr(model, self.cons_slack)[p,t] - self.soc_conserv >= 0
+            else:
+                return en.Constraint.Skip
+
+        if self.soc_conserv is not None:
+            assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
+            assert self.available is not None, 'soc_conserve requires available'
+            con_name = 'cons_soc' + self.port_name
+            self.cons_slack = 'con_slack' + self.port_name
+            setattr(model, self.cons_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
 
         def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
             return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
@@ -567,6 +585,9 @@ class Storage(Port):
 
         if self.enable_min_soc_slack:
             objective += getattr(model, self.min_soc_slack) * model.bigM * 10  # we want this to be more important than import/export constraints
+
+        if self.soc_conserv is not None:
+            objective += sum(getattr(model, self.cons_slack)[p,t] for p in model.Expansion for t in model.Time) * self.soc_conserv_cost
 
         return objective
 

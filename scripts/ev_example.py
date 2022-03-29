@@ -86,10 +86,16 @@ ev1 = ElectricalStorage(max_capacity=40.0,
                         discharging_power_limit=-10,
                         charging_efficiency=1,
                         discharging_efficiency=1,
-                        initial_state_of_charge=0.0)
+                        initial_state_of_charge=10)
 
 vehicle1 = Node()
+# hacky implemetnation of ev user conservativeness while plugged in
 vehicle1.ports['ev'] = ev1
+vehicle1.ports['ev'].soc_conserv = 20.  # kWh
+vehicle1.ports['ev'].soc_conserv_cost = 100.
+vehicle1.ports['ev'].available = available1
+
+
 
 trip1 = Node()
 us1 = ElectricalDemand()
@@ -201,3 +207,4 @@ line4, = ax3.plot(hrs, optimiser.values(ev2.soc_value, 0), color=colors[4])
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2, line3, line4], ['EV1 Charging action (kW)', 'EV1 SOC (kWh)','EV2 Charging action (kW)', 'EV2 SOC (kWh)'])
+plt.show()
