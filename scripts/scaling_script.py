@@ -8,6 +8,7 @@ from echo_optimiser import EchoOptimiser
 from objectives import *
 import networkx as nx
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 import os
 
@@ -15,6 +16,118 @@ SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
 
 N_INTERVALS = 48
+
+
+
+def many_node_system_tree(num_sites):
+
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30  # min
+
+    max_demand = 6
+    min_demand = 0
+
+    max_gen = -10
+    min_gen = 0
+
+    # create system
+    system = OptimisationGraph()
+    objective_list = []
+
+    # create grid node
+    grid = ElectricalNode()
+    g = ElectricalPort()
+    grid.ports['grid'] = g
+    system.add_node_obj(grid)
+
+    # create line of nodes
+    for i in range(num_sites):
+        cp = ElectricalTellegenNode()
+        cp.add_named_electrical_ports(['upstream', 'site', 'downstream'])
+        system.add_node_obj(cp)
+        if i == 0:
+            system.connect_ports_and_create_edge(cp.ports['upstream'], grid.ports['grid'])
+            previous_node = cp
+        else:
+            upstream_port = previous_node.ports['downstream']
+            system.connect_ports_and_create_edge(cp.ports['upstream'], upstream_port)
+            previous_node = cp
+
+        site_cp = ElectricalTellegenNode()
+        site_cp.add_named_electrical_ports(['load', 'pv', 'bess', 'cp'])
+        system.add_node_obj(site_cp)
+        system.connect_ports_and_create_edge(site_cp.ports['cp'], cp.ports['site'])
+
+        # Create load node with random demand profile
+        load = ElectricalNode()
+        lp = ElectricalDemand()
+        lp.add_demand_profile_from_array(np.random.randint(min_demand, max_demand, time_periods), expansion_periods)
+        name = 'load_' + str(i)
+        load.ports[name] = lp
+        system.add_node_obj(load)
+        system.connect_ports_and_create_edge(lp, site_cp.ports['load'])
+
+        # Create generation node with random generation profile
+        gen = ElectricalNode()
+        gp = ElectricalGeneration()
+        gp.curtailable = False
+        gp.add_generation_profile_from_array(np.random.randint(max_gen, min_gen, time_periods), expansion_periods)
+        name = 'gen_' + str(i)
+
+        gen.ports[name] = gp
+        system.add_node_obj(gen)
+        system.connect_ports_and_create_edge(gp, site_cp.ports['pv'])
+
+        # Create storage node
+        bess = ElectricalNode()
+        b1 = ElectricalStorage(max_capacity=48,
+                               depth_of_discharge_limit=0,
+                               charging_power_limit=5.0,
+                               discharging_power_limit=-5.0,
+                               charging_efficiency=1,
+                               discharging_efficiency=1,
+                               initial_state_of_charge=48.0)
+        name = 'bess_' + str(i)
+        bess.ports[name] = b1
+        system.add_node_obj(bess)
+        system.connect_ports_and_create_edge(b1, site_cp.ports['bess'])
+
+        import_tariff = ImportTariff(component=site_cp.ports['cp'],
+                                     tariff_array=np.random.random(time_periods),
+                                     expansion_periods=expansion_periods)
+        objective_list.append(import_tariff)
+    start = time_.time()
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=ObjectiveSet(objective_list=objective_list)
+    )
+    end = time_.time()
+    optimiser.optimise()
+    optimiser.time_to_construct = (end-start)
+    return optimiser
+
+t10 = many_node_system_tree(num_sites=10)
+t100 = many_node_system_tree(num_sites=100)
+t1000 = many_node_system_tree(num_sites=1000)
+
+all_results = {}
+for run in (t10, t100, t1000):
+    results = {}
+    results['num_nodes'] = run.ES.number_of_nodes()
+    results['num_edges'] = run.ES.number_of_edges()
+    results['time to construct optimiser'] = run.time_to_construct
+    results['user time'] = run.opt_status['User time']
+    results['time'] = run.opt_status['Time']
+    results['num_vars'] = run.model.nvariables()
+    results['num_constraints'] = run.model.nconstraints()
+
+
+
 
 def many_node_system_no_objective(num_gen, num_loads, num_storage, num_tellegen_nodes, objective):
 
@@ -145,98 +258,3 @@ def many_node_system_no_objective(num_gen, num_loads, num_storage, num_tellegen_
 #t = many_node_system_no_objective(1000, 1000, 1000, 1000, None)
 
 
-
-
-def many_node_system_tree(num_sites):
-
-    expansion_periods = 1
-    time_periods = 48
-    interval_duration = 30  # min
-
-    max_demand = 6
-    min_demand = 0
-
-    max_gen = -10
-    min_gen = 0
-
-    # create system
-    system = OptimisationGraph()
-    objective_list = []
-
-    # create grid node
-    grid = ElectricalNode()
-    g = ElectricalPort()
-    grid.ports['grid'] = g
-    system.add_node_obj(grid)
-
-    # create line of nodes
-    for i in range(num_sites):
-        cp = ElectricalTellegenNode()
-        cp.add_named_electrical_ports(['upstream', 'site', 'downstream'])
-        system.add_node_obj(cp)
-        if i == 0:
-            system.connect_ports_and_create_edge(cp.ports['upstream'], grid.ports['grid'])
-            previous_node = cp
-        else:
-            upstream_port = previous_node.ports['downstream']
-            system.connect_ports_and_create_edge(cp.ports['upstream'], upstream_port)
-            previous_node = cp
-
-        site_cp = ElectricalTellegenNode()
-        site_cp.add_named_electrical_ports(['load', 'pv', 'bess', 'cp'])
-        system.add_node_obj(site_cp)
-        system.connect_ports_and_create_edge(site_cp.ports['cp'], cp.ports['site'])
-
-        # Create load node with random demand profile
-        load = ElectricalNode()
-        lp = ElectricalDemand()
-        lp.add_demand_profile_from_array(np.random.randint(min_demand, max_demand, time_periods), expansion_periods)
-        name = 'load_' + str(i)
-        load.ports[name] = lp
-        system.add_node_obj(load)
-        system.connect_ports_and_create_edge(lp, site_cp.ports['load'])
-
-        # Create generation node with random generation profile
-        gen = ElectricalNode()
-        gp = ElectricalGeneration()
-        gp.curtailable = False
-        gp.add_generation_profile_from_array(np.random.randint(max_gen, min_gen, time_periods), expansion_periods)
-        name = 'gen_' + str(i)
-
-        gen.ports[name] = gp
-        system.add_node_obj(gen)
-        system.connect_ports_and_create_edge(gp, site_cp.ports['pv'])
-
-        # Create storage node
-        bess = ElectricalNode()
-        b1 = ElectricalStorage(max_capacity=48,
-                               depth_of_discharge_limit=0,
-                               charging_power_limit=5.0,
-                               discharging_power_limit=-5.0,
-                               charging_efficiency=1,
-                               discharging_efficiency=1,
-                               initial_state_of_charge=48.0)
-        name = 'bess_' + str(i)
-        bess.ports[name] = b1
-        system.add_node_obj(bess)
-        system.connect_ports_and_create_edge(b1, site_cp.ports['bess'])
-
-        import_tariff = ImportTariff(component=site_cp.ports['cp'],
-                                     tariff_array=np.random.random(time_periods),
-                                     expansion_periods=expansion_periods)
-        objective_list.append(import_tariff)
-
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=ObjectiveSet(objective_list=objective_list)
-    )
-
-    optimiser.optimise()
-    return optimiser
-
-
-t = many_node_system_tree(num_sites=1000)
