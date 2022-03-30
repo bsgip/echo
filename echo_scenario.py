@@ -21,7 +21,7 @@ import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 
 class EchoScenario:
-    def __init__(self, network_file=None, name='default_name', description=None, energy_only=False):
+    def __init__(self, network_file=None, name='default_name', description=None, energy_only=False, load_file=None, byte_string=False):
         self.name = name
         self.description = description
         self.energy_only = energy_only
@@ -36,6 +36,9 @@ class EchoScenario:
         # load network model
         if network_file and not energy_only:
             self.load_network_model(network_file)
+
+        if (network_file is None) and load_file is not None:
+            self.load(load_file, byte_string=byte_string)
 
     def load_network_model(self, network_file):
         # Load the raw e-JSON data.
@@ -128,11 +131,11 @@ class EchoScenario:
             setattr(self, key, load_dict[key])
 
 
-    def optimise_sites_batched(self, time_periods, interval_duration, log_file=None):
-        # create copy of site
-        # reduce the timeseries data in the copy down to the batch we are interested in
-        # optimise
-        # amalgamate results
+    # def optimise_sites_batched(self, time_periods, interval_duration, log_file=None):
+    #     # create copy of site
+    #     # reduce the timeseries data in the copy down to the batch we are interested in
+    #     # optimise
+    #     # amalgamate results
 
     def optimise_sites(self, time_periods, interval_duration, log_file=None):
         self.time_periods = time_periods
