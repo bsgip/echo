@@ -67,12 +67,10 @@ off_peak_window = np.subtract(1, np.add(shoulder_window, peak_window))
 off_peak_charge = DemandCharge(rate=off_peak_rate, window_array=off_peak_window, min_demand=0.0)
 
 
-demand_tariff = DemandTariffObjective(component=cp1,
+demand_tariff = ImportDemandTariffObjective(component=cp1,
                                       demand_charges=[peak_charge,
                                                       shoulder_charge,
-                                                      off_peak_charge],
-                                      excess_demand_charge=0.0,
-                                      off_peak_demand_charge=0.0)
+                                                      off_peak_charge])
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])

@@ -51,12 +51,8 @@ grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
 dc_rate = 1.0
-demand_tariff = DemandTariffObjective(component=cp1,
-                                      demand_charges=
-                                          [DemandCharge(rate=dc_rate, window_array=dc_window, min_demand=1)],
-                                      excess_demand_charge=0.0,
-                                      off_peak_demand_charge=0.0,
-                                      expansion_periods=expansion_periods)
+demand_tariff = ImportDemandTariffObjective(component=cp1,
+                                            demand_charges=[DemandCharge(rate=dc_rate, window_array=dc_window, min_demand=1)])
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
