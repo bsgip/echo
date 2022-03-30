@@ -60,8 +60,7 @@ def test_export_slack_var_is_minimised():
 
     inv_export_slack = optimiser.values(inverter.ports['cp'].export_slack,0)
 
-    for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(inv_export_slack[i], 0)
+    np.testing.assert_almost_equal(inv_export_slack, 0)
 
 
 def test_import_slack_var_is_minimised():
@@ -109,8 +108,7 @@ def test_import_slack_var_is_minimised():
     g_import_slack = optimiser.values(grid.ports['grid'].import_slack, 0)
     g = optimiser.values(grid.ports['grid'].port_name, 0)
 
-    for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(g_import_slack[i], 0)
+    np.testing.assert_almost_equal(g_import_slack, 0)
 
 
 def test_slack_vars_take_up_slack_when_forced_to():
