@@ -127,7 +127,14 @@ class EchoScenario:
         for key in load_dict:
             setattr(self, key, load_dict[key])
 
-    def optimise_sites(self, time_periods, interval_duration, log_file=None, reprocess=False):
+
+    def optimise_sites_batched(self, time_periods, interval_duration, log_file=None):
+        # create copy of site
+        # reduce the timeseries data in the copy down to the batch we are interested in
+        # optimise
+        # amalgamate results
+
+    def optimise_sites(self, time_periods, interval_duration, log_file=None):
         self.time_periods = time_periods
         self.interval_duration = interval_duration
         aggregate_loads = []
