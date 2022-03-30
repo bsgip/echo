@@ -19,12 +19,12 @@ import echo_models as ecm
 from echo_optimiser import EchoOptimiser
 import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
-from io import BytesIO
 
 class EchoScenario:
-    def __init__(self, network_file=None, name='default_name', description=None):
+    def __init__(self, network_file=None, name='default_name', description=None, energy_only=False):
         self.name = name
         self.description = description
+        self.energy_only = energy_only
         self.sites = None
         self.num_sites = None
         self.network = None
@@ -34,7 +34,7 @@ class EchoScenario:
         self.aggregate_loads = None
         self.processing_errors = None
         # load network model
-        if network_file:
+        if network_file and not energy_only:
             self.load_network_model(network_file)
 
     def load_network_model(self, network_file):
@@ -69,14 +69,19 @@ class EchoScenario:
         return self.connection_point_df
 
     def add_site_data(self, sites):
-        assert self.network is not None, 'load a network before adding site data'
-        assert len(sites) == self.num_sites, 'len(sites) must equal len(self.connection_point_df)'
+        if not self.energy_only:
+            assert self.network is not None, 'load a network before adding site data'
+            assert len(sites) == self.num_sites, 'len(sites) must equal len(self.connection_point_df)'
+        else:
+            self.num_sites = len(sites)
+
         sites = sites.copy()            # prevent overwriting of input
         # check sites for consistency
         # print('Adding site data and checking that all time series data is the same length as the first sites load profile')
         lp = retrieve_value(sites[0], 'load_profile')
         assert lp is not None, 'site 0 has no load_profile'
         time_periods = len(retrieve_value(sites[0], 'load_profile'))
+        # todo: add more checks!!
         for i, site in enumerate(sites):
             lp = retrieve_value(site, 'load_profile')
             assert lp is not None, 'site {} has no load profile'.format(i)
@@ -155,6 +160,7 @@ class EchoScenario:
             return None
 
     def run_power_flows(self, power_factor=0.93, save_pickle_file=None):
+        assert not self.energy_only, 'create a scenario with energy_only=False to run power flows'
         assert self.aggregate_loads is not None, "Aggregate loads need to be calculated first"
         zips = {z.id(): z for z in self.network.zips()}
         agg_loads_df = self.aggregate_load_df()
