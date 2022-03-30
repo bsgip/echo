@@ -94,6 +94,7 @@ vehicle1.ports['ev'] = ev1
 vehicle1.ports['ev'].soc_conserv = 20.  # kWh
 vehicle1.ports['ev'].soc_conserv_cost = 100.
 vehicle1.ports['ev'].available = available1
+vehicle1.ports['ev'].enable_trip_slack = True
 
 
 
@@ -104,7 +105,7 @@ trip1.ports['usage'] = us1
 
 # Create vehicle 2
 available2 = np.array([1]*10 + [0]*10 + [1]*28 + [0]*48)
-usage2 = np.array([0.0]*10 + [0.4]*10 + [0.0]*28 + [0.5]*48)
+usage2 = 10*np.array([0.0]*10 + [0.4]*10 + [0.0]*28 + [0.5]*48)
 
 ev2_cp = ElectricalTellegenNode()
 ev2_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
@@ -120,6 +121,7 @@ ev2 = ElectricalStorage(max_capacity=40.0,
 
 vehicle2 = Node()
 vehicle2.ports['ev'] = ev2
+vehicle2.ports['ev'].enable_trip_slack = True
 
 trip2 = Node()
 us2 = ElectricalDemand()
