@@ -19,6 +19,7 @@ import echo_models as ecm
 from echo_optimiser import EchoOptimiser
 import objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
+from io import BytesIO
 
 class EchoScenario:
     def __init__(self, network_file=None, name='default_name', description=None):
@@ -70,6 +71,7 @@ class EchoScenario:
     def add_site_data(self, sites):
         assert self.network is not None, 'load a network before adding site data'
         assert len(sites) == self.num_sites, 'len(sites) must equal len(self.connection_point_df)'
+        sites = sites.copy()            # prevent overwriting of input
         # check sites for consistency
         # print('Adding site data and checking that all time series data is the same length as the first sites load profile')
         lp = retrieve_value(sites[0], 'load_profile')
@@ -97,15 +99,24 @@ class EchoScenario:
         self.sites = sites
         # print('Finished adding site data')
 
-    def save(self, file_name):
-        save_dict = vars(self)
+    def save(self, file=None):
+        save_dict = vars(self).copy()
         del save_dict['network']
-        with open(file_name, 'wb') as handle:
-            pickle.dump(save_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def load(self, file_name):
-        with open(file_name, 'rb') as handle:
-            load_dict = pickle.load(handle)
+        if file:
+            with open(file, 'wb') as handle:
+                pickle.dump(save_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            return None
+        else:
+            return pickle.dumps(save_dict, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+    def load(self, file, byte_string=False):
+        if not byte_string:
+            with open(file, 'rb') as handle:
+                load_dict = pickle.load(handle)
+        else:
+            load_dict = pickle.loads(file)
 
         self.load_network_model(load_dict['network_file'])
         for key in load_dict:
