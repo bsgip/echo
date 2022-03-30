@@ -431,16 +431,18 @@ def create_echo_site_from_dict(site_dict):
     battery = None if 'battery' not in keys else site_dict['battery']
     site_max_import = retrieve_value(site_dict, 'site_max_import')
     site_max_export = retrieve_value(site_dict, 'site_max_export')
-    demand_tariff_list = retrieve_value(site_dict, 'demand_tariff_list')
+    import_demand_charges = retrieve_value(site_dict, 'import_demand_charges')
+    export_demand_charges = retrieve_value(site_dict, 'export_demand_charges')
 
     site, objective_set, node_uid_dict = create_echo_site(load_profile=load_profile, export_tariff=export_tariff,
                                                           import_tariff=import_tariff, pv_profile=pv_profile,
-                                                          battery=battery, evs=evs, demand_tariff_list=demand_tariff_list,
-                                                          site_max_export=site_max_export, site_max_import=site_max_import)
+                                                          battery=battery, evs=evs, import_demand_charges=import_demand_charges,
+                                                          site_max_export=site_max_export, site_max_import=site_max_import,
+                                                          export_demand_charges=export_demand_charges)
     return site, objective_set, node_uid_dict
 
 def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None, battery=None, evs=None, expansion_periods=1,
-                     site_max_export=None, site_max_import=None, demand_tariff_list=None):
+                     site_max_export=None, site_max_import=None, import_demand_charges=None, export_demand_charges=None):
 
     # check evs have unique names
     ev_name_check(evs)
@@ -594,12 +596,24 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
     if export_tariff is not None:
         export_cost = obj.ExportTariff(connection_point.ports['grid'], export_tariff, expansion_periods)
         objective_list.append(export_cost)
-    if demand_tariff_list is not None:
-        demand_tariff = obj.DemandTariffObjective(component=connection_point.ports['grid'],
-                                              demand_charges=demand_tariff_list,
-                                              excess_demand_charge=0.0,
-                                              off_peak_demand_charge=0.0)
-        objective_list.append(demand_tariff)
+    if import_demand_charges is not None:
+        if not isinstance(import_demand_charges, list):
+            import_demand_charges = [import_demand_charges]
+        tmp_list = []
+        for charge in import_demand_charges:
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
+        import_demand_tariff = obj.ImportDemandTariffObjective(component=connection_point.ports['grid'],
+                                                           demand_charges=tmp_list)
+        objective_list.append(import_demand_tariff)
+    if export_demand_charges is not None:
+        if not isinstance(export_demand_charges, list):
+            export_demand_charges = [export_demand_charges]
+        for charge in export_demand_charges:
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
+        tmp_list = []
+        export_demand_tariff = obj.ExportDemandTariffObjective(component=connection_point.ports['grid'],
+                                                               demand_charges=tmp_list)
+        objective_list.append(export_demand_tariff)
 
     assert len(objective_list) > 0, 'At least one tariff needs to be specified'
 
