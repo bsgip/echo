@@ -142,9 +142,11 @@ class EchoScenario:
         self.interval_duration = interval_duration
         aggregate_loads = []
         processing_errors = []
-        # todo: implement the log file
-        # todo: implement reprocess=False
-        for i in tqdm(range(self.num_sites), desc='Optimising sites', file=log_file):
+        if log_file is not None:
+            prog_file = open(log_file, 'w')
+        else:
+            prog_file = None
+        for i in tqdm(range(self.num_sites), desc='Optimising sites', file=prog_file):
             try:
                 self.sites[i] = process_site(self.sites[i], interval_duration, time_periods)
                 self.sites[i]['processed'] = True
@@ -154,8 +156,8 @@ class EchoScenario:
                 self.sites[i]['processed'] = False
                 processing_errors.append(True)
                 aggregate_loads.append(np.array([]))
-            # todo: what are some other things we want to have all site summaries of?
-
+        if log_file is not None:
+            prog_file.close()
 
         self.aggregate_loads=aggregate_loads
         self.processing_errors = processing_errors
@@ -169,7 +171,7 @@ class EchoScenario:
         else:
             return None
 
-    def run_power_flows(self, power_factor=0.93, save_pickle_file=None):
+    def run_power_flows(self, power_factor=0.93, save_pickle_file=None, log_file=None):
         assert not self.energy_only, 'create a scenario with energy_only=False to run power flows'
         assert self.aggregate_loads is not None, "Aggregate loads need to be calculated first"
         zips = {z.id(): z for z in self.network.zips()}
@@ -196,8 +198,17 @@ class EchoScenario:
         br_power_1_list = []
         br_current_0_list = []
         br_current_1_list = []
+        p_inbalance_list = []
+        gen_total_list = []
+        zip_total_list = []
+        loss_total_list = []
 
-        for t in tqdm(agg_loads_df.index, desc='Running power flows'):
+        if log_file is not None:
+            prog_file = open(log_file, 'w')
+        else:
+            prog_file = None
+
+        for t in tqdm(agg_loads_df.index, desc='Running power flows', file=prog_file):
             # set the loads
             for zid in agg_loads_df.columns:
                 # divide by 1000 to go from kW to MW
@@ -219,6 +230,7 @@ class EchoScenario:
             br_power_1 = []
             br_current_0 = []
             br_current_1 = []
+            p_loss_tot = 0.0  # Total losses.
             for branch in self.network.branches():
                 br_power = branch.s_term()
                 br_power_0 += br_power[0]
@@ -226,10 +238,30 @@ class EchoScenario:
                 br_current = branch.i_term()
                 br_current_0 += br_current[0]
                 br_current_1 += br_current[1]
+                p_loss_tot += np.real(np.sum(br_power[0]) + np.sum(br_power[1]))
             br_power_0_list.append(br_power_0)
             br_power_1_list.append(br_power_1)
             br_current_1_list.append(br_current_1)
             br_current_0_list.append(br_current_0)
+
+            p_gen_tot = 0.0  # Total generation.
+            for g in self.network.gens():
+                # Add up the total real power generation of each generator.
+                p_gen_tot += np.sum(np.real(np.array(g.s())))
+
+            p_zip_tot = 0.0  # Total load power
+            for z in self.network.zips():
+                # Add up the total real power consumption of each zip.
+                p_zip_tot += np.sum(np.real(np.array(z.s())))
+
+            p_inbalance = p_gen_tot - p_zip_tot - p_loss_tot  # Should add to zero: generation = load + losses.
+            p_inbalance_list.append(p_inbalance)
+            gen_total_list.append(p_gen_tot)
+            loss_total_list.append(p_loss_tot)
+            zip_total_list.append(p_zip_tot)
+
+        if log_file is not None:
+            prog_file.close()
 
         bus_voltage_df = pd.DataFrame(data=v_pu_list, columns=bus_name)
         branch_power_0_df = pd.DataFrame(data=br_power_0_list, columns=branch_name_0)
@@ -238,8 +270,10 @@ class EchoScenario:
         branch_current_1_df = pd.DataFrame(data=br_current_1_list, columns=branch_name_1)
 
         power_flow_results = {'status':status, 'bus_voltage':bus_voltage_df,'branch_power_0':branch_power_0_df,
-                  'branch_power_1':branch_power_1_df, 'branch_current_0':branch_current_0_df,
-                  'branch_current_1':branch_current_1_df, 'transformer_names':transformer_names}
+                                'branch_power_1':branch_power_1_df, 'branch_current_0':branch_current_0_df,
+                                'branch_current_1':branch_current_1_df, 'transformer_names':transformer_names,
+                              'power_inbalance':p_inbalance_list, 'total_generation':gen_total_list,
+                              'total_loss':loss_total_list, 'total_zip':zip_total_list}
 
         if save_pickle_file is not None:
             with lzma.open(save_pickle_file + '.lzma', 'wb') as handle:
