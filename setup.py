@@ -11,7 +11,9 @@ install_requires = [
     'networkx>=2.7',
     'seaborn>=0.11',
     'typing-extensions>=4.1',
-    'pydantic>=1.9'
+    'pydantic>=1.9',
+    'tqdm>=4.63',
+    'pyarrow>=7.0'
 ]
 tests_require = [
     "pytest",

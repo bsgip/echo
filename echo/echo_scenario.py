@@ -15,9 +15,9 @@ sgt.set_message_log_level(sgt.LogLevel.NONE)
 sgt.set_warning_log_level(sgt.LogLevel.NONE)
 
 ## echo and optimisation imports
-import echo_models as ecm
-from echo_optimiser import EchoOptimiser
-import objectives as obj
+import echo.echo_models as ecm
+from echo.echo_optimiser import EchoOptimiser
+import echo.objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 
 class EchoScenario:
