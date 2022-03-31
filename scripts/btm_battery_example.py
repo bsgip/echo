@@ -17,12 +17,12 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 
 # The load and pv arrays below are in kwh consumed per 15 minutes
 test_load = np.array(
-    [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
+    [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 15, 15, 15, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
      2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
      3.99, 3.71, 3.38, 3.76, 3.71, 3.78, 3.29, 3.65, 3.61, 3.75, 3.38, 3.66, 3.56, 3.69, 3.3, 3.61, 3.71, 3.82,
      3.17, 3.69, 3.74, 3.86, 3.57, 3.55, 3.75, 3.6, 3.67, 3.48, 3.51, 3.46, 3.19, 3.38, 3.19, 3.38, 3.04, 3.12,
      2.91, 3.11, 3.13, 2.77, 2.24, 2.54, 2.24, 2.24, 2.09, 2.33, 2.17, 2.16, 1.97, 2.16, 2.21, 2.18, 2.01, 2.16,
-     2.19, 2.11, 2.17, 2.13, 2.05, 2.19])
+     2.19, 2.11, 2.17, 2.13, 12, 12])
 
 test_pv = 2 * np.array(
     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.23, 0.52,
@@ -56,6 +56,7 @@ grid.add_named_electrical_ports(['grid'])
 
 connection_point = ElectricalTellegenNode()
 connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])
+connection_point.ports['grid'].set_flow_constraints(max_import=10,max_export=-10, slack=True)
 
 load = Node()
 l1 = ElectricalDemand()
@@ -127,9 +128,10 @@ fig = plt.figure(figsize=(14, 7))
 ax1 = fig.add_subplot(3, 1, 1)
 line1, = ax1.plot(hrs, test_load, color=colors[0])
 line2, = ax1.plot(hrs, test_pv, color=colors[1])
-#line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
+# line3, = ax1.plot(hrs, optimised_connection_point_load,colocolors[2])
+line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
 ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line2], ['Load', 'PV'], ncol=2)
+ax1.legend([line1, line2, line3], ['Load', 'PV', 'aggregate'], ncol=2)
 ax1.set_xlim([0, len(test_load) / 4])
 
 ax2 = fig.add_subplot(3, 1, 2)
@@ -145,3 +147,4 @@ line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+plt.show()
