@@ -238,12 +238,18 @@ class Port(object):
             return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
 
         def import_cap_rule_slack(model, p, t):
-            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack) <= \
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t] <= \
                    getattr(model, self.import_con_val)[p, t]
 
         def export_cap_rule_slack(model, p, t):
-            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack) >= \
+            return getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t] >= \
                    getattr(model, self.export_con_val)[p, t]
+
+        def export_cap_slack_max_rule(model, p, t):
+            return getattr(model, self.export_slack)[p,t] <= getattr(model, self.export_slack_max)
+
+        def import_cap_slack_max_rule(model, p, t):
+            return getattr(model, self.import_slack)[p,t] >= getattr(model, self.import_slack_max)
 
         def generate_array_cons(val):
             d = {}
@@ -264,8 +270,13 @@ class Port(object):
             if self.slack is True:
                 self.import_slack = 'import_slack_' + self.port_name
                 setattr(model, self.import_slack,
-                        en.Var(initialize=0, domain=en.NonPositiveReals))
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
+                self.import_slack_max = 'import_slack_max_' + self.port_name
+                con_name = 'import_con_max_' + self.port_name
+                setattr(model, self.import_slack_max,
+                        en.Var(initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
             else:
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
         if self.export_constraint is FlowConstraint.Fixed:
@@ -277,8 +288,13 @@ class Port(object):
             if self.slack is True:
                 self.export_slack = 'export_slack_' + self.port_name
                 setattr(model, self.export_slack,
-                        en.Var(initialize=0, domain=en.NonNegativeReals))
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
+                self.export_slack_max = 'export_slack_max_' + self.port_name
+                con_name = 'export_con_max_' + self.port_name
+                setattr(model, self.export_slack_max,
+                        en.Var(initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
             else:
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
 
@@ -352,9 +368,11 @@ class Port(object):
         objective = 0
         if self.slack is True:
             if hasattr(self, 'import_slack'):
-                objective += -1 * getattr(model, self.import_slack) * model.bigM
+                objective += -1 * getattr(model, self.import_slack_max) * model.bigM
+                objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in model.Time) * model.bigM*0.1
             if hasattr(self, 'export_slack'):
-                objective += getattr(model, self.export_slack) * model.bigM
+                objective += getattr(model, self.export_slack_max) * model.bigM
+                objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in model.Time) * model.bigM*0.1
         return objective
 
 
