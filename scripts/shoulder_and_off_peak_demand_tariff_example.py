@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from echo_models import *
-from echo_optimiser import EchoOptimiser
-from configuration import *
-from objectives import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.configuration import *
+from echo.objectives import *
 
 import os
 

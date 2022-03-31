@@ -1,3 +1,7 @@
 *.pyc
 .DS_Store
 .idea/*
+.direnv
+.eggs
+dist
+echo.egg-info
