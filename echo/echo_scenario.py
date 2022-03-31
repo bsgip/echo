@@ -417,10 +417,14 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
 
         site_dict['status'] = 'OK'
         if retrieve_value(site_dict, 'site_max_import') is not None:
-            site_dict['import_violation'] = max((site_dict['aggregate_load'] - site_dict['site_max_import']).max(),0)
+            site_dict['import_violation'] = max((site_dict['aggregate_load'] - site_dict['site_max_import']),0)
+        else:
+            site_dict['import_violation'] = 0 * site_dict['aggregate_load']
 
         if retrieve_value(site_dict, 'site_max_export') is not None:
-            site_dict['export_violation'] = max(-(site_dict['aggregate_load'] - site_dict['site_max_export']).min(),0)
+            site_dict['export_violation'] = min((site_dict['aggregate_load'] - site_dict['site_max_export']),0)
+        else:
+            site_dict['import_violation'] = 0 * site_dict['aggregate_load']
 
 
     site_dict['load_profile'] = load_profile_save # restore load profile to just be load and not V0G cars
@@ -690,17 +694,19 @@ def extract_site_results(optimiser, site, node_uid_dict):
 
         evs.append(ev)
 
+    aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
+
     if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
         import_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
     else:
-        import_violation = 0.
+        import_violation = 0. * aggregate_load
 
     if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
         export_violation = -optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
     else:
-        export_violation = 0.
+        export_violation = 0. * aggregate_load
 
-    aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
+
     return aggregate_load, battery, evs, import_violation, export_violation
 
 def append_optim_results_to_dict(optimiser, site, node_uid_dict, site_dict):
