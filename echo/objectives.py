@@ -22,6 +22,7 @@ class Objective(object):
 
 
 class ObjectiveSet(object):
+    """ Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
 
     def __init__(self,
                  objective_list):
@@ -41,6 +42,7 @@ class ObjectiveSet(object):
         optimiser.objective += objective_rule(model)
 
 class PeakPositivePower(Objective):
+    """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
 
     def __init__(self,
                  component):
@@ -72,6 +74,7 @@ class PeakPositivePower(Objective):
 
 
 class PeakNegativePower(Objective):
+    """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
 
     def __init__(self,
                  component):
@@ -103,11 +106,13 @@ class PeakNegativePower(Objective):
 
 
 class ImportTariff(Objective):
+    """ The ImportTariff objective applies a tariff, defined as an array of prices,
+     to the positive (importing) component of the specified port."""
 
     def __init__(self,
                  component,
                  tariff_array,
-                 expansion_periods
+                 expansion_periods=1
                  ):
         super(ImportTariff, self).__init__(component)
         self.import_tariff = {}
@@ -146,11 +151,13 @@ class ImportTariff(Objective):
 
 
 class ExportTariff(Objective):
+    """ The ExportTariff objective applies a tariff, defined as an array of prices,
+     to the negative (exporting) component of the specified port."""
 
     def __init__(self,
                  component,
                  tariff_array,
-                 expansion_periods
+                 expansion_periods=1
                  ):
         super(ExportTariff, self).__init__(component)
         self.export_tariff = {}
@@ -190,11 +197,12 @@ class ExportTariff(Objective):
 
 
 class PathTariff(Objective):
+    """ The PathTariff objective applies a tariff, specified as an array of prices, to flows on a specified path."""
 
     def __init__(self,
                  component,
                  tariff_array,
-                 expansion_periods: int=1
+                 expansion_periods=1
                  ):
         super(PathTariff, self).__init__(component)
         self.path_tariff = {}
@@ -233,6 +241,7 @@ class PathTariff(Objective):
 
 
 class ThroughputCost(Objective):
+    """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
 
     def __init__(self,
                  component,
@@ -266,6 +275,7 @@ class ThroughputCost(Objective):
 
 
 class QuadraticPower(Objective):
+    """ The QuadraticPower objective minimises flow^2 at a specified port."""
 
     def __init__(self,
                  component):
@@ -297,7 +307,6 @@ class QuadraticPower(Objective):
 
 
 class ContingencyNegative(Objective):
-
     """ FCAS Raise """
 
     def __init__(self,
@@ -371,7 +380,7 @@ class ContingencyNegative(Objective):
 
 
 class ContingencyPositive(Objective):
-    """ FCAS lower """
+    """ FCAS Lower """
 
     def __init__(self,
                  component,
@@ -461,6 +470,7 @@ class Day(Enum):
 
 
 class TimePeriod(object):
+    """ Used to specify tariffs according to times/days rather than specifying them directly as arrays."""
 
     def __init__(self,
                  start_time: time,
@@ -493,7 +503,7 @@ class TimePeriod(object):
         if Day.holiday in self.day_type:
             raise NotImplementedError('Public holidays not currently supported in optimisation')
         return (
-                   (df.index.isin(df.between_time(self.start_time, self.end_time, include_start=True, include_end=False).index))
+                   (df.index.isin(df.between_time(self.start_time, self.end_time, inclusive='left').index))
                    & (df.index.weekday <= allowed_days_of_week_end)
                    & (df.index.weekday >= allowed_days_of_week_start)
         ).astype(int)
@@ -531,6 +541,8 @@ class TimePeriod(object):
 
 
 class Window(object):
+    """ A window contains one or many time periods over which a demand charge applies.
+    These time periods should be non-overlapping"""
 
     def  __init__(self, time_periods: List[TimePeriod]):
         self.time_periods = time_periods
@@ -552,12 +564,15 @@ class Window(object):
 
 
 class DemandTariffObjective(Objective):
+    """ A demand tariff objective contains a set of one or more demand charges."""
 
     def __init__(self,
                  component,
                  demand_charges,
                  excess_demand_charge,
                  off_peak_demand_charge,
+                 import_demand: bool,
+                 export_demand: bool,
                  df=None,
                  expansion_periods=1
                  ):
@@ -567,6 +582,8 @@ class DemandTariffObjective(Objective):
         self.off_peak_demand_charge = off_peak_demand_charge
         self.df = df  # pandas dataframe for carrying date info so we can define weekday/weekend rates etc
         self.expansion_periods = expansion_periods
+        self.import_demand = import_demand
+        self.export_demand = export_demand
 
     def verify_objective(self):
         """ Check objectives all reference an object of the correct type"""
@@ -600,44 +617,64 @@ class DemandTariffObjective(Objective):
                 dc.create_params(model)
             else:
                 raise ConfigurationError('Window not defined for demand charge.')
+            if self.import_demand:
+                if dc.min_demand < 0:
+                    raise ConfigurationError('Enter min demand using positive load convention (ie positive number)')
+            if self.export_demand:
+                if dc.min_demand > 0:
+                    raise ConfigurationError('Enter min demand using positive load convention (ie negative number)')
 
     def create_vars(self, model):
         for dc in self.demand_charges:
-            dc.max_demand_val = 'max_demand_' + str(dc.uid)
-            setattr(model, dc.max_demand_val, en.Var(initialize=0, domain=en.NonNegativeReals))
+            if self.import_demand is True:
+                dc.max_demand_val = 'max_demand_' + str(dc.uid)
+                setattr(model, dc.max_demand_val, en.Var(initialize=0, domain=en.NonNegativeReals))
+            elif self.export_demand is True:
+                dc.max_demand_val = 'max_demand_' + str(dc.uid)
+                setattr(model, dc.max_demand_val, en.Var(initialize=0, domain=en.NonPositiveReals))
+            else:
+                raise ConfigurationError('either import/export should be true')
 
-        # Todo finish implementing this
+        # Todo remove this
         if self.excess_demand_charge:
-            setattr(model, f"demand_{dc.uid}_excess_demand_charge_amount", en.Var(within=en.NonNegativeReals, initialize=0))
+            print('Excess demand charge not fully implemented. Please set excess_demand_charge to None.')
 
         if self.off_peak_demand_charge:
-            setattr(model, f"demand_{dc.uid}_off_peak_demand_amount", en.Var(within=en.NonNegativeReals, initialize=0))
+            print('Off peak demand charge not fully implemented. Please set off_peak_demand_charge to None.')
 
     def apply_constraints(self, model):
         if not hasattr(self.component, 'pos'):
             self.component.constrain_pos_neg(model)
 
         for dc in self.demand_charges:
-            def max_demand_rule(model, p, t):
-                return getattr(model, dc.max_demand_val) >= \
-                       (getattr(model, self.component.pos)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, t]
+            if self.import_demand is True:
+                def max_import_demand_rule(model, p, t):
+                    return getattr(model, dc.max_demand_val) >= \
+                           (getattr(model, self.component.pos)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, t]
 
-            setattr(model, f"cons_{dc.max_demand_val}_max_demand", en.Constraint(model.Expansion, model.Time,
-                                                                              rule=max_demand_rule))
+                setattr(model, f"cons_{dc.max_demand_val}_max_demand", en.Constraint(model.Expansion, model.Time,
+                                                                                  rule=max_import_demand_rule))
+            elif self.export_demand is True:
+                def max_export_demand_rule(model, p, t):
+                    return getattr(model, dc.max_demand_val) <= \
+                           (getattr(model, self.component.neg)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, t]
+
+                setattr(model, f"cons_{dc.max_demand_val}_max_export_demand", en.Constraint(model.Expansion, model.Time,
+                                                                                  rule=max_export_demand_rule))
 
     def objective_expr(self, model):
         objective = 0
         for dc in self.demand_charges:
-            objective += getattr(model, dc.max_demand_val) * dc.rate
-        if self.excess_demand_charge:
-            pass
-        if self.off_peak_demand_charge:
-            pass
+            if self.import_demand:
+                objective += getattr(model, dc.max_demand_val) * dc.rate
+            elif self.export_demand:
+                objective += getattr(model, dc.max_demand_val) * dc.rate * -1
+
         return objective
 
 
 class DemandCharge(object):
-    """ A demand charge is a rate that applies to the maximum demand over a specified time window."""
+    """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
 
     def __init__(self,
                  rate,
@@ -672,3 +709,37 @@ class DemandCharge(object):
         setattr(model, self.window_active, en.Param(model.Expansion, model.Time, initialize=self.window_bool, domain=en.Binary))
 
 
+class ImportDemandTariffObjective(DemandTariffObjective):
+
+    def __init__(self,
+                 component,
+                 demand_charges,
+                 df=None,
+                 expansion_periods=1
+                 ):
+        super(ImportDemandTariffObjective, self).__init__(component,
+                                                         demand_charges,
+                                                         import_demand=True,
+                                                         export_demand = False,
+                                                         excess_demand_charge=None,
+                                                         off_peak_demand_charge=None,
+                                                         df=df,
+                                                         expansion_periods=expansion_periods)
+
+
+class ExportDemandTariffObjective(DemandTariffObjective):
+
+    def __init__(self,
+                 component,
+                 demand_charges,
+                 df=None,
+                 expansion_periods=1
+                 ):
+        super(ExportDemandTariffObjective, self).__init__(component,
+                                                         demand_charges,
+                                                         import_demand=False,
+                                                         export_demand=True,
+                                                         excess_demand_charge=None,
+                                                         off_peak_demand_charge=None,
+                                                         df=df,
+                                                         expansion_periods=expansion_periods)

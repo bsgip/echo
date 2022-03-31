@@ -61,13 +61,11 @@ peak_window = Window(time_periods=[
 
 peak_charge = DemandCharge(rate=peak_rate, window=peak_window, min_demand=0.0)
 
-df = pd.DataFrame(index=pd.date_range(start=datetime(2021, 1, 1), end=datetime(2021, 1, 2), closed='left', freq='30min'))
+df = pd.DataFrame(index=pd.date_range(start=datetime(2021, 1, 1), end=datetime(2021, 1, 2), inclusive='left', freq='30min'))
 
-demand_tariff = DemandTariffObjective(component=cp1,
-                                      demand_charges=[peak_charge],
-                                      excess_demand_charge=0.0,
-                                      off_peak_demand_charge=0.0,
-                                      df=df)
+demand_tariff = ImportDemandTariffObjective(component=cp1,
+                                            demand_charges=[peak_charge],
+                                            df=df)
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
