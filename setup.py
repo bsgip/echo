@@ -5,10 +5,13 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 install_requires = [
-    'pyomo>=3.3',
-    'numpy>=1.16.3',
-    'pandas',
-    'networkx'
+    'pyomo>=3.5',
+    'numpy>=1.21',
+    'pandas>=1.4',
+    'networkx>=2.7',
+    'seaborn>=0.11',
+    'typing-extensions>=4.1',
+    'pydantic>=1.9'
 ]
 tests_require = [
     "pytest",

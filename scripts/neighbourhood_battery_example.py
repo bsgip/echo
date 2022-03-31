@@ -8,13 +8,12 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 import sys
 
-from objectives import ObjectiveSet, ThroughputCost, PeakPositivePower
+from echo.objectives import ObjectiveSet, ThroughputCost, PeakPositivePower
 
-sys.path.append("../")
-from echo_models import *
-from echo_optimiser import EchoOptimiser
-from configuration import *
-from objectives import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.configuration import *
+from echo.objectives import *
 from networkx import Graph, draw
 
 # set up seaborn the way you like

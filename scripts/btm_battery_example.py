@@ -1,20 +1,12 @@
 from __future__ import division
-
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pyomo.core import Var
 from pyomo.util.infeasible import log_infeasible_constraints
 
-import sys
-
-from echo.objectives import ObjectiveSet, ThroughputCost, PeakPositivePower
 
 from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
 from echo.objectives import *
-from networkx import Graph, draw
 
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
