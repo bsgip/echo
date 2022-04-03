@@ -15,7 +15,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 
 ############################ Define an Example Optimisation Problem ########################################
 
-# The load and pv arrays below are in kwh consumed per 15 minutes
+# The load and pv arrays below are in average kw consumed per 15 minutes
 test_load = np.array(
     [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 15, 15, 15, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
      2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
