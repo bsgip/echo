@@ -23,7 +23,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 
 ############################ Define an Example Optimisation Problem ########################################
 
-# The load and pv arrays below are in kwh consumed per 15 minutes
+# The load and pv arrays below are in average kw consumed per 15 minutes
 test_load = np.array(
     [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
      2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
@@ -72,8 +72,8 @@ l1.add_demand_profile_from_array(test_load, expansion_periods)
 load.ports['load'] = l1
 
 # Create vehicle 1
-available1 = np.array([1] * 24 + [0] * 24 + [1] * 24 + [0] * 24)
-usage1 = np.array([0.0]*24 + [0.5]*24 + [0.0]*24 + [1.0]*24)
+available1 = np.array([1] * 24 + [0] * 24 + [1] * 24 + [0] * 24)    # bool when at charger
+usage1 = np.array([0.0]*24 + [0.5]*24 + [0.0]*24 + [1.0]*24)        # kw average during use
 
 ev1_cp = ElectricalTellegenNode()
 ev1_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
@@ -90,10 +90,12 @@ ev1 = ElectricalStorage(max_capacity=40.0,
 vehicle1 = Node()
 # hacky implemetnation of ev user conservativeness while plugged in
 vehicle1.ports['ev'] = ev1
+# next few setting are to replicate a conservative user who wants to keep a mininum SOC while plugged in
 vehicle1.ports['ev'].soc_conserv = 20.  # kWh
 vehicle1.ports['ev'].soc_conserv_cost = 100.
 vehicle1.ports['ev'].available = available1
-vehicle1.ports['ev'].enable_trip_slack = True
+# next setting is to deal with infeasible trip data
+vehicle1.ports['ev'].enable_trip_slack = False  # make true to allow infeasible trips to be public charged
 
 
 
@@ -104,7 +106,7 @@ trip1.ports['usage'] = us1
 
 # Create vehicle 2
 available2 = np.array([1]*10 + [0]*10 + [1]*28 + [0]*48)
-usage2 = 10*np.array([0.0]*10 + [0.4]*10 + [0.0]*28 + [0.5]*48)
+usage2 = np.array([0.0]*10 + [0.4]*10 + [0.0]*28 + [0.5]*48)
 
 ev2_cp = ElectricalTellegenNode()
 ev2_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
@@ -120,7 +122,7 @@ ev2 = ElectricalStorage(max_capacity=40.0,
 
 vehicle2 = Node()
 vehicle2.ports['ev'] = ev2
-vehicle2.ports['ev'].enable_trip_slack = True
+vehicle2.ports['ev'].enable_trip_slack = False
 
 trip2 = Node()
 us2 = ElectricalDemand()
