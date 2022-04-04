@@ -171,7 +171,7 @@ class EchoScenario:
         else:
             return None
 
-    def run_power_flows(self, power_factor=0.93, save_pickle_file=None, log_file=None):
+    def run_power_flows(self, power_factor=0.93, save_pickle_file=None, log_file=None, auto_taps=True):
         assert not self.energy_only, 'create a scenario with energy_only=False to run power flows'
         assert self.aggregate_loads is not None, "Aggregate loads need to be calculated first"
         zips = {z.id(): z for z in self.network.zips()}
@@ -191,6 +191,10 @@ class EchoScenario:
             branch_name_1 += [branch.id() + '.' + str(phase) for phase in branch.phases_1()]
             if branch.component_type() == 'transformer':
                 transformer_names.append(branch.id())
+
+        # get a list of transformers
+        transformers = [sgt.Transformer.from_branch(br) for br in self.network.branches() if
+                        br.component_type() == 'transformer']
 
         status = []
         v_pu_list = []
@@ -215,7 +219,15 @@ class EchoScenario:
                 set_zip_total_power(zips[zid], agg_loads_df.at[t, zid] / 1000, pf=power_factor)
 
             # run the power flow
-            ss = self.network.solve_power_flow()
+            if auto_taps:
+                tap_changed = auto_taps     # enable or disable automatic tap changing
+                while tap_changed:
+                    ss = self.network.solve_power_flow()
+                    tap_changed = False     # set to false and then see if at least one reg had tap changed
+                    for transformer in transformers:
+                        tap_changed = transformer.run_tap_changers_once() or tap_changed
+            else:
+                ss = self.network.solve_power_flow()
             status.append(ss)
 
             # get the bus voltages
