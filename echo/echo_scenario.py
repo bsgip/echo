@@ -106,6 +106,7 @@ class EchoScenario:
             if not isinstance(variable, list):
                 variable = [variable]
             for j, v in enumerate(variable):
+                assert isinstance(v, dict), 'site {} import demand charge {} must be a dictionary'.format(i,j)
                 assert retrieve_value(v, 'rate') is not None, 'site {} import demand charge {} must have rate'.format(i, j)
                 assert retrieve_value(v, 'window') is not None, 'site {} import demand charge {} must have window'.format(i, j)
                 array_length_check(v['window'], time_periods, 'site {} import demand charge {} window must have length {}'.format(i,j,time_periods))
@@ -113,6 +114,7 @@ class EchoScenario:
             if not isinstance(variable, list):
                 variable = [variable]
             for j, v in enumerate(variable):
+                assert isinstance(v, dict), 'site {} export demand charge {} must be a dictionary'.format(i,j)
                 assert retrieve_value(v, 'rate') is not None, 'site {} export demand charge {} must have rate'.format(i, j)
                 assert retrieve_value(v, 'window') is not None, 'site {} export demand charge {} must have window'.format(i, j)
                 array_length_check(v['window'], time_periods, 'site {} export demand charge {} window must have length {}'.format(i,j,time_periods))
@@ -159,8 +161,8 @@ class EchoScenario:
                 load_dict = pickle.load(handle)
         else:
             load_dict = pickle.loads(file)
-
-        self.load_network_model(load_dict['network_file'])
+        if not load_dict['energy_only']:
+            self.load_network_model(load_dict['network_file'])
         for key in load_dict:
             setattr(self, key, load_dict[key])
 
