@@ -86,12 +86,44 @@ class EchoScenario:
         time_periods = len(retrieve_value(sites[0], 'load_profile'))
         # todo: add more checks!!
         for i, site in enumerate(sites):
+            # load checks
             lp = retrieve_value(site, 'load_profile')
             assert lp is not None, 'site {} has no load profile'.format(i)
             assert len(lp)==time_periods, 'site {} load_profile should have length {} (same as first site)'.format(i, time_periods)
+
+            # site import/export constraint checks
+            array_length_check(retrieve_value(site,'site_max_import'), time_periods,
+                               'site {} max import constraint should have length {} or be scalar (same as first site)'.format(i, time_periods), scalar_ok=True)
+            array_length_check(retrieve_value(site, 'site_max_export'), time_periods,
+                               'site {} max exoirt constraint should have length {} or be scalar (same as first site)'.format(i, time_periods), scalar_ok=True)
+
+            # tariff checks
+            array_length_check(retrieve_value(site,'import_tariff'), time_periods,
+                               'site {} import_tariff should have length {} (same as first site)'.format(i, time_periods))
+            array_length_check(retrieve_value(site,'export_tariff'), time_periods,
+                               'site {} export_tariff should have length {} (same as first site)'.format(i, time_periods))
+            variable = retrieve_value(site, 'import_demand_charges')
+            if not isinstance(variable, list):
+                variable = [variable]
+            for j, v in enumerate(variable):
+                assert retrieve_value(v, 'rate') is not None, 'site {} import demand charge {} must have rate'.format(i, j)
+                assert retrieve_value(v, 'window') is not None, 'site {} import demand charge {} must have window'.format(i, j)
+                array_length_check(v['window'], time_periods, 'site {} import demand charge {} window must have length {}'.format(i,j,time_periods))
+            variable = retrieve_value(site, 'export_demand_charges')
+            if not isinstance(variable, list):
+                variable = [variable]
+            for j, v in enumerate(variable):
+                assert retrieve_value(v, 'rate') is not None, 'site {} export demand charge {} must have rate'.format(i, j)
+                assert retrieve_value(v, 'window') is not None, 'site {} export demand charge {} must have window'.format(i, j)
+                array_length_check(v['window'], time_periods, 'site {} export demand charge {} window must have length {}'.format(i,j,time_periods))
+
+
+            # pv checks
             pv = retrieve_value(site, 'pv_profile')
             if pv is not None:
                 assert len(pv)==time_periods, 'site {} pv profile should have length {}'.format(i, time_periods)
+
+            # ev checks
             evs = retrieve_value(site, 'evs')
             if evs is not None:
                 for j, ev in enumerate(evs):
@@ -103,9 +135,11 @@ class EchoScenario:
                     available = retrieve_value(ev, 'available')
                     assert available is not None, 'site {} ev {} with name {} must have available'.format(i, name, j)
                     assert len(available)==time_periods, 'site {}, ev {} with name {} available should have length {}'.format(i, j, name, time_periods)
+                    array_length_check(retrieve_value(ev, 'tod_charging'), time_periods, 'site {}, ev {} with name {} tod_charging should have length {}'.format(i, j, name, time_periods))
 
         self.sites = sites
         # print('Finished adding site data')
+
 
     def save(self, file=None):
         save_dict = vars(self).copy()
@@ -223,6 +257,7 @@ class EchoScenario:
                 tap_changed = auto_taps     # enable or disable automatic tap changing
                 while tap_changed:
                     ss = self.network.solve_power_flow()
+                    ss = self.network.solve_power_flow()
                     tap_changed = False     # set to false and then see if at least one reg had tap changed
                     for transformer in transformers:
                         tap_changed = transformer.run_tap_changers_once() or tap_changed
@@ -292,6 +327,11 @@ class EchoScenario:
                 pickle.dump(power_flow_results, handle, protocol=4)
 
         return power_flow_results
+
+def array_length_check(array, length, message, scalar_ok=False):
+    if array is not None:
+        if hasattr(array, '__len__') or (not scalar_ok):
+            assert len(array) == length, message
 
 
 def get_s(p, pf=0.93):
@@ -741,348 +781,3 @@ def append_optim_results_to_dict(optimiser, site, node_uid_dict, site_dict):
     site_dict['export_violation'] = export_violation
     site_dict['opt_status'] = optimiser.opt_status
     return site_dict
-
-if __name__=="__main__":
-    # define some tariffs
-    # Tariffs are in $ / kwh
-    import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
-    export_tariff_array = np.array(([0.1] * 96))
-
-    ## define load to be used in testing
-    test_load = np.array(
-        [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
-         2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
-         3.99, 3.71, 3.38, 3.76, 3.71, 3.78, 3.29, 3.65, 3.61, 3.75, 3.38, 3.66, 3.56, 3.69, 3.3, 3.61, 3.71, 3.82,
-         3.17, 3.69, 3.74, 3.86, 3.57, 3.55, 3.75, 3.6, 3.67, 3.48, 3.51, 3.46, 3.19, 3.38, 3.19, 3.38, 3.04, 3.12,
-         2.91, 3.11, 3.13, 2.77, 2.24, 2.54, 2.24, 2.24, 2.09, 2.33, 2.17, 2.16, 1.97, 2.16, 2.21, 2.18, 2.01, 2.16,
-         2.19, 2.11, 2.17, 2.13, 2.05, 2.19])
-
-    # test pv generation values
-    test_pv = np.array(
-        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.23, 0.52,
-         0.74, 0.71, 0.63, 0.68, 0.97, 0.01, 0.52, 0.83, 0.83, 0.79, 1.22, 1.36, 1.27, 1.42, 1.97, 2.56, 2.91, 3.24,
-         3.8, 4.3, 4.62, 4.84, 4.6, 4.17, 3.77, 3.76, 3.38, 2.64, 1.96, 1.76, 1.85, 2.4, 3.82, 5.13, 4.97, 5.02, 5.43,
-         5.32, 3.56, 1.75, 1.43, 1.65, 1.69, 2.3, 2.71, 2.41, 2.63, 2.6, 1.9, 0.78, 0.13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    test_pv *= -1  # convert solar generation to negative to match convention.
-
-    # define battery
-    battery = {'max_capacity': 15., 'depth_of_discharge_limit':0,
-                'charging_power_limit':1.25, 'discharging_power_limit':-1.25,
-               'charging_efficiency':1., 'discharging_efficiency':1.,
-               'initial_state_of_charge':0}
-
-
-    # define some electric vehicles
-    # Create vehicle 1
-
-    available1 = np.array([1] * 24 + [0] * 24 + [1] * 24 + [0] * 24)        # binary for when its available to charge
-    usage1 = np.array([0.0] * 24 + [0.5] * 24 + [0.0] * 24 + [1.0] * 24)    # energy usage on trip at each time period
-    # first vehicle is V2G
-    ev1 = {'name':'ev1','available': available1, 'usage': usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-           'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
-           'discharging_efficiency':1,'initial_state_of_charge':0.0}
-
-
-    # Create vehicle 2
-    available2 = np.array([1] * 10 + [0] * 10 + [1] * 28 + [0] * 48)
-    usage2 = np.array([0.0] * 10 + [0.4] * 10 + [0.0] * 28 + [0.5] * 48)
-
-    # second vehicle is V1G
-    ev2 = {'name':'ev2','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-           'charging_power_limit':10., 'discharging_power_limit':0, 'charging_efficiency':1,
-           'discharging_efficiency':1, 'initial_state_of_charge':0.0}
-
-    # store these so as arrays of size (num_evs, time_periods)
-    evs = [ev1, ev2]
-
-    ## Set up hyper params
-    time_periods = len(test_load)
-    interval_duration = 15
-    expansion_periods = 1
-    discount_rate = 0
-
-    #   Create a test site with PV and battery
-    test_site_1, test_objective_set_1, node_uid_dict_1 = create_echo_site(load_profile=test_load,
-                                                                          export_tariff=export_tariff_array, import_tariff=import_tariff_array,
-                                                                          pv_profile=test_pv, battery=battery)
-
-    # Invoke the optimiser and optimise
-    optimiser = EchoOptimiser(interval_duration=interval_duration,
-                              number_of_intervals=time_periods,
-                              number_of_expansion_intervals=expansion_periods,
-                              discount_rate=discount_rate,
-                              ES=test_site_1,
-                              objective_set=test_objective_set_1, optimiser_engine='cplex')
-
-    optimiser.optimise()
-
-    log_infeasible_constraints(optimiser.model)
-
-    ############################ Analyse the Optimisation ########################################
-    sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
-        'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
-                   'axes.facecolor': 'white', 'grid.color': '.8', 'grid.linestyle': u'-', 'grid.linewidth': 0.5})
-
-
-    aggregate_load, battery_res, _ = extract_site_results(optimiser, test_site_1, node_uid_dict_1)
-
-
-
-    storage_energy_delta = battery_res['delta']
-    storage_energy_soc = battery_res['SOC']
-    optimised_connection_point_load = aggregate_load
-
-    colors = sns.color_palette()
-    hrs = np.arange(0, len(test_load)) / 4
-    fig = plt.figure(figsize=(14, 7))
-    ax1 = fig.add_subplot(3, 1, 1)
-    line1, = ax1.plot(hrs, test_load, color=colors[0])
-    line2, = ax1.plot(hrs, test_pv, color=colors[1])
-    # line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2], ['Load', 'PV'], ncol=2)
-    ax1.set_xlim([0, len(test_load) / 4])
-    ax1.set_title('test site 1: PV and Battery')
-
-    ax2 = fig.add_subplot(3, 1, 2)
-    line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-    line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-    ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-    ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-    ax2.set_xlim([0, len(test_load) / 4])
-
-    ax3 = fig.add_subplot(3, 1, 3)
-    line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-    line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-    ax3.set_xlim([0, len(test_load) / 4])
-    ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-    ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-    plt.show()
-
-    ## Set up hyper params
-    time_periods = len(test_load)
-    interval_duration = 15
-    expansion_periods = 1
-    discount_rate = 0
-
-    #   Create a test site with battery and no PV
-    test_site_2, test_objective_set_2, node_uid_dict_2 = create_echo_site(load_profile=test_load, expansion_periods=expansion_periods,
-                                                                          export_tariff=export_tariff_array, import_tariff=import_tariff_array,
-                                                                          pv_profile=None, battery=battery)
-
-    # Invoke the optimiser and optimise
-    optimiser_2 = EchoOptimiser(interval_duration=interval_duration,
-                              number_of_intervals=time_periods,
-                              number_of_expansion_intervals=expansion_periods,
-                              discount_rate=discount_rate,
-                              ES=test_site_2,
-                              objective_set=test_objective_set_2, optimiser_engine='cplex')
-
-    optimiser_2.optimise()
-
-    log_infeasible_constraints(optimiser.model)
-
-    aggregate_load_2, battery_res_2, _ = extract_site_results(optimiser_2, test_site_2, node_uid_dict_2)
-
-    storage_energy_delta_2 = battery_res_2['delta']
-    storage_energy_soc_2 = battery_res_2['SOC']
-    optimised_connection_point_load_2 = aggregate_load_2
-
-
-    colors = sns.color_palette()
-    hrs = np.arange(0, len(test_load)) / 4
-    fig = plt.figure(figsize=(14, 7))
-    ax1 = fig.add_subplot(3, 1, 1)
-    line1, = ax1.plot(hrs, test_load, color=colors[0])
-    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1], ['Load'], ncol=2)
-    ax1.set_xlim([0, len(test_load) / 4])
-    ax1.set_title('test site 2: Battery and no PV')
-
-    ax2 = fig.add_subplot(3, 1, 2)
-    line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-    line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-    ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-    ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-    ax2.set_xlim([0, len(test_load) / 4])
-
-    ax3 = fig.add_subplot(3, 1, 3)
-    line1, = ax3.plot(hrs, storage_energy_delta_2, color=colors[1])
-    line2, = ax3.plot(hrs, storage_energy_soc_2, color=colors[2])
-    ax3.set_xlim([0, len(test_load) / 4])
-    ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-    ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-    plt.show()
-
-    connection_import_constraint=15
-    # so a single site could be defined as a dictionary
-    # storing data as a dict and saving and loading ??
-    site_max_import_array = 15*np.ones(test_load.shape)
-    site_max_import_array[:5] =5
-    test_site_3_dict = {'name':'test_site_3', 'load_profile':test_load,
-                        'pv_profile':test_pv, 'battery':battery,
-                        'evs':evs, 'export_tariff':export_tariff_array,
-                         'import_tariff':import_tariff_array,
-                        'site_max_import':site_max_import_array, 'site_max_export':-5}
-    ### create a test site with 1 battery, pv, and 2 evs
-    test_site_3, test_objective_set_3, node_uid_dict_3 = create_echo_site_from_dict(test_site_3_dict)
-
-
-    # Invoke the optimiser and optimise
-    optimiser_3 = EchoOptimiser(interval_duration=interval_duration,
-                              number_of_intervals=time_periods,
-                              number_of_expansion_intervals=expansion_periods,
-                              discount_rate=discount_rate,
-                              ES=test_site_3,
-                              objective_set=test_objective_set_3, optimiser_engine='cplex')
-
-    optimiser_3.optimise()
-
-    log_infeasible_constraints(optimiser.model)
-
-    aggregate_load_3, battery_res_3, evs_res = extract_site_results(optimiser_3, test_site_3, node_uid_dict_3)
-
-    storage_energy_delta_3 = battery_res_3['delta']
-    storage_energy_soc_3 = battery_res_3['SOC']
-    optimised_connection_point_load_3 = aggregate_load_3
-
-    vehicle1_storage = evs_res[0]['SOC']
-    vehicle2_storage = evs_res[1]['SOC']
-
-    colors = sns.color_palette()
-    hrs = np.arange(0, len(test_load)) / 4
-    fig = plt.figure(figsize=(14, 7))
-    ax1 = fig.add_subplot(5, 1, 1)
-    line1, = ax1.plot(hrs, test_load, color=colors[0])
-    line2, = ax1.plot(hrs, test_pv, color=colors[1])
-    # line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2], ['Load', 'PV'], ncol=2)
-    ax1.set_xlim([0, len(test_load) / 4])
-    ax1.set_title('test site 3: PV and Battery and 2 EVS')
-
-    ax2 = fig.add_subplot(5, 1, 2)
-    line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-    line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-    ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-    ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-    ax2.set_xlim([0, len(test_load) / 4])
-
-    ax3 = fig.add_subplot(5, 1, 3)
-    line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-    line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-    ax3.set_xlim([0, len(test_load) / 4])
-    ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-    ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-
-    ax4 = fig.add_subplot(5, 1, 4)
-    line1, = ax4.plot(hrs, vehicle1_storage, color=colors[1])
-    line2, = ax4.plot(hrs, available1, color=colors[2])
-    ax4.set_xlim([0, len(test_load) / 4])
-    ax4.set_xlabel('hour'), ax4.set_ylabel('vehicle 1 (V2G)')
-    ax4.legend([line1, line2], ['SOC', 'available for charge'])
-
-    ax5 = fig.add_subplot(5, 1, 5)
-    line1, = ax5.plot(hrs, vehicle2_storage, color=colors[1])
-    line2, = ax5.plot(hrs, available2, color=colors[2])
-    ax5.set_xlim([0, len(test_load) / 4])
-    ax5.set_xlabel('hour'), ax5.set_ylabel('vehicle 2 (V1G)')
-    ax5.legend([line1, line2], ['SOC', 'available for charge'])
-
-    plt.tight_layout()
-    plt.show()
-
-    ## testing V0G --- convenience and time signal --- charging
-    # a third vehicle that will be either convenience of time of use
-    # the 'charge_model' flag can take values 'V0G', 'V1G', or 'V2G'
-
-    tod_charging = np.ones(available2.shape)
-    tod_charging[20:30] = 0.
-    ev1 = {'name':'ev1','available': available1, 'usage': usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-           'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
-           'discharging_efficiency':1,'initial_state_of_charge':0.0, 'charge_mode': 'V2G'}
-
-    ev3 = {'name':'ev3','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-           'charging_power_limit':10., 'discharging_power_limit':0, 'charging_efficiency':1,
-           'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G', 'tod_charging':tod_charging}
-
-    # ev3 = {'name':'ev3','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-    #        'charging_power_limit':10., 'discharging_power_limit':0, 'charging_efficiency':1,
-    #        'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G', 'tod_charging':None}
-
-
-    # define test site 4 to have 1 ev and 1 battery and some solar and ev to V0G charge ?
-    test_site_4_dict = {'name':'test_site_4', 'load_profile':test_load,
-                        'pv_profile':test_pv, 'battery':battery,
-                        'evs':[ev1, ev3], 'export_tariff':export_tariff_array,
-                         'import_tariff':import_tariff_array}
-
-    # process a site with both V0G and V2G/V1G evs
-    test_site_4_dict = process_site(test_site_4_dict, interval_duration, time_periods)
-
-    storage_energy_delta = test_site_4_dict['battery']['delta']
-    storage_energy_soc = test_site_4_dict['battery']['SOC']
-
-    vehicle1_storage = test_site_4_dict['evs'][0]['SOC']
-    vehicle2_storage = test_site_4_dict['evs'][1]['SOC']
-
-    colors = sns.color_palette()
-    hrs = np.arange(0, len(test_load)) / 4
-    fig = plt.figure(figsize=(14, 7))
-    ax1 = fig.add_subplot(5, 1, 1)
-    line1, = ax1.plot(hrs, test_load, color=colors[0])
-    line2, = ax1.plot(hrs, test_pv, color=colors[1])
-    # line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-    ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-    ax1.legend([line1, line2], ['Load', 'PV'], ncol=2)
-    ax1.set_xlim([0, len(test_load) / 4])
-    ax1.set_title('test site 4: PV and Battery and 2 EVS (1 V2G, 1 V0G)')
-
-    ax2 = fig.add_subplot(5, 1, 2)
-    line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-    line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-    ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-    ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-    ax2.set_xlim([0, len(test_load) / 4])
-
-    ax3 = fig.add_subplot(5, 1, 3)
-    line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-    line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-    ax3.set_xlim([0, len(test_load) / 4])
-    ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-    ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-
-    ax4 = fig.add_subplot(5, 1, 4)
-    line1, = ax4.plot(hrs, vehicle1_storage, color=colors[1])
-    line2, = ax4.plot(hrs, available1, color=colors[2])
-    ax4.set_xlim([0, len(test_load) / 4])
-    ax4.set_xlabel('hour'), ax4.set_ylabel('vehicle 1 (V2G)')
-    ax4.legend([line1, line2], ['SOC', 'available for charge'])
-
-    ax5 = fig.add_subplot(5, 1, 5)
-    line1, = ax5.plot(hrs, vehicle2_storage, color=colors[1])
-    line2, = ax5.plot(hrs, available2, color=colors[2])
-    ax5.set_xlim([0, len(test_load) / 4])
-    ax5.set_xlabel('hour'), ax5.set_ylabel('vehicle 2 (V0G)')
-    ax5.legend([line1, line2], ['SOC', 'available for charge'])
-
-    plt.tight_layout()
-    plt.show()
-
-
-    # define test site 5 to have no optimisable assets
-    test_site_5_dict = {'name':'test_site_5', 'load_profile':test_load,
-                        'pv_profile':test_pv, 'battery':None,
-                        'evs':None, 'export_tariff':export_tariff_array,
-                         'import_tariff':import_tariff_array}
-
-    test_site_5_dict = process_site(test_site_5_dict, interval_duration, time_periods)
-
-    plt.plot(test_site_5_dict['load_profile'],label='load')
-    plt.plot(test_site_5_dict['pv_profile'], label='pv')
-    plt.plot(test_site_5_dict['aggregate_load'], label='aggregate')
-    plt.legend()
-    plt.title('Test site 5: no optimisable assets')
-    plt.show()
-
