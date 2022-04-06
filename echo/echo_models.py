@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 
 import networkx as nx
+import numpy as np
 from networkx import Graph
 import pyomo.environ as en
 from echo.configuration import *
@@ -649,7 +650,8 @@ class ElectricalDemand(Sink):
         self.add_initial_value(electrical_demand)
 
     def add_demand_profile_from_array(self, array, expansion_periods):
-        assert (array >= 0).all(), 'power demand must be non negative'
+        if type(array) is np.ndarray:
+            assert (array >= 0).all(), 'power demand must be non negative'
         t = {}
         for ep in range(0, expansion_periods):
             for i in range(0, len(array)):

@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from echo_models import *
-from echo_optimiser import EchoOptimiser
-from configuration import *
-from objectives import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.configuration import *
+from echo.objectives import *
 
 import os
 
@@ -133,7 +133,7 @@ def test_carbon_aggregation():
 
     load1 = Node()
     l1 = ElectricalDemand()
-    l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
+    l1.add_demand_profile_from_array(np.array([6] * time_periods), expansion_periods)
     load1.ports['demand'] = l1
 
     site1 = ElectricalTellegenNode()
