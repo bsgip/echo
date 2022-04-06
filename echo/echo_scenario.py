@@ -8,12 +8,6 @@ import seaborn as sns
 import cmath
 import lzma
 
-# import sgt and sgt-e-json for power flows
-import sgt
-import sgt_e_json
-sgt.set_message_log_level(sgt.LogLevel.NONE)
-sgt.set_warning_log_level(sgt.LogLevel.NONE)
-
 ## echo and optimisation imports
 import echo.echo_models as ecm
 from echo.echo_optimiser import EchoOptimiser
@@ -42,6 +36,12 @@ class EchoScenario:
 
     def load_network_model(self, network_file):
         # Load the raw e-JSON data.
+        # import sgt and sgt-e-json for power flows
+        import sgt
+        import sgt_e_json
+        sgt.set_message_log_level(sgt.LogLevel.NONE)
+        sgt.set_warning_log_level(sgt.LogLevel.NONE)
+
         print('Importing network data')
         with open(network_file) as f:
             netw_jsn = json.load(f)
@@ -103,21 +103,23 @@ class EchoScenario:
             array_length_check(retrieve_value(site,'export_tariff'), time_periods,
                                'site {} export_tariff should have length {} (same as first site)'.format(i, time_periods))
             variable = retrieve_value(site, 'import_demand_charges')
-            if not isinstance(variable, list):
-                variable = [variable]
-            for j, v in enumerate(variable):
-                assert isinstance(v, dict), 'site {} import demand charge {} must be a dictionary'.format(i,j)
-                assert retrieve_value(v, 'rate') is not None, 'site {} import demand charge {} must have rate'.format(i, j)
-                assert retrieve_value(v, 'window') is not None, 'site {} import demand charge {} must have window'.format(i, j)
-                array_length_check(v['window'], time_periods, 'site {} import demand charge {} window must have length {}'.format(i,j,time_periods))
-            variable = retrieve_value(site, 'export_demand_charges')
-            if not isinstance(variable, list):
-                variable = [variable]
-            for j, v in enumerate(variable):
-                assert isinstance(v, dict), 'site {} export demand charge {} must be a dictionary'.format(i,j)
-                assert retrieve_value(v, 'rate') is not None, 'site {} export demand charge {} must have rate'.format(i, j)
-                assert retrieve_value(v, 'window') is not None, 'site {} export demand charge {} must have window'.format(i, j)
-                array_length_check(v['window'], time_periods, 'site {} export demand charge {} window must have length {}'.format(i,j,time_periods))
+            if variable is not None:
+                if not isinstance(variable, list):
+                    variable = [variable]
+                for j, v in enumerate(variable):
+                    assert isinstance(v, dict), 'site {} import demand charge {} must be a dictionary'.format(i,j)
+                    assert retrieve_value(v, 'rate') is not None, 'site {} import demand charge {} must have rate'.format(i, j)
+                    assert retrieve_value(v, 'window') is not None, 'site {} import demand charge {} must have window'.format(i, j)
+                    array_length_check(v['window'], time_periods, 'site {} import demand charge {} window must have length {}'.format(i,j,time_periods))
+                variable = retrieve_value(site, 'export_demand_charges')
+            if variable is not None:
+                if not isinstance(variable, list):
+                    variable = [variable]
+                for j, v in enumerate(variable):
+                    assert isinstance(v, dict), 'site {} export demand charge {} must be a dictionary'.format(i,j)
+                    assert retrieve_value(v, 'rate') is not None, 'site {} export demand charge {} must have rate'.format(i, j)
+                    assert retrieve_value(v, 'window') is not None, 'site {} export demand charge {} must have window'.format(i, j)
+                    array_length_check(v['window'], time_periods, 'site {} export demand charge {} window must have length {}'.format(i,j,time_periods))
 
 
             # pv checks
@@ -209,6 +211,13 @@ class EchoScenario:
 
     def run_power_flows(self, power_factor=0.93, save_pickle_file=None, log_file=None, auto_taps=True):
         assert not self.energy_only, 'create a scenario with energy_only=False to run power flows'
+
+        # import sgt and sgt-e-json for power flows
+        import sgt
+        import sgt_e_json
+        sgt.set_message_log_level(sgt.LogLevel.NONE)
+        sgt.set_warning_log_level(sgt.LogLevel.NONE)
+
         assert self.aggregate_loads is not None, "Aggregate loads need to be calculated first"
         zips = {z.id(): z for z in self.network.zips()}
         agg_loads_df = self.aggregate_load_df()
@@ -471,14 +480,14 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
 
         site_dict['status'] = 'OK'
         if retrieve_value(site_dict, 'site_max_import') is not None:
-            site_dict['import_violation'] = max((site_dict['aggregate_load'] - site_dict['site_max_import']),0)
+            site_dict['import_violation'] = np.maximum((site_dict['aggregate_load'] - site_dict['site_max_import']),0)
         else:
             site_dict['import_violation'] = 0 * site_dict['aggregate_load']
 
         if retrieve_value(site_dict, 'site_max_export') is not None:
-            site_dict['export_violation'] = min((site_dict['aggregate_load'] - site_dict['site_max_export']),0)
+            site_dict['export_violation'] = np.minimum((site_dict['aggregate_load'] - site_dict['site_max_export']),0)
         else:
-            site_dict['import_violation'] = 0 * site_dict['aggregate_load']
+            site_dict['export_violation'] = 0 * site_dict['aggregate_load']
 
 
     site_dict['load_profile'] = load_profile_save # restore load profile to just be load and not V0G cars
