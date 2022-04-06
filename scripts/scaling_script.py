@@ -17,6 +17,10 @@ SOLVER_EXECUTABLE = None
 
 N_INTERVALS = 48
 
+# This script has a function for generating networks that contain a specified number of sites.
+# Each site has a battery, solar with random uncurtailable generation, and load. Each site has a random positive
+# import tariff at the point of connection to the upstream grid.
+
 def many_node_system_tree(num_sites):
 
     expansion_periods = 1
