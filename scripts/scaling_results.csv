@@ -1,3 +1,0 @@
-10_storage,{'num_nodes': 51, 'num_edges': 50, 'time to construct optimiser': 0.22365117073059082, 'user time': 0.02, 'time': 0.10194730758666992, 'num_vars': 6288, 'num_constraints': 8160}
-100_storage,{'num_nodes': 501, 'num_edges': 500, 'time to construct optimiser': 2.2513153553009033, 'user time': 0.22, 'time': 0.8389396667480469, 'num_vars': 62448, 'num_constraints': 81600}
-1000_storage,{'num_nodes': 5001, 'num_edges': 5000, 'time to construct optimiser': 21.970174551010132, 'user time': 3.31, 'time': 10.8258957862854, 'num_vars': 624048, 'num_constraints': 816000}
