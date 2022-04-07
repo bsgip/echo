@@ -70,30 +70,8 @@ class OptimisationGraph(Graph):
                     return node
         raise ConfigurationError('Port is not part of any node.')
 
-    def check_node_connection(self, node1, node2):
-        """ Checks if there is an existing edge between two nodes"""
-        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
-        if connecting_edge:
-            return True
-        else:
-            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
-            if connecting_edge:
-                return True
-            else:
-                return False
-
-    def get_port_on_path(self, node1, node2):
-        """ Gets port on node1 that forms edge connecting node1 and node2 """
-        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
-        if connecting_edge:
-            return connecting_edge.vertices[0]
-        else:
-            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
-            if connecting_edge:
-                return connecting_edge.vertices[1]
-
     def get_ports_on_edge_from_nodes(self, node1, node2):
-        """ Gets edge ports from node1, node2 """
+        """ Gets the ports that are on the edge from node1 to node2. """
         connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
         if connecting_edge:
             node1_port = connecting_edge.vertices[0]
@@ -107,11 +85,22 @@ class OptimisationGraph(Graph):
                 return node1_port, node2_port
 
     def get_sources_and_sinks(self):
+        """ Returns a set that contains all source and sink nodes."""
         sources_or_sinks = set()
         for _, path in self.paths.items():
             sources_or_sinks.add(path.vertices[0])
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
+
+    def verify_paths(self):
+        """ Verifies that our paths meet the assumptions required to correctly do flow tracing."""
+        all_nodes = self.get_sources_and_sinks()
+        for node in all_nodes:
+            for path in self.paths.values():
+                if node in path.vertices[1:-1]:
+                    # if the source/sink node appears in the middle of another path, the optimiser will fail
+                    # A node can't be both a tellegen node and a source/sink node
+                    raise ConfigurationError('Source/sink node is being treated as a tellegen node.')
 
     def create_path_objects(self, sources, sinks):
         all_paths = {}
@@ -133,6 +122,7 @@ class OptimisationGraph(Graph):
                         all_paths[tuple(vertex_list)] = p
 
         self.paths = all_paths
+        self.verify_paths()
 
 
 class ConfigurationError(Exception):
