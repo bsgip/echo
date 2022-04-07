@@ -190,10 +190,13 @@ class EchoOptimiser(object):
                 self.objective_set.initialise_objective(self.model)
                 self.objective_set.set_objective(self.model, self)
 
-        # Add any other costs that are defined on graph nodes/ports
+        # Add any other costs that are defined on graph nodes/ports/paths
         for _, node_obj in self.ES.node_obj.items():
             for _, port_obj in node_obj.ports.items():
                 self.objective += port_obj.add_objective(self.model)
+
+        for _, path_obj in self.ES.paths.items():
+            self.objective += path_obj.add_objective(self.model)
 
     def optimise(self, tee=False):
         def objective_function(model):

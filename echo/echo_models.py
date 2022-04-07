@@ -102,7 +102,8 @@ class OptimisationGraph(Graph):
                     # A node can't be both a tellegen node and a source/sink node
                     raise ConfigurationError('Source/sink node is being treated as a tellegen node.')
 
-    def create_path_objects(self, sources, sinks):
+    def create_path_objects(self, sources, sinks, regularise=False):
+        """ Creates path objects according to source/sink lists provided."""
         all_paths = {}
         for source_node in sources:
             for sink_node in sinks:
@@ -111,6 +112,7 @@ class OptimisationGraph(Graph):
                     simple_edges = nx.all_simple_edge_paths(self, source_node, sink_node)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
                         p = Path(vertices=vertex_list)  # Create path objects
+                        p.regularise = regularise  # For adding regularisation (ie equal sharing) to give a unique solution
                         p.units = Units.KW
                         for edge in edge_list:
                             edge_obj = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
@@ -1075,8 +1077,6 @@ class Transform(object):
                     var.constrain_pos_neg(model)
 
 
-
-
 class Path(object):
     """ A path is a sequence of distinct vertices (nodes). """
 
@@ -1088,6 +1088,7 @@ class Path(object):
         self.units = Units.KW
         self.start_port = None
         self.end_port = None
+        self.regularise = False
 
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
@@ -1104,9 +1105,9 @@ class Path(object):
     def add_objective(self, model):
         objective = 0
 
-        # To get a unique solution
-        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * \
-                     0.00000001
+        if self.regularise is True:
+            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                             for p in model.Expansion for t in model.Time) * 0.0000001
 
         return objective
 
