@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from echo_models import *
-from echo_optimiser import EchoOptimiser
-from configuration import *
-from objectives import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.configuration import *
+from echo.objectives import *
 
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
