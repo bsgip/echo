@@ -1192,7 +1192,6 @@ class ThermalPort(Port):
         self.opt_type = OptimisationType.Variable
 
 
-
 class BulkGrid(Node):
 
     def __init__(self):
@@ -1207,14 +1206,15 @@ class BulkGas(Node):
         self.ports['gas'] = GasPort()
 
 
-
-
-class GasLoad(Sink):
+class GasDemand(Sink):
 
     def __init__(self):
-        super(GasLoad, self).__init__()
-        self.flows = Flows.Import
-        self.units = Units.KW
+        super(GasDemand, self).__init__()
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.units = Units.J
+
+    def add_demand_profile_from_array(self, array, expansion_intervals):
+        self.add_sink_profile_from_array(array, expansion_intervals)
 
 
 class GasTellegenNode(Node):
