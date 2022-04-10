@@ -9,6 +9,7 @@ import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 import networkx as nx
 import pandas as pd
+import time as time_
 
 
 from echo.echo_models import *
@@ -131,10 +132,12 @@ system = OptimisationGraph()
 labels = {}
 
 # Whole system nodes
-bulk_grid = BulkGrid()
+bulk_grid = Node()
+bulk_grid.ports['grid'] = ElectricalPort()
 labels[bulk_grid] = 'bulk_grid'
 
-bulk_gas = BulkGas()
+bulk_gas = Node()
+bulk_gas.ports['gas'] = GasPort()
 bulk_gas.ports['emissions'] = CarbonSource()
 bulk_gas.emission_factor = 60  # 60 kg per GJ gas
 bulk_gas.add_emission_transformation(bulk_gas.ports['gas'], bulk_gas.ports['emissions'], bulk_gas.emission_factor)  # units
@@ -178,7 +181,7 @@ labels[solar] = 'soad_solar'
 # Gas assets
 gas_cp_soad = GasTellegenNode()
 gas_cp_soad.ports['cp'] = GasDemand()
-gas_cp_soad.ports['cp'].add_demand_profile_from_array(df_gas['SoA_Gj'].values, expansion_intervals)
+gas_cp_soad.ports['cp'].add_demand_profile_from_array(df_gas['SoA_Gj'].values/interval_duration, expansion_intervals)
 
 gas_cp_soad.ports['b1'] = GasPort()
 gas_cp_soad.ports['b2'] = GasPort()
@@ -254,7 +257,7 @@ labels[other] = 'som_other_elec'
 # Gas assets
 gas_cp_som = GasTellegenNode()
 gas_cp_som.ports['cp'] = GasDemand()
-gas_cp_som.ports['cp'].add_demand_profile_from_array(df_gas['SoM_Gj'].values, expansion_intervals)
+gas_cp_som.ports['cp'].add_demand_profile_from_array(df_gas['SoM_Gj'].values/interval_duration, expansion_intervals)
 gas_cp_som.ports['som'] = GasPort()
 gas_cp_som.ports['pk'] = GasPort()
 labels[gas_cp_som] = 'som_gas_cp'
@@ -288,6 +291,7 @@ system.connect_ports_and_create_edge(gas_cp.ports['som'], gas_cp_som.ports['cp']
 system.connect_ports_and_create_edge(gas_cp_som.ports['som'], som_boiler.ports['som'])
 system.connect_ports_and_create_edge(gas_cp_som.ports['pk'], pk_boiler.ports['pk'])
 
+opt_build_start = time_.time()
 optimiser = EchoOptimiser(interval_duration=interval_duration,
                           number_of_intervals=num_intervals,
                           number_of_expansion_intervals=expansion_intervals,
@@ -295,8 +299,11 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
                           ES=system,
                           objective_set=None,
                           optimiser_engine='cplex')
-
+print('Time to build optimiser: ', time_.time() - opt_build_start)
+opt_start_time = time_.time()
 optimiser.optimise(tee=True)
+print('Time to run optimiser: ', time_.time() - opt_start_time)
+
 
 # Plot results
 fig = plt.figure(figsize=(14, 14))
@@ -322,28 +329,21 @@ plt.gca().xaxis.set_major_formatter(myFmt)
 plt.xticks(rotation=45)
 plt.autoscale(enable=True, axis='x', tight=True)
 plt.legend(['gas_meter_soad', 'gas_meter_som'])
-plt.ylabel('GJ')
+plt.ylabel('GJ/s')
 
 fig.add_subplot(3, 1, 3)
 plt.plot(hrs, optimiser.values(bulk_gas.ports['emissions'].port_name, 0)*-1)
 plt.gca().xaxis.set_major_formatter(myFmt)
 plt.xticks(rotation=45)
 plt.autoscale(enable=True, axis='x', tight=True)
-plt.ylabel('kg CO2e')
+plt.ylabel('Instantaneous emissions (kg CO2e)')
 
 gas_total = sum(optimiser.values(bulk_gas.ports['gas'].port_name, 0))*-1
 emissions_total = sum(optimiser.values(bulk_gas.ports['emissions'].port_name, 0))*-1
-print(gas_total)
-print(emissions_total)
-print(gas_total*bulk_gas.emission_factor)
+#print(gas_total)
+print('Total kgCO2e emissions: ', emissions_total)
+#print(gas_total*bulk_gas.emission_factor)
 
 
 # fig = plt.figure(figsize=(14, 7))
 # nx.draw(system, labels=labels, with_labels=True, node_color=(1,0.5,1))
-
-
-
-
-
-
-

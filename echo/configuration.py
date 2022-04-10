@@ -3,9 +3,9 @@ class Units(object):
 
     NA = 0  # Used for initialisation but optimisation will fail if units not set prior to execution.
     KW = 1  # Instantaneous electrical power
-    CO2 = 2  # CO2 emissions
-    KWT = 3  # Thermal power
-    J = 4  # Joules
+    CO2 = 2  # Instantaneous CO2e emissions (in kg)
+    KWT = 3  # Instantaneous thermal power
+    Jps = 4  # Joules per second
 
 
 class Flows(object):
