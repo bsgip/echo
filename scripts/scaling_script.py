@@ -1,14 +1,9 @@
-import random
+from __future__ import division
 import time as time_
 
-import numpy as np
-import pandas as pd
-from echo_models import *
-from echo_optimiser import EchoOptimiser
-from objectives import *
-import networkx as nx
-import matplotlib.pyplot as plt
-from datetime import datetime
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.objectives import *
 
 import os
 
