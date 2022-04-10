@@ -1,4 +1,7 @@
 from __future__ import division
+
+import random
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdate
 import numpy as np
@@ -42,7 +45,7 @@ def data_cleaner_numeric(dp):
             output = float(n)
     return output
 
-def clean_dataframe(df, data_col, data_name):
+def clean_ems_dataframe(df, data_col, data_name):
     time_col = df.columns[0]  # Time column is always first
     t = df[time_col] # Pull out time col for dataframe
     d = df[data_col]  # Pull out col that contains data
@@ -66,84 +69,137 @@ def clean_dataframe(df, data_col, data_name):
 
 
 power_col = [col for col in som_power_df.columns if 'Power' in col]
-power_data = clean_dataframe(som_power_df, power_col[0], 'power')
+som_power_data = clean_ems_dataframe(som_power_df, power_col[0], 'som_power')
 
 temp_col = [col for col in som_boiler1_df.columns if 'Flow-Temp' in col]
-boiler1_data = clean_dataframe(som_boiler1_df, temp_col[0], 'b1_temp')
+som_boiler1_data = clean_ems_dataframe(som_boiler1_df, temp_col[0], 'b1_temp')
 
 temp_col = [col for col in som_boiler2_df.columns if 'Flow-Temp' in col]
-boiler2_data = clean_dataframe(som_boiler2_df, temp_col[0], 'b2_temp')
+som_boiler2_data = clean_ems_dataframe(som_boiler2_df, temp_col[0], 'b2_temp')
 
 solar_col = [col for col in soad_solar_df.columns if 'Power' in col]
-soad_solar_data = clean_dataframe(soad_solar_df, solar_col[0], 'pv')
+soad_solar_data = clean_ems_dataframe(soad_solar_df, solar_col[0], 'pv')
 
-all_dfs = [power_data, boiler1_data, boiler2_data, soad_solar_data]
-df_merged = all_dfs[0]
+all_dfs = [som_power_data, som_boiler1_data, som_boiler2_data, soad_solar_data]
+df = all_dfs[0]
 i = 0
 for df_ in all_dfs[1:]:
-    df_merged = df_merged.merge(df_, on='time', suffixes=(None, df_.columns[-1]))
+    df = df.merge(df_, on='time', suffixes=(None, df_.columns[-1]))
     i += 1
+
+
+# New data :)
+df_elec = pd.read_excel("C:\\Users\\61405\\Documents\\BZ_data\\soad_som_combined_data.xlsx", sheet_name='Electricity')
+df_gas = pd.read_excel("C:\\Users\\61405\\Documents\\BZ_data\\soad_som_combined_data.xlsx", sheet_name='Gas2')
+
+def convert_to_datetime(df):
+    date_col = df.columns[0]
+    time_col = df.columns[1]
+    t = df[time_col] # Pull out time col for dataframe
+    d = df[date_col]  # Pull out col that contains data
+    index = []  # for storing cleaned times
+    for i in range(len(t)):
+        index.append(datetime(year=d[i].year,
+                            month=d[i].month,
+                            day=d[i].day,
+                            hour=t[i].hour,
+                            minute=t[i].minute,
+                            second=t[i].second))
+
+    df['datetime'] = index
+    df.set_index('datetime')
+
+# Convert both to datetime
+convert_to_datetime(df_elec)
+convert_to_datetime(df_gas)
+
+# Downsample the electricity data to be hourly
+df_elec_new = df_elec.set_index('datetime').resample(rule='1h').mean()
+# todo there is something weird happening with the first entry
+assert (df_elec_new.index == df_gas.set_index('datetime').index).all()  # check we have the timestamps lined up
 
 # Do time period calcs
 
-num_intervals = len(df_merged)
-interval_duration = 5
+num_intervals = len(df_elec_new)
+interval_duration = 60
 expansion_intervals = 1
 
 # Initialise graph
 system = OptimisationGraph()
 
+# For plotting
+labels = {}
+
 # Whole system nodes
 bulk_grid = BulkGrid()
+labels[bulk_grid] = 'bulk_grid'
+
 bulk_gas = BulkGas()
+bulk_gas.ports['emissions'] = CarbonSource()
+bulk_gas.emission_factor = 60  # 60 kg per GJ gas
+bulk_gas.add_emission_transformation(bulk_gas.ports['gas'], bulk_gas.ports['emissions'], bulk_gas.emission_factor)  # units
+labels[bulk_gas] = 'bulk_gas'
 
 connection_point = ElectricalTellegenNode()
 connection_point.add_named_electrical_ports(['grid', 'soad', 'som'])
+labels[connection_point] = 'elec_cp'
 
 gas_cp = GasTellegenNode()
 gas_cp.ports['bulk'] = GasPort()
 gas_cp.ports['soad'] = GasPort()
 gas_cp.ports['som'] = GasPort()
+labels[gas_cp] = 'gas_cp'
 
 ### School of Art and Design (SoAD)
 
 # Electrical assets
 elec_conn_pt_soad = ElectricalTellegenNode()
-elec_conn_pt_soad.add_named_electrical_ports(['cp', 'heat_pump', 'pv', 'kiln'])
+elec_conn_pt_soad.add_named_electrical_ports(['heat_pump', 'pv', 'kiln'])
+elec_conn_pt_soad.ports['cp'] = ElectricalDemand()
+elec_conn_pt_soad.ports['cp'].add_demand_profile_from_array(df_elec_new['SoA_kW'].values, expansion_intervals)
+labels[elec_conn_pt_soad] = 'soad_elec_cp'
 
 elec_kiln = Node()
 ek = ElectricalPort()
 elec_kiln.ports['kiln'] = ek
+labels[elec_kiln] = 'elec_kiln'
 
 heat_pump_soad = Node()
 hp_soad = ElectricalPort()
 heat_pump_soad.ports['heat_pump'] = hp_soad
+labels[heat_pump_soad] = 'soad_heat_pump'
 
 solar = Node()
-pv = ElectricalGeneration()
-pv.add_generation_profile_from_array(df_merged['pv'].values*-1, expansion_intervals)
+pv = ElectricalPort()#ElectricalGeneration() # Todo get EMS PV data into same format as excel data
+#pv.add_generation_profile_from_array(df['pv'].values * -1, expansion_intervals)
 solar.ports['pv'] = pv
+labels[solar] = 'soad_solar'
 
 # Gas assets
 gas_cp_soad = GasTellegenNode()
-gas_cp_soad.ports['cp'] = GasPort()
+gas_cp_soad.ports['cp'] = GasDemand()
+gas_cp_soad.ports['cp'].add_demand_profile_from_array(df_gas['SoA_Gj'].values, expansion_intervals)
+
 gas_cp_soad.ports['b1'] = GasPort()
 gas_cp_soad.ports['b2'] = GasPort()
 gas_cp_soad.ports['kiln'] = GasPort()
+labels[gas_cp_soad] = 'soad_gas_cp'
 
 boiler1_soad = Node()
 b1_soad = GasPort()
-b1_soad.set_flow_constraints(max_import=None, max_export=None)
 boiler1_soad.ports['b1'] = b1_soad
+labels[boiler1_soad] = 'soad_boiler1'
 
 boiler2_soad = Node()
 b2_soad = GasPort()
-b2_soad.set_flow_constraints(max_import=None, max_export=None)
 boiler2_soad.ports['b2'] = b2_soad
+labels[boiler2_soad] = 'soad_boiler2'
 
 gas_kiln = Node()
 gk = GasPort()
+gk.set_flow_constraints(max_export=0, max_import=0)
 gas_kiln.ports['kiln'] = gk
+labels[gas_kiln] = 'gas_kiln'
 
 
 # Add assets and do connections
@@ -180,33 +236,38 @@ system.connect_ports_and_create_edge(gas_cp_soad.ports['kiln'], gas_kiln.ports['
 # Electrical assets
 elec_conn_pt_som = ElectricalTellegenNode()
 metered_cp = ElectricalDemand()
-metered_cp.add_demand_profile_from_array(df_merged['power'].values, expansion_periods=expansion_intervals)
+metered_cp.add_demand_profile_from_array(df_elec_new['SoM_kW'].values, expansion_periods=expansion_intervals)
 elec_conn_pt_som.ports['cp'] = metered_cp
 elec_conn_pt_som.add_named_electrical_ports(['chiller', 'other'])
+labels[elec_conn_pt_som] = 'som_elec_cp'
 
 chiller = Node()
 ch = ElectricalPort()
 chiller.ports['chiller'] = ch
+labels[chiller] = 'som_chiller'
 
 other = Node()
 ot = ElectricalPort()
 other.ports['other'] = ot
+labels[other] = 'som_other_elec'
 
 # Gas assets
 gas_cp_som = GasTellegenNode()
-gas_cp_som.ports['cp'] = GasPort()
+gas_cp_som.ports['cp'] = GasDemand()
+gas_cp_som.ports['cp'].add_demand_profile_from_array(df_gas['SoM_Gj'].values, expansion_intervals)
 gas_cp_som.ports['som'] = GasPort()
 gas_cp_som.ports['pk'] = GasPort()
+labels[gas_cp_som] = 'som_gas_cp'
 
 som_boiler = Node()
 som_b = GasPort()
-som_b.set_flow_constraints(max_import=None, max_export=None)
 som_boiler.ports['som'] = som_b
+labels[som_boiler] = 'som_boiler1'
 
 pk_boiler = Node()
 pk_b = GasPort()
-pk_b.set_flow_constraints(max_import=None, max_export=None)
 pk_boiler.ports['pk'] = pk_b
+labels[pk_boiler] = 'som_boiler2'
 
 # Add assets and do connections
 system.add_node_obj([elec_conn_pt_som,
@@ -227,8 +288,6 @@ system.connect_ports_and_create_edge(gas_cp.ports['som'], gas_cp_som.ports['cp']
 system.connect_ports_and_create_edge(gas_cp_som.ports['som'], som_boiler.ports['som'])
 system.connect_ports_and_create_edge(gas_cp_som.ports['pk'], pk_boiler.ports['pk'])
 
-# nx.draw(system)
-
 optimiser = EchoOptimiser(interval_duration=interval_duration,
                           number_of_intervals=num_intervals,
                           number_of_expansion_intervals=expansion_intervals,
@@ -240,22 +299,47 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
 optimiser.optimise(tee=True)
 
 # Plot results
-fig = plt.figure(figsize=(14, 7))
-hrs = df_merged['time'].values
-myFmt = mdate.DateFormatter('%H:%M:%S')
-# for _, node in system.node_obj.items():
-#     for _, p in node.ports.items():
-#         if hasattr(p, 'port_name'):
-#             plt.plot(hrs, optimiser.values(p.port_name, 0))
+fig = plt.figure(figsize=(14, 14))
+fig.add_subplot(3, 1, 1)
+hrs = df_gas['datetime'].values
+myFmt = mdate.DateFormatter('%m')
 
 plt.plot(hrs, optimiser.values(elec_conn_pt_soad.ports['cp'].port_name, 0))
 plt.plot(hrs, optimiser.values(elec_conn_pt_som.ports['cp'].port_name, 0))
 plt.plot(hrs, optimiser.values(pv.port_name, 0))
+plt.gca().xaxis.set_major_formatter(myFmt)
+plt.xticks(rotation=45)
+plt.ylabel('kW')
+plt.autoscale(enable=True, axis='x', tight=True)
+plt.legend(['meter_soad', 'meter_som', 'solar_soad'])
+plt.title('elec-2021, gas-2019')
 
+fig.add_subplot(3, 1, 2)
+
+plt.plot(hrs, optimiser.values(gas_cp_soad.ports['cp'].port_name, 0))
+plt.plot(hrs, optimiser.values(gas_cp_som.ports['cp'].port_name, 0))
 plt.gca().xaxis.set_major_formatter(myFmt)
 plt.xticks(rotation=45)
 plt.autoscale(enable=True, axis='x', tight=True)
-plt.legend(['meter_soad', 'meter_som', 'solar_soad'])
+plt.legend(['gas_meter_soad', 'gas_meter_som'])
+plt.ylabel('GJ')
+
+fig.add_subplot(3, 1, 3)
+plt.plot(hrs, optimiser.values(bulk_gas.ports['emissions'].port_name, 0)*-1)
+plt.gca().xaxis.set_major_formatter(myFmt)
+plt.xticks(rotation=45)
+plt.autoscale(enable=True, axis='x', tight=True)
+plt.ylabel('kg CO2e')
+
+gas_total = sum(optimiser.values(bulk_gas.ports['gas'].port_name, 0))*-1
+emissions_total = sum(optimiser.values(bulk_gas.ports['emissions'].port_name, 0))*-1
+print(gas_total)
+print(emissions_total)
+print(gas_total*bulk_gas.emission_factor)
+
+
+# fig = plt.figure(figsize=(14, 7))
+# nx.draw(system, labels=labels, with_labels=True, node_color=(1,0.5,1))
 
 
 
