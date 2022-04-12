@@ -89,42 +89,8 @@ class EchoOptimiser(object):
         self.apply_path_constraints()
 
     def apply_node_constraints(self):
-
-        def reliability(model, p, t):  # Tellegen node rule
-            a = 0
-            for _, port in node_ports.items():
-                b = getattr(self.model, port.port_name)
-                a += b[p, t]
-            return a == 0
-
-        def transform(model, p, t):  # Generic transformation node
-            def unpack_transform(x):
-                expr = 0
-                for term in x:
-                    transform_rule = term['rule']
-                    weight = term['weight']
-                    var = term['var']
-                    if transform_rule is TransformRule.Both:
-                        expr += getattr(self.model, var.port_name)[p, t] * weight
-                    if transform_rule is TransformRule.NegativeComponent:
-                        expr += getattr(self.model, var.neg)[p, t] * weight
-                    if transform_rule is TransformRule.PositiveComponent:
-                        expr += getattr(self.model, var.pos)[p, t] * weight
-                return expr
-            rhs = unpack_transform(current_transform.rhs)
-            lhs = unpack_transform(current_transform.lhs)
-            return lhs == rhs
-
         for _, obj in self.ES.node_obj.items():
-            if obj.node_rule == NodeRule.Transform:
-                for _, current_transform in obj.transformations.items():
-                    current_transform.initialise_transform(self.model)
-                    con_name = 'transformation_con_' + current_transform.transform_name
-                    setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
-            if obj.node_rule == NodeRule.Tellegen:
-                node_ports = obj.ports
-                con_name = 'reliability_con_' + obj.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
+            obj.apply_node_constraints(self.model)
 
     def apply_path_constraints(self):
 
