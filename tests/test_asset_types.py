@@ -80,8 +80,8 @@ def test_chiller_operation():
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports['grid'], chiller.ports['elec'])
-    system.connect_ports_and_create_edge(chiller.ports['cooling'], cl)
+    system.connect_ports_and_create_edge(grid.ports['grid'], chiller.input)
+    system.connect_ports_and_create_edge(chiller.output, cl)
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -95,8 +95,8 @@ def test_chiller_operation():
     optimiser.optimise()
 
     print('mains gas: ', optimiser.values(grid.ports['grid'].port_name, 0))
-    print('chiller input (elec): ', optimiser.values(chiller.ports['elec'].port_name, 0))
-    print('chiller output (cooling): ', optimiser.values(chiller.ports['cooling'].port_name, 0))
+    print('chiller input (elec): ', optimiser.values(chiller.input.port_name, 0))
+    print('chiller output (cooling): ', optimiser.values(chiller.output.port_name, 0))
     print('cooling load: ', cl.initial_value.values())
 
     grid_import = optimiser.values(grid.ports['grid'].port_name, 0)

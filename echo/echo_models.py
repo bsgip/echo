@@ -1138,20 +1138,25 @@ class GasBoiler(Node):
         self.node_rule = NodeRule.Transform
 
 class Chiller(Node):
-    """ A chiller is a node that imports electricity and heat, where the amount of heat imported depends on
-    a defined coefficient of performance (cop), which is unitless (kW of cooling per kW electrical) """
+    """ A chiller is a node that imports electricity and exports thermal energy, where the conversion occurs according
+    to a coefficient of performance (COP), which is unitless (kW of cooling energy per kW electrical).
+     The COP for a chiller depends on the ambient air temperature, and the system loading."""
 
     def __init__(self,
                  cop):
         super(Chiller, self).__init__()
         self.cop = cop
+        # Create input electrical port
         ep = ElectricalPort()
+        self.input = ep
         ep.flows = Flows.Import
-        self.ports['elec'] = ep
+        self.ports['input'] = ep
+        # Create output thermal port
         cp = ThermalPort()
+        self.output = cp
         cp.flows = Flows.Export
-        self.ports['cooling'] = cp
-        self.add_chiller_transformation(ep, cp, cop)
+        self.ports['output'] = cp
+        self.add_chiller_transformation(elec_port=ep, cooling_port=cp, cop=cop)
 
     def add_chiller_transformation(self, elec_port, cooling_port, cop):
         # Create appropriate transformation
@@ -1160,6 +1165,14 @@ class Chiller(Node):
         t.add_rhs_term(elec_port, TransformRule.PositiveComponent, cop)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
+
+    def add_temperature_profile_from_array(self, array, expansion_periods=1):
+        t = {}
+        for ep in range(0, expansion_periods):
+            for i in range(0, len(array)):
+                t[(ep, i)] = array[i]
+        self.temp_profile = t
+
 
 class ThermalLoad(Sink):
     """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
