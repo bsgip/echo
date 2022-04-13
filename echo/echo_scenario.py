@@ -655,7 +655,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                     raise Exception(ev['name']+' usage must have same length as load_profile')
             ev_cp = ecm.ElectricalTellegenNode()
             ev_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
-            ev_cp.ports['cp'].add_active_periods_from_array(available, expansion_periods)
+            ev_cp.ports['cp'].add_active_periods_from_array(np.array(available,dtype=int), expansion_periods)
 
             ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],
                                     depth_of_discharge_limit=ev['depth_of_discharge_limit'],
@@ -672,7 +672,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                 assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
                 vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
                 vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost # dollars per kwh
-                vehicle.ports['ev'].available = available
+                vehicle.ports['ev'].available = np.array(available,dtype=int)       # force integer representation of bools
 
             trip = ecm.Node()
             us_port = ecm.ElectricalDemand()
@@ -718,16 +718,16 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             import_demand_charges = [import_demand_charges]
         tmp_list = []
         for charge in import_demand_charges:
-            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=np.array(charge['window'],dtype=int)))
         import_demand_tariff = obj.ImportDemandTariffObjective(component=connection_point.ports['grid'],
                                                            demand_charges=tmp_list)
         objective_list.append(import_demand_tariff)
     if export_demand_charges is not None:
         if not isinstance(export_demand_charges, list):
             export_demand_charges = [export_demand_charges]
-        for charge in export_demand_charges:
-            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
         tmp_list = []
+        for charge in export_demand_charges:
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=np.array(charge['window'],dtype=int)))
         export_demand_tariff = obj.ExportDemandTariffObjective(component=connection_point.ports['grid'],
                                                                demand_charges=tmp_list)
         objective_list.append(export_demand_tariff)
