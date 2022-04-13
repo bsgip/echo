@@ -163,7 +163,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     demand_tariff = ImportDemandTariffObjective(component=cp1,
                                           demand_charges=[DemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)])
 
-    throughput_cost = ThroughputCost(component=b1, rate=0.2)
+    throughput_cost = ThroughputCost(component=b1, rate=0.1)
 
     objective_set = ObjectiveSet(objective_list=[import_tariff, demand_tariff, throughput_cost])
 

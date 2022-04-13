@@ -106,8 +106,7 @@ class PeakNegativePower(Objective):
 
 
 class ImportTariff(Objective):
-    """ The ImportTariff objective applies a tariff, defined as an array of prices,
-     to the positive (importing) component of the specified port."""
+    """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
 
     def __init__(self,
                  component,
@@ -143,11 +142,12 @@ class ImportTariff(Objective):
 
     def objective_expr(self, model):
         return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.component.import_tariff)[p, t] *
-                   getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+                   model.interval_duration/60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
     def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.component.pos, expansion_period) * \
-               optimiser.values(self.component.import_tariff, expansion_period)
+        pass
+        # return optimiser.values(self.component.pos, expansion_period) * \
+        #        optimiser.values(self.component.import_tariff, expansion_period)
 
 
 class ExportTariff(Objective):
@@ -189,15 +189,16 @@ class ExportTariff(Objective):
 
     def objective_expr(self, model):
         return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.component.export_tariff)[p, t] *
-                   getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+                   model.interval_duration /60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
     def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.component.neg, expansion_period) * \
-               optimiser.values(self.component.export_tariff, expansion_period)
+        pass
+        # return optimiser.values(self.component.neg, expansion_period) * \
+        #        optimiser.values(self.component.export_tariff, expansion_period)
 
 
 class PathTariff(Objective):
-    """ The PathTariff objective applies a tariff, specified as an array of prices, to flows on a specified path."""
+    """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
 
     def __init__(self,
                  component,
