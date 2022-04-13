@@ -69,9 +69,6 @@ class EchoOptimiser(object):
 
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
-            for _, port_obj in node_obj.ports.items():
-                port_obj.verify_port()
-                port_obj.initialise_port(self.model)
             node_obj.verify_node()
             node_obj.initialise_node(self.model)
 

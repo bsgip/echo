@@ -410,7 +410,9 @@ class Node(object):
                     "Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def initialise_node(self, model):
-        pass
+        for port in self.ports.values():
+            port.verify_port()
+            port.initialise_port(model)
 
     def apply_node_constraints(self, model):
 
@@ -961,6 +963,7 @@ class Inverter(ElectricalNode):
             self.ports[port_name] = p
 
     def initialise_node(self, model):
+        super(Inverter, self).initialise_node(model)
 
         for port in self.ports.values(): # Make sure all ports have pos/neg constraint
             port.constrain_pos_neg(model)
@@ -1180,28 +1183,27 @@ class Chiller(Node):
      The COP for a chiller depends on the ambient air temperature, and the system loading."""
 
     def __init__(self,
-                 cop):
+                 cop_df,
+                 max_capacity
+                 ):
         super(Chiller, self).__init__()
-        self.cop = cop
+        self.max_capacity = max_capacity
         # Create input electrical port
         ep = ElectricalPort()
-        self.input = ep
         ep.flows = Flows.Import
+        ep.import_constraint = FlowConstraint.Fixed
+        ep.import_constraint_value = self.max_capacity
+        self.input = ep
         self.ports['input'] = ep
+
         # Create output thermal port
         cp = ThermalPort()
-        self.output = cp
         cp.flows = Flows.Export
-        self.ports['output'] = cp
-        self.add_chiller_transformation(elec_port=ep, cooling_port=cp, cop=cop)
+        self.output = cp
 
-    def add_chiller_transformation(self, elec_port, cooling_port, cop):
-        # Create appropriate transformation
-        t = Transform()
-        t.add_lhs_term(cooling_port, TransformRule.NegativeComponent, -1)
-        t.add_rhs_term(elec_port, TransformRule.PositiveComponent, cop)
-        self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
+        self.ports['output'] = cp
+        self.cop_df = cop_df  # todo extract temperature and loading info
+        self.node_rule = NodeRule.Custom
 
     def add_temperature_profile_from_array(self, array, expansion_periods=1):
         t = {}
@@ -1209,6 +1211,34 @@ class Chiller(Node):
             for i in range(0, len(array)):
                 t[(ep, i)] = array[i]
         self.temp_profile = t
+
+    def initialise_node(self, model):
+        super(Chiller, self).initialise_node(model)
+
+    def apply_node_constraints(self, model):
+        pass
+        # let's ignore temperature for now
+        # Will need a linear approximation of relationship between cooling capacity in kWt and input power in kW.
+        # Otherwise we will have a non-convex constraint, which cplex can't handle
+        # Can add a temperature correction term to shift the line up or down
+        # todo add possibility of adding a piecewise linear function
+        # in this example, let the linear coeff be 2 for loads up to 50%, and 1 for load from 50% to 100$
+        # todo use pyomo piecewise function to do this
+
+        # input_var = getattr(model, self.input.port_name)
+        # output_var = getattr(model, self.output.port_name)
+        #
+        # setattr(model, 'piecewise_con', en.Piecewise(
+        #     model.Expansion, model.Time,
+        #     input_var, output_var, pw_pts=[0, 0.5, 1], pw_constr_type='EQ', f_rule=[0, 2, 3], pw_repn='SOS2')
+        #
+        #
+        # def node_constraint(model, p, t):
+        #     return getattr(model, self.output.port_name)[p, t]*-1 == \
+        #            2*getattr(model, self.input.port_name)[p, t]
+        #
+        # con_name = 'transformation_con_' + self.node_name
+        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
 
 
 class ThermalLoad(Sink):

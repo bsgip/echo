@@ -72,7 +72,7 @@ def test_chiller_operation():
     grid = Node()
     grid.ports['grid'] = ElectricalPort()
 
-    chiller = Chiller(cop=5)
+    chiller = Chiller(cop_df=None, max_capacity=7)
 
     cooling_load = Node()
     cl = ThermalLoad()
@@ -98,6 +98,7 @@ def test_chiller_operation():
     print('chiller input (elec): ', optimiser.values(chiller.input.port_name, 0))
     print('chiller output (cooling): ', optimiser.values(chiller.output.port_name, 0))
     print('cooling load: ', cl.initial_value.values())
+    print('cop: ', np.divide(optimiser.values(chiller.output.port_name, 0), optimiser.values(chiller.input.port_name, 0)))
 
     grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
     cl_p = cl.initial_value
