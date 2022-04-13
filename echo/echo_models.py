@@ -70,30 +70,8 @@ class OptimisationGraph(Graph):
                     return node
         raise ConfigurationError('Port is not part of any node.')
 
-    def check_node_connection(self, node1, node2):
-        """ Checks if there is an existing edge between two nodes"""
-        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
-        if connecting_edge:
-            return True
-        else:
-            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
-            if connecting_edge:
-                return True
-            else:
-                return False
-
-    def get_port_on_path(self, node1, node2):
-        """ Gets port on node1 that forms edge connecting node1 and node2 """
-        connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
-        if connecting_edge:
-            return connecting_edge.vertices[0]
-        else:
-            connecting_edge = self.edge_obj.get((node2.uid, node1.uid))
-            if connecting_edge:
-                return connecting_edge.vertices[1]
-
     def get_ports_on_edge_from_nodes(self, node1, node2):
-        """ Gets edge ports from node1, node2 """
+        """ Gets the ports that are on the edge from node1 to node2. """
         connecting_edge = self.edge_obj.get((node1.uid, node2.uid))
         if connecting_edge:
             node1_port = connecting_edge.vertices[0]
@@ -107,13 +85,25 @@ class OptimisationGraph(Graph):
                 return node1_port, node2_port
 
     def get_sources_and_sinks(self):
+        """ Returns a set that contains all source and sink nodes."""
         sources_or_sinks = set()
         for _, path in self.paths.items():
             sources_or_sinks.add(path.vertices[0])
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
 
-    def create_path_objects(self, sources, sinks):
+    def verify_paths(self):
+        """ Verifies that our paths meet the assumptions required to correctly do flow tracing."""
+        all_nodes = self.get_sources_and_sinks()
+        for node in all_nodes:
+            for path in self.paths.values():
+                if node in path.vertices[1:-1]:
+                    # if the source/sink node appears in the middle of another path, the optimiser will fail
+                    # A node can't be both a tellegen node and a source/sink node
+                    raise ConfigurationError('Source/sink node is being treated as a tellegen node.')
+
+    def create_path_objects(self, sources, sinks, regularise=False):
+        """ Creates path objects according to source/sink lists provided."""
         all_paths = {}
         for source_node in sources:
             for sink_node in sinks:
@@ -122,6 +112,7 @@ class OptimisationGraph(Graph):
                     simple_edges = nx.all_simple_edge_paths(self, source_node, sink_node)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
                         p = Path(vertices=vertex_list)  # Create path objects
+                        p.regularise = regularise  # For adding regularisation (ie equal sharing) to give a unique solution
                         p.units = Units.KW
                         for edge in edge_list:
                             edge_obj = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
@@ -133,6 +124,7 @@ class OptimisationGraph(Graph):
                         all_paths[tuple(vertex_list)] = p
 
         self.paths = all_paths
+        self.verify_paths()
 
 
 class ConfigurationError(Exception):
@@ -419,6 +411,43 @@ class Node(object):
 
     def initialise_node(self, model):
         pass
+
+    def apply_node_constraints(self, model):
+
+        def reliability(model, p, t):  # Tellegen node rule
+            a = 0
+            for _, port in node_ports.items():
+                b = getattr(model, port.port_name)
+                a += b[p, t]
+            return a == 0
+
+        def transform(model, p, t):  # Generic transformation node
+            def unpack_transform(x):
+                expr = 0
+                for term in x:
+                    transform_rule = term['rule']
+                    weight = term['weight']
+                    var = term['var']
+                    if transform_rule is TransformRule.Both:
+                        expr += getattr(model, var.port_name)[p, t] * weight
+                    if transform_rule is TransformRule.NegativeComponent:
+                        expr += getattr(model, var.neg)[p, t] * weight
+                    if transform_rule is TransformRule.PositiveComponent:
+                        expr += getattr(model, var.pos)[p, t] * weight
+                return expr
+            rhs = unpack_transform(current_transform.rhs)
+            lhs = unpack_transform(current_transform.lhs)
+            return lhs == rhs
+
+        if self.node_rule == NodeRule.Transform:
+            for _, current_transform in self.transformations.items():
+                current_transform.initialise_transform(model)
+                con_name = 'transformation_con_' + current_transform.transform_name
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
+        if self.node_rule == NodeRule.Tellegen:
+            node_ports = self.ports
+            con_name = 'reliability_con_' + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
     def num_ports(self):
         return len(self.ports)
@@ -1085,8 +1114,6 @@ class Transform(object):
                     var.constrain_pos_neg(model)
 
 
-
-
 class Path(object):
     """ A path is a sequence of distinct vertices (nodes). """
 
@@ -1098,6 +1125,7 @@ class Path(object):
         self.units = Units.KW
         self.start_port = None
         self.end_port = None
+        self.regularise = False
 
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
@@ -1114,9 +1142,9 @@ class Path(object):
     def add_objective(self, model):
         objective = 0
 
-        # To get a unique solution
-        objective += sum(getattr(model, self.flow_value)[p, t] for p in model.Expansion for t in model.Time) * \
-                     0.00000001
+        if self.regularise is True:
+            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                             for p in model.Expansion for t in model.Time) * 0.0000001
 
         return objective
 

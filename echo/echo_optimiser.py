@@ -89,42 +89,8 @@ class EchoOptimiser(object):
         self.apply_path_constraints()
 
     def apply_node_constraints(self):
-
-        def reliability(model, p, t):  # Tellegen node rule
-            a = 0
-            for _, port in node_ports.items():
-                b = getattr(self.model, port.port_name)
-                a += b[p, t]
-            return a == 0
-
-        def transform(model, p, t):  # Generic transformation node
-            def unpack_transform(x):
-                expr = 0
-                for term in x:
-                    transform_rule = term['rule']
-                    weight = term['weight']
-                    var = term['var']
-                    if transform_rule is TransformRule.Both:
-                        expr += getattr(self.model, var.port_name)[p, t] * weight
-                    if transform_rule is TransformRule.NegativeComponent:
-                        expr += getattr(self.model, var.neg)[p, t] * weight
-                    if transform_rule is TransformRule.PositiveComponent:
-                        expr += getattr(self.model, var.pos)[p, t] * weight
-                return expr
-            rhs = unpack_transform(current_transform.rhs)
-            lhs = unpack_transform(current_transform.lhs)
-            return lhs == rhs
-
         for _, obj in self.ES.node_obj.items():
-            if obj.node_rule == NodeRule.Transform:
-                for _, current_transform in obj.transformations.items():
-                    current_transform.initialise_transform(self.model)
-                    con_name = 'transformation_con_' + current_transform.transform_name
-                    setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=transform))
-            if obj.node_rule == NodeRule.Tellegen:
-                node_ports = obj.ports
-                con_name = 'reliability_con_' + obj.node_name
-                setattr(self.model, con_name, en.Constraint(self.model.Expansion, self.model.Time, rule=reliability))
+            obj.apply_node_constraints(self.model)
 
     def apply_path_constraints(self):
 
@@ -132,11 +98,17 @@ class EchoOptimiser(object):
 
             def path_flow_rule(model, p, t):
                 a = 0
+                # Iterate through all paths in the model
                 for _, path in self.ES.paths.items():
+                    # If the path starts at the current node
                     if path.vertices[0] is current_node:
+                        # Add the flow value
                         a += getattr(model, path.flow_value)[p, t]
+                    # If the path ends at the current node
                     if path.vertices[-1] is current_node:
+                        # Subtract the flow value
                         a -= getattr(model, path.flow_value)[p, t]
+                # Enforce that flows out minus flows in = -1 * port
                 return a == getattr(model, current_port.port_name)[p, t] * -1
 
             def only_inflow_or_outflow_one(model, p, t):
@@ -153,19 +125,19 @@ class EchoOptimiser(object):
                         a += getattr(model, path.flow_value)[p, t]
                 return a <= (1 - getattr(model, current_node.inflow)[p, t]) * self.model.bigM
 
-            sources_and_sinks = self.ES.get_sources_and_sinks()
-            for current_node in sources_and_sinks:
-                # Find a path that contains this node so that we pick up the right port
-                for k, v in self.ES.paths.items():
-                    if current_node is k[0]:
-                        current_port = v.edge_ports[0][0]
-                    elif current_node is k[-1]:
-                        current_port = v.edge_ports[-1][-1]
+            sources_and_sinks = self.ES.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
+            for current_node in sources_and_sinks:  # Iterate through the source/sink nodes
+                for k, v in self.ES.paths.items():  # Iterate through all paths
+                    if current_node is k[0]:  # If we find a path where the current node is the first node on that path
+                        current_port = v.edge_ports[0][0]  # Pick up the first port on the path
+                    elif current_node is k[-1]:  # If we find a path where the current node is the last node on that path
+                        current_port = v.edge_ports[-1][-1]  # Pick up the last port on the path
                 assert current_port in current_node.ports.values()
 
                 setattr(self.model, f"path_flow_con1_{current_node.node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
+                # Create an indicator var for when there are flows into a node
                 current_node.inflow = 'inflow_' + current_node.node_name
                 setattr(self.model, current_node.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
                                                                 domain=en.Binary))
@@ -184,10 +156,13 @@ class EchoOptimiser(object):
                 self.objective_set.initialise_objective(self.model)
                 self.objective_set.set_objective(self.model, self)
 
-        # Add any other costs that are defined on graph nodes/ports
+        # Add any other costs that are defined on graph nodes/ports/paths
         for _, node_obj in self.ES.node_obj.items():
             for _, port_obj in node_obj.ports.items():
                 self.objective += port_obj.add_objective(self.model)
+
+        for _, path_obj in self.ES.paths.items():
+            self.objective += path_obj.add_objective(self.model)
 
     def optimise(self, tee=False):
         def objective_function(model):
