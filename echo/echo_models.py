@@ -701,6 +701,8 @@ class ElectricalGeneration(Source):
         self.add_initial_value(generation)
 
     def add_generation_profile_from_array(self, array, expansion_periods):
+        if type(array) is np.ndarray:
+            assert (array <= 0).all(), 'power generation must be non positive'
         t = {}
         for ep in range(0, expansion_periods):
             for i in range(0, len(array)):
