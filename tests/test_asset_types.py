@@ -72,11 +72,11 @@ def test_chiller_operation():
     grid = Node()
     grid.ports['grid'] = ElectricalPort()
 
-    chiller = Chiller(cop_df=None, max_capacity=7)
+    chiller = Chiller(pw_input=[0, 2, 4, 8], pw_output=[0, 3, 4, 8], max_output=-8, max_input=8)
 
     cooling_load = Node()
     cl = ThermalLoad()
-    cl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
+    cl.add_sink_profile_from_array([4]*time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -100,11 +100,15 @@ def test_chiller_operation():
     print('cooling load: ', cl.initial_value.values())
     print('cop: ', np.divide(optimiser.values(chiller.output.port_name, 0), optimiser.values(chiller.input.port_name, 0)))
 
+    chiller_input = optimiser.values(chiller.input.port_name, 0)
+    chiller_output = optimiser.values(chiller.output.port_name, 0)
     grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
     cl_p = cl.initial_value
 
     for i in range(time_periods):
-        assert grid_import[i] * chiller.cop == cl_p[(0, i)]*-1
+        assert chiller_output[i] == chiller_input[i]*-1
+
+
 
 
 def test_carbon_aggregation():

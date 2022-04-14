@@ -1179,20 +1179,33 @@ class GasBoiler(Node):
 
 class Chiller(Node):
     """ A chiller is a node that imports electricity and exports thermal energy, where the conversion occurs according
-    to a coefficient of performance (COP), which is unitless (kW of cooling energy per kW electrical).
+    to a coefficient of performance (COP), which is unitless (kW of cooling energy per kW electrical). We model this
+    nonlinear relationship as a piecewise linear function between input electrical power and output cooling power.
      The COP for a chiller depends on the ambient air temperature, and the system loading."""
 
     def __init__(self,
-                 cop_df,
-                 max_capacity
+                 pw_input,
+                 pw_output,
+                 max_input,
+                 max_output,
                  ):
         super(Chiller, self).__init__()
-        self.max_capacity = max_capacity
+        assert max_input >= 0, 'Enter max input as positive number'
+        assert max_output <= 0, 'Enter max output as negative number'
+        assert len(pw_input) == len(pw_output), 'Unequal number of input breakpoints and output values'
+        assert max(pw_input) == max_input, 'Input breakpoints should be defined up to max input'
+        assert max(pw_output) == max_output*-1, 'Output values should be defined up to max output'
+
+        self.max_input = max_input
+        self.max_output = max_output
+        self.input_breakpoints = pw_input
+        self.output_values = pw_output
+
         # Create input electrical port
         ep = ElectricalPort()
         ep.flows = Flows.Import
         ep.import_constraint = FlowConstraint.Fixed
-        ep.import_constraint_value = self.max_capacity
+        ep.import_constraint_value = self.max_input
         self.input = ep
         self.ports['input'] = ep
 
@@ -1200,9 +1213,9 @@ class Chiller(Node):
         cp = ThermalPort()
         cp.flows = Flows.Export
         self.output = cp
-
+        cp.export_constraint = FlowConstraint.Fixed
+        cp.export_constraint_value = self.max_output
         self.ports['output'] = cp
-        self.cop_df = cop_df  # todo extract temperature and loading info
         self.node_rule = NodeRule.Custom
 
     def add_temperature_profile_from_array(self, array, expansion_periods=1):
@@ -1216,29 +1229,31 @@ class Chiller(Node):
         super(Chiller, self).initialise_node(model)
 
     def apply_node_constraints(self, model):
-        pass
         # let's ignore temperature for now
-        # Will need a linear approximation of relationship between cooling capacity in kWt and input power in kW.
+        # We use a linear approximation of the relationship between cooling capacity in kWt and input power in kW.
         # Otherwise we will have a non-convex constraint, which cplex can't handle
-        # Can add a temperature correction term to shift the line up or down
-        # todo add possibility of adding a piecewise linear function
-        # in this example, let the linear coeff be 2 for loads up to 50%, and 1 for load from 50% to 100$
-        # todo use pyomo piecewise function to do this
 
-        # input_var = getattr(model, self.input.port_name)
-        # output_var = getattr(model, self.output.port_name)
-        #
-        # setattr(model, 'piecewise_con', en.Piecewise(
-        #     model.Expansion, model.Time,
-        #     input_var, output_var, pw_pts=[0, 0.5, 1], pw_constr_type='EQ', f_rule=[0, 2, 3], pw_repn='SOS2')
-        #
-        #
-        # def node_constraint(model, p, t):
-        #     return getattr(model, self.output.port_name)[p, t]*-1 == \
-        #            2*getattr(model, self.input.port_name)[p, t]
-        #
-        # con_name = 'transformation_con_' + self.node_name
-        # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+        # todo less hacky way of doing this
+        self.dummy = 'dummy_var_' + self.node_name  # this is a nonnegative variable for the piecewise func
+        setattr(model, self.dummy, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+
+        xvar = getattr(model, self.input.port_name)  # x is our input
+        yvar = getattr(model, self.dummy)  # y is our dummy output
+        for i in range(len(xvar.index_set())):
+            xvar[0, i].bounds = (0, self.max_input)
+            yvar[0, i].bounds = (0, self.max_output*-1)
+
+        xdata = self.input_breakpoints
+        ydata = self.output_values
+        setattr(model, 'piecewise_con', en.Piecewise(
+            model.Expansion, model.Time,
+            yvar, xvar, pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
+
+        def node_constraint(model, p, t): # - could add a linear temp correction factor here
+            return getattr(model, self.output.port_name)[p, t] == getattr(model, self.dummy)[p, t]*-1
+
+        con_name = 'transformation_con_' + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
 
 
 class ThermalLoad(Sink):
