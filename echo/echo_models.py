@@ -331,6 +331,7 @@ class Port(object):
         setattr(model, f"pos_neg_con2_{self.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
 
+
     def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
 
         def constraint(model, expansion_interval, time_interval):
@@ -451,6 +452,9 @@ class Node(object):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
+    def apply_piecewise_node_constraint(self, index_list, var_list, pw, fval, ):
+
+        pass
     def num_ports(self):
         return len(self.ports)
 
@@ -1178,7 +1182,7 @@ class GasBoiler(Node):
         self.node_rule = NodeRule.Transform
 
 class Chiller(Node):
-    """ A chiller is a node that imports electricity and exports thermal energy, where the conversion occurs according
+    """ A chiller is a node that imports electricity and exports cooling power, where the conversion occurs according
     to a coefficient of performance (COP), which is unitless (kW of cooling energy per kW electrical). We model this
     nonlinear relationship as a piecewise linear function between input electrical power and output cooling power.
      The COP for a chiller depends on the ambient air temperature, and the system loading."""
@@ -1188,18 +1192,27 @@ class Chiller(Node):
                  pw_output,
                  max_input,
                  max_output,
+                 temp_array=None,
+                 coeff_array=None,
+                 n_breakpoints=4
                  ):
         super(Chiller, self).__init__()
+        # Checks
         assert max_input >= 0, 'Enter max input as positive number'
         assert max_output <= 0, 'Enter max output as negative number'
         assert len(pw_input) == len(pw_output), 'Unequal number of input breakpoints and output values'
         assert max(pw_input) == max_input, 'Input breakpoints should be defined up to max input'
         assert max(pw_output) == max_output*-1, 'Output values should be defined up to max output'
+        assert len(coeff_array) == 3, 'Coefficients for a quadratic function should be used (ie 3 coefficients).'
 
         self.max_input = max_input
         self.max_output = max_output
         self.input_breakpoints = pw_input
         self.output_values = pw_output
+        if temp_array:
+            self.add_temperature_profile_from_array(temp_array)
+        if coeff_array:
+            self.convert_coeff_array_to_piecewise_function(coeff_array, n_breakpoints=n_breakpoints)
 
         # Create input electrical port
         ep = ElectricalPort()
@@ -1219,11 +1232,24 @@ class Chiller(Node):
         self.node_rule = NodeRule.Custom
 
     def add_temperature_profile_from_array(self, array, expansion_periods=1):
+        # Calculate temperature correction factor
+        y = np.subtract(array, np.average(array))
+        cf = y/np.linalg.norm(y)
         t = {}
         for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.temp_profile = t
+            for i in range(0, len(cf)):
+                t[(ep, i)] = cf[i]
+        self.temp_correction_factors = t
+
+    def convert_coeff_array_to_piecewise_function(self, array, n_breakpoints=4):
+
+        xvals = np.linspace(0, self.max_input, n_breakpoints)
+        yvals = np.zeros(len(xvals))
+        for i in range(len(xvals)):
+            yvals[i] = array[0]*xvals[i]**2 + array[1]*xvals[i] + array[2]
+
+        self.input_breakpoints = list(xvals)
+        self.output_values = list(yvals)
 
     def initialise_node(self, model):
         super(Chiller, self).initialise_node(model)
@@ -1249,8 +1275,14 @@ class Chiller(Node):
             model.Expansion, model.Time,
             yvar, xvar, pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
 
-        def node_constraint(model, p, t): # - could add a linear temp correction factor here
-            return getattr(model, self.output.port_name)[p, t] == getattr(model, self.dummy)[p, t]*-1
+        def node_constraint(model, p, t):
+            # add a linear temp correction factor here. temp will also be correlated with cooling load...
+            if hasattr(self, 'temp_correction_factors'):
+                return getattr(model, self.output.port_name)[p, t] == \
+                       (getattr(model, self.dummy)[p, t] - self.temp_correction_factors[p, t])*-1
+            else:
+                return getattr(model, self.output.port_name)[p, t] == \
+                       (getattr(model, self.dummy)[p, t]) * -1
 
         con_name = 'transformation_con_' + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
@@ -1265,6 +1297,7 @@ class ThermalLoad(Sink):
         self.flows = Flows.Both
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
+
 
 class GasPort(Port):
 

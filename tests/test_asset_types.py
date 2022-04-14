@@ -72,7 +72,12 @@ def test_chiller_operation():
     grid = Node()
     grid.ports['grid'] = ElectricalPort()
 
-    chiller = Chiller(pw_input=[0, 2, 4, 8], pw_output=[0, 3, 4, 8], max_output=-8, max_input=8)
+    nonlin_array = [-0.0068, 5.5052, 0]
+    chiller = Chiller(pw_input=[0, 2, 4, 8],
+                      pw_output=[0, 3, 4, 8],
+                      max_output=-8,
+                      max_input=8,
+                      coeff_array=nonlin_array)
 
     cooling_load = Node()
     cl = ThermalLoad()
@@ -104,11 +109,11 @@ def test_chiller_operation():
     chiller_output = optimiser.values(chiller.output.port_name, 0)
     grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
     cl_p = cl.initial_value
+    cop = np.divide(optimiser.values(chiller.output.port_name, 0), optimiser.values(chiller.input.port_name, 0))
 
     for i in range(time_periods):
-        assert chiller_output[i] == chiller_input[i]*-1
-
-
+        np.testing.assert_almost_equal(chiller_output[i]*-1,
+                                       chiller_input[i]**2*nonlin_array[0] + chiller_input[i]*nonlin_array[1] + nonlin_array[2], 2)
 
 
 def test_carbon_aggregation():
