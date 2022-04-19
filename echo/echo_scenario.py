@@ -683,7 +683,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             vehicles.append(vehicle)
             trips.append(trip)
 
-            node_uid_dict[ev['name']] = vehicle.uid
+            node_uid_dict['ev:'+ev['name']] = vehicle.uid
 
         nodes_list = nodes_list + ev_cps + vehicles + trips
 
@@ -745,7 +745,7 @@ def extract_site_results(optimiser, site, node_uid_dict):
         battery = dict()
         battery['SOC'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].soc_value, 0)
         battery['delta'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].port_name, 0)
-    ev_names = [name for name in keys if 'ev' in name]
+    ev_names = [name for name in keys if 'ev:' in name]
     evs = []
     for ev_name in ev_names:
         ev = dict()
@@ -780,12 +780,19 @@ def append_optim_results_to_dict(optimiser, site, node_uid_dict, site_dict):
     if evs:
         for ev in evs:
             name = ev['name']
+            found=False
             for i in range(len(site_dict['evs'])):
-                if name==site_dict['evs'][i]['name']:
+                if name=='ev:'+site_dict['evs'][i]['name']:
                     site_dict['evs'][i]['SOC'] = ev['SOC']
                     site_dict['evs'][i]['delta'] = ev['delta']
                     site_dict['evs'][i]['trip_infeasibility'] = ev['trip_infeasibility']
                     site_dict['evs'][i]['charge_status'] = ev['charge_status']
+                    found=True
+            if not found:
+                if retrieve_value(site_dict,'lost_ev_results') is not None:
+                    site_dict['lost_ev_results'].append(ev)
+                else:
+                    site_dict['lost_ev_results'] = list(ev)
 
     site_dict['aggregate_load'] = aggregate_load
     site_dict['import_violation'] = import_violation
