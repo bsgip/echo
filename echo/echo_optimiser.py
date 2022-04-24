@@ -171,7 +171,7 @@ class EchoOptimiser(object):
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
 
         # Set the path to the solver
-        if (self.optimiser_engine == 'cplex') and self.optimiser_engine_executable:
+        if self.optimiser_engine_executable:
             opt = SolverFactory(self.optimiser_engine, executable=self.optimiser_engine_executable)
         else:
             opt = SolverFactory(self.optimiser_engine)
