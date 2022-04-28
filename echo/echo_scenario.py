@@ -655,7 +655,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                     raise Exception(ev['name']+' usage must have same length as load_profile')
             ev_cp = ecm.ElectricalTellegenNode()
             ev_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
-            ev_cp.ports['cp'].add_active_periods_from_array(available, expansion_periods)
+            ev_cp.ports['cp'].add_active_periods_from_array(np.array(available,dtype=int), expansion_periods)
 
             ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],
                                     depth_of_discharge_limit=ev['depth_of_discharge_limit'],
@@ -672,7 +672,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                 assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
                 vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
                 vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost # dollars per kwh
-                vehicle.ports['ev'].available = available
+                vehicle.ports['ev'].available = np.array(available,dtype=int)       # force integer representation of bools
 
             trip = ecm.Node()
             us_port = ecm.ElectricalDemand()
@@ -683,7 +683,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             vehicles.append(vehicle)
             trips.append(trip)
 
-            node_uid_dict[ev['name']] = vehicle.uid
+            node_uid_dict['ev:'+ev['name']] = vehicle.uid
 
         nodes_list = nodes_list + ev_cps + vehicles + trips
 
@@ -718,16 +718,16 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
             import_demand_charges = [import_demand_charges]
         tmp_list = []
         for charge in import_demand_charges:
-            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=np.array(charge['window'],dtype=int)))
         import_demand_tariff = obj.ImportDemandTariffObjective(component=connection_point.ports['grid'],
                                                            demand_charges=tmp_list)
         objective_list.append(import_demand_tariff)
     if export_demand_charges is not None:
         if not isinstance(export_demand_charges, list):
             export_demand_charges = [export_demand_charges]
-        for charge in export_demand_charges:
-            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=charge['window']))
         tmp_list = []
+        for charge in export_demand_charges:
+            tmp_list.append(obj.DemandCharge(rate=charge['rate'], min_demand=0, window_array=np.array(charge['window'],dtype=int)))
         export_demand_tariff = obj.ExportDemandTariffObjective(component=connection_point.ports['grid'],
                                                                demand_charges=tmp_list)
         objective_list.append(export_demand_tariff)
@@ -745,7 +745,7 @@ def extract_site_results(optimiser, site, node_uid_dict):
         battery = dict()
         battery['SOC'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].soc_value, 0)
         battery['delta'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].port_name, 0)
-    ev_names = [name for name in keys if 'ev' in name]
+    ev_names = [name for name in keys if 'ev:' in name]
     evs = []
     for ev_name in ev_names:
         ev = dict()
@@ -780,12 +780,19 @@ def append_optim_results_to_dict(optimiser, site, node_uid_dict, site_dict):
     if evs:
         for ev in evs:
             name = ev['name']
+            found=False
             for i in range(len(site_dict['evs'])):
-                if name==site_dict['evs'][i]['name']:
+                if name=='ev:'+site_dict['evs'][i]['name']:
                     site_dict['evs'][i]['SOC'] = ev['SOC']
                     site_dict['evs'][i]['delta'] = ev['delta']
                     site_dict['evs'][i]['trip_infeasibility'] = ev['trip_infeasibility']
                     site_dict['evs'][i]['charge_status'] = ev['charge_status']
+                    found=True
+            if not found:
+                if retrieve_value(site_dict,'lost_ev_results') is not None:
+                    site_dict['lost_ev_results'].append(ev)
+                else:
+                    site_dict['lost_ev_results'] = list(ev)
 
     site_dict['aggregate_load'] = aggregate_load
     site_dict['import_violation'] = import_violation
