@@ -27,6 +27,11 @@ NOTE: This package is not on pypi. Doing `pip install echo` will NOT install thi
 ### [Optional]
 If you plan to use echo_scenario to solve power flows then you will need to install sgt and sgt-e-json.
 
+1. Install SmartgridToolbox by following the instructions here https://gitlab.com/SmartGridToolbox/SmartGridToolbox
+2. Install the SmartGridToolbox python bindings by following the instructions here https://smartgridtoolbox.gitlab.io/SmartGridToolbox/python_bindings.html
+3. Install sgt-e-json and its python bindings following instructions here https://gitlab.com/SmartGridToolbox/sgt-e-json
+4. If pip install of the sgt-e-json python bindings failed, then a work around is to run `python setup.py`
+
 ## Solver
 The following solvers can be used
 
