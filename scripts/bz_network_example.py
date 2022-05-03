@@ -1,3 +1,6 @@
+import pandas as pd
+from echo.bz_builder import *
+
 time_periods = 48
 
 df = pd.DataFrame({
@@ -113,3 +116,11 @@ network_dict = {
 x = convert_dict_to_nx(network_dict)
 check_nx_for_floating_nodes(x)
 nx.draw(x, with_labels=True)
+
+em = convert_nx_to_echo(x)
+
+battery = {'max_capacity': 15., 'depth_of_discharge_limit':0,
+            'charging_power_limit':1.25, 'discharging_power_limit':-1.25,
+           'charging_efficiency':1., 'discharging_efficiency':1.,
+           'initial_state_of_charge':0}
+b = create_battery_node(battery)
