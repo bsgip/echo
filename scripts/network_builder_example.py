@@ -30,7 +30,9 @@ network_dict = {
                 'id': 'load',
                 'type': 'load',
                 'ports': ['load'],
-                'data': 'load'
+                'data': 'load',
+                'parameters': {},
+                'results': {'soc_result', 'power_result', 'other'}  # echo results stored in pandas df
             }
         }
     },
@@ -44,6 +46,14 @@ network_dict = {
                    'res': 'elec'},
 
     }
+}
+
+
+objective_dict = {
+    'import_tariff': {'prices': [],
+                      'type': None,
+                      'component': 'port_or_path_name'}
+
 }
 
 # Convert dict to nx

@@ -90,11 +90,13 @@ def run_echo_optimiser(echo_graph,
                        optimiser_engine='cplex',
                        opt_display=False):
 
-    # Check we have consistent array lengths
+    # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
         for port_name, port_obj in node_obj.ports.items():
             array_length_check(port_obj.initial_value, time_periods,
                                'port "{}" on node "{}", should have length = {} but has length = '.format(port_name, node_name, time_periods), scalar_ok=True)
+
+    # todo other whole model checks
 
     optimiser = EchoOptimiser(interval_duration=interval_duration,
                               number_of_intervals=time_periods,
@@ -129,6 +131,42 @@ def connect_nodes(system, node1, node2, port1, port2):
         system.connect_two_nodes_create_edges_create_ports(node1, node2)
     else:
         system.connect_ports_and_create_edge(p1, p2)
+
+
+def combine_two_graphs(g1, g2, p1=None, p2=None):
+    """ Takes two graphs and combines them, returning the combination as a third graph"""
+    # Initialise a new graph
+    output = ecm.OptimisationGraph()
+
+    # Add all nodes from both graphs
+    for n in g1.node_obj.values():
+        output.add_node_obj(n)
+    for n in g2.node_obj.values():
+        output.add_node_obj(n)
+
+    # Add all edges from both graphs
+    for e in g1.edge_objs.values():
+        output.add_edge_obj(e)
+    for e in g2.edge_objs.values():
+        output.add_edge_obj(e)
+
+    # Find each port object
+    port1 = None
+    port2 = None
+    for n in output.node_obj.values():
+        for port_name, port_obj in n.ports.items():
+            if port_name == p1:
+                port1 = port_obj
+            if port_name == p2:
+                port2 = port_obj
+
+    assert (port1 is not None) and (port2 is not None), 'Ports to be connected cannot be found in the graphs provided.'
+    output.connect_ports_and_create_edge(port1, port2)
+    return output
+
+
+def split_graph():
+    pass
 
 
 def create_battery_node(battery):
