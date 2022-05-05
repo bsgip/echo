@@ -34,7 +34,6 @@ def convert_nx_to_echo(g, df):
     """ Creates echo model from nx graph"""
 
     node_uid_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
-    port_dict = {}
 
     system = ecm.OptimisationGraph()
 
@@ -81,6 +80,81 @@ def convert_nx_to_echo(g, df):
     return system, node_uid_dict
 
 
+def convert_objective_to_echo_objective(em, node_uid_dict, objective_dict):
+    objective_list = []
+    for obj_name, obj_dict in objective_dict.items():
+        if obj_dict['type'] == 'import_tariff':
+            new_obj = create_import_tariff(obj_dict, node_uid_dict, em)
+            objective_list.append(new_obj)
+        if (obj_dict['type'] == 'import_demand_tariff') or (obj_dict['type'] == 'export_demand_tariff'):
+            new_obj = create_demand_tariff(obj_dict, node_uid_dict, em)
+            objective_list.append(new_obj)
+
+    output = obj.ObjectiveSet(objective_list=objective_list)
+    return output
+
+
+def create_import_tariff(tariff_dict, node_uid_dict, em):
+
+    tariff_array = tariff_dict['prices']
+    target_node = tariff_dict['component']['node']
+    target_port = tariff_dict['component']['port']
+    node_obj = em.node_obj[node_uid_dict[target_node]]
+    component_obj = node_obj.ports[target_port]
+    t = obj.ImportTariff(component=component_obj,
+                         tariff_array=tariff_array)
+    return t
+
+
+def create_export_tariff(tariff_dict, node_uid_dict, em):
+
+    prices = tariff_dict['prices']
+    target_node = tariff_dict['component']['node']
+    target_port = tariff_dict['component']['port']
+    node_obj = em.node_obj[node_uid_dict[target_node]]
+    component_obj = node_obj.ports[target_port]
+    t = obj.ExportTariff(component=component_obj,
+                         tariff_array=prices)
+    return t
+
+
+def create_demand_tariff(tariff_dict, node_uid_dict, em):
+
+    echo_charge_list = []
+    charges = tariff_dict['charges']  # list of charge dicts
+    for c in charges:
+        rate = c['rate']
+        window = c['window']
+        if 'min_demand' in c:
+            min_demand = c['min_demand']
+        else:
+            min_demand = 0
+
+        c = obj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)
+        echo_charge_list.append(c)
+
+    target_node = tariff_dict['component']['node']
+    target_port = tariff_dict['component']['port']
+    node_obj = em.node_obj[node_uid_dict[target_node]]
+    component_obj = node_obj.ports[target_port]
+
+    if 'import' in tariff_dict['type']:
+        import_demand = True
+        export_demand = False
+    else:
+        import_demand = False
+        export_demand = True
+
+    demand_tariff = obj.DemandTariffObjective(component=component_obj,
+                                              demand_charges=echo_charge_list,
+                                              excess_demand_charge=None,
+                                              off_peak_demand_charge=None,
+                                              export_demand=export_demand,
+                                              import_demand=import_demand)
+
+    return demand_tariff
+
+
 def run_echo_optimiser(echo_graph,
                        objective_set,
                        interval_duration,
@@ -117,6 +191,7 @@ def process_optimisation_results(optimiser):
 
 
 def connect_nodes(system, node1, node2, port1, port2):
+    #todo clean this up
 
     if port1 is not None:
         p1 = node1.ports[port1]
@@ -134,6 +209,7 @@ def connect_nodes(system, node1, node2, port1, port2):
 
 
 def combine_two_graphs(g1, g2, p1=None, p2=None):
+    # todo test this function
     """ Takes two graphs and combines them, returning the combination as a third graph"""
     # Initialise a new graph
     output = ecm.OptimisationGraph()
@@ -169,8 +245,8 @@ def split_graph():
     pass
 
 
-def create_battery_node(battery):
-
+def create_battery_node(node_dict):
+    battery = node_dict['parameters']
     battery_node = ecm.Node()
     b = ecm.ElectricalStorage(max_capacity=battery['max_capacity'],
                               depth_of_discharge_limit=battery['depth_of_discharge_limit'],
@@ -179,7 +255,9 @@ def create_battery_node(battery):
                               charging_efficiency=battery['charging_efficiency'],
                               discharging_efficiency=battery['discharging_efficiency'],
                               initial_state_of_charge=battery['initial_state_of_charge'])
-    battery_node.ports['bess'] = b
+
+    port_name = node_dict['ports'][0]
+    battery_node.ports[port_name] = b
     return battery_node
 
 
@@ -198,14 +276,13 @@ def create_flex_node(node_dict):
 
 
 def create_load_node(load_dict, df):
-
     col_name = load_dict['data']
     load_profile = df[col_name]
     load = ecm.Node()           # site load
     l1 = ecm.ElectricalDemand()
     l1.add_demand_profile_from_array(load_profile, expansion_periods=1)
-    load.ports['load'] = l1
-
+    port_name = load_dict['ports'][0]
+    load.ports[port_name] = l1
     return load
 
 
@@ -214,12 +291,14 @@ def create_solar_node(solar_dict, df):
     pv_profile = df[col_name]
     solar = ecm.Node()
     pv = ecm.ElectricalGeneration()
-    pv.curtailable = False
+    pv.curtailable = False  #todo this should be set from the dict
     pv.add_generation_profile_from_array(pv_profile, expansion_periods=1)
     solar.ports['pv'] = pv
+    return solar
 
 
 def create_ev(ev, num_time_periods):
+
     # Straight from echo_scenario
     ev_subgraph = ecm.OptimisationGraph()
 
