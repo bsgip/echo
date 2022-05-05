@@ -1,5 +1,5 @@
 import pandas as pd
-from echo.bz_builder import *
+from echo.echo_builder import *
 
 time_periods = 48
 
