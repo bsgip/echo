@@ -41,6 +41,13 @@ class OptimisationGraph(Graph):
         else:
             add_single_edge(edge)
 
+    def add_subgraph(self, subgraph):
+        for _, new_node_obj in subgraph.node_obj.items():
+            self.add_node_obj(new_node_obj)
+        for _, new_edge_obj in subgraph.edge_obj.items():
+            self.add_edge_obj(new_edge_obj)
+
+
     def connect_ports_and_create_edge(self, port1, port2):
         e = Edge(vertices=(port1, port2))
         self.add_edge_obj(e)

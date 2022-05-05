@@ -23,7 +23,7 @@ network_dict = {
             'Node': {
                 'id': 'elec_cp',
                 'type': 'tellegen',
-                'ports': ['upstream', 'load', 'bess']
+                'ports': ['upstream', 'load', 'bess', 'ev']
             }
         },
         'load': {
@@ -53,10 +53,10 @@ network_dict = {
         'ev1': {
             'Node': {
                 'id': 'ev1',
-                'type': 'ev_conv',
+                'type': 'ev',
                 'ports': ['ev'],
-                'parameters': {'available': np.array([1] * 24 + [0] * 24 + [1] * 24 + [0] * 24),
-                               'usage': np.array([0.0] * 24 + [0.5] * 24 + [0.0] * 24 + [1.0] * 24),
+                'parameters': {'available': np.array([1] * 24 + [0] * 24),
+                               'usage': np.array([0.0] * 24 + [0.5] * 24),
                                'max_capacity': 40.,
                                'depth_of_discharge_limit': 0,
                                'charging_power_limit': 10.,
@@ -64,9 +64,10 @@ network_dict = {
                                'charging_efficiency': 1.,
                                'discharging_efficiency': 1.,
                                'initial_state_of_charge': 20.,
-                               'charge_mode': 'V2G',
-                               'soc_conserv': 20.,
-                               'soc_conserv_cost': 10.}
+                               'charge_mode': 'V1G',
+                               'soc_conserv': None,
+                               'soc_conserv_cost': 0.,
+                               'enable_trip_slack': True}
             }
         }
     },
@@ -81,6 +82,10 @@ network_dict = {
 
         'edge_3': {'nodes': ('elec_cp', 'battery'),
                    'ports': ('bess', 'bess'),
+                   'res': 'elec'},
+
+        'edge_4': {'nodes': ('elec_cp', 'ev1'),
+                   'ports': ('ev', 'ev'),
                    'res': 'elec'},
 
     }
@@ -134,9 +139,14 @@ grid_node = em.node_obj[node_uid_dict['bulk_grid']]
 cp_node = em.node_obj[node_uid_dict['elec_cp']]
 load_node = em.node_obj[node_uid_dict['load']]
 battery_node = em.node_obj[node_uid_dict['battery']]
+ev_cp_node = em.node_obj[node_uid_dict['ev1']]
+ev_battery = em.node_obj[node_uid_dict['ev1vehicle']]
 
+print(opt.opt_status)
 print('Grid import:\n', opt.values(cp_node.ports['upstream'].port_name, 0))
 print('Load\n', opt.values(load_node.ports['load'].port_name, 0))
 print('Battery\n', opt.values(cp_node.ports['bess'].port_name, 0))
 print('Battery soc\n', opt.values(battery_node.ports['bess'].soc_value, 0))
+print('EV \n', opt.values(ev_cp_node.ports['ev'].port_name, 0))
+
 
