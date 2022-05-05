@@ -50,10 +50,11 @@ network_dict = {
 
 
 objective_dict = {
-    'import_tariff': {'prices': [],
-                      'type': None,
-                      'component': 'port_or_path_name'}
-
+    'import_tariff': {'prices': [0.1]*24 + [0.2]*24,
+                      'type': 'import_tariff',
+                      'component': {'node': 'elec_cp',
+                                    'port': 'upstream'}
+                      }
 }
 
 # Convert dict to nx
