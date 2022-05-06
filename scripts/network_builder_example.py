@@ -64,7 +64,7 @@ network_dict = {
                                'charging_efficiency': 1.,
                                'discharging_efficiency': 1.,
                                'initial_state_of_charge': 20.,
-                               'charge_mode': 'V1G',
+                               'charge_mode': 'V0G',
                                'soc_conserv': None,
                                'soc_conserv_cost': 0.,
                                'enable_trip_slack': True}
@@ -140,13 +140,13 @@ cp_node = em.node_obj[node_uid_dict['elec_cp']]
 load_node = em.node_obj[node_uid_dict['load']]
 battery_node = em.node_obj[node_uid_dict['battery']]
 ev_cp_node = em.node_obj[node_uid_dict['ev1']]
-ev_battery = em.node_obj[node_uid_dict['ev1vehicle']]
+#ev_battery = em.node_obj[node_uid_dict['ev1vehicle']]
 
 print(opt.opt_status)
 print('Grid import:\n', opt.values(cp_node.ports['upstream'].port_name, 0))
 print('Load\n', opt.values(load_node.ports['load'].port_name, 0))
 print('Battery\n', opt.values(cp_node.ports['bess'].port_name, 0))
 print('Battery soc\n', opt.values(battery_node.ports['bess'].soc_value, 0))
-print('EV \n', opt.values(ev_cp_node.ports['ev'].port_name, 0))
+#print('EV \n', opt.values(ev_cp_node.ports['ev'].port_name, 0))
 
 

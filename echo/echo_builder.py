@@ -67,9 +67,11 @@ def convert_nx_to_echo(g, df):
 
         if node_dict['type'] == 'ev':
             new_subgraph, node_map = create_ev(node_dict, df)
-            system.add_subgraph(new_subgraph)
+            if node_dict['parameters']['charge_mode'] == 'V0G':
+                system.add_node_obj(new_subgraph)
+            else:
+                system.add_subgraph(new_subgraph)
             node_uid_dict.update(node_map)
-
 
     # Do edges
     for edge in g.edges:
@@ -173,8 +175,6 @@ def run_echo_optimiser(echo_graph,
                        discount_rate=0,
                        optimiser_engine='cplex',
                        opt_display=False):
-
-
 
     # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
@@ -333,10 +333,13 @@ def create_ev(ev_dict, df):
         ev['trip_infeasibility'] = trip_infeasibility
         ev_node = ecm.Node()  # site load
         ev_port = ecm.ElectricalDemand()
-        ev_node.add_demand_profile_from_array(ev_delta, expansion_periods=1)
+        ev_port.add_demand_profile_from_array(ev_delta, expansion_periods=1)
         port_name = ev_dict['ports'][0]
         ev_node.ports[port_name] = ev_port
-        return ev_node
+
+        node_map = {ev_dict['id']: ev_node.uid}
+        # todo check this is working
+        return ev_node, node_map
 
     #### V1G checks
     if ev['charge_mode'] == 'V1G':
