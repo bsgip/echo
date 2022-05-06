@@ -523,44 +523,26 @@ def extract_results(optimiser, node_uid_dict):
             output[node_name]['delta'] = optimiser.values(battery_node.ports['bess'].port_name, 0)
             output[node_name]['optimised_capacity'] = optimiser.values(
                 battery_node.ports['bess'].optimised_storage_capacity, 0)
-        # if 'ev' in node_name:
-        #     output[node_name] = {}
-        #     ev_cp_node = system.node_obj[node_uid]
-        #     output[node_name]['SOC'] = optimiser.values(ev_cp_node.ports['ev'].soc_value, 0)
-        #     output[node_name]['delta'] = optimiser.values(ev_cp_node.ports['ev'].port_name, 0)
-        #     output[node_name]['trip_infeasibility'] = optimiser.values(ev_cp_node.ports['ev'].trip_slack, 0)
-        #     output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
+        elif 'ev' in node_name:
+            output[node_name] = {}
+            ev_node = system.node_obj[node_uid]
+            output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
+            output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
+            if hasattr(ev_node.ports['vehicle'], 'trip_slack'):
+                output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
+                output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
+
+        else:
+            # Just grab the port value
+            output[node_name] = {}
+            node_obj = system.node_obj[node_uid]
+            for port_name, port_obj in node_obj.ports.items():
+                output[node_name][port_name] = optimiser.values(port_obj.port_name, 0)
+
 
     return output
 
-    ev_names = [name for name in keys if 'ev:' in name]
-    evs = []
-    for ev_name in ev_names:
-        ev = dict()
-        ev['name'] = ev_name
-        ev['SOC'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
-        ev['delta'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
-        ev['trip_infeasibility'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
-        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible'
 
-        evs.append(ev)
-
-    # todo generalise below
-    aggregate_load = optimiser.values(system.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
-
-    if hasattr(system.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
-        import_violation = -optimiser.values(
-            system.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
-    else:
-        import_violation = 0. * aggregate_load
-
-    if hasattr(system.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
-        export_violation = -optimiser.values(
-            system.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
-    else:
-        export_violation = 0. * aggregate_load
-
-    return aggregate_load, battery, evs, import_violation, export_violation
 
     # ## VERSION THAT ITERATES THROUGH PYOMO MODEL VARS/PARAMS
     # all_pyomo_components = {}
@@ -579,7 +561,6 @@ def extract_results(optimiser, node_uid_dict):
     #
     #     output[node_name] = node_dict
 
-    return output
 
 
 def append_results(result_dict, network_dict):

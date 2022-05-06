@@ -86,7 +86,7 @@ network_dict = {
                    'res': 'elec'},
 
         'edge_4': {'nodes': ('elec_cp', 'ev1'),
-                   'ports': ('ev', 'ev_c'),
+                   'ports': ('ev', 'ev_cp'),
                    'res': 'elec'},
 
     }
@@ -137,8 +137,8 @@ opt = run_echo_optimiser(em,
                          optimiser_engine='cplex',
                          opt_display=False)
 
-# results = extract_results(opt, node_uid_dict)
-
+results = extract_results(opt, node_uid_dict)
+append_results(results, network_dict)
 
 # Get some results
 grid_node = em.node_obj[node_uid_dict['bulk_grid']]
