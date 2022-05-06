@@ -13,16 +13,13 @@ def convert_dict_to_nx(netw_jsn):
     print('Converting dict to networkx')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
-    # Node name is the unique node ID
-    # Node dict carries all the relevant node info in a dict
+    # Node name is the unique node ID, Node dict carries all the relevant node info in a dict
     for node_name, node_dict in netw_jsn['components'].items():
         n.add_node(node_name,
                    name=node_name,
                    attr=node_dict)
 
-    # Add edges
-    # Edge name is the unique edge ID
-    # Edge dict carries node pair info, optional port pair info, and resource type
+    # Add edges, Edge name is the unique edge ID, Edge dict carries node pair info, optional port pair info, and resource type
     for edge_name, edge_dict in netw_jsn['edges'].items():
         # Check that both node edges exist already
         assert edge_dict['nodes'][0] in n.nodes, \
@@ -35,8 +32,9 @@ def convert_dict_to_nx(netw_jsn):
                    ports=edge_dict['ports'],
                    res=edge_dict['res'])
 
-    # Check there are no floating nodes
+    # Do some checks
     check_nx_for_floating_nodes(n)
+    check_port_names_are_consistent(n)
 
     return n
 
@@ -58,7 +56,7 @@ def convert_nx_to_echo(g, df):
             system.add_node_obj(new_node)
             node_uid_dict[node] = new_node.uid
 
-        if node_dict['type']== 'tellegen':
+        if node_dict['type'] == 'tellegen':
             new_node = create_tellegen_node(node_dict)
             system.add_node_obj(new_node)
             node_uid_dict[node] = new_node.uid
@@ -74,9 +72,12 @@ def convert_nx_to_echo(g, df):
             node_uid_dict[node] = new_node.uid
 
         if node_dict['type'] == 'ev':
-            new_subgraph, node_map = create_ev(node_dict, df)
-            system.add_subgraph(new_subgraph)
-            node_uid_dict.update(node_map)
+            # new_subgraph, node_map = create_ev(node_dict, df)
+            # system.add_subgraph(new_subgraph)
+            # node_uid_dict.update(node_map)
+            new_node = create_ev(node_dict, df)
+            system.add_node_obj(new_node)
+            node_uid_dict[node] = new_node.uid
 
     # Do edges
     for edge in g.edges:
@@ -136,7 +137,6 @@ def create_export_tariff(tariff_dict, node_uid_dict, em):
 
 
 def create_demand_tariff(tariff_dict, node_uid_dict, em):
-
     echo_charge_list = []
     charges = tariff_dict['charges']  # list of charge dicts
     for c in charges:
@@ -147,7 +147,7 @@ def create_demand_tariff(tariff_dict, node_uid_dict, em):
         else:
             min_demand = 0
         # todo allow demand tariffs to be specific with start/end times
-        c = obj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)   # Create demand charge
+        c = obj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)  # Create demand charge
         echo_charge_list.append(c)
 
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
@@ -163,7 +163,7 @@ def create_demand_tariff(tariff_dict, node_uid_dict, em):
 
 
 def create_throughput_tariff(tariff_dict, node_uid_dict, em):
-    #todo test this
+    # todo test this
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
     t = obj.ThroughputCost(component=component_obj, rate=tariff_dict['rate'])
     return t
@@ -200,20 +200,23 @@ def run_echo_optimiser(echo_graph,
                        discount_rate=0,
                        optimiser_engine='cplex',
                        opt_display=False):
-
     print('Performing whole model checks')
     # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
         for port_name, port_obj in node_obj.ports.items():
             # Check we have the correct array lengths - todo may not be sufficient to just check initial value, what about other arrays
             array_length_check(port_obj.initial_value, time_periods,
-                               'port "{}" on node "{}", should have length = {} but has length = '.format(port_name, node_name, time_periods), scalar_ok=True)
+                               'port "{}" on node "{}", should have length = {} but has length = '.format(port_name,
+                                                                                                          node_name,
+                                                                                                          time_periods),
+                               scalar_ok=True)
 
             # Check every port has an edge, if it doesn't, set it to zero so it doesn't interfere w the optimisation
-            success = port_connectivity_check(port_obj, echo_graph)
-            if success is False:
-                print('port "{}" on node "{}" has no edge, setting port to zero'.format(port_name, node_name))
-                port_obj.set_flow_constraints(max_import=0., max_export=0.)
+            if port_obj.optional is True:
+                success = port_connectivity_check(port_obj, echo_graph)
+                if success is False:
+                    print('port "{}" on node "{}" has no edge, setting port to zero'.format(port_name, node_name))
+                    port_obj.set_flow_constraints(max_import=0., max_export=0.)
 
     optimiser = EchoOptimiser(interval_duration=interval_duration,
                               number_of_intervals=time_periods,
@@ -234,7 +237,7 @@ def process_optimisation_results(optimiser):
 
 
 def connect_nodes(system, node1, node2, port1, port2):
-    #todo clean this up
+    # todo clean this up
 
     if port1 is not None:
         p1 = node1.ports[port1]
@@ -321,7 +324,7 @@ def create_flex_node(node_dict):
 def create_load_node(load_dict, df):
     col_name = load_dict['data']
     load_profile = df[col_name]
-    load = ecm.Node()           # site load
+    load = ecm.Node()  # site load
     l1 = ecm.ElectricalDemand()
     l1.add_demand_profile_from_array(load_profile, expansion_periods=1)
     port_name = load_dict['ports'][0]
@@ -334,74 +337,71 @@ def create_solar_node(solar_dict, df):
     pv_profile = df[col_name]
     solar = ecm.Node()
     pv = ecm.ElectricalGeneration()
-    pv.curtailable = False  #todo this should be set from the dict
+    pv.curtailable = False  # todo this should be set from the dict
     pv.add_generation_profile_from_array(pv_profile, expansion_periods=1)
     solar.ports['pv'] = pv
     return solar
 
 
 def create_ev(ev_dict, df):
-
     ev = ev_dict['parameters']
-
-    ev_subgraph = ecm.OptimisationGraph()
-    available = ev['available']  # todo these could be pulled from dataframes using a col name instead of directly from dict
+    available = ev['available']  # todo could pull from dataframes using a col name instead of directly from dict
     usage = ev['usage']
     soc_conserv = retrieve_value(ev, 'soc_conserv')
     soc_conserv_cost = retrieve_value(ev, 'soc_conserv_cost')
 
-    ev_cp = ecm.ElectricalTellegenNode()
-    port_name = ev_dict['ports'][0] #todo update
+    ev_port_name = ev_dict['ports'][0]
+    ev_cp = ecm.EV(charge_mode=ev['charge_mode'],
+                   connection_port_name=ev_port_name,
+                   max_capacity=ev['max_capacity'],
+                   depth_of_discharge_limit=ev['depth_of_discharge_limit'],
+                   charging_power_limit=ev['charging_power_limit'],
+                   discharging_power_limit=-1e4,
+                   charging_efficiency=ev['charging_efficiency'],
+                   discharging_efficiency=ev['discharging_efficiency'],
+                   initial_state_of_charge=ev['initial_state_of_charge'])
 
-    # todo need to make sure the port names below do not conflict with the provided port name
-    ev_cp.ports['usage'] = ecm.ElectricalPort()
-    ev_cp.ports['vehicle'] = ecm.ElectricalPort()
-
-    if ev['charge_mode'] == 'V0G':
-        process_V0G_charging(ev, ev['interval_duration'])
-        ev_cp.ports[port_name] = ecm.ElectricalDemand()  #From the cp perspective, the EV is just a load
-        ev_cp.ports[port_name].add_demand_profile_from_array(ev['V0G_delta'], expansion_periods=1)
-    else:
-        ev_cp.ports[port_name] = ecm.ElectricalPort()
-        ev_cp.ports[port_name].add_active_periods_from_array(available, expansion_periods=1)
-
-    if ev['charge_mode'] == 'V1G':
-        ev_cp.ports[port_name].set_flow_constraints(max_import=ev['charging_power_limit'], max_export=0.) # Enforce discharge to the grid = 0
-
-    ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],
-                                       depth_of_discharge_limit=ev['depth_of_discharge_limit'],
-                                       charging_power_limit=ev['charging_power_limit'],
-                                       discharging_power_limit=-1e4,
-                                       charging_efficiency=ev['charging_efficiency'],
-                                       discharging_efficiency=ev['discharging_efficiency'],
-                                       initial_state_of_charge=ev['initial_state_of_charge'])
-
-    vehicle = ecm.Node()
-    vehicle.ports['ev'] = ev_storage
-    vehicle.ports['ev'].enable_trip_slack = ev['enable_trip_slack']
+    ev_cp.ports[ev_port_name].add_active_periods_from_array(available, expansion_periods=1)
+    ev_cp.ports['vehicle'].enable_trip_slack = ev['enable_trip_slack']
     if soc_conserv is not None:
         assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
-        vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
-        vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
-        vehicle.ports['ev'].available = available
+        ev_cp.ports['vehicle'].soc_conserv = soc_conserv  # kWh
+        ev_cp.ports['vehicle'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
+        ev_cp.ports['vehicle'].available = available
 
-    trip = ecm.Node()
-    usage_port = ecm.ElectricalDemand()
-    usage_port.add_demand_profile_from_array(usage, expansion_periods=1)
-    trip.ports['usage'] = usage_port
+    ev_cp.ports['usage'].add_demand_profile_from_array(usage, expansion_periods=1)
 
-    # Add all nodes (3)
-    ev_subgraph.add_node_obj([vehicle, trip, ev_cp])
-    # Do connections
-    ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['vehicle'], ev_storage)
-    ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['usage'], usage_port)
+    return ev_cp
 
-    node_map = {ev_dict['id']: ev_cp.uid,
-                ev_dict['id'] + 'vehicle': vehicle.uid,
-                ev_dict['id'] + 'usage': trip.uid
-                }
-
-    return ev_subgraph, node_map
+    # ev_subgraph = ecm.OptimisationGraph()
+    # ev_cp.ports['usage'] = ecm.ElectricalPort()
+    # ev_cp.ports['vehicle'] = ecm.ElectricalPort()
+    # vehicle = ecm.Node()
+    # vehicle.ports['ev'] = ev_storage
+    # vehicle.ports['ev'].enable_trip_slack = ev['enable_trip_slack']
+    # if soc_conserv is not None:
+    #     assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
+    #     vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
+    #     vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
+    #     vehicle.ports['ev'].available = available
+    #
+    # trip = ecm.Node()
+    # usage_port = ecm.ElectricalDemand()
+    # usage_port.add_demand_profile_from_array(usage, expansion_periods=1)
+    # trip.ports['usage'] = usage_port
+    #
+    # # Add all nodes (3)
+    # ev_subgraph.add_node_obj([vehicle, trip, ev_cp])
+    # # Do connections
+    # ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['vehicle'], ev_storage)
+    # ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['usage'], usage_port)
+    #
+    # node_map = {ev_dict['id']: ev_cp.uid,
+    #             ev_dict['id'] + 'vehicle': vehicle.uid,
+    #             ev_dict['id'] + 'usage': trip.uid
+    #             }
+    #
+    # return ev_subgraph, node_map
 
 
 def check_nx_for_floating_nodes(g):
@@ -412,12 +412,28 @@ def check_nx_for_floating_nodes(g):
     assert len(nodes_without_edges) == 0, 'Node {} has no edge'.format(nodes_without_edges)
 
 
+def check_port_names_are_consistent(g):
+
+    inconsistencies = []
+    for edge in g.edges:
+        for i in range(0, 2):
+            node = edge[i]
+            port = g.edges[edge]['ports'][i]
+            component = g.nodes[node]
+            component_ports = component['attr']['Node']['ports']
+            if port not in component_ports:
+                err = 'Port {} may be misnamed in edge {}. Node {} has ports {}'.format(port, edge, node, component_ports)
+                inconsistencies.append(err)
+
+    assert len(inconsistencies) == 0, inconsistencies
+
+
 def retrieve_value(dict, key):
     out = None
     if key in dict.keys():
         out = dict[key]
         if hasattr(out, '__len__'):
-            if len(out)==0:
+            if len(out) == 0:
                 out = None
     return out
 
@@ -462,32 +478,179 @@ def process_V0G_charging(ev, interval_duration):
 
 def V0G_charging(ev, interval_duration, force_conv=False):
     """ Convert a V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
-    available = ev['available']                         # bool
-    usage = ev['usage']                                 # kW
-    charge_limit = ev['charging_power_limit']           # kW
-    max_capacity = ev['max_capacity']                   # kWh
-    initial_soc = ev['initial_state_of_charge']         # kWh
-    charging_efficiency = ev['charging_efficiency']     # ratio
-    tod_charging = retrieve_value(ev, 'tod_charging')   # bool flag
+    available = ev['available']  # bool
+    usage = ev['usage']  # kW
+    charge_limit = ev['charging_power_limit']  # kW
+    max_capacity = ev['max_capacity']  # kWh
+    initial_soc = ev['initial_state_of_charge']  # kWh
+    charging_efficiency = ev['charging_efficiency']  # ratio
+    tod_charging = retrieve_value(ev, 'tod_charging')  # bool flag
     if (tod_charging is not None) and (not force_conv):
         available = available * tod_charging
     T = len(available)
-    soc = np.zeros((T+1,))
+    soc = np.zeros((T + 1,))
     soc[0] = initial_soc
-    trip_infeasibility = np.zeros((T+1,))
+    trip_infeasibility = np.zeros((T + 1,))
     delta = np.zeros((T,))
 
     for t in range(T):
-        if available[t] and (soc[t] < max_capacity):        # available to charge and not at max capacity
-            delta[t] = min(charge_limit, (max_capacity - soc[t])/charging_efficiency/(interval_duration/60))
-            soc[t+1] = soc[t] + delta[t] * (interval_duration/60) * charging_efficiency
-        else:   # if not available then it might be on a trip and using power
-            soc[t+1] = soc[t] - usage[t] * (interval_duration/60)
-        trip_infeasibility[t+1] = - min(soc[t+1], 0)
-        soc[t+1] = max(soc[t+1], 0)
+        if available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
+            delta[t] = min(charge_limit, (max_capacity - soc[t]) / charging_efficiency / (interval_duration / 60))
+            soc[t + 1] = soc[t] + delta[t] * (interval_duration / 60) * charging_efficiency
+        else:  # if not available then it might be on a trip and using power
+            soc[t + 1] = soc[t] - usage[t] * (interval_duration / 60)
+        trip_infeasibility[t + 1] = - min(soc[t + 1], 0)
+        soc[t + 1] = max(soc[t + 1], 0)
 
     success = True if (trip_infeasibility.max() == 0) else False
 
     return success, soc[:-1], delta, trip_infeasibility[:-1]
 
 
+def extract_results(optimiser, node_uid_dict):
+    """ Extracts results from an echo model and returns them in a dict"""
+    system = optimiser.ES
+    output = {}  # for storing results
+
+    # todo decide what to return?
+    #  we could also let the user specify what they want to retrieve
+
+    for node_name, node_uid in node_uid_dict.items():
+        if 'battery' in node_name:
+            output[node_name] = {}
+            battery_node = system.node_obj[node_uid]
+            output[node_name]['SOC'] = optimiser.values(battery_node.ports['bess'].soc_value, 0)
+            output[node_name]['delta'] = optimiser.values(battery_node.ports['bess'].port_name, 0)
+            output[node_name]['optimised_capacity'] = optimiser.values(
+                battery_node.ports['bess'].optimised_storage_capacity, 0)
+        # if 'ev' in node_name:
+        #     output[node_name] = {}
+        #     ev_cp_node = system.node_obj[node_uid]
+        #     output[node_name]['SOC'] = optimiser.values(ev_cp_node.ports['ev'].soc_value, 0)
+        #     output[node_name]['delta'] = optimiser.values(ev_cp_node.ports['ev'].port_name, 0)
+        #     output[node_name]['trip_infeasibility'] = optimiser.values(ev_cp_node.ports['ev'].trip_slack, 0)
+        #     output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
+
+    return output
+
+    ev_names = [name for name in keys if 'ev:' in name]
+    evs = []
+    for ev_name in ev_names:
+        ev = dict()
+        ev['name'] = ev_name
+        ev['SOC'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
+        ev['delta'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
+        ev['trip_infeasibility'] = optimiser.values(system.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
+        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible'
+
+        evs.append(ev)
+
+    # todo generalise below
+    aggregate_load = optimiser.values(system.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
+
+    if hasattr(system.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
+        import_violation = -optimiser.values(
+            system.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
+    else:
+        import_violation = 0. * aggregate_load
+
+    if hasattr(system.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
+        export_violation = -optimiser.values(
+            system.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
+    else:
+        export_violation = 0. * aggregate_load
+
+    return aggregate_load, battery, evs, import_violation, export_violation
+
+    # ## VERSION THAT ITERATES THROUGH PYOMO MODEL VARS/PARAMS
+    # all_pyomo_components = {}
+    # for pyomo_component in optimiser.model.component_objects():
+    #     all_pyomo_components[(str(pyomo_component))] = pyomo_component
+    # for node_name, node_uid in node_uid_dict.items():
+    #     node_obj = system.node_obj[node_uid]
+    #     node_dict = {}
+    #     for port_name, port_obj in node_obj.ports.items():
+    #         node_dict[port_name] = {}
+    #         for attr_name, attr_val in vars(port_obj).items(): # see if there are port attributes that correspond to pyomo model components
+    #             if attr_val in list(all_pyomo_components.keys()):
+    #                 # get the value from the model
+    #                 result = optimiser.values(attr_val, 0)
+    #                 node_dict[port_name][attr_name] = result  # Add result to the dict for this port, for this node
+    #
+    #     output[node_name] = node_dict
+
+    return output
+
+
+def append_results(result_dict, network_dict):
+    """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
+    # todo want to give option to directly edit the original network dict, or return an updated copy
+
+    for node_name, results in result_dict.items():
+        network_dict['components'][node_name]['Node']['results'] = results
+
+
+def extract_site_results(optimiser, site, node_uid_dict):
+    keys = node_uid_dict.keys()
+    battery = None
+    if 'battery' in keys:
+        battery = dict()
+        battery['SOC'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].soc_value, 0)
+        battery['delta'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].port_name, 0)
+    ev_names = [name for name in keys if 'ev:' in name]
+    evs = []
+    for ev_name in ev_names:
+        ev = dict()
+        ev['name'] = ev_name
+        ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
+        ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
+        ev['trip_infeasibility'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
+        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible'
+
+        evs.append(ev)
+
+    aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
+
+    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
+        import_violation = -optimiser.values(
+            site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
+    else:
+        import_violation = 0. * aggregate_load
+
+    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
+        export_violation = -optimiser.values(
+            site.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
+    else:
+        export_violation = 0. * aggregate_load
+
+    return aggregate_load, battery, evs, import_violation, export_violation
+
+
+def append_optim_results_to_dict(optimiser, echo_graph, node_uid_dict, network_dict):
+    aggregate_load, battery, evs, import_violation, export_violation = extract_site_results(optimiser, echo_graph,
+                                                                                            node_uid_dict)
+    if battery:
+        network_dict['battery']['SOC'] = battery['SOC']
+        network_dict['battery']['delta'] = battery['delta']
+    if evs:
+        for ev in evs:
+            name = ev['name']
+            found = False
+            for i in range(len(network_dict['evs'])):
+                if name == 'ev:' + network_dict['evs'][i]['name']:
+                    network_dict['evs'][i]['SOC'] = ev['SOC']
+                    network_dict['evs'][i]['delta'] = ev['delta']
+                    network_dict['evs'][i]['trip_infeasibility'] = ev['trip_infeasibility']
+                    network_dict['evs'][i]['charge_status'] = ev['charge_status']
+                    found = True
+            if not found:
+                if retrieve_value(network_dict, 'lost_ev_results') is not None:
+                    network_dict['lost_ev_results'].append(ev)
+                else:
+                    network_dict['lost_ev_results'] = list(ev)
+
+    network_dict['aggregate_load'] = aggregate_load
+    network_dict['import_violation'] = import_violation
+    network_dict['export_violation'] = export_violation
+    network_dict['opt_status'] = optimiser.opt_status
+    return network_dict

@@ -54,7 +54,7 @@ network_dict = {
             'Node': {
                 'id': 'ev1',
                 'type': 'ev',
-                'ports': ['ev'],
+                'ports': ['ev_cp'],
                 'parameters': {'available': np.array([1] * 24 + [0] * 24),
                                'usage': np.array([0.0] * 24 + [0.5] * 24),
                                'max_capacity': 40.,
@@ -86,7 +86,7 @@ network_dict = {
                    'res': 'elec'},
 
         'edge_4': {'nodes': ('elec_cp', 'ev1'),
-                   'ports': ('ev', 'ev'),
+                   'ports': ('ev', 'ev_c'),
                    'res': 'elec'},
 
     }
@@ -115,6 +115,9 @@ objective_dict = {
                       }
 }
 
+
+results_key = {}
+
 # Convert dict to nx
 x = convert_dict_to_nx(network_dict)
 
@@ -133,6 +136,8 @@ opt = run_echo_optimiser(em,
                          discount_rate=0,
                          optimiser_engine='cplex',
                          opt_display=False)
+
+# results = extract_results(opt, node_uid_dict)
 
 
 # Get some results
