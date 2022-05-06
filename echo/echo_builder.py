@@ -10,6 +10,7 @@ from echo.echo_optimiser import EchoOptimiser
 
 def convert_dict_to_nx(netw_jsn):
     """ Creates nx graph from network dictionary"""
+    print('Converting dict to networkx')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
     # Node name is the unique node ID
@@ -23,6 +24,12 @@ def convert_dict_to_nx(netw_jsn):
     # Edge name is the unique edge ID
     # Edge dict carries node pair info, optional port pair info, and resource type
     for edge_name, edge_dict in netw_jsn['edges'].items():
+        # Check that both node edges exist already
+        assert edge_dict['nodes'][0] in n.nodes, \
+            'Node {} is part of edge {} but is not defined in components dict'.format(edge_dict['nodes'][0], edge_name)
+        assert edge_dict['nodes'][1] in n.nodes, \
+            'Node {} is part of edge {} but is not defined in components dict'.format(edge_dict['nodes'][1], edge_name)
+
         n.add_edge(edge_dict['nodes'][0], edge_dict['nodes'][1],
                    name=edge_name,
                    ports=edge_dict['ports'],
@@ -36,6 +43,7 @@ def convert_dict_to_nx(netw_jsn):
 
 def convert_nx_to_echo(g, df):
     """ Creates echo model from nx graph"""
+    print('Converting networkx model to echo')
 
     node_uid_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
@@ -93,40 +101,40 @@ def convert_nx_to_echo(g, df):
 
 
 def convert_objective_to_echo_objective(em, node_uid_dict, objective_dict):
+    print('Converting objectives to echo objectives')
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
         if obj_dict['type'] == 'import_tariff':
             new_obj = create_import_tariff(obj_dict, node_uid_dict, em)
             objective_list.append(new_obj)
-        if (obj_dict['type'] == 'import_demand_tariff') or (obj_dict['type'] == 'export_demand_tariff'):
+        elif (obj_dict['type'] == 'import_demand_tariff') or (obj_dict['type'] == 'export_demand_tariff'):
             new_obj = create_demand_tariff(obj_dict, node_uid_dict, em)
             objective_list.append(new_obj)
+        elif obj_dict['type'] == 'throughput':
+            new_obj = create_throughput_tariff(obj_dict, node_uid_dict, em)
+            objective_list.append(new_obj)
+        elif (obj_dict['type'] == 'peak_pos_power') or (obj_dict['type'] == 'peak_neg_power'):
+            new_obj = create_peak_power_objective(obj_dict, node_uid_dict, em)
+            objective_list.append(new_obj)
+        elif obj_dict['type'] == 'quadratic':
+            new_obj = create_quadratic_objective(obj_dict, node_uid_dict, em)
+            objective_list.append(new_obj)
+        else:
+            ValueError('Objective not recognised')
 
     output = obj.ObjectiveSet(objective_list=objective_list)
     return output
 
 
 def create_import_tariff(tariff_dict, node_uid_dict, em):
-
-    tariff_array = tariff_dict['prices']
-    target_node = tariff_dict['component']['node']
-    target_port = tariff_dict['component']['port']
-    node_obj = em.node_obj[node_uid_dict[target_node]]
-    component_obj = node_obj.ports[target_port]
-    t = obj.ImportTariff(component=component_obj,
-                         tariff_array=tariff_array)
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    t = obj.ImportTariff(component=component_obj, tariff_array=tariff_dict['prices'])
     return t
 
 
 def create_export_tariff(tariff_dict, node_uid_dict, em):
-
-    prices = tariff_dict['prices']
-    target_node = tariff_dict['component']['node']
-    target_port = tariff_dict['component']['port']
-    node_obj = em.node_obj[node_uid_dict[target_node]]
-    component_obj = node_obj.ports[target_port]
-    t = obj.ExportTariff(component=component_obj,
-                         tariff_array=prices)
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    t = obj.ExportTariff(component=component_obj, tariff_array=tariff_dict['prices'])
     return t
 
 
@@ -141,30 +149,50 @@ def create_demand_tariff(tariff_dict, node_uid_dict, em):
             min_demand = c['min_demand']
         else:
             min_demand = 0
-
-        c = obj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)
+        # todo allow demand tariffs to be specific with start/end times
+        c = obj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)   # Create demand charge
         echo_charge_list.append(c)
 
-    target_node = tariff_dict['component']['node']
-    target_port = tariff_dict['component']['port']
-    node_obj = em.node_obj[node_uid_dict[target_node]]
-    component_obj = node_obj.ports[target_port]
-
-    if 'import' in tariff_dict['type']:
-        import_demand = True
-        export_demand = False
-    else:
-        import_demand = False
-        export_demand = True
-
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    import_demand = True if 'import' in tariff_dict['type'] else False
+    export_demand = False if 'import' in tariff_dict['type'] else True
     demand_tariff = obj.DemandTariffObjective(component=component_obj,
                                               demand_charges=echo_charge_list,
                                               excess_demand_charge=None,
                                               off_peak_demand_charge=None,
                                               export_demand=export_demand,
                                               import_demand=import_demand)
-
     return demand_tariff
+
+
+def create_throughput_tariff(tariff_dict, node_uid_dict, em):
+    #todo test this
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    t = obj.ThroughputCost(component=component_obj, rate=tariff_dict['rate'])
+    return t
+
+
+def create_peak_power_objective(tariff_dict, node_uid_dict, em):
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    if 'pos' in tariff_dict['type']:
+        t = obj.PeakPositivePower(component=component_obj)
+    else:
+        t = obj.PeakNegativePower(component=component_obj)
+    return t
+
+
+def create_quadratic_objective(tariff_dict, node_uid_dict, em):
+    component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em)
+    t = obj.QuadraticPower(component=component_obj)
+    return t
+
+
+def get_tariff_component_from_node_port_name(tariff_dict, node_uid_dict, em):
+    target_node = tariff_dict['component']['node']
+    target_port = tariff_dict['component']['port']
+    node_obj = em.node_obj[node_uid_dict[target_node]]
+    component_obj = node_obj.ports[target_port]
+    return component_obj
 
 
 def run_echo_optimiser(echo_graph,
@@ -176,13 +204,19 @@ def run_echo_optimiser(echo_graph,
                        optimiser_engine='cplex',
                        opt_display=False):
 
+    print('Performing whole model checks')
     # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
         for port_name, port_obj in node_obj.ports.items():
+            # Check we have the correct array lengths - todo may not be sufficient to just check initial value, what about other arrays
             array_length_check(port_obj.initial_value, time_periods,
                                'port "{}" on node "{}", should have length = {} but has length = '.format(port_name, node_name, time_periods), scalar_ok=True)
 
-    # todo other whole model checks
+            # Check every port has an edge, if it doesn't, set it to zero so it doesn't interfere w the optimisation
+            success = port_connectivity_check(port_obj, echo_graph)
+            if success is False:
+                print('port "{}" on node "{}" has no edge, setting port to zero'.format(port_name, node_name))
+                port_obj.set_flow_constraints(max_import=0., max_export=0.)
 
     optimiser = EchoOptimiser(interval_duration=interval_duration,
                               number_of_intervals=time_periods,
@@ -222,7 +256,7 @@ def connect_nodes(system, node1, node2, port1, port2):
 
 def combine_two_graphs(g1, g2, p1=None, p2=None):
     # todo test this function
-    """ Takes two graphs and combines them, returning the combination as a third graph"""
+    """ Takes two networkx graphs and combines them, returning the combination as a third graph"""
     # Initialise a new graph
     output = ecm.OptimisationGraph()
 
@@ -312,25 +346,26 @@ def create_solar_node(solar_dict, df):
 def create_ev(ev_dict, df):
 
     ev = ev_dict['parameters']
-
+    interval_duration = ev['interval_duration']
     ## V0G processing
     if ev['charge_mode'] == 'V0G':
-        # convert to a load
-        interval_duration = len(ev['usage'])
-
+        # Attempt to resolve to a single load by applying conv charging steps
         success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration)
+        # Add results to the ev dict
         ev['delta'] = ev_delta
         ev['SOC'] = ev_soc
         if retrieve_value(ev, 'tod_charging') is not None:
             if success:
                 ev['charge_status'] = 'success'
-            else:  # attempt conv
+            else:  # force conv
                 success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration, force_conv=True)
                 ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
 
         else:
             ev['charge_status'] = 'success' if success else 'infeasible'
         ev['trip_infeasibility'] = trip_infeasibility
+
+        # We should still set this up as a normal ev w
         ev_node = ecm.Node()  # site load
         ev_port = ecm.ElectricalDemand()
         ev_port.add_demand_profile_from_array(ev_delta, expansion_periods=1)
@@ -341,18 +376,9 @@ def create_ev(ev_dict, df):
         # todo check this is working
         return ev_node, node_map
 
-    #### V1G checks
-    if ev['charge_mode'] == 'V1G':
-        ###### check that any V1G evs have charge discharge limit of 0 ############
-        if ev['discharging_power_limit'] != 0.0:
-            print('\n ev with id ' + ev_dict['id'] + ' is V1G but discharge limit was not zero, setting to zero \n')
-            ev['discharging_power_limit'] = 0.
-            # todo any other V1G things?
-
-    ### Everything else
+    ### Otherwise - V1G or V2G
 
     ev_subgraph = ecm.OptimisationGraph()
-
     available = ev['available']  # todo these could be pulled from dataframes using a col name instead of directly from dict
     usage = ev['usage']
     soc_conserv = retrieve_value(ev, 'soc_conserv')
@@ -364,13 +390,14 @@ def create_ev(ev_dict, df):
     ev_cp.add_named_electrical_ports(['vehicle', 'usage']) #todo need to make sure these names are unique compared to provided port name
     ev_cp.ports[port_name].add_active_periods_from_array(available, expansion_periods=1)
 
-    if ev['enable_trip_slack'] is True:
-        ev['discharging_power_limit'] = -1e4
+    if ev['charge_mode'] == 'V1G':
+        # Need to set discharge to the grid to zero
+        ev_cp.ports[port_name].set_flow_constraints(max_import=ev['charging_power_limit'], max_export=0.)
 
     ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],
                                        depth_of_discharge_limit=ev['depth_of_discharge_limit'],
                                        charging_power_limit=ev['charging_power_limit'],
-                                       discharging_power_limit=ev['discharging_power_limit'],
+                                       discharging_power_limit=-1e4,
                                        charging_efficiency=ev['charging_efficiency'],
                                        discharging_efficiency=ev['discharging_efficiency'],
                                        initial_state_of_charge=ev['initial_state_of_charge'])
@@ -434,8 +461,15 @@ def array_length_check(array, length, message, scalar_ok=False):
             assert len(array) == length, message + str(len(array))
 
 
+def port_connectivity_check(port_obj, graph):
+    for _, edge_obj in graph.edge_obj.items():
+        if port_obj in edge_obj.vertices:
+            return True
+    return False
+
+
 def V0G_charging(ev, interval_duration, force_conv=False):
-    """ Convert a V0G vehicle (convenience charging) to a load"""
+    """ Convert a V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
     available = ev['available']                         # bool
     usage = ev['usage']                                 # kW
     charge_limit = ev['charging_power_limit']           # kW
@@ -459,7 +493,6 @@ def V0G_charging(ev, interval_duration, force_conv=False):
             soc[t+1] = soc[t] - usage[t] * (interval_duration/60)
         trip_infeasibility[t+1] = - min(soc[t+1], 0)
         soc[t+1] = max(soc[t+1], 0)
-
 
     success = True if (trip_infeasibility.max() == 0) else False
 
