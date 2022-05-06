@@ -67,7 +67,7 @@ network_dict = {
                                'charge_mode': 'V2G',
                                'soc_conserv': False,
                                'soc_conserv_cost': 0.,
-                               'enable_trip_slack': True,
+                               'enable_trip_slack': False,
                                'interval_duration': 30.}  #todo another way to carry this info, we need it for building EVs tho
             }
         }

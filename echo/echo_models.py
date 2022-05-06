@@ -1037,16 +1037,6 @@ class EVCharger(ElectricalPort):
         self.import_constraint_value = import_constraint_value
 
 
-class ElectricVehicle(Node):
-
-    def __init__(self):
-        super(ElectricVehicle, self).__init__()
-        self.units = Units.KW
-
-    def initialise_node(self, model):
-        super(ElectricVehicle, self).initialise_node(model)
-
-
 class Edge(object):
     """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x. """

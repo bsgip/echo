@@ -75,10 +75,7 @@ def convert_nx_to_echo(g, df):
 
         if node_dict['type'] == 'ev':
             new_subgraph, node_map = create_ev(node_dict, df)
-            if node_dict['parameters']['charge_mode'] == 'V0G':
-                system.add_node_obj(new_subgraph)
-            else:
-                system.add_subgraph(new_subgraph)
+            system.add_subgraph(new_subgraph)
             node_uid_dict.update(node_map)
 
     # Do edges
@@ -346,37 +343,6 @@ def create_solar_node(solar_dict, df):
 def create_ev(ev_dict, df):
 
     ev = ev_dict['parameters']
-    interval_duration = ev['interval_duration']
-    ## V0G processing
-    if ev['charge_mode'] == 'V0G':
-        # Attempt to resolve to a single load by applying conv charging steps
-        success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration)
-        # Add results to the ev dict
-        ev['delta'] = ev_delta
-        ev['SOC'] = ev_soc
-        if retrieve_value(ev, 'tod_charging') is not None:
-            if success:
-                ev['charge_status'] = 'success'
-            else:  # force conv
-                success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration, force_conv=True)
-                ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
-
-        else:
-            ev['charge_status'] = 'success' if success else 'infeasible'
-        ev['trip_infeasibility'] = trip_infeasibility
-
-        # We should still set this up as a normal ev w
-        ev_node = ecm.Node()  # site load
-        ev_port = ecm.ElectricalDemand()
-        ev_port.add_demand_profile_from_array(ev_delta, expansion_periods=1)
-        port_name = ev_dict['ports'][0]
-        ev_node.ports[port_name] = ev_port
-
-        node_map = {ev_dict['id']: ev_node.uid}
-        # todo check this is working
-        return ev_node, node_map
-
-    ### Otherwise - V1G or V2G
 
     ev_subgraph = ecm.OptimisationGraph()
     available = ev['available']  # todo these could be pulled from dataframes using a col name instead of directly from dict
@@ -386,13 +352,21 @@ def create_ev(ev_dict, df):
 
     ev_cp = ecm.ElectricalTellegenNode()
     port_name = ev_dict['ports'][0] #todo update
-    ev_cp.add_named_electrical_ports([port_name])
-    ev_cp.add_named_electrical_ports(['vehicle', 'usage']) #todo need to make sure these names are unique compared to provided port name
-    ev_cp.ports[port_name].add_active_periods_from_array(available, expansion_periods=1)
+
+    # todo need to make sure the port names below do not conflict with the provided port name
+    ev_cp.ports['usage'] = ecm.ElectricalPort()
+    ev_cp.ports['vehicle'] = ecm.ElectricalPort()
+
+    if ev['charge_mode'] == 'V0G':
+        process_V0G_charging(ev, ev['interval_duration'])
+        ev_cp.ports[port_name] = ecm.ElectricalDemand()  #From the cp perspective, the EV is just a load
+        ev_cp.ports[port_name].add_demand_profile_from_array(ev['V0G_delta'], expansion_periods=1)
+    else:
+        ev_cp.ports[port_name] = ecm.ElectricalPort()
+        ev_cp.ports[port_name].add_active_periods_from_array(available, expansion_periods=1)
 
     if ev['charge_mode'] == 'V1G':
-        # Need to set discharge to the grid to zero
-        ev_cp.ports[port_name].set_flow_constraints(max_import=ev['charging_power_limit'], max_export=0.)
+        ev_cp.ports[port_name].set_flow_constraints(max_import=ev['charging_power_limit'], max_export=0.) # Enforce discharge to the grid = 0
 
     ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],
                                        depth_of_discharge_limit=ev['depth_of_discharge_limit'],
@@ -468,6 +442,24 @@ def port_connectivity_check(port_obj, graph):
     return False
 
 
+def process_V0G_charging(ev, interval_duration):
+    # Attempt to resolve to a single load by applying conv charging steps
+    success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration)
+    # Add results to the ev dict
+    ev['V0G_delta'] = ev_delta
+    ev['SOC'] = ev_soc
+    if retrieve_value(ev, 'tod_charging') is not None:
+        if success:
+            ev['charge_status'] = 'success'
+        else:  # force conv
+            success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration, force_conv=True)
+            ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
+
+    else:
+        ev['charge_status'] = 'success' if success else 'infeasible'
+    ev['trip_infeasibility'] = trip_infeasibility
+
+
 def V0G_charging(ev, interval_duration, force_conv=False):
     """ Convert a V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
     available = ev['available']                         # bool
@@ -497,3 +489,5 @@ def V0G_charging(ev, interval_duration, force_conv=False):
     success = True if (trip_infeasibility.max() == 0) else False
 
     return success, soc[:-1], delta, trip_infeasibility[:-1]
+
+
