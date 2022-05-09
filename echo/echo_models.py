@@ -1161,7 +1161,7 @@ class EV(ElectricalTellegenNode):
 
         success = True if (trip_infeasibility.max() == 0) else False
 
-        return success, soc[:-1], delta, trip_infeasibility
+        return success, soc[1:], delta, trip_infeasibility
 
     def verify_node(self):
         super(EV, self).verify_node()
