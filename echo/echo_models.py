@@ -1123,17 +1123,17 @@ class EV(ElectricalTellegenNode):
         # Add results to the ev dict
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
-        # if self.tod_charging is not None:
-        #     if success:
-        #         self.charge_status = 'success'
-        #     else:  # force conv
-        #         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
-        #         self.charge_status = 'time of day infeasible, convenience success' if success else 'infeasible'
-        #         self.V0G_delta = ev_delta
-        #         self.V0G_SOC = ev_soc
-        #
-        # else:
-        self.charge_status = 'success' if success else 'infeasible'
+        if self.tod_charging is not None:
+            if success:
+                self.charge_status = 'success'
+            else:  # force conv
+                success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
+                self.charge_status = 'time of day infeasible, convenience success' if success else 'infeasible'
+                self.V0G_delta = ev_delta
+                self.V0G_SOC = ev_soc
+
+        else:
+            self.charge_status = 'success' if success else 'infeasible'
         self.trip_infeasibility = trip_infeasibility
 
     def V0G_charging(self, interval_duration, force_conv=False):
