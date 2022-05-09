@@ -67,7 +67,7 @@ network_dict = {
                                'charge_mode': 'V0G',
                                'soc_conserv': None,
                                'soc_conserv_cost': 0.,
-                               'enable_trip_slack': False,
+                               'enable_trip_slack': True,
                                'interval_duration': 30.}  #todo another way to carry this info, we need it for building EVs tho
             }
         }
@@ -138,7 +138,7 @@ opt = run_echo_optimiser(em,
                          opt_display=False)
 
 results = extract_results(opt, node_uid_dict)
-append_results(results, network_dict)
+new_dict = append_results(results, network_dict, in_place=False)
 
 # Get some results
 grid_node = em.node_obj[node_uid_dict['bulk_grid']]

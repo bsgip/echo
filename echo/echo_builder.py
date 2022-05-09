@@ -371,36 +371,6 @@ def create_ev(ev_dict, df):
 
     return ev_cp
 
-    # ev_subgraph = ecm.OptimisationGraph()
-    # ev_cp.ports['usage'] = ecm.ElectricalPort()
-    # ev_cp.ports['vehicle'] = ecm.ElectricalPort()
-    # vehicle = ecm.Node()
-    # vehicle.ports['ev'] = ev_storage
-    # vehicle.ports['ev'].enable_trip_slack = ev['enable_trip_slack']
-    # if soc_conserv is not None:
-    #     assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
-    #     vehicle.ports['ev'].soc_conserv = soc_conserv  # kWh
-    #     vehicle.ports['ev'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
-    #     vehicle.ports['ev'].available = available
-    #
-    # trip = ecm.Node()
-    # usage_port = ecm.ElectricalDemand()
-    # usage_port.add_demand_profile_from_array(usage, expansion_periods=1)
-    # trip.ports['usage'] = usage_port
-    #
-    # # Add all nodes (3)
-    # ev_subgraph.add_node_obj([vehicle, trip, ev_cp])
-    # # Do connections
-    # ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['vehicle'], ev_storage)
-    # ev_subgraph.connect_ports_and_create_edge(ev_cp.ports['usage'], usage_port)
-    #
-    # node_map = {ev_dict['id']: ev_cp.uid,
-    #             ev_dict['id'] + 'vehicle': vehicle.uid,
-    #             ev_dict['id'] + 'usage': trip.uid
-    #             }
-    #
-    # return ev_subgraph, node_map
-
 
 def check_nx_for_floating_nodes(g):
     """ Checks if we have nodes without any edge"""
@@ -456,55 +426,6 @@ def port_connectivity_check(port_obj, graph):
     return False
 
 
-def process_V0G_charging(ev, interval_duration):
-    # Attempt to resolve to a single load by applying conv charging steps
-    success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration)
-    # Add results to the ev dict
-    ev['V0G_delta'] = ev_delta
-    ev['SOC'] = ev_soc
-    if retrieve_value(ev, 'tod_charging') is not None:
-        if success:
-            ev['charge_status'] = 'success'
-        else:  # force conv
-            success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration, force_conv=True)
-            ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
-
-    else:
-        ev['charge_status'] = 'success' if success else 'infeasible'
-    ev['trip_infeasibility'] = trip_infeasibility
-
-
-def V0G_charging(ev, interval_duration, force_conv=False):
-    """ Convert a V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
-    available = ev['available']  # bool
-    usage = ev['usage']  # kW
-    charge_limit = ev['charging_power_limit']  # kW
-    max_capacity = ev['max_capacity']  # kWh
-    initial_soc = ev['initial_state_of_charge']  # kWh
-    charging_efficiency = ev['charging_efficiency']  # ratio
-    tod_charging = retrieve_value(ev, 'tod_charging')  # bool flag
-    if (tod_charging is not None) and (not force_conv):
-        available = available * tod_charging
-    T = len(available)
-    soc = np.zeros((T + 1,))
-    soc[0] = initial_soc
-    trip_infeasibility = np.zeros((T + 1,))
-    delta = np.zeros((T,))
-
-    for t in range(T):
-        if available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
-            delta[t] = min(charge_limit, (max_capacity - soc[t]) / charging_efficiency / (interval_duration / 60))
-            soc[t + 1] = soc[t] + delta[t] * (interval_duration / 60) * charging_efficiency
-        else:  # if not available then it might be on a trip and using power
-            soc[t + 1] = soc[t] - usage[t] * (interval_duration / 60)
-        trip_infeasibility[t + 1] = - min(soc[t + 1], 0)
-        soc[t + 1] = max(soc[t + 1], 0)
-
-    success = True if (trip_infeasibility.max() == 0) else False
-
-    return success, soc[:-1], delta, trip_infeasibility[:-1]
-
-
 def extract_results(optimiser, node_uid_dict):
     """ Extracts results from an echo model and returns them in a dict"""
     system = optimiser.ES
@@ -529,6 +450,7 @@ def extract_results(optimiser, node_uid_dict):
             if hasattr(ev_node.ports['vehicle'], 'trip_slack'):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
                 output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
+                # todo need to update this to have some tolerance rather than ==0
 
         else:
             # Just grab the port value, todo other node types
