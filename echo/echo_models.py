@@ -1104,7 +1104,7 @@ class EV(ElectricalTellegenNode):
             self.ports['vehicle'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
             self.ports['vehicle'].available = available
 
-        # EV always has a trip port
+        # EV always has a fixed trip port
         self.ports['usage'] = ElectricalDemand()
         self.ports['usage'].add_demand_profile_from_array(usage, expansion_periods=1)
         # Customise connection point port type based on the charge mode
@@ -1173,7 +1173,28 @@ class EV(ElectricalTellegenNode):
         assert self.ports['usage'].initial_value != 0, 'EV usage port needs demand profile added.'
 
 
-
+    def initialise_node(self, model):
+        super(EV, self).initialise_node(model)
+        if self.charge_mode == 'V0G':
+            # Fix the battery state of charge
+            soc_var = getattr(model, self.ports['vehicle'].soc_value)
+            keys = [(0, i) for i in range(len(soc_var))]
+            soc_param = dict(zip(keys, self.V0G_SOC))
+            soc_var.set_values(soc_param)
+            soc_var.fix()
+            # Fix the trip slack variable
+            slack_var = getattr(model, self.ports['vehicle'].trip_slack)
+            slack_param = dict(zip(keys, self.trip_infeasibility))
+            slack_var.set_values(slack_param)
+            slack_var.fix()
+            # Fix the battery charging/discharging
+            cp_charging = self.V0G_delta
+            trip_discharging = self.usage - self.trip_infeasibility
+            power_profile = np.array(cp_charging) + np.array(trip_discharging)
+            power_param = dict(zip(keys, power_profile))
+            power_var = getattr(model, self.ports['vehicle'].port_name)
+            power_var.set_values(power_param)
+            power_var.fix()
 
 
 
