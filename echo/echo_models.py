@@ -1144,7 +1144,7 @@ class EV(ElectricalTellegenNode):
         T = len(self.available)
         soc = np.zeros((T + 1,))
         soc[0] = self.ports['vehicle'].initial_state_of_charge
-        trip_infeasibility = np.zeros((T + 1,))
+        trip_infeasibility = np.zeros((T,))
         delta = np.zeros((T,))
         max_capacity = self.ports['vehicle'].max_capacity
         charge_limit = self.ports['vehicle'].charging_power_limit
@@ -1156,12 +1156,12 @@ class EV(ElectricalTellegenNode):
                 soc[t + 1] = soc[t] + delta[t] * (interval_duration / 60) * charging_efficiency
             else:  # if not available then it might be on a trip and using power
                 soc[t + 1] = soc[t] - self.usage[t] * (interval_duration / 60)
-            trip_infeasibility[t + 1] = - min(soc[t + 1], 0)
+            trip_infeasibility[t] = - min(soc[t + 1], 0)
             soc[t + 1] = max(soc[t + 1], 0)
 
         success = True if (trip_infeasibility.max() == 0) else False
 
-        return success, soc[:-1], delta, trip_infeasibility[:-1]
+        return success, soc[:-1], delta, trip_infeasibility
 
     def verify_node(self):
         super(EV, self).verify_node()
