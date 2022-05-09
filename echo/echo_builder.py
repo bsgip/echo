@@ -349,9 +349,12 @@ def create_ev(ev_dict, df):
     usage = ev['usage']
     soc_conserv = retrieve_value(ev, 'soc_conserv')
     soc_conserv_cost = retrieve_value(ev, 'soc_conserv_cost')
+    tod_charging = retrieve_value(ev, 'tod_charging')
 
     ev_port_name = ev_dict['ports'][0]
     ev_cp = ecm.EV(charge_mode=ev['charge_mode'],
+                   available=available,
+                   usage=usage,
                    connection_port_name=ev_port_name,
                    max_capacity=ev['max_capacity'],
                    depth_of_discharge_limit=ev['depth_of_discharge_limit'],
@@ -359,17 +362,12 @@ def create_ev(ev_dict, df):
                    discharging_power_limit=-1e4,
                    charging_efficiency=ev['charging_efficiency'],
                    discharging_efficiency=ev['discharging_efficiency'],
-                   initial_state_of_charge=ev['initial_state_of_charge'])
-
-    ev_cp.ports[ev_port_name].add_active_periods_from_array(available, expansion_periods=1)
-    ev_cp.ports['vehicle'].enable_trip_slack = ev['enable_trip_slack']
-    if soc_conserv is not None:
-        assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
-        ev_cp.ports['vehicle'].soc_conserv = soc_conserv  # kWh
-        ev_cp.ports['vehicle'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
-        ev_cp.ports['vehicle'].available = available
-
-    ev_cp.ports['usage'].add_demand_profile_from_array(usage, expansion_periods=1)
+                   initial_state_of_charge=ev['initial_state_of_charge'],
+                   soc_conserv=soc_conserv,
+                   soc_conserv_cost=soc_conserv_cost,
+                   interval_duration=ev['interval_duration'],
+                   tod_charging=tod_charging,
+                   trip_slack=ev['enable_trip_slack'])
 
     return ev_cp
 
@@ -533,16 +531,13 @@ def extract_results(optimiser, node_uid_dict):
                 output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
 
         else:
-            # Just grab the port value
+            # Just grab the port value, todo other node types
             output[node_name] = {}
             node_obj = system.node_obj[node_uid]
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = optimiser.values(port_obj.port_name, 0)
 
-
     return output
-
-
 
     # ## VERSION THAT ITERATES THROUGH PYOMO MODEL VARS/PARAMS
     # all_pyomo_components = {}
@@ -562,76 +557,14 @@ def extract_results(optimiser, node_uid_dict):
     #     output[node_name] = node_dict
 
 
-
-def append_results(result_dict, network_dict):
+def append_results(result_dict, network_dict, in_place=False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
     # todo want to give option to directly edit the original network dict, or return an updated copy
-
-    for node_name, results in result_dict.items():
-        network_dict['components'][node_name]['Node']['results'] = results
-
-
-def extract_site_results(optimiser, site, node_uid_dict):
-    keys = node_uid_dict.keys()
-    battery = None
-    if 'battery' in keys:
-        battery = dict()
-        battery['SOC'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].soc_value, 0)
-        battery['delta'] = optimiser.values(site.node_obj[node_uid_dict['battery']].ports['bess'].port_name, 0)
-    ev_names = [name for name in keys if 'ev:' in name]
-    evs = []
-    for ev_name in ev_names:
-        ev = dict()
-        ev['name'] = ev_name
-        ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
-        ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
-        ev['trip_infeasibility'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
-        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible'
-
-        evs.append(ev)
-
-    aggregate_load = optimiser.values(site.node_obj[node_uid_dict['connection_point']].ports['grid'].port_name, 0)
-
-    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'import_slack'):
-        import_violation = -optimiser.values(
-            site.node_obj[node_uid_dict['connection_point']].ports['grid'].import_slack, 0)
+    if in_place is True:
+        for node_name, results in result_dict.items():
+            network_dict['components'][node_name]['Node']['results'] = results
     else:
-        import_violation = 0. * aggregate_load
-
-    if hasattr(site.node_obj[node_uid_dict['connection_point']].ports['grid'], 'export_slack'):
-        export_violation = -optimiser.values(
-            site.node_obj[node_uid_dict['connection_point']].ports['grid'].export_slack, 0)
-    else:
-        export_violation = 0. * aggregate_load
-
-    return aggregate_load, battery, evs, import_violation, export_violation
-
-
-def append_optim_results_to_dict(optimiser, echo_graph, node_uid_dict, network_dict):
-    aggregate_load, battery, evs, import_violation, export_violation = extract_site_results(optimiser, echo_graph,
-                                                                                            node_uid_dict)
-    if battery:
-        network_dict['battery']['SOC'] = battery['SOC']
-        network_dict['battery']['delta'] = battery['delta']
-    if evs:
-        for ev in evs:
-            name = ev['name']
-            found = False
-            for i in range(len(network_dict['evs'])):
-                if name == 'ev:' + network_dict['evs'][i]['name']:
-                    network_dict['evs'][i]['SOC'] = ev['SOC']
-                    network_dict['evs'][i]['delta'] = ev['delta']
-                    network_dict['evs'][i]['trip_infeasibility'] = ev['trip_infeasibility']
-                    network_dict['evs'][i]['charge_status'] = ev['charge_status']
-                    found = True
-            if not found:
-                if retrieve_value(network_dict, 'lost_ev_results') is not None:
-                    network_dict['lost_ev_results'].append(ev)
-                else:
-                    network_dict['lost_ev_results'] = list(ev)
-
-    network_dict['aggregate_load'] = aggregate_load
-    network_dict['import_violation'] = import_violation
-    network_dict['export_violation'] = export_violation
-    network_dict['opt_status'] = optimiser.opt_status
-    return network_dict
+        network_dict = network_dict.copy()
+        for node_name, results in result_dict.items():
+            network_dict['components'][node_name]['Node']['results'] = results
+        return network_dict

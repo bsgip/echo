@@ -1065,6 +1065,8 @@ class EV(ElectricalTellegenNode):
 
     def __init__(self,
                  charge_mode,
+                 available,
+                 usage,
                  connection_port_name,
                  max_capacity,
                  depth_of_discharge_limit,
@@ -1072,11 +1074,21 @@ class EV(ElectricalTellegenNode):
                  discharging_power_limit,
                  charging_efficiency,
                  discharging_efficiency,
-                 initial_state_of_charge
+                 initial_state_of_charge,
+                 tod_charging,
+                 soc_conserv,
+                 soc_conserv_cost,
+                 trip_slack,
+                 interval_duration
                  ):
         super(EV, self).__init__()
         self.charge_mode = charge_mode
+        self.available = available
+        self.usage = usage
         self.cp_name = connection_port_name
+        self.tod_charging = tod_charging
+
+        # EV always has a storage port, set this up correctly
         self.ports['vehicle'] = ElectricalStorage(max_capacity,
                                                   depth_of_discharge_limit,
                                                   charging_power_limit,
@@ -1084,14 +1096,72 @@ class EV(ElectricalTellegenNode):
                                                   charging_efficiency,
                                                   discharging_efficiency,
                                                   initial_state_of_charge)
+        self.ports['vehicle'].enable_trip_slack = trip_slack
+        # Process any constraints on the storage port
+        if soc_conserv is not None:
+            assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
+            self.ports['vehicle'].soc_conserv = soc_conserv  # kWh
+            self.ports['vehicle'].soc_conserv_cost = soc_conserv_cost  # dollars per kwh
+            self.ports['vehicle'].available = available
+
+        # EV always has a trip port
         self.ports['usage'] = ElectricalDemand()
+        self.ports['usage'].add_demand_profile_from_array(usage, expansion_periods=1)
+        # Customise connection point port type based on the charge mode
         if charge_mode == 'V0G':
-            self.ports['cp'] = ElectricalDemand()
-        if charge_mode == 'V1G':
+            self.ports[connection_port_name] = ElectricalGeneration()
+            self.process_V0G_charging(interval_duration)
+            self.ports[connection_port_name].add_generation_profile_from_array(self.V0G_delta*-1, expansion_periods=1)
+        else:
             self.ports[connection_port_name] = ElectricalPort()
-            self.ports[connection_port_name].set_flow_constraints(max_import=charging_power_limit, max_export=0.)
-        if charge_mode == 'V2G':
-            self.ports[connection_port_name] = ElectricalPort()
+            self.ports[connection_port_name].add_active_periods_from_array(available, expansion_periods=1)
+            if charge_mode == 'V1G':
+                self.ports[connection_port_name].set_flow_constraints(max_import=charging_power_limit, max_export=0.)
+
+    def process_V0G_charging(self, interval_duration):
+        success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
+        # Add results to the ev dict
+        self.V0G_delta = ev_delta
+        self.V0G_SOC = ev_soc
+        # if self.tod_charging is not None:
+        #     if success:
+        #         self.charge_status = 'success'
+        #     else:  # force conv
+        #         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
+        #         self.charge_status = 'time of day infeasible, convenience success' if success else 'infeasible'
+        #         self.V0G_delta = ev_delta
+        #         self.V0G_SOC = ev_soc
+        #
+        # else:
+        self.charge_status = 'success' if success else 'infeasible'
+        self.trip_infeasibility = trip_infeasibility
+
+    def V0G_charging(self, interval_duration, force_conv=False):
+        """ Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
+
+        if (self.tod_charging is not None) and (not force_conv):
+            self.available = self.available * self.tod_charging
+        T = len(self.available)
+        soc = np.zeros((T + 1,))
+        soc[0] = self.ports['vehicle'].initial_state_of_charge
+        trip_infeasibility = np.zeros((T + 1,))
+        delta = np.zeros((T,))
+        max_capacity = self.ports['vehicle'].max_capacity
+        charge_limit = self.ports['vehicle'].charging_power_limit
+        charging_efficiency = self.ports['vehicle'].charging_efficiency
+
+        for t in range(T):
+            if self.available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
+                delta[t] = min(charge_limit, (max_capacity - soc[t]) / charging_efficiency / (interval_duration / 60))
+                soc[t + 1] = soc[t] + delta[t] * (interval_duration / 60) * charging_efficiency
+            else:  # if not available then it might be on a trip and using power
+                soc[t + 1] = soc[t] - self.usage[t] * (interval_duration / 60)
+            trip_infeasibility[t + 1] = - min(soc[t + 1], 0)
+            soc[t + 1] = max(soc[t + 1], 0)
+
+        success = True if (trip_infeasibility.max() == 0) else False
+
+        return success, soc[:-1], delta, trip_infeasibility[:-1]
 
     def verify_node(self):
         super(EV, self).verify_node()

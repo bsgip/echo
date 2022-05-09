@@ -174,7 +174,7 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        results = opt.solve(self.model, tee=False, symbolic_solver_labels=True)
+        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
         self.opt_status = results['Solver'][0]
 
     def values(self, variable_name, expansion):
