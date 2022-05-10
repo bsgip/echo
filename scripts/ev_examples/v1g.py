@@ -32,7 +32,7 @@ connection_point.add_named_electrical_ports(['ev', 'grid'])  # create ports to c
 # Create V0G vehicle
 
 available = np.array([1] * 24 + [0] * 24)    # bool when at charger
-usage = np.array([0.0]*24 + [0.1]*24)        # kw average during use
+usage = np.array([0.0]*24 + [0.5]*24)        # kw average during use
 
 ev_cp = EV(charge_mode='V1G',
                available=available,
@@ -44,12 +44,12 @@ ev_cp = EV(charge_mode='V1G',
                discharging_power_limit=-1e4,
                charging_efficiency=1,
                discharging_efficiency=1,
-               initial_state_of_charge=20,
+               initial_state_of_charge=0,
                soc_conserv=None,
                soc_conserv_cost=0.,
                interval_duration=30.,
                tod_charging=None,
-               trip_slack=True)
+               trip_slack=False)
 
 
 system.add_node_obj([grid, ev_cp, connection_point])
@@ -76,16 +76,16 @@ log_infeasible_constraints(optimiser.model)
 ############################ Analyse the Optimisation ########################################
 
 print(optimiser.node_values(ev_cp, 0))
-print('Trip usage:', usage)
-print('EV soc: ', optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-print('Infeasibility: ', ev_cp.trip_infeasibility)
-
-plt.plot(usage)
-plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-plt.plot(ev_cp.trip_infeasibility)
-plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack,0))
-plt.legend(['Usage', 'EV soc', 'infeasibility', 'slack_var'])
-
-print('Slack sum: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack,0).sum())
-print('infeasibility sum: ', ev_cp.trip_infeasibility.sum())
-
+# print('Trip usage:', usage)
+# print('EV soc: ', optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
+# #print('Infeasibility: ', ev_cp.trip_infeasibility)
+#
+# plt.plot(usage)
+# plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
+# #plt.plot(ev_cp.trip_infeasibility)
+# plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack,0))
+# plt.legend(['Usage', 'EV soc', 'infeasibility', 'slack_var'])
+#
+# print('Slack sum: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack,0).sum())
+# #print('infeasibility sum: ', ev_cp.trip_infeasibility.sum())
+#

@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+
 
 import networkx as nx
 import numpy as np
@@ -7,6 +7,9 @@ from networkx import Graph
 import pyomo.environ as en
 from echo.configuration import *
 from echo.constants import *
+
+from pydantic import BaseModel, validator
+from typing import Optional
 
 
 class OptimisationGraph(Graph):
@@ -139,7 +142,39 @@ class ConfigurationError(Exception):
     pass
 
 
+def fix_port_variable(model, var_name, new_values, expansion_periods):
+    var = getattr(model, var_name)
+    keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
+    fixed_vals = dict(zip(keys, new_values))
+    var.set_values(fixed_vals)
+    var.fix()
+
+
 class Port(object):
+    # units: int
+    # initial_value: float = 0.
+    # port_name: str
+    # import_constraint: int
+    # import_constraint_value: float
+    # export_constraint: int
+    # export_constraint_value: float
+    # active_periods: Optional[list]
+    # slack: bool = False
+    # optional: bool = False
+    #
+    # @validator('import_constraint_value')
+    # def import_cons_check(cls, v):
+    #     if v is not None:
+    #         if v < 0:
+    #             raise ValueError('Import constraint should be positive')
+    #
+    # @validator('export_constraint_value')
+    # def export_cons_check(cls, v):
+    #     if v is not None:
+    #         if v > 0:
+    #             raise ValueError('Export constraint should be negative')
+
+
     def __init__(self):
         self.uid = uuid.uuid4()
         self.units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
@@ -359,18 +394,14 @@ class Port(object):
         self.initial_value = initial_value
 
     def add_initial_value_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
 
     def add_active_periods_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.active_periods = t
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.active_periods = vals
 
     def add_objective(self, model):
         objective = 0
@@ -499,11 +530,9 @@ class Sink(Port):
         self.add_initial_value(electrical_demand)
 
     def add_sink_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
 
 
 class Storage(Port):
@@ -716,11 +745,9 @@ class ElectricalDemand(Sink):
     def add_demand_profile_from_array(self, array, expansion_periods):
         if type(array) is np.ndarray:
             assert (array >= 0).all(), 'power demand must be non negative'
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
 
 
 class ElectricalGeneration(Source):
@@ -733,16 +760,15 @@ class ElectricalGeneration(Source):
         self.curtailable = False
 
     def add_generation_profile(self, generation):
+        assert type(generation) is dict, 'Generation profile must be dict.'
         self.add_initial_value(generation)
 
     def add_generation_profile_from_array(self, array, expansion_periods):
         if type(array) is np.ndarray:
             assert (array <= 0).all(), 'power generation must be non positive'
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
 
     def initialise_port(self, model):
         self.port_name_max = 'port_max_' + self.port_name
@@ -909,11 +935,11 @@ class ControlledLoadOrGen(Port):
                     en.Constraint(rule=sum_of_energy_must_be_less_than_max))
 
     def add_demand_profile_from_array(self, array, expansion_periods):
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                t[(ep, i)] = array[i]
-        self.add_initial_value(t)
+        if type(array) is np.ndarray:
+            assert (array >= 0).all(), 'power demand must be non negative'
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
 
 
 class ControlledLoad(ControlledLoadOrGen):
@@ -1061,7 +1087,7 @@ class EVCharger(ElectricalPort):
         self.import_constraint_value = import_constraint_value
 
 
-class EV(ElectricalTellegenNode):
+class EV(ElectricalNode):
 
     def __init__(self,
                  charge_mode,
@@ -1087,8 +1113,9 @@ class EV(ElectricalTellegenNode):
         self.usage = usage
         self.cp_name = connection_port_name
         self.tod_charging = tod_charging
+        self.interval_duration = interval_duration
 
-        # EV always has a storage port, set this up correctly
+        # EV always has a storage port
         self.ports['vehicle'] = ElectricalStorage(max_capacity,
                                                   depth_of_discharge_limit,
                                                   charging_power_limit,
@@ -1109,24 +1136,37 @@ class EV(ElectricalTellegenNode):
         self.ports['usage'].add_demand_profile_from_array(usage, expansion_periods=1)
         # Customise connection point port type based on the charge mode
         if charge_mode == 'V0G':
-            self.ports[connection_port_name] = ElectricalGeneration()
+            assert trip_slack is True, 'Trip slack must be enabled for V0G charge mode.'
+            self.ports[self.cp_name] = ElectricalDemand()
             self.process_V0G_charging(interval_duration)
-            self.ports[connection_port_name].add_generation_profile_from_array(self.V0G_delta*-1, expansion_periods=1)
+            self.ports[self.cp_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
-            self.ports[connection_port_name] = ElectricalPort()
-            self.ports[connection_port_name].add_active_periods_from_array(available, expansion_periods=1)
+            self.ports[self.cp_name] = ElectricalPort()
+            self.ports[self.cp_name].add_active_periods_from_array(available, expansion_periods=1)
             if charge_mode == 'V1G':
-                self.ports[connection_port_name].set_flow_constraints(max_import=charging_power_limit, max_export=0.)
+                self.ports[self.cp_name].set_flow_constraints(max_import=charging_power_limit, max_export=0.)
+
+        # EV needs a custom transformation because of the positive load convention
+        self.create_ev_transformation()
+
+    def create_ev_transformation(self):
+        # Create appropriate transformation
+        # vehicle = cp - usage
+        t = Transform()
+        t.add_lhs_term(self.ports['vehicle'], TransformRule.Both, 1)
+        t.add_rhs_term(self.ports['usage'], TransformRule.Both, -1)
+        t.add_rhs_term(self.ports[self.cp_name], TransformRule.Both, 1)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
 
     def process_V0G_charging(self, interval_duration):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
-        # Add results to the ev dict
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
         if self.tod_charging is not None:
             if success:
                 self.charge_status = 'success'
-            else:  # force conv
+            else:  # force convenience charging
                 success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
                 self.charge_status = 'time of day infeasible, convenience success' if success else 'infeasible'
                 self.V0G_delta = ev_delta
@@ -1138,7 +1178,6 @@ class EV(ElectricalTellegenNode):
 
     def V0G_charging(self, interval_duration, force_conv=False):
         """ Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
-
         if (self.tod_charging is not None) and (not force_conv):
             self.available = self.available * self.tod_charging
         T = len(self.available)
@@ -1165,37 +1204,20 @@ class EV(ElectricalTellegenNode):
 
     def verify_node(self):
         super(EV, self).verify_node()
-        # Check that all the relevant time series data has been added
         if self.charge_mode == 'V0G':
             assert self.ports[self.cp_name].initial_value != 0, 'V0G connection pt port needs demand profile added.'
         else:
-            assert self.ports[self.cp_name].active_periods is not None, 'EV connection pt port needs available periods added.'
-        assert self.ports['usage'].initial_value != 0, 'EV usage port needs demand profile added.'
-
+            assert self.ports[self.cp_name].active_periods is not None, 'Add available periods to EV connection pt port'
+        assert self.ports['usage'].initial_value != 0, 'EV usage port needs usage profile added.'
 
     def initialise_node(self, model):
         super(EV, self).initialise_node(model)
         if self.charge_mode == 'V0G':
-            # Fix the battery state of charge
-            soc_var = getattr(model, self.ports['vehicle'].soc_value)
-            keys = [(0, i) for i in range(len(soc_var))]
-            soc_param = dict(zip(keys, self.V0G_SOC))
-            soc_var.set_values(soc_param)
-            soc_var.fix()
-            # Fix the trip slack variable
-            slack_var = getattr(model, self.ports['vehicle'].trip_slack)
-            slack_param = dict(zip(keys, self.trip_infeasibility))
-            slack_var.set_values(slack_param)
-            slack_var.fix()
-            # Fix the battery charging/discharging
-            cp_charging = self.V0G_delta
-            trip_discharging = self.usage - self.trip_infeasibility
-            power_profile = np.array(cp_charging) + np.array(trip_discharging)
-            power_param = dict(zip(keys, power_profile))
-            power_var = getattr(model, self.ports['vehicle'].port_name)
-            power_var.set_values(power_param)
-            power_var.fix()
-
+            # Fix the battery state of charge, the slack variable, and battery charging/discharging
+            fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
+            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.trip_infeasibility, expansion_periods=1)
+            power_profile = np.array(self.V0G_delta) + np.array(self.usage)*-1
+            fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
 
 class Edge(object):
@@ -1396,11 +1418,9 @@ class Chiller(Node):
         # Calculate temperature correction factor
         y = np.subtract(array, np.average(array))
         cf = y / np.linalg.norm(y)
-        t = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(cf)):
-                t[(ep, i)] = cf[i]
-        self.temp_correction_factors = t
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, cf))
+        self.temp_correction_factors = vals
 
     def convert_coeff_array_to_piecewise_function(self, array, n_breakpoints=4):
 

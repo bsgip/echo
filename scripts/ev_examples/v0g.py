@@ -85,6 +85,8 @@ plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
 plt.plot(ev_cp.trip_infeasibility)
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack,0))
 plt.legend(['Usage', 'EV soc', 'infeasibility', 'slack_var'])
+plt.xlim([0, 47])
+
 
 print('Slack sum: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack,0).sum())
 print('infeasibility sum: ', ev_cp.trip_infeasibility.sum())

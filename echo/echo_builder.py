@@ -7,6 +7,9 @@ import echo.objectives as obj
 import echo.echo_models as ecm
 from echo.echo_optimiser import EchoOptimiser
 
+from pydantic import BaseModel, validator
+from typing import Optional
+
 
 def convert_dict_to_nx(netw_jsn):
     """ Creates nx graph from network dictionary"""
@@ -381,7 +384,6 @@ def check_nx_for_floating_nodes(g):
 
 
 def check_port_names_are_consistent(g):
-
     inconsistencies = []
     for edge in g.edges:
         for i in range(0, 2):
@@ -390,7 +392,8 @@ def check_port_names_are_consistent(g):
             component = g.nodes[node]
             component_ports = component['attr']['Node']['ports']
             if port not in component_ports:
-                err = 'Port {} may be misnamed in edge {}. Node {} has ports {}'.format(port, edge, node, component_ports)
+                err = 'Port {} may be misnamed in edge {}. Node {} has ports {}'.format(port, edge, node,
+                                                                                        component_ports)
                 inconsistencies.append(err)
 
     assert len(inconsistencies) == 0, inconsistencies
@@ -449,7 +452,8 @@ def extract_results(optimiser, node_uid_dict):
             output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
             if hasattr(ev_node.ports['vehicle'], 'trip_slack'):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
-                output[node_name]['charge_status'] = 'success' if all(output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
+                output[node_name]['charge_status'] = 'success' if all(
+                    output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
                 # todo need to update this to have some tolerance rather than ==0
 
         else:
@@ -490,3 +494,42 @@ def append_results(result_dict, network_dict, in_place=False):
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['Node']['results'] = results
         return network_dict
+
+#
+# class Battery(BaseModel):
+#     max_capacity: float
+#     depth_of_discharge_limit: float = 0
+#     charging_power_limit: float
+#     discharging_power_limit: float
+#     charging_efficiency: float = 1
+#     discharging_efficiency: float = 1
+#     initial_state_of_charge: float
+#
+#     @validator('max_capacity')
+#     def positive_capacity(cls, v):
+#         if v < 0:
+#             raise ValueError('Enter positive battery capacity.')
+#         return v
+#
+#     @validator('charging_power_limit')
+#     def charging_sign(cls, v):
+#         if v < 0:
+#             raise ValueError('Enter charging power limit using positive load convention (lim>0).')
+#         return v
+#
+#     @validator('discharging_power_limit')
+#     def discharging_sign(cls, v):
+#         if v > 0:
+#             raise ValueError('Enter charging power limit using positive load convention (lim<0).')
+#         return v
+#
+#
+# b_dict = {'max_capacity': 15.,
+#           'depth_of_discharge_limit': 0,
+#           'charging_power_limit': 1.25,
+#           'discharging_power_limit': -1.25,
+#           'charging_efficiency': 1.,
+#           'discharging_efficiency': 1.,
+#           'initial_state_of_charge': 0}
+#
+# b = Battery(**b_dict)
