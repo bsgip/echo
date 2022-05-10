@@ -1,6 +1,7 @@
 import pandas as pd
 from echo.echo_builder import *
 import numpy as np
+import pprint
 
 time_periods = 48
 
@@ -64,7 +65,7 @@ network_dict = {
                                'charging_efficiency': 1.,
                                'discharging_efficiency': 1.,
                                'initial_state_of_charge': 20.,
-                               'charge_mode': 'V0G',
+                               'charge_mode': 'V1G',
                                'soc_conserv': None,
                                'soc_conserv_cost': 0.,
                                'enable_trip_slack': True,

@@ -1150,8 +1150,7 @@ class EV(ElectricalNode):
         self.create_ev_transformation()
 
     def create_ev_transformation(self):
-        # Create appropriate transformation
-        # vehicle = cp - usage
+        # Create appropriate transformation: vehicle = cp - usage
         t = Transform()
         t.add_lhs_term(self.ports['vehicle'], TransformRule.Both, 1)
         t.add_rhs_term(self.ports['usage'], TransformRule.Both, -1)
@@ -1174,7 +1173,7 @@ class EV(ElectricalNode):
 
         else:
             self.charge_status = 'success' if success else 'infeasible'
-        self.trip_infeasibility = trip_infeasibility
+        self.V0G_trip_infeasibility = trip_infeasibility
 
     def V0G_charging(self, interval_duration, force_conv=False):
         """ Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
@@ -1215,7 +1214,7 @@ class EV(ElectricalNode):
         if self.charge_mode == 'V0G':
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
             fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
-            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.trip_infeasibility, expansion_periods=1)
+            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage)*-1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 

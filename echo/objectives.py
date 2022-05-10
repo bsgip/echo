@@ -41,6 +41,7 @@ class ObjectiveSet(object):
 #        model.objective = en.Objective(rule=objective, sense=en.minimize)
         optimiser.objective += objective_rule(model)
 
+
 class PeakPositivePower(Objective):
     """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
 
@@ -62,7 +63,10 @@ class PeakPositivePower(Objective):
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
-            return getattr(model, self.component.max_pos) >= getattr(model, self.component.port_name)[p, t]
+            return getattr(model, self.component.max_pos) >= getattr(model, self.component.pos)[p, t]
+
+        if not hasattr(self.component, 'pos'):
+            self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
@@ -94,7 +98,9 @@ class PeakNegativePower(Objective):
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
-            return getattr(model, self.component.max_neg) <= getattr(model, self.component.port_name)[p, t]
+            return getattr(model, self.component.max_neg) <= getattr(model, self.component.neg)[p, t]
+        if not hasattr(self.component, 'pos'):
+            self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
