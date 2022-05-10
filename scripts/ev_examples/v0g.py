@@ -1,5 +1,7 @@
 from __future__ import division
 
+import pprint
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -75,19 +77,17 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
+print('EV NODE ATTRIBUTES:')
+pprint.pprint(vars(ev_cp))
+print('\n OPTIMISATION RESULTS: ')
 print(optimiser.node_values(ev_cp, 0))
-print('Trip usage:', usage)
 print('EV soc: ', optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-print('Infeasibility: ', ev_cp.trip_infeasibility)
+print('Infeasibility: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack, 0))
 
 plt.plot(usage)
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-plt.plot(ev_cp.trip_infeasibility)
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack,0))
-plt.legend(['Usage', 'EV soc', 'infeasibility', 'slack_var'])
+plt.legend(['Usage', 'EV soc', 'infeasibility'])
 plt.xlim([0, 47])
 
-
-print('Slack sum: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack,0).sum())
-print('infeasibility sum: ', ev_cp.trip_infeasibility.sum())
 

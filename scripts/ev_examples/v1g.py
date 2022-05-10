@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
+import pprint
 
 
 from echo.echo_models import *
@@ -32,7 +33,7 @@ connection_point.add_named_electrical_ports(['ev', 'grid'])  # create ports to c
 # Create V0G vehicle
 
 available = np.array([1] * 24 + [0] * 24)    # bool when at charger
-usage = np.array([0.0]*24 + [0.5]*24)        # kw average during use
+usage = np.array([0.0]*24 + [5]*24)        # kw average during use
 
 ev_cp = EV(charge_mode='V1G',
                available=available,
@@ -49,7 +50,7 @@ ev_cp = EV(charge_mode='V1G',
                soc_conserv_cost=0.,
                interval_duration=30.,
                tod_charging=None,
-               trip_slack=False)
+               trip_slack=True)
 
 
 system.add_node_obj([grid, ev_cp, connection_point])
@@ -75,17 +76,9 @@ log_infeasible_constraints(optimiser.model)
 
 ############################ Analyse the Optimisation ########################################
 
-print(optimiser.node_values(ev_cp, 0))
-# print('Trip usage:', usage)
-# print('EV soc: ', optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-# #print('Infeasibility: ', ev_cp.trip_infeasibility)
-#
-# plt.plot(usage)
-# plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
-# #plt.plot(ev_cp.trip_infeasibility)
-# plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack,0))
-# plt.legend(['Usage', 'EV soc', 'infeasibility', 'slack_var'])
-#
-# print('Slack sum: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack,0).sum())
-# #print('infeasibility sum: ', ev_cp.trip_infeasibility.sum())
-#
+print('EV NODE ATTRIBUTES:')
+pprint.pprint(vars(ev_cp))
+print('\n OPTIMISATION RESULTS: ')
+pprint.pprint(optimiser.node_values(ev_cp, 0))
+print('EV soc: ', optimiser.values(ev_cp.ports['vehicle'].soc_value,0))
+print('Infeasibility: ', optimiser.values(ev_cp.ports['vehicle'].trip_slack, 0))
