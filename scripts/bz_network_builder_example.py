@@ -1,5 +1,5 @@
 import pandas as pd
-from echo.bz_builder import *
+from echo.echo_builder import *
 
 time_periods = 48
 
@@ -17,110 +17,150 @@ network_dict = {
         'bulk_grid': {
             'Node': {
                 'id': 'bulk_grid',
-                'cons': [],
+                'type': 'flex',
                 'ports': ['downstream']
             }
         },
         'elec_cp': {
             'Node': {
                 'id': 'elec_cp',
-                'cons': [],
-                'ports': []
+                'type': 'tellegen',
+                'ports': ['upstream', 'load', 'inverter']
             }
         },
         'load': {
             'Node': {
                 'id': 'load',
-                'cons': ['elec_cp'],  # connections to other components
+                'type': 'load',
                 'ports': ['load'],
-                'data': 'load'
+                'data': 'som_load'
             }
         },
         'inverter': {
             'Node': {
                 'id': 'inverter',
-                'cons': [],  # connections to other components - should they go here or be defined separately as edges?
-                'ports': ['ac', 'dc'],
+                'type': 'inverter',
+                'ports': ['ac', 'dc_pv', 'dc_bess'],
 
             }
         },
         'battery': {
             'Node': {
                 'id': 'battery',
-                'cons': [],
-                'ports': ['battery']
-
+                'type': 'battery',
+                'ports': ['battery'],
+                'parameters': {'max_capacity': 15.,
+                               'depth_of_discharge_limit': 0,
+                               'charging_power_limit': 1.25,
+                               'discharging_power_limit': -1.25,
+                               'charging_efficiency': 1.,
+                               'discharging_efficiency': 1.,
+                               'initial_state_of_charge': 0},
             }
         },
         'solar': {
             'Node': {
                 'id': 'solar',
-                'cons': ['elec_cp'],  # connections to other components
+                'type': 'solar',
                 'ports': ['solar'],
-                'data': 'solar'
+                'data': 'som_solar'
             }
         },
         'bulk_gas': {
             'Node': {
                 'id': 'bulk_gas',
-                'cons': [],  # connections to other components
+                'type': 'flex',
                 'ports': ['downstream']
             }
         },
         'gas_cp': {
             'Node': {
                 'id': 'gas_cp',
-                'cons': ['bulk_gas'],  # connections to other components
-                'ports': []
+                'type': 'tellegen',
+                'ports': ['upstream', 'load']
             }
         },
         'gas_load': {
             'Node': {
                 'id': 'gas_load',
-                'cons': [],  # connections to other components - should they go here or be defined separately as edges?
-                'ports': [],
-                'data': 'gas_load'
+                'ports': ['gas_load'],
+                'data': 'som_gas_load'
             }
         }
     },
     'edges': {
         'edge_1': {'nodes': ('bulk_grid', 'elec_cp'),
-                   'ports': ('downstream', None),
+                   'ports': ('downstream', 'upstream'),
                    'res': 'elec'},
 
         'edge_2': {'nodes': ('elec_cp', 'load'),
-                   'ports': (None, 'load'),
+                   'ports': ('load', 'load'),
                    'res': 'elec'},
 
         'edge_3': {'nodes': ('elec_cp', 'inverter'),
-                   'ports': (None, 'ac'),
+                   'ports': ('inverter', 'ac'),
                    'res': 'elec'},
 
         'edge_4': {'nodes': ('inverter', 'solar'),
-                   'ports': ('dc', 'solar'),
+                   'ports': ('dc_pv', 'solar'),
                    'res': 'elec'},
 
         'edge_5': {'nodes': ('inverter', 'battery'),
-                   'ports': ('dc', 'battery'),
+                   'ports': ('dc_bess', 'battery'),
                    'res': 'elec'},
 
         'edge_6': {'nodes': ('bulk_gas', 'gas_cp'),
-                   'ports': ('downstream', None),
+                   'ports': ('downstream', 'upstream'),
                    'res': 'gas'},
 
         'edge_7': {'nodes': ('gas_cp', 'gas_load'),
-                   'ports': (),
+                   'ports': ('load', 'gas_load'),
                    'res': 'gas'},
     }
 }
+
+objective_dict = {
+    'import_tariff': {'type': 'import_tariff',
+                      'prices': [0]*48,
+                      'component': {'node': 'elec_cp',
+                                    'port': 'upstream'}
+                      },
+    'demand_tariff': {'type': 'import_demand_tariff',
+                      'component': {'node': 'elec_cp',
+                                    'port': 'upstream'},
+                      'charges': [
+                          {'name': 'shoulder',
+                           'rate': 2.,
+                           'window': [0]*24 + [1]*24
+                           },
+                          {'name': 'peak',
+                           'rate': 1.,
+                           'window': [1]*24 + [0]*24
+                           },
+                      ]
+                      }
+}
+
+
+# Convert dict to nx
 x = convert_dict_to_nx(network_dict)
-check_nx_for_floating_nodes(x)
-nx.draw(x, with_labels=True)
 
-em = convert_nx_to_echo(x)
+# Convert nx to echo
+em, node_uid_dict = convert_nx_to_echo(x, df)
 
-battery = {'max_capacity': 15., 'depth_of_discharge_limit':0,
-            'charging_power_limit':1.25, 'discharging_power_limit':-1.25,
-           'charging_efficiency':1., 'discharging_efficiency':1.,
-           'initial_state_of_charge':0}
-b = create_battery_node(battery)
+# Convert objective dict to echo objective
+obj = convert_objective_to_echo_objective(em, node_uid_dict, objective_dict)
+
+# Run optimiser on echo model and echo objective
+opt = run_echo_optimiser(em,
+                         obj,
+                         interval_duration=30,
+                         time_periods=48,
+                         expansion_periods=1,
+                         discount_rate=0,
+                         optimiser_engine='cplex',
+                         opt_display=False)
+
+results = extract_results(opt, node_uid_dict)
+new_dict = append_results(results, network_dict, in_place=False)
+
