@@ -6,6 +6,7 @@ import numpy as np
 import echo.objectives as obj
 import echo.echo_models as ecm
 from echo.echo_optimiser import EchoOptimiser
+from echo.configuration import *
 
 from pydantic import BaseModel, validator
 from typing import Optional
@@ -81,6 +82,11 @@ def convert_nx_to_echo(g, df):
 
         if node_dict['type'] == 'inverter':
             new_node = create_inverter_node(node_dict)
+            system.add_node_obj(new_node)
+            node_uid_dict[node] = new_node.uid
+
+        if node_dict['type'] == 'solar':
+            new_node = create_solar_node(node_dict, df)
             system.add_node_obj(new_node)
             node_uid_dict[node] = new_node.uid
 
@@ -314,24 +320,31 @@ def create_battery_node(node_dict):
 
 def create_tellegen_node(node_dict):
     port_list = node_dict['ports']
-    tnode = ecm.ElectricalTellegenNode()
-    tnode.add_named_electrical_ports(port_list)
+    port_unit = node_dict['units']
+    echo_unit = get_echo_port_units(node_dict['id'], port_unit)
+    tnode = ecm.TellegenNode()
+    tnode.add_named_flex_ports(port_list, unit=echo_unit)
     return tnode
 
 
 def create_flex_node(node_dict):
     port_list = node_dict['ports']
+    port_unit = node_dict['units']
+    echo_unit = get_echo_port_units(node_dict['id'], port_unit)
     fnode = ecm.Node()
-    fnode.add_named_electrical_ports(port_list)
+    fnode.add_named_flex_ports(port_list, unit=echo_unit)
     return fnode
 
 
 def create_load_node(load_dict, df):
     col_name = load_dict['data']
     load_profile = df[col_name]
+    port_unit = load_dict['units']
+    echo_unit = get_echo_port_units(load_dict['id'], port_unit)
     load = ecm.Node()  # site load
-    l1 = ecm.ElectricalDemand()
-    l1.add_demand_profile_from_array(load_profile, expansion_periods=1)
+    l1 = ecm.Demand()
+    l1.add_sink_profile_from_array(load_profile, expansion_periods=1)
+    l1.units = echo_unit
     port_name = load_dict['ports'][0]
     load.ports[port_name] = l1
     return load
@@ -343,8 +356,9 @@ def create_inverter_node(inverter_dict):
                             max_export=inv['max_export'],
                             dc_ac_efficiency=inv['dc_ac_eta'],
                             ac_dc_efficiency=inv['ac_dc_eta'])
-    inverter.add_dc_port('dc')
-    inverter.add_ac_port('ac') #todo fix this
+    for i in inv['dc_ports']:
+        inverter.add_dc_port(i)
+    inverter.add_ac_port(inv['ac_port'])
     return inverter
 
 
@@ -353,9 +367,9 @@ def create_solar_node(solar_dict, df):
     pv_profile = df[col_name]
     solar = ecm.Node()
     pv = ecm.ElectricalGeneration()
-    pv.curtailable = False  # todo this should be set from the dict
+    pv.curtailable = solar_dict['parameters']['curtailable']
     pv.add_generation_profile_from_array(pv_profile, expansion_periods=1)
-    solar.ports['pv'] = pv
+    solar.ports[solar_dict['ports'][0]] = pv
     return solar
 
 
@@ -489,6 +503,15 @@ def append_results(result_dict, network_dict, in_place=False):
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['Node']['results'] = results
         return network_dict
+
+
+def get_echo_port_units(node_name, port_unit):
+    if port_unit.upper() in vars(Units):
+        unit = vars(Units)[port_unit.upper()]
+        return unit
+    else:
+        valid_units = [f for f in dir(Units) if not f.startswith('_')]
+        raise ValueError('Unit {} for node {} does not match any valid unit. Valid units are {}'.format(port_unit, node_name, valid_units))
 
 # Pydantic tinkering
 

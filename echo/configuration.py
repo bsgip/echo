@@ -5,7 +5,7 @@ class Units(object):
     KW = 1  # Instantaneous electrical power
     CO2 = 2  # Instantaneous CO2e emissions (in kg)
     KWT = 3  # Instantaneous thermal power
-    Jps = 4  # Joules per second
+    JPS = 4  # Joules per second
 
 
 class Flows(object):

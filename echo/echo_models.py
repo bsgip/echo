@@ -435,6 +435,14 @@ class Node(object):
         for name in name_list:
             self.ports[name] = ElectricalPort()
 
+    def add_named_flex_ports(self, name_list, unit=None):
+        if type(name_list) is not list:
+            return ConfigurationError('Please enter named ports as list of port names.')
+        for name in name_list:
+            self.ports[name] = FlexPort()
+            if unit is not None:
+                self.ports[name].units = unit
+
     def add_transformation(self, transformation_obj):
         self.transformations[transformation_obj.uid] = transformation_obj
 
@@ -731,6 +739,13 @@ class Storage(Port):
         return objective
 
 
+class Demand(Sink):
+
+    def __init__(self):
+        super(Demand, self).__init__()
+        self.import_constraint = FlowConstraint.NoConstraint
+
+
 class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
 
@@ -826,8 +841,27 @@ class ElectricalTellegenNode(ElectricalNode):
         self.node_rule = NodeRule.Tellegen
 
 
-class ElectricalPort(Port):
+class TellegenNode(Node):
+    """A node that implements a Tellegen constraint requiring that port values sum to zero."""
+
+    def __init__(self):
+        super(TellegenNode, self).__init__()
+        self.node_rule = NodeRule.Tellegen
+
+
+class FlexPort(Port):
     """ Flexible port """
+
+    def __init__(self):
+        super(FlexPort, self).__init__()
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+
+
+class ElectricalPort(Port):
+    """ Flexible electrical port """
 
     def __init__(self):
         super(ElectricalPort, self).__init__()
