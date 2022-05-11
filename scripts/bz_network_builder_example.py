@@ -3,8 +3,9 @@ from echo.echo_builder import *
 
 time_periods = 48
 
+# Dummy data
 df = pd.DataFrame({
-    'gas': [4] * time_periods,
+    'gas_load': [4] * time_periods,
     'load': [5] * time_periods,
     'solar': [-2] * 24 + [-1] * 24,
 
@@ -33,7 +34,7 @@ network_dict = {
                 'id': 'load',
                 'type': 'load',
                 'ports': ['load'],
-                'data': 'som_load'
+                'data': 'load'
             }
         },
         'inverter': {
@@ -41,6 +42,10 @@ network_dict = {
                 'id': 'inverter',
                 'type': 'inverter',
                 'ports': ['ac', 'dc_pv', 'dc_bess'],
+                'parameters': {'max_import': 10.,
+                               'max_export': -10.,
+                               'ac_dc_eta': 1.,
+                               'dc_ac_eta': 1.}
 
             }
         },
@@ -63,7 +68,7 @@ network_dict = {
                 'id': 'solar',
                 'type': 'solar',
                 'ports': ['solar'],
-                'data': 'som_solar'
+                'data': 'solar'
             }
         },
         'bulk_gas': {
@@ -83,8 +88,9 @@ network_dict = {
         'gas_load': {
             'Node': {
                 'id': 'gas_load',
+                'type': 'load',
                 'ports': ['gas_load'],
-                'data': 'som_gas_load'
+                'data': 'gas_load'
             }
         }
     },
