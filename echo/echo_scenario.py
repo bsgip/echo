@@ -507,7 +507,7 @@ def V0G_charging(ev, interval_duration, force_conv=False):
     T = len(available)
     soc = np.zeros((T+1,))
     soc[0] = initial_soc
-    trip_infeasibility = np.zeros((T+1,))
+    trip_infeasibility = np.zeros((T,))
     delta = np.zeros((T,))
 
     for t in range(T):
@@ -516,13 +516,13 @@ def V0G_charging(ev, interval_duration, force_conv=False):
             soc[t+1] = soc[t] + delta[t] * (interval_duration/60) * charging_efficiency
         else:   # if not available then it might be on a trip and using power
             soc[t+1] = soc[t] - usage[t] * (interval_duration/60)
-        trip_infeasibility[t+1] = - min(soc[t+1], 0)
+        trip_infeasibility[t] = - min(soc[t+1], 0)
         soc[t+1] = max(soc[t+1], 0)
 
 
     success = True if (trip_infeasibility.max() == 0) else False
 
-    return success, soc[:-1], delta, trip_infeasibility[:-1]
+    return success, soc[1:], delta, trip_infeasibility[:-1]
 
 def ev_name_check(evs):
     """
