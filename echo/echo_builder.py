@@ -75,10 +75,12 @@ def convert_nx_to_echo(g, df):
             node_uid_dict[node] = new_node.uid
 
         if node_dict['type'] == 'ev':
-            # new_subgraph, node_map = create_ev(node_dict, df)
-            # system.add_subgraph(new_subgraph)
-            # node_uid_dict.update(node_map)
             new_node = create_ev(node_dict, df)
+            system.add_node_obj(new_node)
+            node_uid_dict[node] = new_node.uid
+
+        if node_dict['type'] == 'inverter':
+            new_node = create_inverter_node(node_dict)
             system.add_node_obj(new_node)
             node_uid_dict[node] = new_node.uid
 
@@ -335,6 +337,17 @@ def create_load_node(load_dict, df):
     return load
 
 
+def create_inverter_node(inverter_dict):
+    inv = inverter_dict['parameters']
+    inverter = ecm.Inverter(max_import=inv['max_import'],
+                            max_export=inv['max_export'],
+                            dc_ac_efficiency=inv['dc_ac_eta'],
+                            ac_dc_efficiency=inv['ac_dc_eta'])
+    inverter.add_dc_port('dc')
+    inverter.add_ac_port('ac') #todo fix this
+    return inverter
+
+
 def create_solar_node(solar_dict, df):
     col_name = solar_dict['data']
     pv_profile = df[col_name]
@@ -434,8 +447,7 @@ def extract_results(optimiser, node_uid_dict):
     system = optimiser.ES
     output = {}  # for storing results
 
-    # todo decide what to return?
-    #  we could also let the user specify what they want to retrieve
+    # todo decide what to return? we could also let the user specify what they want to retrieve
 
     for node_name, node_uid in node_uid_dict.items():
         if 'battery' in node_name:
@@ -465,23 +477,6 @@ def extract_results(optimiser, node_uid_dict):
 
     return output
 
-    # ## VERSION THAT ITERATES THROUGH PYOMO MODEL VARS/PARAMS
-    # all_pyomo_components = {}
-    # for pyomo_component in optimiser.model.component_objects():
-    #     all_pyomo_components[(str(pyomo_component))] = pyomo_component
-    # for node_name, node_uid in node_uid_dict.items():
-    #     node_obj = system.node_obj[node_uid]
-    #     node_dict = {}
-    #     for port_name, port_obj in node_obj.ports.items():
-    #         node_dict[port_name] = {}
-    #         for attr_name, attr_val in vars(port_obj).items(): # see if there are port attributes that correspond to pyomo model components
-    #             if attr_val in list(all_pyomo_components.keys()):
-    #                 # get the value from the model
-    #                 result = optimiser.values(attr_val, 0)
-    #                 node_dict[port_name][attr_name] = result  # Add result to the dict for this port, for this node
-    #
-    #     output[node_name] = node_dict
-
 
 def append_results(result_dict, network_dict, in_place=False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
@@ -495,7 +490,8 @@ def append_results(result_dict, network_dict, in_place=False):
             network_dict['components'][node_name]['Node']['results'] = results
         return network_dict
 
-#
+# Pydantic tinkering
+
 # class Battery(BaseModel):
 #     max_capacity: float
 #     depth_of_discharge_limit: float = 0

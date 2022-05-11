@@ -24,7 +24,18 @@ network_dict = {
             'Node': {
                 'id': 'elec_cp',
                 'type': 'tellegen',
-                'ports': ['upstream', 'load', 'bess', 'ev']
+                'ports': ['upstream', 'load', 'inverter', 'ev']
+            }
+        },
+        'inverter': {
+            'Node': {
+                'id': 'inverter',
+                'type': 'inverter',
+                'ports': ['ac', 'dc'],
+                'parameters': {'max_import': 5.,
+                               'max_export': -5.,
+                               'ac_dc_eta': 1.,
+                               'dc_ac_eta': 1.}
             }
         },
         'load': {
@@ -46,9 +57,8 @@ network_dict = {
                                'charging_power_limit': 1.25,
                                'discharging_power_limit': -1.25,
                                'charging_efficiency': 1.,
-                               'discharging_efficiency': 1.,
+                               'discharging_efficiency': 1,
                                'initial_state_of_charge': 0},
-                'results': {'soc_result', 'power_result', 'other'}  # echo results stored in pandas df
             }
         },
         'ev1': {
@@ -82,13 +92,18 @@ network_dict = {
                    'ports': ('load', 'load'),
                    'res': 'elec'},
 
-        'edge_3': {'nodes': ('elec_cp', 'battery'),
-                   'ports': ('bess', 'bess'),
-                   'res': 'elec'},
-
-        'edge_4': {'nodes': ('elec_cp', 'ev1'),
+        'edge_3': {'nodes': ('elec_cp', 'ev1'),
                    'ports': ('ev', 'ev_cp'),
                    'res': 'elec'},
+
+        'edge_4': {'nodes': ('elec_cp', 'inverter'),
+                   'ports': ('inverter', 'ac'),
+                   'res': 'elec'},
+        'edge_5': {'nodes': ('inverter', 'battery'),
+                   'ports': ('dc', 'bess'),
+                   'res': 'elec'},
+
+
 
     }
 }
@@ -147,6 +162,7 @@ cp_node = em.node_obj[node_uid_dict['elec_cp']]
 load_node = em.node_obj[node_uid_dict['load']]
 battery_node = em.node_obj[node_uid_dict['battery']]
 ev_cp_node = em.node_obj[node_uid_dict['ev1']]
+inv_node = em.node_obj[node_uid_dict['inverter']]
 #ev_battery = em.node_obj[node_uid_dict['ev1vehicle']]
 
 print(opt.opt_status)
@@ -155,5 +171,6 @@ print('Load\n', opt.values(load_node.ports['load'].port_name, 0))
 print('Battery soc\n', opt.values(battery_node.ports['bess'].soc_value, 0))
 print('Battery\n', opt.values(battery_node.ports['bess'].port_name, 0))
 print('EV node \n', opt.node_values(ev_cp_node, 0))
+print('Inv node in/out:', opt.node_values(inv_node, 0))
 
 
