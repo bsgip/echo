@@ -30,7 +30,7 @@ class ObjectiveSet(object):
 
     def initialise_objective(self, model):
         for obj in self.objectives:
-            obj.verify_objective()
+            obj.verify_objective(model)
             obj.create_params(model)
             obj.create_vars(model)
             obj.apply_constraints(model)
@@ -49,7 +49,7 @@ class PeakPositivePower(Objective):
                  component):
         super(PeakPositivePower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Peak Power objective must be applied to port component.')
@@ -84,7 +84,7 @@ class PeakNegativePower(Objective):
                  component):
         super(PeakNegativePower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Peak Power objective must be applied to port component.')
@@ -130,7 +130,7 @@ class ImportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.import_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Import Tariff objective must be applied to port component.')
@@ -176,7 +176,7 @@ class ExportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.export_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Export Tariff objective must be applied to port component.')
@@ -223,7 +223,7 @@ class PathTariff(Objective):
                 t[(ep, i)] = array[i]
         self.path_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Path Tariff objective must be applied to path component.')
@@ -256,7 +256,7 @@ class ThroughputCost(Objective):
         super(ThroughputCost, self).__init__(component)
         self.rate = rate
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Throughput Cost objective must be applied to port component.')
@@ -288,7 +288,7 @@ class QuadraticPower(Objective):
                  component):
         super(QuadraticPower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Quadratic Power objective must be applied to port component.')
@@ -322,7 +322,7 @@ class ContingencyNegative(Objective):
         super(ContingencyNegative, self).__init__(component)
         self.duration = duration
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Contingency objective must be applied to path component.')
@@ -395,7 +395,7 @@ class ContingencyPositive(Objective):
         super(ContingencyPositive, self).__init__(component)
         self.duration = duration
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Contingency objective must be applied to path component.')
@@ -586,7 +586,7 @@ class DemandTariffObjective(Objective):
         self.import_demand = import_demand
         self.export_demand = export_demand
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Demand Tariff objective must be applied to port component.')
@@ -608,10 +608,21 @@ class DemandTariffObjective(Objective):
                    prev_dc = dc
                    prev_window = np.array(dc.window_array)
 
+        def verify_same_length_windows():
+            prev_length = None
+            for dc in self.demand_charges:
+                if prev_length is not None:
+                    assert len(dc.window_array) == prev_length, f"Demand charge windows are not all the same length"
+                    prev_length = len(dc.window_array)
+                else:
+                    prev_length = len(dc.window_array)
+
+                assert prev_length == model.number_of_intervals, f"Demand charge {dc} windows do not match optimiser time periods."
+
         def verify_dc():
             # do any verification of demand charges
             for dc in self.demand_charges:
-                dc.verify_objective()
+                dc.verify_objective(model)
 
         def verify_min_demand():
             if self.import_demand:
@@ -626,6 +637,7 @@ class DemandTariffObjective(Objective):
                 raise ConfigurationError('Demand tariff must be either import or export.')
 
         verify_non_overlapping()
+        verify_same_length_windows()
         verify_dc()
         verify_min_demand()
 
@@ -694,7 +706,7 @@ class DemandCharge(object):
         self.num_reset_periods = len(window_array)//self.reset_period_length
         self.reset_index = en.RangeSet(0, self.num_reset_periods-1)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         pass
 
     def create_params(self, model):
