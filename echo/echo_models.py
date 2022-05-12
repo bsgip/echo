@@ -1517,7 +1517,7 @@ class GasPort(Port):
 
     def __init__(self):
         super(GasPort, self).__init__()
-        self.units = Units.Jps
+        self.units = Units.JPS
         self.flows = Flows.Both
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint

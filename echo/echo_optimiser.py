@@ -182,6 +182,7 @@ class EchoOptimiser(object):
 
         var_obj = getattr(self.model, variable_name)
         if var_obj.dim() == 2:
+            # the variable/param has two indices - we assume these are expansion and time
             output = np.zeros(self.number_of_intervals)
             max_planning_period = 0
             for index in var_obj:
@@ -195,12 +196,19 @@ class EchoOptimiser(object):
                 raise ConfigurationError('Expansion period is not in range.')
             return output
         else:
+            # the variable/param doesn't have two indices
             if var_obj.is_indexed():
-                if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
-                    return var_obj[expansion]
-                else:  # Var
-                    return var_obj[expansion].value
+                # if it has one, then work out what that one is:
+                output = np.zeros(len(var_obj))
+                for i in var_obj:
+                    output[i] = var_obj[i].value
+                return output
+                # if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
+                #     return var_obj[expansion]
+                # else:  # Var
+                #     return var_obj[expansion].value
             else:
+                # if it has no index, we can directly return value
                 return var_obj.value
 
     def node_values(self, node_obj, expansion_period):
