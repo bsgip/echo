@@ -166,8 +166,6 @@ def create_demand_tariff(tariff_dict, node_uid_dict, em):
     export_demand = False if 'import' in tariff_dict['type'] else True
     demand_tariff = obj.DemandTariffObjective(component=component_obj,
                                               demand_charges=echo_charge_list,
-                                              excess_demand_charge=None,
-                                              off_peak_demand_charge=None,
                                               export_demand=export_demand,
                                               import_demand=import_demand)
     return demand_tariff

@@ -18,6 +18,7 @@ network_dict = {
             'Node': {
                 'id': 'bulk_grid',
                 'type': 'flex',
+                'units': 'KW',
                 'ports': ['downstream']
             }
         },
@@ -25,6 +26,7 @@ network_dict = {
             'Node': {
                 'id': 'elec_cp',
                 'type': 'tellegen',
+                'units': 'kW',
                 'ports': ['upstream', 'load', 'inverter', 'ev']
             }
         },
@@ -45,6 +47,7 @@ network_dict = {
             'Node': {
                 'id': 'load',
                 'type': 'load',
+                'units': 'kW',
                 'ports': ['load'],
                 'data': 'load',
                 'parameters': {},
@@ -119,8 +122,6 @@ network_dict = {
         'edge_6': {'nodes': ('inverter', 'solar'),
                    'ports': ('pv', 'solar'),
                    'res': 'elec'},
-
-
 
     }
 }
