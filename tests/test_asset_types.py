@@ -27,7 +27,7 @@ def test_gas_boiler_operation():
     gas_mains = Node()
     gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoiler(0.5)
+    boiler = GasBoiler(gas_to_heat_efficiency=0.5)
 
     heating_load = Node()
     hl = ThermalLoad()
@@ -73,8 +73,8 @@ def test_chiller_operation():
     grid.ports['grid'] = ElectricalPort()
 
     nonlin_array = [-0.0068, 5.5052, 0]
-    chiller = Chiller(pw_input=[0, 2, 4, 8],
-                      pw_output=[0, 3, 4, 8],
+    chiller = Chiller(input_breakpoints=[0, 2, 4, 8],
+                      output_values=[0, 3, 4, 8],
                       max_output=-8,
                       max_input=8,
                       coeff_array=nonlin_array)
@@ -85,8 +85,8 @@ def test_chiller_operation():
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports['grid'], chiller.input)
-    system.connect_ports_and_create_edge(chiller.output, cl)
+    system.connect_ports_and_create_edge(grid.ports['grid'], chiller.ports['input'])
+    system.connect_ports_and_create_edge(chiller.ports['output'], cl)
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -100,16 +100,16 @@ def test_chiller_operation():
     optimiser.optimise()
 
     print('mains gas: ', optimiser.values(grid.ports['grid'].port_name, 0))
-    print('chiller input (elec): ', optimiser.values(chiller.input.port_name, 0))
-    print('chiller output (cooling): ', optimiser.values(chiller.output.port_name, 0))
+    print('chiller input (elec): ', optimiser.values(chiller.ports['input'].port_name, 0))
+    print('chiller output (cooling): ', optimiser.values(chiller.ports['output'].port_name, 0))
     print('cooling load: ', cl.initial_value.values())
-    print('cop: ', np.divide(optimiser.values(chiller.output.port_name, 0), optimiser.values(chiller.input.port_name, 0)))
+    print('cop: ', np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0)))
 
-    chiller_input = optimiser.values(chiller.input.port_name, 0)
-    chiller_output = optimiser.values(chiller.output.port_name, 0)
+    chiller_input = optimiser.values(chiller.ports['input'].port_name, 0)
+    chiller_output = optimiser.values(chiller.ports['output'].port_name, 0)
     grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
     cl_p = cl.initial_value
-    cop = np.divide(optimiser.values(chiller.output.port_name, 0), optimiser.values(chiller.input.port_name, 0))
+    cop = np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0))
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(chiller_output[i]*-1,

@@ -53,7 +53,7 @@ def test_v0g():
                soc_conserv=None,
                soc_conserv_cost=0.,
                interval_duration=15.,
-               tod_charging=None,
+               tod_charging=False,
                trip_slack=True)
 
     system.add_node_obj([grid, ev_cp, connection_point])

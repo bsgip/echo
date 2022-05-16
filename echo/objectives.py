@@ -65,7 +65,7 @@ class PeakPositivePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_pos) >= getattr(model, self.component.pos)[p, t]
 
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
@@ -93,13 +93,13 @@ class PeakNegativePower(Objective):
         pass
 
     def create_vars(self, model):
-        self.component.max_neg = 'max_neg' + self.component.port_name
+        self.component.max_neg = 'max_neg_' + self.component.port_name
         setattr(model, self.component.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_neg) <= getattr(model, self.component.neg)[p, t]
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
@@ -143,7 +143,7 @@ class ImportTariff(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -190,7 +190,7 @@ class ExportTariff(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -268,7 +268,7 @@ class ThroughputCost(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -300,7 +300,7 @@ class QuadraticPower(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -370,10 +370,10 @@ class ContingencyNegative(Objective):
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.start_port, 'soc_value'):
+        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.component.contingency_neg)[p, t] * self.duration / 60 >= \
-                       getattr(model, self.component.start_port.soc_value)[p, t]*-1
+                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]*-1
 
             setattr(model, f"cont_neg_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -443,10 +443,10 @@ class ContingencyPositive(Objective):
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.start_port, 'soc_value'):
+        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.component.contingency_pos)[p, t] * self.duration / 60 <= \
-                       self.component.start_port.max_capacity - getattr(model, self.component.start_port.soc_value)[p, t]
+                       self.component.edge_ports[0][0].max_capacity - getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]
 
             setattr(model, f"cont_pos_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -654,7 +654,7 @@ class DemandTariffObjective(Objective):
                 setattr(model, dc.max_demand_val, en.Var(dc.reset_index, initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         for dc in self.demand_charges:

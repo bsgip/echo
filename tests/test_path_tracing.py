@@ -77,10 +77,10 @@ def test_partitioning_regions_for_path_flow():
 
     optimiser.optimise(tee=True)
 
-    grid_to_inverter = system.paths[(grid, cp, inverter)]
-    grid_to_load = system.paths[(grid, cp, load)]
-    inverter_to_grid = system.paths[(inverter, cp, grid)]
-    inverter_to_load = system.paths[(inverter, cp, load)]
+    grid_to_inverter = system.get_path([grid, cp, inverter])
+    grid_to_load = system.get_path([grid, cp, load])
+    inverter_to_grid = system.get_path([inverter, cp, grid])
+    inverter_to_load = system.get_path([inverter, cp, load])
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(optimiser.values(grid_to_load.flow_value, 0)[i] +
@@ -143,10 +143,10 @@ def test_regularisation_of_path_flows():
     optimiser.optimise(tee=True)
     print(optimiser.opt_status)
 
-    s1_to_l1 = optimiser.values(system.paths[(source1, cp, load1)].flow_value, 0)*-1
-    s1_to_l2 = optimiser.values(system.paths[(source1, cp, load2)].flow_value, 0)*-1
-    s2_to_l1 = optimiser.values(system.paths[(source2, cp, load1)].flow_value, 0)*-1
-    s2_to_l2 = optimiser.values(system.paths[(source2, cp, load2)].flow_value, 0)*-1
+    s1_to_l1 = optimiser.values(system.get_path([source1, cp, load1]).flow_value, 0)*-1
+    s1_to_l2 = optimiser.values(system.get_path([source1, cp, load2]).flow_value, 0)*-1
+    s2_to_l1 = optimiser.values(system.get_path([source2, cp, load1]).flow_value, 0)*-1
+    s2_to_l2 = optimiser.values(system.get_path([source2, cp, load2]).flow_value, 0)*-1
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(s1_to_l1[i], optimiser.values(s1.port_name, 0)[i]/2)

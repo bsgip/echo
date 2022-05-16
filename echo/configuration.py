@@ -71,6 +71,7 @@ class OptimiserObjective(object):
     LocalGridPeakPower = 14
 
 
+# below is superseded
 class OptimiserObjectiveSet(object):
     FinancialOptimisation = [OptimiserObjective.ConnectionPointCost,
                              # OptimiserObjective.GreedyGenerationCharging,

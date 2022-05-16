@@ -49,7 +49,7 @@ ev_cp = EV(charge_mode='V1G',
                soc_conserv=None,
                soc_conserv_cost=0.,
                interval_duration=30.,
-               tod_charging=None,
+               tod_charging=False,
                trip_slack=True)
 
 

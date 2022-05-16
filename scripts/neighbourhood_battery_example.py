@@ -110,13 +110,13 @@ system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery,
 
 # Create objectives/tariffs
 # Retrieve paths
-grid_to_bess = system.paths[(grid, connection_point, battery)]
-bess_to_grid = system.paths[(battery, connection_point, grid)]
-bess_to_load = system.paths[(battery, connection_point, load)]
-grid_to_load = system.paths[(grid, connection_point, load)]
-solar_to_load = system.paths[(solar, connection_point, load)]
-solar_to_bess = system.paths[(solar, connection_point, battery)]
-solar_to_grid = system.paths[(solar, connection_point, grid)]
+grid_to_bess = system.get_path([grid, connection_point, battery])
+bess_to_grid = system.get_path([battery, connection_point, grid])
+bess_to_load = system.get_path([battery, connection_point, load])
+grid_to_load = system.get_path([grid, connection_point, load])
+solar_to_load = system.get_path([solar, connection_point, load])
+solar_to_bess = system.get_path([solar, connection_point, battery])
+solar_to_grid = system.get_path([solar, connection_point, grid])
 
 # Construct tariffs per path
 

@@ -8,7 +8,7 @@ import echo.echo_models as ecm
 from echo.echo_optimiser import EchoOptimiser
 from echo.configuration import *
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator, confloat
 from typing import Optional
 
 
@@ -53,7 +53,7 @@ def convert_nx_to_echo(g, df):
 
     # Create nodes
     for node in g.nodes:
-        # Check what the node type is so we know what kind of echo node/subgraph to make
+        # Check what the node type is so we know what kind of echo node to make
         node_dict = g.nodes[node]['attr']['Node']
         if node_dict['type'] == 'battery':
             new_node = create_battery_node(node_dict)
@@ -513,40 +513,73 @@ def get_echo_port_units(node_name, port_unit):
 
 # Pydantic tinkering
 
-# class Battery(BaseModel):
-#     max_capacity: float
-#     depth_of_discharge_limit: float = 0
-#     charging_power_limit: float
-#     discharging_power_limit: float
-#     charging_efficiency: float = 1
-#     discharging_efficiency: float = 1
-#     initial_state_of_charge: float
-#
-#     @validator('max_capacity')
-#     def positive_capacity(cls, v):
-#         if v < 0:
-#             raise ValueError('Enter positive battery capacity.')
-#         return v
-#
-#     @validator('charging_power_limit')
-#     def charging_sign(cls, v):
-#         if v < 0:
-#             raise ValueError('Enter charging power limit using positive load convention (lim>0).')
-#         return v
-#
-#     @validator('discharging_power_limit')
-#     def discharging_sign(cls, v):
-#         if v > 0:
-#             raise ValueError('Enter charging power limit using positive load convention (lim<0).')
-#         return v
-#
-#
-# b_dict = {'max_capacity': 15.,
-#           'depth_of_discharge_limit': 0,
-#           'charging_power_limit': 1.25,
-#           'discharging_power_limit': -1.25,
-#           'charging_efficiency': 1.,
-#           'discharging_efficiency': 1.,
-#           'initial_state_of_charge': 0}
-#
-# b = Battery(**b_dict)
+#from our_validators import *
+
+class BatteryParams(BaseModel):
+    max_capacity: float
+    depth_of_discharge_limit: float = 0
+    charging_power_limit: float
+    discharging_power_limit: float
+    charging_efficiency: float = 1
+    discharging_efficiency: float = 1
+    initial_state_of_charge: float
+    test_var: str = str(max_capacity)
+
+    #max_cap_sign = validator("thing to be validated", allow_reuse=True)(my_validator_name)  #needs to be assigned to variable name,
+
+    @validator('max_capacity', allow_reuse=True)
+    def max_cap_sign(cls, v):
+        if v < 0:
+            raise ValueError(f"Max battery capacity should be a positive number")
+        return v
+
+    @root_validator()
+    def dod_check(cls, values):
+        dod_lim = values.get('depth_of_discharge_limit')
+        max_cap = values.get('max_capacity')
+        if dod_lim < 0 or dod_lim > max_cap:
+            raise ValueError('DoD must be between 0 and max capacity')
+        return values
+
+    @root_validator()
+    def init_soc_check(cls, values):
+        init_soc = values.get('initial_state_of_charge')
+        dod_lim = values.get('depth_of_discharge_limit')
+        max_cap = values.get('max_capacity')
+        lb = max(0., dod_lim)
+        if init_soc < lb or init_soc > max_cap:
+            raise ValueError('Initial state of charge must be between min DoD and max capacity')
+        return values
+
+    @validator('charging_power_limit')
+    def charging_sign(cls, v):
+        if v < 0:
+            raise ValueError(f"Charging power limit should be a positive number")
+        return v
+
+    @validator('discharging_power_limit')
+    def discharging_sign(cls, v):
+        if v > 0:
+            raise ValueError('Enter charging power limit using positive load convention (lim<0).')
+        return v
+
+    @validator('charging_efficiency')
+    def ch_efficiency_rule(cls, v):
+        if v > 1 or v < 0:
+            raise ValueError(f"Charging efficiency should be a number between 0 and 1.")
+
+    @validator('discharging_efficiency')
+    def dch_efficiency_rule(cls, v):
+        if v > 1 or v < 0:
+            raise ValueError(f"Discharging efficiency should be a number between 0 and 1.")
+
+
+b_dict = {'max_capacity': 15.,
+          'depth_of_discharge_limit': 5,
+          'charging_power_limit': 1.25,
+          'discharging_power_limit': -1.25,
+          'charging_efficiency': 1.,
+          'discharging_efficiency': 1.,
+          'initial_state_of_charge': 5}
+
+b = BatteryParams(**b_dict)
