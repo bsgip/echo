@@ -165,7 +165,7 @@ def fix_port_variable(model, var_name, new_values, expansion_periods):
 
 class Port(BaseModel):
     # Pydantic attribute declaration follows this format:
-    # field_name: type = default_value
+    # attribute_name: type = default_value
 
     units: int = Units.NA # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = {}
