@@ -168,7 +168,7 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: int = Units.NA # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict = {}
+    initial_value: dict = 0.
     opt_type: int = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     port_name: Optional[str] = None
@@ -221,7 +221,8 @@ class Port(BaseModel):
         else:
             self.export_constraint = FlowConstraint.NoConstraint
         self.export_constraint_value = max_export
-        self.slack = slack
+        if slack is not None:
+            self.slack = slack
 
     def verify_port(self):
         """ Used to verify that a port has been set up appropriately"""
@@ -456,13 +457,18 @@ class Node(BaseModel):
         for name in name_list:
             self.ports[name] = ElectricalPort()
 
-    def add_named_flex_ports(self, name_list, unit=None):
+    def add_named_flex_ports(self, name_list, unit=Units.NA):
         if type(name_list) is not list:
             return ConfigurationError('Please enter named ports as list of port names.')
         for name in name_list:
             self.ports[name] = FlexPort()
-            if unit is not None:
+            if unit is not Units.NA:
                 self.ports[name].units = unit
+
+    def add_named_flex_port(self, name, unit=Units.NA):
+        self.ports[name] = FlexPort()
+        if unit is not Units.NA:
+            self.ports[name].units = unit
 
     def add_transformation(self, transformation_obj):
         self.transformations[transformation_obj.uid] = transformation_obj
@@ -1008,7 +1014,7 @@ class EV(ElectricalNode):
     available: Union[ArrayType, list]
     usage: Union[ArrayType, list]
     cp_name: str = 'cp'
-    tod_charging: bool = False
+    tod_charging: Union[bool, ArrayType, list] = False
     interval_duration: int
     # Battery attributes
     max_capacity: float

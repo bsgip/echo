@@ -126,7 +126,6 @@ network_dict = {
     }
 }
 
-
 objective_dict = {
     'import_tariff': {'type': 'import_tariff',
                       'prices': [0]*48,
