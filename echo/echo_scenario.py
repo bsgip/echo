@@ -14,6 +14,10 @@ from echo.echo_optimiser import EchoOptimiser
 import echo.objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 
+import echo.echo_sgt as ecsgt
+
+
+
 class EchoScenario:
     def __init__(self, network_file=None, name='default_name', description=None, energy_only=False, load_file=None, byte_string=False):
         self.name = name
@@ -64,6 +68,7 @@ class EchoScenario:
 
         self.network_file = network_file
         self.network = netw
+        self.json_network = netw_jsn
         self.connection_point_df = con_point_df
         self.num_sites = len(con_point_df)
         print('Finished importing network data')
@@ -267,7 +272,6 @@ class EchoScenario:
             if auto_taps:
                 tap_changed = auto_taps     # enable or disable automatic tap changing
                 while tap_changed:
-                    ss = self.network.solve_power_flow()
                     ss = self.network.solve_power_flow()
                     tap_changed = False     # set to false and then see if at least one reg had tap changed
                     for transformer in transformers:
