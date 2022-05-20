@@ -1454,3 +1454,9 @@ class GasTellegenNode(Node):
         super(GasTellegenNode, self).__init__()
         self.node_rule = NodeRule.Tellegen
         self.units = Units.Jps
+
+
+
+class FixedElectricalPort(ElectricalPort):
+    """ An electrical port with fixed values (parameters)."""
+    opt_type = OptimisationType.Parameter
