@@ -312,7 +312,8 @@ print('Total kgCO2e emissions: ', emissions_total)
 print('Predicted total gas consumption: ', 5436)
 print('Total gas consumption: ', sum(optimiser.values(gas_cp_soad.ports['cp'].port_name, 0)))
 print('Total cost: ', optimiser.opt_status['Termination message'])
+plt.show()
 
-
-# fig = plt.figure(figsize=(14, 7))
-# nx.draw(system, labels=labels, with_labels=True, node_color=(1,0.5,1))
+fig = plt.figure(figsize=(8, 8))
+nx.draw(system, labels=labels, with_labels=True, node_color=(1,0.5,1))
+plt.show()
