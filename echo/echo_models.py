@@ -11,10 +11,16 @@ from pydantic import Field, validator, root_validator, NegativeFloat, PositiveFl
 from typing import Optional, Union, List, Container
 from echo.echo_validators import *
 
+
+"""
+
+    Base models
+
+"""
+
 class BaseModel(PydanticBaseModel):
     class Config:
         validate_assignment = True
-
 
 class OptimisationGraph(Graph):
     # todo do we need anything pydantic related for this class?
@@ -24,7 +30,6 @@ class OptimisationGraph(Graph):
         self.node_obj = dict()
         self.edge_obj = dict()
         self.paths = {}
-
 
     def add_node_obj(self, node):
         def add_single_node(node_obj):
@@ -136,7 +141,6 @@ class OptimisationGraph(Graph):
                     simple_edges = nx.all_simple_edge_paths(self, source_node.node_name, sink_node.node_name)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
                         # Convert list of node names to list of node objects
-                        node_obj_list = [self.node_obj[node_name] for node_name in vertex_list]
                         p = Path(vertices=vertex_list)  # Create path objects
                         p.regularise = regularise  # For adding regularisation (ie equal sharing) to give a unique solution
                         p.units = Units.KW
@@ -150,18 +154,8 @@ class OptimisationGraph(Graph):
         self.paths = all_paths
         self.verify_paths()
 
-
 class ConfigurationError(Exception):
     pass
-
-
-def fix_port_variable(model, var_name, new_values, expansion_periods):
-    var = getattr(model, var_name)
-    keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
-    fixed_vals = dict(zip(keys, new_values))
-    var.set_values(fixed_vals)
-    var.fix()
-
 
 class Port(BaseModel):
     # Pydantic attribute declaration follows this format:
@@ -396,13 +390,12 @@ class Port(BaseModel):
         setattr(model, f"pos_neg_con2_{self.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
 
-    def factory_pos_neg_flows(self, var_name, pos_name, neg_name):
-
+    @staticmethod
+    def factory_pos_neg_flows(var_name, pos_name, neg_name):
         def constraint(model, expansion_interval, time_interval):
             return getattr(model, var_name)[expansion_interval, time_interval] == \
                    (getattr(model, pos_name)[expansion_interval, time_interval] +
                     getattr(model, neg_name)[expansion_interval, time_interval])
-
         return constraint
 
     def add_initial_value(self, initial_value):
@@ -431,7 +424,6 @@ class Port(BaseModel):
                                  model.Time) * model.bigM * 0.1
         return objective
 
-
 class Node(BaseModel):
     """Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented."""
@@ -450,6 +442,14 @@ class Node(BaseModel):
         if uid is not None:
             values["node_name"] = 'node_' + str(uid)
         return values
+
+    @staticmethod
+    def fix_port_variable(model, var_name, new_values, expansion_periods):
+        var = getattr(model, var_name)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
+        fixed_vals = dict(zip(keys, new_values))
+        var.set_values(fixed_vals)
+        var.fix()
 
     def add_named_electrical_ports(self, name_list):
         if type(name_list) is not list:
@@ -542,13 +542,160 @@ class Node(BaseModel):
     def num_ports(self):
         return len(self.ports)
 
+class Edge(BaseModel):
+    """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
+    the edge value is equal to the flow from x->y plus the flow from y->x. """
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    edge_name: Optional[str] = None
+    opt_type: int = OptimisationType.NA
+    vertices: tuple
+    tariff: Optional[Union[list, None]]
 
-# High Level definitions of asset types
+    @root_validator()
+    def assign_edge_name(cls, values):
+        uid = values.get("uid")
+        if uid is not None:
+            values["edge_name"] = 'edge_' + str(uid)
+        return values
+
+    def add_vertices(self, obj1, obj2):
+        self.vertices = (obj1, obj2)
+
+    def verify_edge(self):
+        port1 = self.vertices[0]
+        port2 = self.vertices[1]
+
+        if (port1.flows is Flows.Export) and (port2.flows is Flows.Export):
+            raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
+        if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
+            raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
+
+    def initialise_edge(self, model):
+
+        port1 = self.vertices[0]
+        port2 = self.vertices[1]
+
+        con_rule1 = self.factory_constraint_edge_builder(port1.port_name, port2.port_name)
+        con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
+
+    def factory_constraint_edge_builder(self, obj1, obj2):
+        def constraint(model, expansion_interval, time_interval):
+            return getattr(model, obj1)[expansion_interval, time_interval] + \
+                   getattr(model, obj2)[expansion_interval, time_interval] == 0
+
+        return constraint
+
+    def add_objective(self, model):
+        # Todo add edge tariffs here
+        return 0
+
+    def add_initial_edge_capacity(self, initial_capacity):
+        self.initial_edge_capacity = initial_capacity
+
+class Transform(BaseModel):
+    """ An object for carrying a generic linear node transformation."""
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    transform_name: Optional[str] = None
+    rhs: list = []
+    lhs: list = []
+
+    @root_validator()
+    def assign_transform_name(cls, values):
+        uid = values.get("uid")
+        if uid is not None:
+            values["transform_name"] = 'transform_' + str(uid)
+        return values
+
+    def add_rhs_term(self, var, rule, weight):
+        term = {'var': var, 'rule': rule, 'weight': weight}
+        self.rhs.append(term)
+
+    def add_lhs_term(self, var, rule, weight):
+        term = {'var': var, 'rule': rule, 'weight': weight}
+        self.lhs.append(term)
+
+    def initialise_transform(self, model):
+        # Check if we need to create pos/neg components
+        for i in range(len(self.lhs)):
+            rule = self.lhs[i]['rule']
+            if rule is not TransformRule.Both:
+                var = self.lhs[i]['var']
+                if getattr(var, 'pos') is None:
+                    var.constrain_pos_neg(model)
+
+        for i in range(len(self.rhs)):
+            rule = self.rhs[i]['rule']
+            if rule is not TransformRule.Both:
+                var = self.rhs[i]['var']
+                if getattr(var, 'pos') is None:
+                    var.constrain_pos_neg(model)
+
+class Path(BaseModel):
+    """ A path is a sequence of distinct vertices (nodes). """
+    edge_ports: List[tuple] = []  # list of edge name tuples
+    vertices: list  # list of node names
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    path_name: Optional[str] = None
+    units = Units.KW
+    regularise: bool = False
+
+    flow_value: Optional[str]
+    contingency_neg: Optional[str]
+    contingency_pos: Optional[str]
+    path_tariff: Optional[str]
+    slack: Optional[str]
+
+    @root_validator()
+    def assign_path_name(cls, values):
+        uid = values.get("uid")
+        if uid is not None:
+            values["path_name"] = 'path_' + str(uid)
+        return values
+
+    def add_vertices(self, vertex_list):
+        if type(vertex_list) is not list:
+            raise ConfigurationError('Please enter path vertices (nodes) as a list.')
+        self.vertices = vertex_list
+
+    def verify_path(self):
+        pass
+
+    def initialise_path(self, model):
+        self.flow_value = 'flow_value_' + self.path_name
+        setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+
+    def add_objective(self, model):
+        objective = 0
+
+        if self.regularise is True:
+            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                             for p in model.Expansion for t in model.Time) * 0.0000001
+
+        return objective
+
+
+"""
+
+    Commodity agnostic ports and nodes
+
+"""
+
+class TellegenNode(Node):
+    """A node that implements a Tellegen constraint requiring that port values sum to zero."""
+    node_rule = NodeRule.Tellegen
+
+class FlexPort(Port):
+    """ Flexible port """
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+
 class Source(Port):
     """ A source of a commodity. """
     flows: int = Flows.Export
     opt_type: int = OptimisationType.Parameter
-
 
 class Sink(Port):
     """ The sink for a commodity. """
@@ -562,7 +709,6 @@ class Sink(Port):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
-
 
 class Storage(Port):
     """ Storage for a commodity. """
@@ -749,138 +895,8 @@ class Storage(Port):
 
         return objective
 
-
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
-
-
-class ElectricalDemand(Sink):
-    """ Fixed electrical demand"""
-    units = Units.KW
-    import_constraint = FlowConstraint.NoConstraint
-
-    def add_demand_profile(self, electrical_demand):
-        self.add_initial_value(electrical_demand)
-
-    def add_demand_profile_from_array(self, array, expansion_periods):
-        if type(array) is np.ndarray:
-            assert (array >= 0).all(), 'power demand must be non negative'
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
-
-
-class ElectricalGeneration(Source):
-    """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
-    units = Units.KW
-    export_constraint = FlowConstraint.NoConstraint
-    curtailable: bool = False
-
-    # All our optional fields/fields created when building pyomo model
-    port_name_max: Optional[str]
-
-    def add_generation_profile(self, generation):
-        assert type(generation) is dict, 'Generation profile must be dict.'
-        self.add_initial_value(generation)
-
-    def add_generation_profile_from_array(self, array, expansion_periods):
-        if type(array) is np.ndarray:
-            assert (array <= 0).all(), 'power generation must be non positive'
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
-
-    def initialise_port(self, model):
-        self.port_name_max = 'port_max_' + self.port_name
-        setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
-                                                    initialize=self.initial_value, domain=en.NonPositiveReals))
-        setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
-                                              initialize=self.initial_value, domain=en.NonPositiveReals))
-        if self.curtailable:
-            def gen_less_than_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
-
-            setattr(model, f"cons_{self.port_name}_curtailment",
-                    en.Constraint(model.Expansion, model.Time, rule=gen_less_than_max_gen))
-        else:
-            # TODO This could be simplified to only set solar_p as a Param on initialisation
-            def gen_equal_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] == getattr(model, self.port_name_max)[p, t]
-
-            setattr(model, f"cons_{self.port_name}_curtailment",
-                    en.Constraint(model.Expansion, model.Time, rule=gen_equal_max_gen))
-
-
-class ElectricalStorage(Storage):
-    units = Units.KW
-
-
-class ElectricalNode(Node):
-    units = Units.KW
-
-
-class ElectricalTellegenNode(ElectricalNode):
-    """A node that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
-    node_rule = NodeRule.Tellegen
-
-
-class TellegenNode(Node):
-    """A node that implements a Tellegen constraint requiring that port values sum to zero."""
-    node_rule = NodeRule.Tellegen
-
-
-class FlexPort(Port):
-    """ Flexible port """
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
-
-
-class ElectricalPort(FlexPort):
-    """ Flexible electrical port """
-    units = Units.KW
-
-
-class CarbonSource(Port):
-    """ For doing carbon emissions from an asset (node) """
-    flows = Flows.Export
-    export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
-    units = Units.CO2
-
-
-class CarbonSink(Port):
-    """ For sinking carbon emissions into an aggregation node """
-    flows = Flows.Import
-    import_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
-    units = Units.CO2
-
-
-class CarbonAggregation(Node):
-    sum: Optional[BaseModel]
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        aggregation_port = CarbonSink()
-        self.ports['sum'] = aggregation_port
-        setattr(self, 'sum', aggregation_port)
-
-    def add_aggregation_transformation(self):
-        # Create appropriate transformation
-        t = Transform()
-        for port_name, port_obj in self.ports.items():
-            if port_name != 'sum':
-                t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
-        t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
-        self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
-
-    def verify_node(self):
-        self.add_aggregation_transformation()
-        super(CarbonAggregation, self).verify_node()
-
 
 class ControlledLoadOrGen(Port):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
@@ -933,7 +949,6 @@ class ControlledLoadOrGen(Port):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
-
 class ControlledLoad(ControlledLoadOrGen):
     max_power: confloat(ge=0)
     min_power: confloat(ge=0)
@@ -942,7 +957,6 @@ class ControlledLoad(ControlledLoadOrGen):
         if self.max_power < 0 or self.min_power < 0:
             raise ConfigurationError(
                 'For controlled load asset, enter max and min power using positive load convention (i.e. positive).')
-
 
 class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
@@ -953,15 +967,84 @@ class ControlledGen(ControlledLoadOrGen):
             raise ConfigurationError(
                 'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
 
+"""
 
-class CarbonSinkNode(Node):
-    node_rule = NodeRule.Custom
+    Electrical ports and nodes
 
-    def verify_node(self):
-        for port in self.ports.values():
-            if port.units is not Units.CO2:
-                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
+"""
 
+class ElectricalNode(Node):
+    units = Units.KW
+
+class ElectricalTellegenNode(ElectricalNode):
+    """A node that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
+    node_rule = NodeRule.Tellegen
+
+class ElectricalDemand(Sink):
+    """ Fixed electrical demand"""
+    units = Units.KW
+    import_constraint = FlowConstraint.NoConstraint
+
+    def add_demand_profile(self, electrical_demand):
+        self.add_initial_value(electrical_demand)
+
+    def add_demand_profile_from_array(self, array, expansion_periods):
+        if type(array) is np.ndarray:
+            assert (array >= 0).all(), 'power demand must be non negative'
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
+
+class ElectricalGeneration(Source):
+    """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
+    units = Units.KW
+    export_constraint = FlowConstraint.NoConstraint
+    curtailable: bool = False
+
+    # All our optional fields/fields created when building pyomo model
+    port_name_max: Optional[str]
+
+    def add_generation_profile(self, generation):
+        assert type(generation) is dict, 'Generation profile must be dict.'
+        self.add_initial_value(generation)
+
+    def add_generation_profile_from_array(self, array, expansion_periods):
+        if type(array) is np.ndarray:
+            assert (array <= 0).all(), 'power generation must be non positive'
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
+
+    def initialise_port(self, model):
+        self.port_name_max = 'port_max_' + self.port_name
+        setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
+                                                    initialize=self.initial_value, domain=en.NonPositiveReals))
+        setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
+                                              initialize=self.initial_value, domain=en.NonPositiveReals))
+        if self.curtailable:
+            def gen_less_than_max_gen(model, p, t):
+                return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
+
+            setattr(model, f"cons_{self.port_name}_curtailment",
+                    en.Constraint(model.Expansion, model.Time, rule=gen_less_than_max_gen))
+        else:
+            # TODO This could be simplified to only set solar_p as a Param on initialisation
+            def gen_equal_max_gen(model, p, t):
+                return getattr(model, self.port_name)[p, t] == getattr(model, self.port_name_max)[p, t]
+
+            setattr(model, f"cons_{self.port_name}_curtailment",
+                    en.Constraint(model.Expansion, model.Time, rule=gen_equal_max_gen))
+
+class ElectricalStorage(Storage):
+    units = Units.KW
+
+class ElectricalPort(FlexPort):
+    """ Flexible electrical port """
+    units = Units.KW
+
+class FixedElectricalPort(ElectricalPort):
+    """ An electrical port with fixed values (parameters)."""
+    opt_type = OptimisationType.Parameter
 
 class Inverter(ElectricalNode):
     """ An inverter is a node with one AC port and at least one DC port.
@@ -1007,7 +1090,6 @@ class Inverter(ElectricalNode):
         ac_port = self.ports[self.ac_port_name]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
-
 
 class EV(ElectricalNode):
     charge_mode: str = None
@@ -1134,148 +1216,68 @@ class EV(ElectricalNode):
         super(EV, self).initialise_node(model)
         if self.charge_mode == 'V0G':
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
-            fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
-            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
+            self.fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
+            self.fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage)*-1
-            fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
+            self.fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
+
+"""
+
+    Carbon ports and nodes
+
+"""
+
+class CarbonSource(Port):
+    """ For doing carbon emissions from an asset (node) """
+    flows = Flows.Export
+    export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+    units = Units.CO2
+
+class CarbonSink(Port):
+    """ For sinking carbon emissions into an aggregation node """
+    flows = Flows.Import
+    import_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+    units = Units.CO2
+
+class CarbonAggregation(Node):
+    sum: Optional[BaseModel]
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        aggregation_port = CarbonSink()
+        self.ports['sum'] = aggregation_port
+        setattr(self, 'sum', aggregation_port)
+
+    def add_aggregation_transformation(self):
+        # Create appropriate transformation
+        t = Transform()
+        for port_name, port_obj in self.ports.items():
+            if port_name != 'sum':
+                t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
+        t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
+
+    def verify_node(self):
+        self.add_aggregation_transformation()
+        super(CarbonAggregation, self).verify_node()
+
+class CarbonSinkNode(Node):
+    node_rule = NodeRule.Custom
+
+    def verify_node(self):
+        for port in self.ports.values():
+            if port.units is not Units.CO2:
+                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
 
 
-class Edge(BaseModel):
-    """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
-    the edge value is equal to the flow from x->y plus the flow from y->x. """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    edge_name: Optional[str] = None
-    opt_type: int = OptimisationType.NA
-    vertices: list
-    tariff: Optional[Union[list, None]]
+""""
 
-    @root_validator()
-    def assign_edge_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["edge_name"] = 'edge_' + str(uid)
-        return values
+    Below Zero assets
 
-    def add_vertices(self, obj1, obj2):
-        self.vertices = (obj1, obj2)
-
-    def verify_edge(self):
-        port1 = self.vertices[0]
-        port2 = self.vertices[1]
-
-        if (port1.flows is Flows.Export) and (port2.flows is Flows.Export):
-            raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
-        if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
-            raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
-
-    def initialise_edge(self, model):
-
-        port1 = self.vertices[0]
-        port2 = self.vertices[1]
-
-        con_rule1 = self.factory_constraint_edge_builder(port1.port_name, port2.port_name)
-        con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
-
-    def factory_constraint_edge_builder(self, obj1, obj2):
-        def constraint(model, expansion_interval, time_interval):
-            return getattr(model, obj1)[expansion_interval, time_interval] + \
-                   getattr(model, obj2)[expansion_interval, time_interval] == 0
-
-        return constraint
-
-    def add_objective(self, model):
-        # Todo add edge tariffs here
-        return 0
-
-    def add_initial_edge_capacity(self, initial_capacity):
-        self.initial_edge_capacity = initial_capacity
-
-
-class Transform(BaseModel):
-    """ An object for carrying a generic linear node transformation."""
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    transform_name: Optional[str] = None
-    rhs: list = []
-    lhs: list = []
-
-    @root_validator()
-    def assign_transform_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["transform_name"] = 'transform_' + str(uid)
-        return values
-
-    def add_rhs_term(self, var, rule, weight):
-        term = {'var': var, 'rule': rule, 'weight': weight}
-        self.rhs.append(term)
-
-    def add_lhs_term(self, var, rule, weight):
-        term = {'var': var, 'rule': rule, 'weight': weight}
-        self.lhs.append(term)
-
-    def initialise_transform(self, model):
-        # Check if we need to create pos/neg components
-        for i in range(len(self.lhs)):
-            rule = self.lhs[i]['rule']
-            if rule is not TransformRule.Both:
-                var = self.lhs[i]['var']
-                if getattr(var, 'pos') is None:
-                    var.constrain_pos_neg(model)
-
-        for i in range(len(self.rhs)):
-            rule = self.rhs[i]['rule']
-            if rule is not TransformRule.Both:
-                var = self.rhs[i]['var']
-                if getattr(var, 'pos') is None:
-                    var.constrain_pos_neg(model)
-
-
-class Path(BaseModel):
-    """ A path is a sequence of distinct vertices (nodes). """
-    edge_ports: List[tuple] = []  # list of edge name tuples
-    vertices: list  # list of node names
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    path_name: Optional[str] = None
-    units = Units.KW
-    regularise: bool = False
-
-    flow_value: Optional[str]
-    contingency_neg: Optional[str]
-    contingency_pos: Optional[str]
-    path_tariff: Optional[str]
-    slack: Optional[str]
-
-    @root_validator()
-    def assign_path_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["path_name"] = 'path_' + str(uid)
-        return values
-
-    def add_vertices(self, vertex_list):
-        if type(vertex_list) is not list:
-            raise ConfigurationError('Please enter path vertices (nodes) as a list.')
-        self.vertices = vertex_list
-
-    def verify_path(self):
-        pass
-
-    def initialise_path(self, model):
-        self.flow_value = 'flow_value_' + self.path_name
-        setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-
-    def add_objective(self, model):
-        objective = 0
-
-        if self.regularise is True:
-            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
-                             for p in model.Expansion for t in model.Time) * 0.0000001
-
-        return objective
-
-
-# BZ assets
+"""
 
 class GasBoiler(Node):
     """ Gas boiler converts gas to thermal energy """
@@ -1298,7 +1300,6 @@ class GasBoiler(Node):
         t.add_rhs_term(gas_port, TransformRule.PositiveComponent, gas_to_heat_efficiency)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
-
 
 class Chiller(Node):
     """ A chiller is a node that imports electricity and exports cooling power, where the conversion occurs according
@@ -1403,7 +1404,6 @@ class Chiller(Node):
         con_name = f"transformation_con_{self.node_name}"
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
 
-
 class ThermalLoad(Sink):
     """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
     # todo think abt this
@@ -1415,7 +1415,6 @@ class ThermalLoad(Sink):
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
 
-
 class GasPort(Port):
 
     def __init__(self):
@@ -1425,7 +1424,6 @@ class GasPort(Port):
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
         self.opt_type = OptimisationType.Variable
-
 
 class ThermalPort(Port):
 
@@ -1437,7 +1435,6 @@ class ThermalPort(Port):
         self.export_constraint = FlowConstraint.NoConstraint
         self.opt_type = OptimisationType.Variable
 
-
 class GasDemand(Sink):
 
     def __init__(self):
@@ -1448,16 +1445,9 @@ class GasDemand(Sink):
     def add_demand_profile_from_array(self, array, expansion_intervals):
         self.add_sink_profile_from_array(array, expansion_intervals)
 
-
 class GasTellegenNode(Node):
 
     def __init__(self):
         super(GasTellegenNode, self).__init__()
         self.node_rule = NodeRule.Tellegen
         self.units = Units.Jps
-
-
-
-class FixedElectricalPort(ElectricalPort):
-    """ An electrical port with fixed values (parameters)."""
-    opt_type = OptimisationType.Parameter
