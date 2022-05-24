@@ -1244,6 +1244,7 @@ class Path(BaseModel):
     contingency_neg: Optional[str]
     contingency_pos: Optional[str]
     path_tariff: Optional[str]
+    slack: Optional[str]
 
     @root_validator()
     def assign_path_name(cls, values):

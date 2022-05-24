@@ -65,6 +65,9 @@ def test_partitioning_regions_for_path_flow():
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
     system.create_path_objects(sources=[grid, inverter], sinks=[grid, inverter, load])
+    # example_path = system.get_path([grid, cp, load])
+    # system.paths = {}
+    # system.paths[(grid.node_name, cp.node_name, load.node_name)] = example_path
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,

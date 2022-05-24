@@ -26,6 +26,7 @@ class ObjectiveSet(object):
 
     def __init__(self,
                  objective_list):
+        assert type(objective_list) == list, 'Enter objectives as a list'
         self.objectives = objective_list
 
     def initialise_objective(self, model):

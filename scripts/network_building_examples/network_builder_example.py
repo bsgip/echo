@@ -15,23 +15,18 @@ df = pd.DataFrame({
 network_dict = {
     'components': {
         'bulk_grid': {
-            'Node': {
                 'id': 'bulk_grid',
                 'type': 'flex',
                 'units': 'KW',
                 'ports': ['downstream']
-            }
         },
         'elec_cp': {
-            'Node': {
                 'id': 'elec_cp',
                 'type': 'tellegen',
                 'units': 'kW',
                 'ports': ['upstream', 'load', 'inverter', 'ev']
-            }
         },
         'inverter': {
-            'Node': {
                 'id': 'inverter',
                 'type': 'inverter',
                 'ports': ['ac', 'bess', 'pv'],
@@ -41,20 +36,16 @@ network_dict = {
                                'max_export': -5.,
                                'ac_dc_eta': 1.,
                                'dc_ac_eta': 1.}
-            }
         },
         'load': {
-            'Node': {
                 'id': 'load',
                 'type': 'load',
                 'units': 'kW',
                 'ports': ['load'],
                 'data': 'load',
                 'parameters': {},
-            }
         },
         'battery': {
-            'Node': {
                 'id': 'bess',
                 'type': 'battery',
                 'ports': ['bess'],
@@ -65,19 +56,15 @@ network_dict = {
                                'charging_efficiency': 1.,
                                'discharging_efficiency': 1,
                                'initial_state_of_charge': 0},
-            }
         },
         'solar': {
-            'Node': {
                 'id': 'solar',
                 'type': 'solar',
                 'ports': ['solar'],
                 'data': 'solar',
                 'parameters': {'curtailable': False},
-            }
         },
         'ev1': {
-            'Node': {
                 'id': 'ev1',
                 'type': 'ev',
                 'ports': ['ev_cp'],
@@ -95,7 +82,6 @@ network_dict = {
                                'soc_conserv_cost': 0.,
                                'enable_trip_slack': True,
                                'interval_duration': 30.}  #todo another way to carry this info, we need it for building EVs tho
-            }
         }
     },
     'edges': {

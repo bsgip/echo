@@ -84,6 +84,7 @@ class EchoOptimiser(object):
     def apply_constraints(self):
         self.apply_node_constraints()
         self.apply_path_constraints()
+        #self.apply_new_path_constraints()
 
     def apply_node_constraints(self):
         for _, obj in self.ES.node_obj.items():
@@ -145,6 +146,27 @@ class EchoOptimiser(object):
 
                 setattr(self.model, f"path_flow_con3_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_two))
+
+    def apply_new_path_constraints(self):
+        if self.ES.paths:
+            for path_vertices, path_obj in self.ES.paths.items():
+                # create a slack var
+                path_obj.slack = 'slack_' + str(path_obj.path_name)
+                setattr(self.model, path_obj.slack, en.Var(self.model.Expansion, self.model.Time, domain=en.Reals))
+
+                def rule1(model, p, t):
+                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
+                    b = getattr(model, path_obj.edge_ports[-1][-1].port_name)[p, t]
+                    return a*-1 + b*-1 == getattr(model, path_obj.slack)[p, t]
+
+                def rule2(model, p, t):
+                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
+                    return getattr(model, path_obj.flow_value)[p, t] == a + getattr(model, path_obj.slack)[p, t]
+
+                setattr(self.model, f"path_con1_{path_obj.path_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule1))
+                setattr(self.model, f"path_con2_{path_obj.path_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule2))
 
     def build_objective(self):
         self.objective = 0

@@ -42,8 +42,10 @@ class NetworkSet:
         else:
             prog_file = None
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
-            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods))
+            # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
+            # Append results to network dict
+            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods))
         if log_file is not None:
             prog_file.close()
 
@@ -114,7 +116,7 @@ def convert_dict_to_nx(netw_jsn: dict):
 
     # Add edges, Edge name is the unique edge ID, Edge dict carries node pair info, optional port pair info, and resource type
     for edge_name, edge_dict in netw_jsn['edges'].items():
-        # Check that both node edges exist already
+        # Check that both edge nodes exist in the component dict
         assert edge_dict['nodes'][0] in n.nodes, \
             'Node {} is part of edge {} but is not defined in components dict'.format(edge_dict['nodes'][0], edge_name)
         assert edge_dict['nodes'][1] in n.nodes, \
@@ -124,11 +126,10 @@ def convert_dict_to_nx(netw_jsn: dict):
                    name=edge_name,
                    ports=edge_dict['ports'],
                    res=edge_dict['res'])
-        # note that networkx may add the edges in a different order to the way we specify
+        # NB: networkx may add the edges in a different order to the way we specify
 
-    # Do some checks
-    check_nx_for_floating_nodes(n)
-    check_port_names_are_consistent(n)
+    check_nx_for_floating_nodes(n)  # Check that the graph is connected
+    check_port_names_are_consistent(n) # Check there are no naming issues
 
     return n
 
@@ -145,40 +146,8 @@ def convert_nx_to_echo(g, df):
     for node in g.nodes:
         # Check what the node type is so we know what kind of echo node to make
         node_dict = g.nodes[node]['attr']
-        if node_dict['type'] == 'battery':
-            new_node = create_battery_node(node_dict)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'tellegen':
-            new_node = create_tellegen_node(node_dict)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'flex':
-            new_node = create_flex_node(node_dict)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'load':
-            new_node = create_load_node(node_dict, df)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'ev':
-            new_node = create_ev(node_dict, df)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'inverter':
-            new_node = create_inverter_node(node_dict)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
-
-        if node_dict['type'] == 'solar':
-            new_node = create_solar_node(node_dict, df)
-            system.add_node_obj(new_node)
-            node_name_dict[node] = new_node.node_name
+        # Construct the right kind of node
+        construct_echo_node(system, node_name_dict, node, node_dict, df)
 
     # Do edges
     for edge in g.edges:
@@ -200,6 +169,46 @@ def convert_nx_to_echo(g, df):
             connect_nodes(system, node1, node2, port1=port2, port2=port1)
 
     return system, node_name_dict
+
+
+def construct_echo_node(system, node_name_dict, node, node_dict, df):
+    """ Does logic for workingout which type of node to build.
+    Builds it and updates the echo graph, as well as the node name map."""
+
+    if node_dict['type'] == 'battery':
+        new_node = create_battery_node(node_dict)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'tellegen':
+        new_node = create_tellegen_node(node_dict)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'flex':
+        new_node = create_flex_node(node_dict)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'load':
+        new_node = create_load_node(node_dict, df)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'ev':
+        new_node = create_ev(node_dict, df)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'inverter':
+        new_node = create_inverter_node(node_dict)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
+    if node_dict['type'] == 'solar':
+        new_node = create_solar_node(node_dict, df)
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
 
 
 def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict):
