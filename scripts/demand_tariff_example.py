@@ -9,7 +9,7 @@ from echo.objectives import *
 
 import os
 
-SOLVER = os.environ.get('OPTIMISER_ENGINE','cplex')
+SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
 
 expansion_periods = 1
@@ -36,8 +36,6 @@ l1 = ElectricalDemand()
 l1.add_demand_profile_from_array([2] * time_periods, expansion_periods)
 load1.ports['demand'] = l1
 
-dc_window = [0] * 24 + [1] * 12 + [0] * 12
-
 site1 = ElectricalTellegenNode()
 site1.add_named_electrical_ports(['cp', 'load', 'bess'])
 cp1 = site1.ports['cp']
@@ -50,9 +48,34 @@ grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
 system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
-dc_rate = 1.0
+# peak usage
+peak_rate = 2.0
+peak_window = [0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8
+
+peak_charge = DemandCharge(rate=peak_rate,
+                           window_array=peak_window,
+                           min_demand=0.0)
+
+# shoulder usage
+shoulder_rate = 1.0
+shoulder_window = [0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4
+
+shoulder_charge = DemandCharge(rate=shoulder_rate,
+                               window_array=shoulder_window,
+                               min_demand=0.0)
+
+# off peak usage
+off_peak_rate = 0.5
+off_peak_window = np.subtract(1, np.add(shoulder_window, peak_window))
+
+off_peak_charge = DemandCharge(rate=off_peak_rate,
+                               window_array=off_peak_window,
+                               min_demand=0.0)
+
 demand_tariff = ImportDemandTariffObjective(component=cp1,
-                                            demand_charges=[DemandCharge(rate=dc_rate, window_array=dc_window, min_demand=1)])
+                                            demand_charges=[peak_charge,
+                                                            shoulder_charge,
+                                                            off_peak_charge])
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -68,8 +91,8 @@ optimiser = EchoOptimiser(
 
 optimiser.optimise()
 
-
 storage_energy_delta = optimiser.values(b1.port_name, 0)
+max_demand_peak = optimiser.values(peak_charge.max_demand_val, 0)
 storage_energy_soc = optimiser.values(b1.soc_value, 0)
 optimised_connection_point_load = optimiser.values(site1.ports['cp'].port_name, 0)
 
@@ -77,9 +100,12 @@ colors = sns.color_palette()
 hrs = np.arange(0, 48) / 2
 fig = plt.figure(figsize=(14, 7))
 ax2 = fig.add_subplot(2, 1, 1)
-line1, = ax2.plot(hrs, np.multiply(dc_window,dc_rate), color=colors[3])
+line1, = ax2.plot(hrs, np.multiply(peak_window, peak_rate), color=colors[0])
+line2, = ax2.plot(hrs, np.multiply(shoulder_window, shoulder_rate), color=colors[1])
+line3, = ax2.plot(hrs, np.multiply(off_peak_window, off_peak_rate), color=colors[2])
+
 ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-ax2.legend([line1], ['demand tariff'])
+ax2.legend([line1, line2, line3], ['peak', 'shoulder', 'off peak'])
 ax2.set_xlim([0, 24])
 
 ax3 = fig.add_subplot(2, 1, 2)
@@ -88,3 +114,4 @@ line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
 ax3.set_xlim([0, 24])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+plt.show()

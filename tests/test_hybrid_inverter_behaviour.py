@@ -126,7 +126,7 @@ def test_hybrid_inverter_limits_path_flows():
     system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
     system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
 
-    system.create_path_objects(sources=[grid, solar, battery, load], sinks=[grid, solar, battery, load])
+    system.create_path_objects(sources=[grid, solar, battery], sinks=[grid, battery, load])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -142,10 +142,10 @@ def test_hybrid_inverter_limits_path_flows():
 
     optimiser.optimise()
 
-    bess_to_load = optimiser.values(system.paths[(battery, inverter, cp, load)].flow_value, 0)
-    bess_to_grid = optimiser.values(system.paths[(battery, inverter, cp, grid)].flow_value, 0)
-    solar_to_load = optimiser.values(system.paths[(solar, inverter, cp, load)].flow_value, 0)
-    solar_to_grid = optimiser.values(system.paths[(solar, inverter, cp, grid)].flow_value, 0)
+    bess_to_load = optimiser.values(system.get_path([battery, inverter, cp, load]).flow_value, 0)
+    bess_to_grid = optimiser.values(system.get_path([battery, inverter, cp, grid]).flow_value, 0)
+    solar_to_load = optimiser.values(system.get_path([solar, inverter, cp, load]).flow_value, 0)
+    solar_to_grid = optimiser.values(system.get_path([solar, inverter, cp, grid]).flow_value, 0)
 
     # Check all flows through inverter respect inverter limits
     for i in range(time_periods):

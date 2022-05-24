@@ -26,11 +26,12 @@ class ObjectiveSet(object):
 
     def __init__(self,
                  objective_list):
+        assert type(objective_list) == list, 'Enter objectives as a list'
         self.objectives = objective_list
 
     def initialise_objective(self, model):
         for obj in self.objectives:
-            obj.verify_objective()
+            obj.verify_objective(model)
             obj.create_params(model)
             obj.create_vars(model)
             obj.apply_constraints(model)
@@ -49,7 +50,7 @@ class PeakPositivePower(Objective):
                  component):
         super(PeakPositivePower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Peak Power objective must be applied to port component.')
@@ -65,7 +66,7 @@ class PeakPositivePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_pos) >= getattr(model, self.component.pos)[p, t]
 
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
@@ -84,7 +85,7 @@ class PeakNegativePower(Objective):
                  component):
         super(PeakNegativePower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Peak Power objective must be applied to port component.')
@@ -93,13 +94,13 @@ class PeakNegativePower(Objective):
         pass
 
     def create_vars(self, model):
-        self.component.max_neg = 'max_neg' + self.component.port_name
+        self.component.max_neg = 'max_neg_' + self.component.port_name
         setattr(model, self.component.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
         def max_value_rule(model, p, t):
             return getattr(model, self.component.max_neg) <= getattr(model, self.component.neg)[p, t]
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
@@ -130,7 +131,7 @@ class ImportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.import_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Import Tariff objective must be applied to port component.')
@@ -143,7 +144,7 @@ class ImportTariff(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -176,7 +177,7 @@ class ExportTariff(Objective):
                 t[(ep, i)] = array[i]
         self.export_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Export Tariff objective must be applied to port component.')
@@ -190,7 +191,7 @@ class ExportTariff(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -223,7 +224,7 @@ class PathTariff(Objective):
                 t[(ep, i)] = array[i]
         self.path_tariff = t
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Path Tariff objective must be applied to path component.')
@@ -256,7 +257,7 @@ class ThroughputCost(Objective):
         super(ThroughputCost, self).__init__(component)
         self.rate = rate
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Throughput Cost objective must be applied to port component.')
@@ -268,7 +269,7 @@ class ThroughputCost(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -288,7 +289,7 @@ class QuadraticPower(Objective):
                  component):
         super(QuadraticPower, self).__init__(component)
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Quadratic Power objective must be applied to port component.')
@@ -300,7 +301,7 @@ class QuadraticPower(Objective):
         pass
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
@@ -322,7 +323,7 @@ class ContingencyNegative(Objective):
         super(ContingencyNegative, self).__init__(component)
         self.duration = duration
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Contingency objective must be applied to path component.')
@@ -370,10 +371,10 @@ class ContingencyNegative(Objective):
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.start_port, 'soc_value'):
+        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.component.contingency_neg)[p, t] * self.duration / 60 >= \
-                       getattr(model, self.component.start_port.soc_value)[p, t]*-1
+                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]*-1
 
             setattr(model, f"cont_neg_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -395,7 +396,7 @@ class ContingencyPositive(Objective):
         super(ContingencyPositive, self).__init__(component)
         self.duration = duration
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'flow_value'):
             raise ConfigurationError('Contingency objective must be applied to path component.')
@@ -443,10 +444,10 @@ class ContingencyPositive(Objective):
                         en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.start_port, 'soc_value'):
+        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.component.contingency_pos)[p, t] * self.duration / 60 <= \
-                       self.component.start_port.max_capacity - getattr(model, self.component.start_port.soc_value)[p, t]
+                       self.component.edge_ports[0][0].max_capacity - getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]
 
             setattr(model, f"cont_pos_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -576,23 +577,17 @@ class DemandTariffObjective(Objective):
     def __init__(self,
                  component,
                  demand_charges,
-                 excess_demand_charge,
-                 off_peak_demand_charge,
                  import_demand: bool,
                  export_demand: bool,
-                 df=None,
                  expansion_periods=1
                  ):
         super(DemandTariffObjective, self).__init__(component)
         self.demand_charges = demand_charges
-        self.excess_demand_charge = excess_demand_charge
-        self.off_peak_demand_charge = off_peak_demand_charge
-        self.df = df  # pandas dataframe for carrying date info so we can define weekday/weekend rates etc
         self.expansion_periods = expansion_periods
         self.import_demand = import_demand
         self.export_demand = export_demand
 
-    def verify_objective(self):
+    def verify_objective(self, model):
         """ Check objectives all reference an object of the correct type"""
         if not hasattr(self.component, 'port_name'):
             raise ConfigurationError('Demand Tariff objective must be applied to port component.')
@@ -600,82 +595,92 @@ class DemandTariffObjective(Objective):
         if type(self.demand_charges) is not list:
             raise ConfigurationError('Enter list of demand charges.')
 
-        # Check that windows are not overlapping if there are multiple demand charges defined
-        v = []
-        for dc in self.demand_charges:
-            if dc.window is not None:
-                v.append(dc.window.time_periods[0])
-                for i in range(len(v)):
-                    for j in range(i + 1, len(v)):
-                        if v[i].overlaps(v[j]):
-                            raise ValueError(f"TimePeriod {v[i]} overlaps with TimePeriod {v[j]}")
+        def verify_non_overlapping():
+            # Check that windows are not overlapping if there are multiple demand charges defined
+            prev_window = np.array([])
+            prev_dc = None
+            for dc in self.demand_charges:
+                if prev_window.size > 0:
+                   comparison = np.array(prev_window)*np.array(dc.window_array)
+                   if sum(comparison) > 0:
+                       raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
+                   prev_window = np.array(prev_window) + np.array(dc.window_array)
+                else:
+                   prev_dc = dc
+                   prev_window = np.array(dc.window_array)
+
+        def verify_same_length_windows():
+            prev_length = None
+            for dc in self.demand_charges:
+                if prev_length is not None:
+                    assert len(dc.window_array) == prev_length, f"Demand charge windows are not all the same length"
+                    prev_length = len(dc.window_array)
+                else:
+                    prev_length = len(dc.window_array)
+
+                assert prev_length == model.number_of_intervals, f"Demand charge {dc} windows do not match optimiser time periods."
+
+        def verify_dc():
+            # do any verification of demand charges
+            for dc in self.demand_charges:
+                dc.verify_objective(model)
+
+        def verify_min_demand():
+            if self.import_demand:
+                for dc in self.demand_charges:
+                    if dc.min_demand < 0:
+                        raise ConfigurationError('Enter min demand using positive load convention (ie positive number)')
+            elif self.export_demand:
+                for dc in self.demand_charges:
+                    if dc.min_demand > 0:
+                        raise ConfigurationError('Enter min demand using positive load convention (ie negative number)')
+            else:
+                raise ConfigurationError('Demand tariff must be either import or export.')
+
+        verify_non_overlapping()
+        verify_same_length_windows()
+        verify_dc()
+        verify_min_demand()
 
     def create_params(self, model):
-        # Create window bool param for each demand charge
         for dc in self.demand_charges:
-            if dc.window:
-                # Check that there is a dataframe reference
-                if self.df is None:
-                    raise ConfigurationError('Enter pandas date_range in demandtariffobjective if using time periods to define tariffs.')
-                dc.window_obj_to_bool(self.df, self.expansion_periods)
-                dc.create_params(model)
-            elif dc.window_array is not None:
-                dc.window_array_to_bool(self.expansion_periods)
-                dc.create_params(model)
-            else:
-                raise ConfigurationError('Window not defined for demand charge.')
-            if self.import_demand:
-                if dc.min_demand < 0:
-                    raise ConfigurationError('Enter min demand using positive load convention (ie positive number)')
-            if self.export_demand:
-                if dc.min_demand > 0:
-                    raise ConfigurationError('Enter min demand using positive load convention (ie negative number)')
+            dc.create_params(model)
 
     def create_vars(self, model):
         for dc in self.demand_charges:
+            dc.max_demand_val = 'max_demand_' + str(dc.uid)
             if self.import_demand is True:
-                dc.max_demand_val = 'max_demand_' + str(dc.uid)
-                setattr(model, dc.max_demand_val, en.Var(initialize=0, domain=en.NonNegativeReals))
+                setattr(model, dc.max_demand_val, en.Var(dc.reset_index, initialize=0, domain=en.NonNegativeReals))
             elif self.export_demand is True:
-                dc.max_demand_val = 'max_demand_' + str(dc.uid)
-                setattr(model, dc.max_demand_val, en.Var(initialize=0, domain=en.NonPositiveReals))
-            else:
-                raise ConfigurationError('either import/export should be true')
-
-        # Todo remove this
-        if self.excess_demand_charge:
-            print('Excess demand charge not fully implemented. Please set excess_demand_charge to None.')
-
-        if self.off_peak_demand_charge:
-            print('Off peak demand charge not fully implemented. Please set off_peak_demand_charge to None.')
+                setattr(model, dc.max_demand_val, en.Var(dc.reset_index, initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
-        if not hasattr(self.component, 'pos'):
+        if getattr(self.component, 'pos') is None:
             self.component.constrain_pos_neg(model)
 
         for dc in self.demand_charges:
             if self.import_demand is True:
-                def max_import_demand_rule(model, p, t):
-                    return getattr(model, dc.max_demand_val) >= \
-                           (getattr(model, self.component.pos)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, t]
+                def max_import_demand_rule(model, p, t, r):
+                    return getattr(model, dc.max_demand_val)[r] >= \
+                           (getattr(model, self.component.pos)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, r, t]
 
-                setattr(model, f"cons_{dc.max_demand_val}_max_demand", en.Constraint(model.Expansion, model.Time,
-                                                                                  rule=max_import_demand_rule))
+                setattr(model, f"cons_{dc.max_demand_val}_max_demand",
+                        en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_import_demand_rule))
             elif self.export_demand is True:
-                def max_export_demand_rule(model, p, t):
-                    return getattr(model, dc.max_demand_val) <= \
-                           (getattr(model, self.component.neg)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, t]
+                def max_export_demand_rule(model, p, t, r):
+                    return getattr(model, dc.max_demand_val)[r] <= \
+                           (getattr(model, self.component.neg)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, r, t]
 
-                setattr(model, f"cons_{dc.max_demand_val}_max_export_demand", en.Constraint(model.Expansion, model.Time,
-                                                                                  rule=max_export_demand_rule))
+                setattr(model, f"cons_{dc.max_demand_val}_max_export_demand",
+                        en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_export_demand_rule))
 
     def objective_expr(self, model):
         objective = 0
         for dc in self.demand_charges:
             if self.import_demand:
-                objective += getattr(model, dc.max_demand_val) * dc.rate
+                objective += sum(getattr(model, dc.max_demand_val)[r] * dc.rate for r in dc.reset_index)
             elif self.export_demand:
-                objective += getattr(model, dc.max_demand_val) * dc.rate * -1
+                objective += sum(getattr(model, dc.max_demand_val)[r] * dc.rate * -1 for r in dc.reset_index)
 
         return objective
 
@@ -686,34 +691,41 @@ class DemandCharge(object):
     def __init__(self,
                  rate,
                  min_demand,
-                 window=None,
-                 window_array=None,
+                 window_array,
+                 reset_period_length=None,
+                 expansion_periods=1,
                  ):
         self.rate = rate
         self.min_demand = min_demand
         self.uid = uuid.uuid4()
-        self.window_bool = None
-        self.window = window
         self.window_array = window_array
+        if reset_period_length is None:
+            self.reset_period_length = len(window_array)
+        else:
+            self.reset_period_length = reset_period_length
+        assert len(self.window_array) % self.reset_period_length == 0, f"Demand charge reset period length should be a multiple of the window array length."
+        self.num_reset_periods = len(window_array)//self.reset_period_length
+        self.reset_index = en.RangeSet(0, self.num_reset_periods-1)
 
-    def window_array_to_bool(self, expansion_periods):
-        w = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(self.window_array)):
-                w[(ep, i)] = self.window_array[i]
-        self.window_bool = w
-
-    def window_obj_to_bool(self, df, expansion_periods):
-        array = self.window.to_bool_periods(df)
-        w = {}
-        for ep in range(0, expansion_periods):
-            for i in range(0, len(array)):
-                w[(ep, i)] = array[i]
-        self.window_bool = w
+    def verify_objective(self, model):
+        pass
 
     def create_params(self, model):
+        #todo make this work for multiple planning intervals, make it less hacky:)
+
+        initial_window_val = {}
+        x = np.identity(self.num_reset_periods)
+        i = 0
+        for row in x:
+            period_window = row.repeat(self.reset_period_length)
+            new_window = np.array(self.window_array)*np.array(period_window)
+            for j in range(len(new_window)):
+                initial_window_val[(0, i, j)] = new_window[j]
+            i += 1
+
         self.window_active = 'window_active_' + str(self.uid)
-        setattr(model, self.window_active, en.Param(model.Expansion, model.Time, initialize=self.window_bool, domain=en.Binary))
+        setattr(model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time,
+                                                    initialize=initial_window_val, domain=en.Binary))
 
 
 class ImportDemandTariffObjective(DemandTariffObjective):
@@ -728,9 +740,6 @@ class ImportDemandTariffObjective(DemandTariffObjective):
                                                          demand_charges,
                                                          import_demand=True,
                                                          export_demand = False,
-                                                         excess_demand_charge=None,
-                                                         off_peak_demand_charge=None,
-                                                         df=df,
                                                          expansion_periods=expansion_periods)
 
 
@@ -746,7 +755,4 @@ class ExportDemandTariffObjective(DemandTariffObjective):
                                                          demand_charges,
                                                          import_demand=False,
                                                          export_demand=True,
-                                                         excess_demand_charge=None,
-                                                         off_peak_demand_charge=None,
-                                                         df=df,
                                                          expansion_periods=expansion_periods)

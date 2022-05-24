@@ -41,6 +41,7 @@ test_pv = 2 * np.array(
      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 test_pv *= -1  # convert solar generation to negative to match convention.
 
+aggregate_load = test_load+test_pv
 
 # Tariffs are in $ / kwh
 remote_energy_tariff = np.array(([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12))
@@ -76,8 +77,8 @@ connection_point = ElectricalTellegenNode()
 connection_point.add_named_electrical_ports(['load', 'bess', 'pv', 'grid'])
 
 load = Node()
-l1 = ElectricalDemand()
-l1.add_demand_profile_from_array(test_load, expansion_periods)
+l1 = FixedElectricalPort()
+l1.add_initial_value_from_array(aggregate_load, expansion_periods)
 load.ports['load'] = l1
 
 battery = Node()
@@ -90,23 +91,16 @@ b = ElectricalStorage(max_capacity=15.0,
                        initial_state_of_charge=0.0)
 battery.ports['bess'] = b
 
-solar = Node()
-pv = ElectricalGeneration()
-pv.curtailable = False
-pv.add_generation_profile_from_array(test_pv, expansion_periods)
-solar.ports['pv'] = pv
-
 # Populate graph with assets (nodes)
-system.add_node_obj([grid, battery, load, solar, connection_point])
+system.add_node_obj([grid, battery, load, connection_point])
 
 # Add edges to graph
 system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
 system.connect_ports_and_create_edge(connection_point.ports['load'], load.ports['load'])
 system.connect_ports_and_create_edge(connection_point.ports['bess'], battery.ports['bess'])
-system.connect_ports_and_create_edge(connection_point.ports['pv'], solar.ports['pv'])
 
 # Generate path objects from graph representation
-system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery, load])
+system.create_path_objects(sources=[grid, battery, load], sinks=[grid, battery, load])
 
 # Create objectives/tariffs
 # Retrieve paths
@@ -114,9 +108,8 @@ grid_to_bess = system.get_path([grid, connection_point, battery])
 bess_to_grid = system.get_path([battery, connection_point, grid])
 bess_to_load = system.get_path([battery, connection_point, load])
 grid_to_load = system.get_path([grid, connection_point, load])
-solar_to_load = system.get_path([solar, connection_point, load])
-solar_to_bess = system.get_path([solar, connection_point, battery])
-solar_to_grid = system.get_path([solar, connection_point, grid])
+load_to_bess = system.get_path([load, connection_point, battery])
+load_to_grid = system.get_path([load, connection_point, grid])
 
 # Construct tariffs per path
 
@@ -125,13 +118,13 @@ cws = [PathTariff(component=grid_to_load,
                   tariff_array=remote_energy_tariff + remote_transport_import),
        PathTariff(component=bess_to_load,
                   tariff_array=local_energy_tariff + local_transport_import),
-       PathTariff(component=solar_to_grid,
+       PathTariff(component=load_to_grid,
                   tariff_array=(remote_energy_tariff - remote_transport_export)*-1),
-       PathTariff(component=solar_to_bess,
+       PathTariff(component=load_to_bess,
                   tariff_array=(local_energy_tariff - local_transport_export)*-1)]
 
 # Cost for storage operator
-cstorage = [PathTariff(component=solar_to_bess,
+cstorage = [PathTariff(component=load_to_bess,
                        tariff_array=local_energy_tariff + local_transport_import),
             PathTariff(component=bess_to_grid,
                        tariff_array=(local_energy_tariff - local_transport_export)*-1),
@@ -148,20 +141,16 @@ rnetwork = [PathTariff(component=grid_to_load,
                        tariff_array=remote_transport_import),
             PathTariff(component=bess_to_load,
                        tariff_array=local_transport_import),
-            PathTariff(component=solar_to_bess,
+            PathTariff(component=load_to_bess,
                        tariff_array=local_transport_import),
-            PathTariff(component=solar_to_load,
-                       tariff_array=local_transport_import),
-            PathTariff(component=solar_to_grid,
+            PathTariff(component=load_to_grid,
                        tariff_array=remote_transport_export),
             PathTariff(component=bess_to_grid,
                        tariff_array=remote_transport_export),
             PathTariff(component=bess_to_load,
                        tariff_array=local_transport_export),
-            PathTariff(component=solar_to_bess,
-                       tariff_array=local_transport_export),
-            PathTariff(component=solar_to_load,
-                       tariff_array=local_transport_export),
+            PathTariff(component=load_to_bess,
+                       tariff_array=local_transport_export)
             ]
 
 throughput_cost = ThroughputCost(component=b, rate=0.000001)
@@ -197,11 +186,10 @@ colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
 fig = plt.figure(figsize=(14, 7))
 ax1 = fig.add_subplot(3, 1, 1)
-line1, = ax1.plot(hrs, test_load, color=colors[0])
-line2, = ax1.plot(hrs, test_pv, color=colors[1])
+line1, = ax1.plot(hrs, aggregate_load, color=colors[0])
 line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
 ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line2, line3], ['Load', 'PV', 'Connection Point'], ncol=3)
+ax1.legend([line1, line3], ['Aggregate Load', 'Connection Point'], ncol=3)
 ax1.set_xlim([0, len(test_load) / 4])
 
 ax2 = fig.add_subplot(3, 1, 2)
@@ -222,3 +210,4 @@ line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+plt.show()

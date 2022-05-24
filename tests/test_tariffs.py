@@ -238,7 +238,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
 
     system.create_path_objects(sources=[grid, battery1, load1], sinks=[grid, battery1, load1])
 
-    grid_to_load = system.paths[(grid, site1, load1)]
+    grid_to_load = system.get_path([grid, site1, load1])
 
     path_tariff = PathTariff(component=grid_to_load,
                              tariff_array=[0] * 24 + [1] * 24,
@@ -330,13 +330,13 @@ def test_path_flows_respect_port_constraints():
     optimiser.optimise()
 
     # Check solar flows are zero
-    solar_to_bess = system.paths[(solar, site, battery)]
-    solar_to_load = system.paths[(solar, site, load)]
-    solar_to_grid = system.paths[(solar, site, grid)]
+    solar_to_bess = system.paths[(solar.node_name, site.node_name, battery.node_name)]
+    solar_to_load = system.paths[(solar.node_name, site.node_name, load.node_name)]
+    solar_to_grid = system.paths[(solar.node_name, site.node_name, grid.node_name)]
 
-    bess_to_solar = system.paths[(battery, site, solar)]
-    load_to_solar = system.paths[(load, site, solar)]
-    grid_to_solar = system.paths[(battery, site, solar)]
+    bess_to_solar = system.paths[(battery.node_name, site.node_name, solar.node_name)]
+    load_to_solar = system.paths[(load.node_name, site.node_name, solar.node_name)]
+    grid_to_solar = system.paths[(battery.node_name, site.node_name, solar.node_name)]
 
     np.testing.assert_array_almost_equal(optimiser.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3)
     np.testing.assert_array_almost_equal(optimiser.values(solar_to_load.flow_value, 0), [0] * time_periods, 3)

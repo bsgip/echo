@@ -15,8 +15,8 @@ from echo.objectives import *
 from networkx import Graph, draw
 
 ## Set up hyper params
-time_periods = 48  # number of time periods to run the optimisation for
-interval_duration = 30          # each time period is 15 mins long
+time_periods = 96  # number of time periods to run the optimisation for
+interval_duration = 15          # each time period is 15 mins long
 expansion_periods = 1           # not yet implemented leave as 1
 discount_rate = 0               # not yet implemented leave as 0
 
@@ -33,8 +33,8 @@ connection_point.add_named_electrical_ports(['ev', 'grid'])  # create ports to c
 
 # Create V0G vehicle
 
-available = np.array([1] * 24 + [0] * 24)    # bool when at charger
-usage = np.array([0.0]*24 + [5]*24)        # kw average during use
+available = np.array([1] * 48 + [0] * 48)    # bool when at charger
+usage = np.array([0.0]*48 + [5]*48)        # kw average during use
 
 ev_cp = EV(charge_mode='V0G',
                available=available,
@@ -49,8 +49,8 @@ ev_cp = EV(charge_mode='V0G',
                initial_state_of_charge=20,
                soc_conserv=None,
                soc_conserv_cost=0.,
-               interval_duration=30.,
-               tod_charging=None,
+               interval_duration=15.,
+               tod_charging=False,
                trip_slack=True)
 
 

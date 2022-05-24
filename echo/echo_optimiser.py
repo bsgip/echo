@@ -84,6 +84,7 @@ class EchoOptimiser(object):
     def apply_constraints(self):
         self.apply_node_constraints()
         self.apply_path_constraints()
+        #self.apply_new_path_constraints()
 
     def apply_node_constraints(self):
         for _, obj in self.ES.node_obj.items():
@@ -98,11 +99,11 @@ class EchoOptimiser(object):
                 # Iterate through all paths in the model
                 for _, path in self.ES.paths.items():
                     # If the path starts at the current node
-                    if path.vertices[0] is current_node:
+                    if path.vertices[0] is current_node_name:
                         # Add the flow value
                         a += getattr(model, path.flow_value)[p, t]
                     # If the path ends at the current node
-                    if path.vertices[-1] is current_node:
+                    if path.vertices[-1] is current_node_name:
                         # Subtract the flow value
                         a -= getattr(model, path.flow_value)[p, t]
                 # Enforce that flows out minus flows in = -1 * port
@@ -111,39 +112,61 @@ class EchoOptimiser(object):
             def only_inflow_or_outflow_one(model, p, t):
                 a = 0
                 for _, path in self.ES.paths.items():
-                    if path.vertices[-1] is current_node:
+                    if path.vertices[-1] is current_node_name:
                         a += getattr(model, path.flow_value)[p, t]
-                return a <= getattr(model, current_node.inflow)[p, t] * self.model.bigM
+                return a <= getattr(model, current_node_obj.inflow)[p, t] * self.model.bigM
 
             def only_inflow_or_outflow_two(model, p, t):
                 a = 0
                 for _, path in self.ES.paths.items():
-                    if path.vertices[0] is current_node:
+                    if path.vertices[0] is current_node_name:
                         a += getattr(model, path.flow_value)[p, t]
-                return a <= (1 - getattr(model, current_node.inflow)[p, t]) * self.model.bigM
+                return a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * self.model.bigM
 
             sources_and_sinks = self.ES.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
-            for current_node in sources_and_sinks:  # Iterate through the source/sink nodes
-                for k, v in self.ES.paths.items():  # Iterate through all paths
-                    if current_node is k[0]:  # If we find a path where the current node is the first node on that path
-                        current_port = v.edge_ports[0][0]  # Pick up the first port on the path
-                    elif current_node is k[-1]:  # If we find a path where the current node is the last node on that path
-                        current_port = v.edge_ports[-1][-1]  # Pick up the last port on the path
-                assert current_port in current_node.ports.values()
+            for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
+                # get the node obj
+                current_node_obj = self.ES.node_obj[current_node_name]
+                for path_vertices, path_obj in self.ES.paths.items():  # Iterate through all paths
+                    if current_node_name is path_vertices[0]:  # If we find a path where the current node is the first node on that path
+                        current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
+                    elif current_node_name is path_vertices[-1]:  # If we find a path where the current node is the last node on that path
+                        current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
 
-                setattr(self.model, f"path_flow_con1_{current_node.node_name}",
+                setattr(self.model, f"path_flow_con1_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
 
                 # Create an indicator var for when there are flows into a node
-                current_node.inflow = 'inflow_' + current_node.node_name
-                setattr(self.model, current_node.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
+                current_node_obj.inflow = f"inflow_{current_node_name}"
+                setattr(self.model, current_node_obj.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
                                                                 domain=en.Binary))
 
-                setattr(self.model, f"path_flow_con2_{current_node.node_name}",
+                setattr(self.model, f"path_flow_con2_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_one))
 
-                setattr(self.model, f"path_flow_con3_{current_node.node_name}",
+                setattr(self.model, f"path_flow_con3_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_two))
+
+    def apply_new_path_constraints(self):
+        if self.ES.paths:
+            for path_vertices, path_obj in self.ES.paths.items():
+                # create a slack var
+                path_obj.slack = 'slack_' + str(path_obj.path_name)
+                setattr(self.model, path_obj.slack, en.Var(self.model.Expansion, self.model.Time, domain=en.Reals))
+
+                def rule1(model, p, t):
+                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
+                    b = getattr(model, path_obj.edge_ports[-1][-1].port_name)[p, t]
+                    return a*-1 + b*-1 == getattr(model, path_obj.slack)[p, t]
+
+                def rule2(model, p, t):
+                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
+                    return getattr(model, path_obj.flow_value)[p, t] == a + getattr(model, path_obj.slack)[p, t]
+
+                setattr(self.model, f"path_con1_{path_obj.path_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule1))
+                setattr(self.model, f"path_con2_{path_obj.path_name}",
+                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule2))
 
     def build_objective(self):
         self.objective = 0
@@ -182,6 +205,7 @@ class EchoOptimiser(object):
 
         var_obj = getattr(self.model, variable_name)
         if var_obj.dim() == 2:
+            # the variable/param has two indices - we assume these are expansion and time
             output = np.zeros(self.number_of_intervals)
             max_planning_period = 0
             for index in var_obj:
@@ -195,12 +219,19 @@ class EchoOptimiser(object):
                 raise ConfigurationError('Expansion period is not in range.')
             return output
         else:
+            # the variable/param doesn't have two indices
             if var_obj.is_indexed():
-                if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
-                    return var_obj[expansion]
-                else:  # Var
-                    return var_obj[expansion].value
+                # if it has one, then work out what that one is:
+                output = np.zeros(len(var_obj))
+                for i in var_obj:
+                    output[i] = var_obj[i].value
+                return output
+                # if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
+                #     return var_obj[expansion]
+                # else:  # Var
+                #     return var_obj[expansion].value
             else:
+                # if it has no index, we can directly return value
                 return var_obj.value
 
     def node_values(self, node_obj, expansion_period):
