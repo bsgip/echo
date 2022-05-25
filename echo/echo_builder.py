@@ -35,17 +35,17 @@ class NetworkSet:
         self.networks.extend(networks)
         self.num_networks = len(self.networks)
 
-    def optimise_network_set(self, log_file=None):
+    def optimise_network_set(self, log_file=None, verbose=False):
 
         if log_file is not None:
             prog_file = open(log_file, 'w')
         else:
             prog_file = None
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
+            # Append results to network dict
+            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose))
             # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
-            # Append results to network dict
-            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods))
         if log_file is not None:
             prog_file.close()
 
@@ -78,12 +78,13 @@ class NetworkSet:
     def export_results_to_df(self):
         pass
 
-def process_single_network(network_dict: dict, interval_duration: int, time_periods: int):
-    print(f"Processing network {network_dict['name']}")
-    x = convert_dict_to_nx(network_dict)
-    em, node_name_dict = convert_nx_to_echo(x, None)
+def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, verbose: bool=True):
+    if verbose:
+        print(f"Processing network {network_dict['name']}")
+    x = convert_dict_to_nx(network_dict, verbose=verbose)
+    em, node_name_dict = convert_nx_to_echo(x, None, verbose=verbose)
     objective_dict = network_dict.get('objective')
-    obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict)
+    obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict, verbose=verbose)
 
     # Run optimiser on echo model and echo objective
     opt = run_echo_optimiser(em,
@@ -93,7 +94,8 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
                              expansion_periods=1,
                              discount_rate=0,
                              optimiser_engine='cplex',
-                             opt_display=False)
+                             opt_display=False,
+                             verbose=verbose)
 
     # Manage results
     results = extract_results(opt, node_name_dict)
@@ -103,9 +105,10 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     return results
 
 
-def convert_dict_to_nx(netw_jsn: dict):
+def convert_dict_to_nx(netw_jsn: dict, verbose: bool=True):
     """ Creates nx graph from network dictionary"""
-    print('Converting dict to networkx')
+    if verbose:
+        print('Converting dict to networkx')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
     # Node name is the unique node ID, Node dict carries all the relevant node info in a dict
@@ -134,9 +137,10 @@ def convert_dict_to_nx(netw_jsn: dict):
     return n
 
 
-def convert_nx_to_echo(g, df):
+def convert_nx_to_echo(g, df, verbose=True):
     """ Creates echo model from nx graph"""
-    print('Converting networkx model to echo')
+    if verbose:
+        print('Converting networkx model to echo')
 
     node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
@@ -211,8 +215,9 @@ def construct_echo_node(system, node_name_dict, node, node_dict, df):
         node_name_dict[node] = new_node.node_name
 
 
-def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict):
-    print('Converting objectives to echo objectives')
+def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool=True):
+    if verbose:
+        print('Converting objectives to echo objectives')
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
         if obj_dict['type'] == 'import_tariff':
@@ -311,8 +316,10 @@ def run_echo_optimiser(echo_graph,
                        expansion_periods=1,
                        discount_rate=0,
                        optimiser_engine='cplex',
-                       opt_display=False):
-    print('Performing whole model checks')
+                       opt_display=False,
+                       verbose=True):
+    if verbose:
+        print('Performing whole model checks')
     # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
         for port_name, port_obj in node_obj.ports.items():
