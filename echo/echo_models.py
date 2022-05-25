@@ -185,12 +185,7 @@ class Port(BaseModel):
     export_slack_max: Optional[str]
     pos: Optional[str]
     is_pos: Optional[str]
-    neg: Optional[str]
-    import_tariff: Optional[str]
-    export_tariff: Optional[str]
-    path_tariff: Optional[str]  #todo don't love having to define every one of these.. is there an alternative?
-    max_neg: Optional[str]
-    max_pos: Optional[str]
+    neg: Optional[str]  #todo don't love having to define every one of these.. is there an alternative?
     active: Optional[str]
 
     class Config:
@@ -201,6 +196,21 @@ class Port(BaseModel):
         uid = values.get("uid")
         if uid is not None:
             values["port_name"] = 'port_' + str(uid)
+        return values
+
+    @root_validator()
+    def assign_pyomo_var_names(cls, values):
+        port_name = values.get("port_name")
+        if port_name is not None:
+            values["import_con_val"] = f"import_con_val_{port_name}"
+            values['export_con_val'] = f"export_con_val_{port_name}"
+            values['import_slack'] = 'import_slack_' + port_name
+            values['import_slack_max'] = 'import_slack_max_' + port_name
+            values['export_slack'] = 'export_slack' + port_name
+            values['export_slack_max'] = 'export_slack_max_' + port_name
+            values['pos'] = positive_variable_component + port_name
+            values['neg'] = negative_variable_component + port_name
+            values['is_pos'] = f"is_pos_{port_name}"
         return values
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
@@ -312,17 +322,14 @@ class Port(BaseModel):
         if self.import_constraint is FlowConstraint.Fixed:
             if self.opt_type is not OptimisationType.Parameter:  # only apply these constraints to variables
                 con_name = 'import_con_' + self.port_name
-                self.import_con_val = f"import_con_val_{self.port_name}"
                 constraint_array = generate_array_cons(self.import_constraint_value)
                 setattr(model, self.import_con_val,
                         en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonNegativeReals))
 
                 if self.slack is True:
-                    self.import_slack = 'import_slack_' + self.port_name
                     setattr(model, self.import_slack,
                             en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
                     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
-                    self.import_slack_max = 'import_slack_max_' + self.port_name
                     con_name = 'import_con_max_' + self.port_name
                     setattr(model, self.import_slack_max,
                             en.Var(initialize=0, domain=en.NonPositiveReals))
@@ -332,17 +339,14 @@ class Port(BaseModel):
         if self.export_constraint is FlowConstraint.Fixed:
             if self.opt_type is not OptimisationType.Parameter:  # only apply these constraints to variables
                 con_name = 'export_con_' + self.port_name
-                self.export_con_val = f"export_con_val_{self.port_name}"
                 constraint_array = generate_array_cons(self.export_constraint_value)
                 setattr(model, self.export_con_val,
                         en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
 
                 if self.slack is True:
-                    self.export_slack = 'export_slack_' + self.port_name
                     setattr(model, self.export_slack,
                             en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
                     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
-                    self.export_slack_max = 'export_slack_max_' + self.port_name
                     con_name = 'export_con_max_' + self.port_name
                     setattr(model, self.export_slack_max,
                             en.Var(initialize=0, domain=en.NonNegativeReals))
@@ -365,13 +369,8 @@ class Port(BaseModel):
 
     def constrain_pos_neg(self, model):
 
-        self.pos = positive_variable_component + self.port_name
-        self.neg = negative_variable_component + self.port_name
-
         setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
         setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
-
-        self.is_pos = f"is_pos_{self.port_name}"
         setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
@@ -414,11 +413,11 @@ class Port(BaseModel):
     def add_objective(self, model):
         objective = 0
         if self.slack is True:
-            if hasattr(self, 'import_slack'):
+            if hasattr(model, self.import_slack) is True:
                 objective += -1 * getattr(model, self.import_slack_max) * model.bigM
                 objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
                                       model.Time) * model.bigM * 0.1
-            if hasattr(self, 'export_slack'):
+            if hasattr(model, self.export_slack) is True:
                 objective += getattr(model, self.export_slack_max) * model.bigM
                 objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
                                  model.Time) * model.bigM * 0.1
@@ -621,14 +620,14 @@ class Transform(BaseModel):
             rule = self.lhs[i]['rule']
             if rule is not TransformRule.Both:
                 var = self.lhs[i]['var']
-                if getattr(var, 'pos') is None:
+                if hasattr(model, var.pos) is False:
                     var.constrain_pos_neg(model)
 
         for i in range(len(self.rhs)):
             rule = self.rhs[i]['rule']
             if rule is not TransformRule.Both:
                 var = self.rhs[i]['var']
-                if getattr(var, 'pos') is None:
+                if hasattr(model, var.pos) is False:
                     var.constrain_pos_neg(model)
 
 class Path(BaseModel):
@@ -653,6 +652,13 @@ class Path(BaseModel):
             values["path_name"] = 'path_' + str(uid)
         return values
 
+    @root_validator()
+    def assign_var_names(cls, values):
+        path_name = values.get('path_name')
+        if path_name is not None:
+            values['flow_value'] = 'flow_value_' + path_name
+        return values
+
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
             raise ConfigurationError('Please enter path vertices (nodes) as a list.')
@@ -662,7 +668,6 @@ class Path(BaseModel):
         pass
 
     def initialise_path(self, model):
-        self.flow_value = 'flow_value_' + self.path_name
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
@@ -1096,7 +1101,7 @@ class EV(ElectricalNode):
     available: Union[ArrayType, list]
     usage: Union[ArrayType, list]
     cp_name: str = 'cp'
-    tod_charging: Union[bool, ArrayType, list] = False
+    tod_charging: Union[ArrayType, list, None] = None
     interval_duration: int
     # Battery attributes
     max_capacity: float

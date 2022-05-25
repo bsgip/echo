@@ -65,7 +65,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
 
     for i in range(time_periods):
         assert cont_pos_p[i] == 5.0
@@ -128,7 +128,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
 
     # for i in range(0, 1):
@@ -260,7 +260,7 @@ def test_positive_contingency_calculation_with_storage_full():
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(cont_pos_p[i], 0.0, 5)  #Had to update to 5dp

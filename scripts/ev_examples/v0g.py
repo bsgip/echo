@@ -33,8 +33,8 @@ connection_point.add_named_electrical_ports(['ev', 'grid'])  # create ports to c
 
 # Create V0G vehicle
 
-available = np.array([1] * 48 + [0] * 48)    # bool when at charger
-usage = np.array([0.0]*48 + [5]*48)        # kw average during use
+available = [1] * 48 + [0] * 48    # bool when at charger
+usage = [0.0]*48 + [5]*48        # kw average during use
 
 ev_cp = EV(charge_mode='V0G',
                available=available,
@@ -49,8 +49,8 @@ ev_cp = EV(charge_mode='V0G',
                initial_state_of_charge=20,
                soc_conserv=None,
                soc_conserv_cost=0.,
-               interval_duration=15.,
-               tod_charging=False,
+               interval_duration=15,
+               tod_charging=None,
                trip_slack=True)
 
 
