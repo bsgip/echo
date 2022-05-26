@@ -141,7 +141,7 @@ for i in range(num_sites):
     components['grid'] = {'id': 'grid', 'type': 'flex', 'units': 'kW', 'ports': ['downstream']}
 
     components['cp'] = {'id': 'cp', 'type': 'tellegen', 'units': 'kW', 'ports': ['cp'],
-                        'parameters': {'cp': {'max_import': 1, 'max_export': -1, 'slack': False}}}
+                        'parameters': {'cp': {'max_import': None, 'max_export': None, 'slack': False}}}
 
     edges['grid_cp'] = {'nodes': ('grid', 'cp'), 'ports': ('downstream', 'cp'), 'res': 'elec'}
 

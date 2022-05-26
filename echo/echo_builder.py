@@ -594,7 +594,7 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
             ev_node = system.node_obj[node_uid]
             output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
             output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
-            if getattr(ev_node.ports['vehicle'], 'trip_slack') is not None:
+            if hasattr(optimiser.model, ev_node.ports['vehicle'].trip_slack):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
                 output[node_name]['charge_status'] = 'success' if all(
                     output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
@@ -605,13 +605,13 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
                 output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
-                if getattr(port_obj, 'import_slack') is not None:
+                if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max, 0)
                 else:
                     output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
                     output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
-                if getattr(port_obj, 'export_slack') is not None:
+                if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max, 0)
                 else:
