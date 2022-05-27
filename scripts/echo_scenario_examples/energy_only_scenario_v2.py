@@ -14,10 +14,10 @@ First we will define the percentages of DER penetration we want so that when we 
 
 """
 
-pv_percent = 0.5  # percentage of sites with PV (0-1)
-bat_percent = 0.99  # percentage of sites with battery (0-1)
-ev_percent = 0.99  # percentage of sites with evs (0-1)
-ev_mean = 2  # mean number of evs per components
+pv_percent = 0.1  # percentage of sites with PV (0-1)
+bat_percent = 0.01  # percentage of sites with battery (0-1)
+ev_percent = 0.01  # percentage of sites with evs (0-1)
+ev_mean = 1  # mean number of evs per components
 
 """
 Create a netset object of class NetworkSet from echo_builder. The description string is used to keep details such as percentages of DER. 
@@ -116,7 +116,7 @@ v0g_tod = {'name': 'v0g_tod',
 # Generate the psuedo random components data and store in a list of dicts
 """
 
-num_sites = 5  # 10 sites
+num_sites = 3649  # 10 sites
 
 has_battery = np.random.rand(num_sites, ) > (1 - bat_percent)
 has_solar = np.random.rand(num_sites, ) > (1 - pv_percent)
@@ -265,3 +265,6 @@ print('Max import violation was {}'.format(np.array(import_violations).max()))
 
 plt.tight_layout()
 plt.show()
+
+site_loads_df = netset.to_df(node='cp', port='cp')
+site_loads_df.to_csv('../../data/dummy_netset_loads.csv')
