@@ -8,12 +8,14 @@ import cmath
 import lzma
 
 from echo.echo_builder import NetworkSet
-
+import ejson.util as eju
 import sgt
 import sgt_e_json
 sgt.set_message_log_level(sgt.LogLevel.NONE)
 sgt.set_warning_log_level(sgt.LogLevel.NONE)
 
+inf = float('inf')
+neg_inf = float('-inf')
 
 class SGT_interface():
     def __init__(self, network_file):
@@ -34,6 +36,7 @@ class SGT_interface():
 
         self.network_file = network_file
         self.network = netw
+        self.network_json = netw_jsn
         self.connection_point_df = con_point_df
         self.num_connections = len(con_point_df)
         self.load_series = None
@@ -42,6 +45,9 @@ class SGT_interface():
     def get_connection_info(self):
         return self.connection_point_df
 
+    def save_ejson(self, filename):
+        with open(filename, 'w') as f:
+            json.dump(self.network_json, f)
 
     def power_flows(self, power_factor=0.93, save_pickle_file=None, log_file=None, auto_taps=True):
 
@@ -89,7 +95,7 @@ class SGT_interface():
             # set the loads
             for zid in load_series_df.columns:
                 # divide by 1000 to go from kW to MW
-                SGT_interface._set_zip_total_power(zips[zid], load_series_df.at[t, zid] / 1000, pf=power_factor)
+                SGT_interface._set_zip_total_power(zips[zid], load_series_df.at[t, zid], pf=power_factor)
 
             # run the power flow
             if auto_taps:
@@ -217,17 +223,136 @@ class SGT_interface():
         else:
             load_series.rename(columns=mapping)
 
-        self.load_series = load_series
+        self.load_series = load_series / 1000   # convert from kW to MW
+
+    def optimise_taps(self, v0=1.0, num_passes=2):
+        print('Optimising transformer tap settings')
+        assert len(self.load_series) <= 30, 'load series cannot have more than 30 timesteps'
+
+        self.v0 = v0
+        self.num_passes = num_passes
+
+        self.buses = {b.id(): b for b in self.network.buses()}
+        self.zips = {z.id(): z for z in self.network.zips()}
+        self.txs = (x.downcast(sgt.Transformer) for x in self.network.branches())
+        self.txs = [x for x in self.txs if x is not None]
+
+        # Make a map of buses below each transformer.
+        g = eju.make_graph(self.network_json)
+        infeeders = [cid for cid, ctype, cd in eju.graph_components(g) if ctype == 'Infeeder']
+        assert len(infeeders) == 1
+        infeeder = infeeders[0]
+        g = eju.reorder(g, start=infeeder)  # Make sure network is oriented.
+
+        self.tx_buses = {}
+
+        for tx in self.txs:
+            bus1 = tx.bus1().id()
+            accum = self.tx_buses.setdefault(tx.id(), [])
+
+            def pre_cb(g, cur, accum):
+                if cur == tx.id():
+                    return (True, accum)
+
+                ctp, cd = g.nodes[cur]['comp']
+                if ctp == 'Node':
+                    accum.append((cur, self.buses[cur]))
+
+                return (False, accum)
+
+            visited, accum = eju.dfs(g, bus1, pre_cb=pre_cb, accum=accum)
+
+        # Set all taps to zero.
+        for tx in self.txs:
+            tx.set_equal_taps(0)
+
+        # Do the loops
+        for pass_ in range(self.num_passes):
+            print(f'Pass {pass_}')
+            for tx in self.txs:
+                print(f'    Transformer {tx.id()}')
+                start_tap = tx.taps()[0];
+                best_dev = inf
+                best_tap = 0;
+
+                for dir_ in (-1, 1):
+                    i0 = start_tap if dir_ == -1 else start_tap + 1
+                    i1 = tx.min_tap() if dir_ == -1 else tx.max_tap();
+                    print(f'        [{i0}, {i1}]')
+                    tap = i0
+                    while (dir_ == -1 and tap >= i1) or (dir_ == 1 and tap <= i1):
+                        print(f'            Trying tap {tap}')
+                        tx.set_equal_taps(tap);
+
+                        # Loop over data points
+                        lowest = inf
+                        highest = neg_inf
+
+                        for t in self.load_series.index:
+                            # for t in tqdm(self.df_load_series.index, desc='Iterating through load series'):
+                            for zid in self.load_series.columns:
+                                # divide by 1000 to go from kW to MW
+                                z = self.zips[zid]
+                                v = self.load_series.at[t, zid]
+                                nc = z.n_comps()
+                                s_vec = [v / nc] * nc
+                                z.set_s_const(s_vec)
+
+                            ok = self.network.solve_power_flow()
+                            if not ok:
+                                print("            Couldn't solve power flow, ignoring data point")
+                                continue
+
+                            v_env = self._voltage_envelope(self.tx_buses[tx.id()])
+
+                            if (v_env[0] < lowest):
+                                lowest = v_env[0];
+
+                            if (v_env[1] > highest):
+                                highest = v_env[1];
+
+                        dev = abs(self.v0 - 0.5 * (lowest + highest));
+                        print(f'                dev = {dev}')
+                        if (dev < best_dev):
+                            print(f'                Deviation is best')
+                            best_dev = dev
+                            best_tap = tap
+                        else:
+                            print(f'                Deviation is not best')
+                            break
+
+                        tap += dir_
+
+                    if (best_tap != start_tap):
+                        # No point in trying the other direction if we improved in this direction.
+                        break
+                print(f'        Best tap = {best_tap}')
+                tx.set_equal_taps(best_tap)
+                self.network_json['components'][tx.id()]['Transformer']['taps'] = tx.taps()
+
+        print('Finished optimising transformer tap settings')
+
+    def _voltage_envelope(self, buses):
+        ve_min = 1e6
+        ve_max = -1e6
+        for bid, b in buses:
+            v = np.abs(b.v()) / b.v_base()
+            ve_min = min(np.min(v), ve_min)
+            ve_max = max(np.max(v), ve_max)
+
+        return (ve_min, ve_max)
 
     def loads_from_netset(self, netset, node, port):
         """
             TODO: function to get loads directly from an echo netset
+            Remember, if not using the load_series from df, then we need to convert to MW somewhere else
         """
         return None
 
     def loads_from_network(self, network, mapping):
         """
             TODO: function to get loads directly from an echo network
+            Remember, if not using the load_series from df, then we need to convert to MW somewhere else
         """
         return None
 
@@ -242,6 +367,8 @@ if __name__=="__main__":
 
     df = pd.read_csv('../data/dummy_netset_loads.csv', index_col=[0])
 
-    sgt_interface.load_series_from_df(df, mapping=None)
+    sgt_interface.load_series_from_df(df[0:15], mapping=None)
+
+    sgt_interface.optimise_taps()
 
     pf_results = sgt_interface.power_flows()
