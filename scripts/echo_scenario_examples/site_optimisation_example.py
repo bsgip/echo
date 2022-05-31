@@ -238,3 +238,9 @@ netset.time_periods = time_periods
 Optimise
 """
 processing_errors = netset.optimise_network_set()
+
+
+"""
+This dictionary contains all results
+"""
+results = netset.results[0]

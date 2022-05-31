@@ -226,7 +226,7 @@ class SGT_interface():
         self.load_series = load_series / 1000   # convert from kW to MW
 
     def optimise_taps(self, v0=1.0, num_passes=2):
-        print('Optimising transformer tap settings')
+        # print('Optimising transformer tap settings')
         assert len(self.load_series) <= 30, 'load series cannot have more than 30 timesteps'
 
         self.v0 = v0
@@ -267,66 +267,69 @@ class SGT_interface():
             tx.set_equal_taps(0)
 
         # Do the loops
-        for pass_ in range(self.num_passes):
-            print(f'Pass {pass_}')
-            for tx in self.txs:
-                print(f'    Transformer {tx.id()}')
-                start_tap = tx.taps()[0];
-                best_dev = inf
-                best_tap = 0;
+        with tqdm(total=self.num_passes * len(self.txs), desc='Optimising transformer taps') as pbar:
+            for pass_ in range(self.num_passes):
+                # tqdm.write('pass {} of {}'.format(pass_, self.num_passes))
+                for tx in self.txs:
+                    # tqdm.write(f'    Transformer {tx.id()}')
+                    start_tap = tx.taps()[0];
+                    best_dev = inf
+                    best_tap = 0;
 
-                for dir_ in (-1, 1):
-                    i0 = start_tap if dir_ == -1 else start_tap + 1
-                    i1 = tx.min_tap() if dir_ == -1 else tx.max_tap();
-                    print(f'        [{i0}, {i1}]')
-                    tap = i0
-                    while (dir_ == -1 and tap >= i1) or (dir_ == 1 and tap <= i1):
-                        print(f'            Trying tap {tap}')
-                        tx.set_equal_taps(tap);
+                    for dir_ in (-1, 1):
+                        i0 = start_tap if dir_ == -1 else start_tap + 1
+                        i1 = tx.min_tap() if dir_ == -1 else tx.max_tap();
+                        # print(f'        [{i0}, {i1}]')
+                        tap = i0
+                        while (dir_ == -1 and tap >= i1) or (dir_ == 1 and tap <= i1):
+                            # print(f'            Trying tap {tap}')
+                            tx.set_equal_taps(tap);
 
-                        # Loop over data points
-                        lowest = inf
-                        highest = neg_inf
+                            # Loop over data points
+                            lowest = inf
+                            highest = neg_inf
 
-                        for t in self.load_series.index:
-                            # for t in tqdm(self.df_load_series.index, desc='Iterating through load series'):
-                            for zid in self.load_series.columns:
-                                # divide by 1000 to go from kW to MW
-                                z = self.zips[zid]
-                                v = self.load_series.at[t, zid]
-                                nc = z.n_comps()
-                                s_vec = [v / nc] * nc
-                                z.set_s_const(s_vec)
+                            for t in self.load_series.index:
+                                # for t in tqdm(self.df_load_series.index, desc='Iterating through load series'):
+                                for zid in self.load_series.columns:
+                                    # divide by 1000 to go from kW to MW
+                                    z = self.zips[zid]
+                                    v = self.load_series.at[t, zid]
+                                    nc = z.n_comps()
+                                    s_vec = [v / nc] * nc
+                                    z.set_s_const(s_vec)
 
-                            ok = self.network.solve_power_flow()
-                            if not ok:
-                                print("            Couldn't solve power flow, ignoring data point")
-                                continue
+                                ok = self.network.solve_power_flow()
+                                if not ok:
+                                    # print("            Couldn't solve power flow, ignoring data point")
+                                    continue
 
-                            v_env = self._voltage_envelope(self.tx_buses[tx.id()])
+                                v_env = self._voltage_envelope(self.tx_buses[tx.id()])
 
-                            if (v_env[0] < lowest):
-                                lowest = v_env[0];
+                                if (v_env[0] < lowest):
+                                    lowest = v_env[0];
 
-                            if (v_env[1] > highest):
-                                highest = v_env[1];
+                                if (v_env[1] > highest):
+                                    highest = v_env[1];
 
-                        dev = abs(self.v0 - 0.5 * (lowest + highest));
-                        print(f'                dev = {dev}')
-                        if (dev < best_dev):
-                            print(f'                Deviation is best')
-                            best_dev = dev
-                            best_tap = tap
-                        else:
-                            print(f'                Deviation is not best')
+                            dev = abs(self.v0 - 0.5 * (lowest + highest));
+                            # print(f'                dev = {dev}')
+                            if (dev < best_dev):
+                                # print(f'                Deviation is best')
+                                best_dev = dev
+                                best_tap = tap
+                            else:
+                                # print(f'                Deviation is not best')
+                                break
+
+                            tap += dir_
+
+                        if (best_tap != start_tap):
+                            # No point in trying the other direction if we improved in this direction.
                             break
 
-                        tap += dir_
-
-                    if (best_tap != start_tap):
-                        # No point in trying the other direction if we improved in this direction.
-                        break
-                print(f'        Best tap = {best_tap}')
+                    pbar.update(1)
+                    # print(f'        Best tap = {best_tap}')
                 tx.set_equal_taps(best_tap)
                 self.network_json['components'][tx.id()]['Transformer']['taps'] = tx.taps()
 
