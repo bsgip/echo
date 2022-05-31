@@ -739,26 +739,28 @@ class Storage(Port):
     available: Union[ArrayType, list, None] = None
 
     # All our optional fields/fields created when building pyomo model
-    soc_value: str = None
+    soc_value: Optional[str]
     optimised_storage_capacity: Optional[str]
     trip_slack: Optional[Union[ArrayType, list]]
+    cons_slack: Optional[str]
+    trip_slack: Optional[str]
 
     @root_validator()
-    def set_import_cons(cls, values):
+    def set_attr_names(cls, values):
         values['import_constraint_value'] = values.get('charging_power_limit')
         values['export_constraint_value'] = values.get('discharging_power_limit')
+        port_name = values.get("port_name")
+        if port_name is not None:
+            values['soc_value'] = 'storage_soc_' + port_name
+            values['cons_slack'] = 'con_slack' + port_name
+            values['trip_slack'] = 'trip_slack_' + port_name
         return values
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
 
-        self.soc_value = 'storage_soc_' + self.port_name
-        # if not self.enable_min_soc_slack:
         setattr(model, self.soc_value,
                 en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
-
-        # else:
-        #     setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(None, self.max_capacity)))
 
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
@@ -771,7 +773,6 @@ class Storage(Port):
             assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
             assert self.available is not None, 'soc_conserve requires available'
             con_name = 'cons_soc' + self.port_name
-            self.cons_slack = 'con_slack' + self.port_name
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
@@ -847,7 +848,7 @@ class Storage(Port):
 
         if self.enable_trip_slack is True:
             # con_name = 'min_soc_con_' + self.port_name
-            self.trip_slack = 'trip_slack_' + self.port_name
+
             setattr(model, self.trip_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
