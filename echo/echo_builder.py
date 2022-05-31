@@ -58,6 +58,32 @@ class NetworkSet:
 
         return self.processing_errors
 
+    def to_df(self, node, port):
+        """
+        for each network segment in netset, gets the value of port on node, if that node and port combination does not exists
+        sets the result to nan.
+        :param node: name of node to look at
+        :param port: port to get value of
+        :return: dataframe with timeseries data
+        """
+
+        assert self.results is not None, "Generate results first"
+
+
+        data = {}
+        for i, res in enumerate(self.results):
+            val = np.nan
+            if node in res:
+                if port in res[node]:
+                    if 'port_val' in res[node][port]:
+                        val = res[node][port]['port_val']
+            data['seg_{}'.format(i)] = val
+
+        df = pd.DataFrame.from_dict(data)
+        return df
+
+
+
     def get_echo_model(self, network_name: str):
         """ Returns an echo model of a network in the network set"""
         network_dict = self.networks[network_name]
