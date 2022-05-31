@@ -116,7 +116,7 @@ v0g_tod = {'name': 'v0g_tod',
 # Generate the psuedo random components data and store in a list of dicts
 """
 
-num_sites = 3649  # 10 sites
+num_sites = 10  # 10 sites
 
 has_battery = np.random.rand(num_sites, ) > (1 - bat_percent)
 has_solar = np.random.rand(num_sites, ) > (1 - pv_percent)
