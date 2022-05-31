@@ -45,8 +45,8 @@ objective = {
         'component': {'node': 'cp', 'port': 'cp'}
     },
     'demand_tariff': {'type': 'import_demand_tariff',
-                      'component': {'node': 'elec_cp',
-                                    'port': 'upstream'},
+                      'component': {'node': 'cp',
+                                    'port': 'cp'},
                       'charges': [
                           {'name': 'shoulder',
                            'rate': 1.,
@@ -103,7 +103,9 @@ battery = {'max_capacity': 15., 'depth_of_discharge_limit':0,
 """
 define import/export constraints
 """
-site_max_import_array = 23.*np.ones(load_profile.shape)
+# site_max_import_array = 23.*np.ones(load_profile.shape)
+site_max_import_array = 23.
+
 
 """
 # Define parameters of EVs at the site
@@ -134,7 +136,7 @@ usage1 = np.array([0.0] * 24 + [0.5] * 24 + [0.0] * 24 + [1.0] * 24)    # energy
 ev1 = {'name':'ev1','available': available1, 'usage': usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
        'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
        'discharging_efficiency':1,'initial_state_of_charge':20.0, 'charge_mode':'V2G',
-       'soc_conserv':20, 'soc_conserv_cost':10}
+       'soc_conserv':20, 'soc_conserv_cost':10, 'interval_duration': interval_duration}
 
 """
 Define a V1G EV
@@ -146,14 +148,14 @@ usage2 = np.array([0.0] * 10 + [0.4] * 10 + [0.0] * 28 + [0.5] * 48)
 # second vehicle is V1G
 ev2 = {'name':'ev2','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
        'charging_power_limit':10., 'discharging_power_limit':-0., 'charging_efficiency':1,
-       'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode':'V1G'}
+       'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode':'V1G', 'interval_duration': interval_duration}
 
 """
 Define a V0G convenienced charged EV
 """
 ev3 = {'name':'ev3','available': available1, 'usage': 20*usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
        'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
-       'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G'}
+       'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G', 'interval_duration': interval_duration}
 
 """
 Define a time of day charging ev
@@ -161,7 +163,7 @@ Define a time of day charging ev
 tod_charging = np.ones(available2.shape)
 tod_charging[20:30] = 0.            # we dont want to charge in the 20-30 time intervals
 ev4 = {'name':'ev4','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-       'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
+       'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,'interval_duration': interval_duration,
        'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G', 'tod_charging':tod_charging}
 
 evs = [ev1, ev2, ev3, ev4]
