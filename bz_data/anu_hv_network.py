@@ -1,6 +1,9 @@
 """ Manually defined HV network for Acton campus"""
+"""
 
-feeder_list = ['Avenue', 'Central', 'South', 'North', 'Science', 'West', 'Garran']
+Feeder name (eg Avenue) --> substation id (AVE00739) --> building list
+
+"""
 
 feeder_dict = {'Avenue':
                    {'AVE00739': ['B31', 'B32'],
@@ -32,69 +35,44 @@ feeder_dict = {'Avenue':
                     'CEN11132': ['B162'],
                     'CEN11134': ['B163']
                     },
-               'South': [],
-               'North': [],
-               'Science': [],
-               'West': [],
+               'South':
+                   {'STH05151': ['B58'],
+                    'STH08733': ['B117', 'B53', 'B88'],
+                    'STH09260': ['B130'],
+                    'STH09770': ['B143']
+                    },
+               'North':
+                   {'BTH01008': ['B109', 'B24', 'B25A', 'B26', 'B27'],
+                    'NTH01952': ['B12T', 'B12', 'B13T1', 'B13', 'B14'],
+                    'NTH02002': ['B29', 'B30'],
+                    'NTH03411': ['B35A', 'B35', 'B38B39'],
+                    'NTH04737': ['B101'],
+                    'NTH04871': ['B95'],
+                    'NTH06163': ['B110', 'B127', 'B13B', 'B99'],
+                    'NTH06809': ['B115'],
+                    'NTH08845': ['B40A'],
+                    'NTH09427': ['B26C', 'B26'],
+                    'NTH11331': ['B146']
+                    },
+               'West':
+                   {'WST01225': ['B116', 'B133', 'B141', 'B47', 'B48', 'B49'],
+                    'WST01240': ['B50T1T2', 'B50', 'B51', 'B52'],
+                    'WST04685': ['B106'],
+                    'WST08972': ['B131'],
+                    'WST09226': ['B54'],
+                    'WST09266': ['B131', 'B88TH']
+                    },
                'Garran':
-                   {'GAR01348': ['B125', 'B142', 'B61', 'B62', 'B63T1', 'B63']
+                   {'GAR01348': ['B125', 'B142', 'B61', 'B62', 'B63T1', 'B63'],
+                    'GAR03294': ['B1A', 'B1', 'B9'],
+                    'GAR03401': ['B56A', 'B56'],
+                    'GAR04685': ['B150'],
+                    'GAR09003': ['B56'],
+                    'GAR09142': ['B59'],
+                    'GAR09525': ['B56'],  # huh? same as above
+                    'GAR7584': ['B118', 'B124', ]
+                    },
+               'Kambri':
+                   {'Kambri': ['B151', 'B152', 'B153', 'B155', 'B156']
                     }
                }
-
-network_dict = {
-    'components': {
-        'BSP1': {
-            'id': 'bulk_grid',
-            'type': 'flex',
-            'units': 'kW',
-            'ports': feeder_list
-        },
-        'Avenue': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': ['B32', 'B31', ...]
-        },
-        'Central': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-        'North': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-        'South': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-        'Science': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-        'Garran': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-        'West': {
-            'id': 'bulk_grid',
-            'type': 'feeder',
-            'units': 'kW',
-            'ports': []
-        },
-    },
-    'edges': {
-        'edge_1': {'nodes': ('bulk_grid', 'elec_cp'),
-                   'ports': ('downstream', 'upstream'),
-                   'res': 'elec'},
-    }
-}
