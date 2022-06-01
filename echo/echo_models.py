@@ -400,12 +400,12 @@ class Port(BaseModel):
     def add_initial_value(self, initial_value):
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods):
+    def add_initial_value_from_array(self, array, expansion_periods=1):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
-    def add_active_periods_from_array(self, array, expansion_periods):
+    def add_active_periods_from_array(self, array, expansion_periods=1):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.active_periods = vals
@@ -443,7 +443,7 @@ class Node(BaseModel):
         return values
 
     @staticmethod
-    def fix_port_variable(model, var_name, new_values, expansion_periods):
+    def fix_port_variable(model, var_name, new_values, expansion_periods=1):
         var = getattr(model, var_name)
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
         fixed_vals = dict(zip(keys, new_values))
@@ -710,7 +710,7 @@ class Sink(Port):
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
-    def add_sink_profile_from_array(self, array, expansion_periods):
+    def add_sink_profile_from_array(self, array, expansion_periods=1):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
@@ -948,7 +948,7 @@ class ControlledLoadOrGen(Port):
             setattr(model, f"cons_{self.port_name}_max_utilisation_req",
                     en.Constraint(rule=sum_of_energy_must_be_less_than_max))
 
-    def add_demand_profile_from_array(self, array, expansion_periods):
+    def add_demand_profile_from_array(self, array, expansion_periods=1):
         if type(array) is np.ndarray:
             assert (array >= 0).all(), 'power demand must be non negative'
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
@@ -994,7 +994,7 @@ class ElectricalDemand(Sink):
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
-    def add_demand_profile_from_array(self, array, expansion_periods):
+    def add_demand_profile_from_array(self, array, expansion_periods=1):
         if type(array) is np.ndarray:
             assert (array >= 0).all(), 'power demand must be non negative'
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
@@ -1014,7 +1014,7 @@ class ElectricalGeneration(Source):
         assert type(generation) is dict, 'Generation profile must be dict.'
         self.add_initial_value(generation)
 
-    def add_generation_profile_from_array(self, array, expansion_periods):
+    def add_generation_profile_from_array(self, array, expansion_periods=1):
         if type(array) is np.ndarray:
             assert (array <= 0).all(), 'power generation must be non positive'
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]

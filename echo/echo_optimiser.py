@@ -200,7 +200,7 @@ class EchoOptimiser(object):
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
         self.opt_status = results['Solver'][0]
 
-    def values(self, variable_name, expansion):
+    def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""
 
         var_obj = getattr(self.model, variable_name)
@@ -234,7 +234,7 @@ class EchoOptimiser(object):
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj, expansion_period):
+    def node_values(self, node_obj, expansion_period=0):
         """ Returns all values of all ports in a specified node for a single specified expansion period."""
 
         outputs = {}

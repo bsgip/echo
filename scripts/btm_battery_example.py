@@ -73,7 +73,7 @@ connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])    # create
 # set flow constraints for the port that connects to the grid,
 # such that         max_export <= 0 <= max_import
 # set slack=True to allow the constraints to be violated if the optimisation problem would be infeasible otherwise
-connection_point.ports['grid'].set_flow_constraints(max_import=10,max_export=-10, slack=True)
+connection_point.ports['grid'].set_flow_constraints(max_import=15,max_export=-15, slack=True)
 # todo: value of slack
 
 load = Node()                       # create a node to represent the load
@@ -125,11 +125,14 @@ peak_power_obj = PeakNegativePower(component=grid.ports['grid'])    # assign a c
 import_cost = ImportTariff(component=connection_point.ports['grid'],
                            tariff_array=import_tariff_array,
                            expansion_periods=expansion_periods)  # create the import objective cost
+import_cost2 = ImportTariff(component=connection_point.ports['grid'],
+                           tariff_array=import_tariff_array,
+                           expansion_periods=expansion_periods)  # create the import objective cost
 export_cost = ExportTariff(component=connection_point.ports['grid'],
                            tariff_array=export_tariff_array,
                            expansion_periods=expansion_periods)  # create the export objective cost
 
-objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost])
+objective_set = ObjectiveSet(objective_list=[import_cost, import_cost2, export_cost, peak_power_obj, throughput_cost])
 
 
 ############################ ----------------------- ########################################
