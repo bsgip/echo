@@ -156,16 +156,20 @@ class OptimisationGraph(Graph):
         self.verify_paths()
 
     def draw(self, with_labels=False, labels=None):
-        """ Draws the network with or without network"""
-        if labels:
-            nx.draw_networkx(self, with_labels=with_labels, labels=labels)
-        else:
-            nx.draw_networkx(self, with_labels=with_labels)
+        """
+        Draws the network with or without node labels
+        """
+        nx.draw_networkx(self, with_labels=with_labels, labels=labels)
         plt.show()
-        return
 
     def print_network_hierarchy(self):
-        """ Prints the model hierarchy: nodes --> ports --> port_name"""
+        """
+        Prints the model hierarchy:
+
+        node names
+            port_name
+
+        """
         for n_name, n_object in self.node_obj.items():
             print(n_name)
             for p_name, p_object in n_object.ports.items():
