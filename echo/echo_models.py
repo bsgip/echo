@@ -20,7 +20,7 @@ from echo.echo_validators import *
 
 class BaseModel(PydanticBaseModel):
     class Config:
-        validate_assignment = True
+        validate_assignment = True  # set to true so that we re-validate when we update a model field
 
 class OptimisationGraph(Graph):
     # todo do we need anything pydantic related for this class?
@@ -188,9 +188,6 @@ class Port(BaseModel):
     neg: Optional[str]  #todo don't love having to define every one of these.. is there an alternative?
     active: Optional[str]
 
-    class Config:
-        validate_assignment = True  #This makes pydantic validate again after making an assignment to a field
-
     @root_validator()
     def assign_port_name(cls, values):
         uid = values.get("uid")
@@ -214,6 +211,15 @@ class Port(BaseModel):
         return values
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
+        """
+
+        Sets the values of port flow constraints.
+
+        Args:
+            max_import: max allowable import into port (float, array, or None)
+            max_export: max allowable export out of port (float, array, or None)
+            slack: bool
+        """
         if max_import is not None:
             self.import_constraint = FlowConstraint.Fixed
         else:
@@ -273,6 +279,14 @@ class Port(BaseModel):
                         raise ConfigurationError('Enter import constraint using positive load convention.')
 
     def initialise_port(self, model):
+        """
+
+        Creates pyomo vars, params, and constraints for the port
+
+        Args:
+            model: pyomo concrete model
+
+        """
 
         domain = en.Reals
         if self.flows is Flows.Export:
@@ -368,6 +382,13 @@ class Port(BaseModel):
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
 
     def constrain_pos_neg(self, model):
+        """
+        Applies a mixed integer constraint that splits a port var into positive and negative components:
+
+        Args:
+            model: pyomo concrete model
+
+        """
 
         setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
         setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
@@ -398,19 +419,49 @@ class Port(BaseModel):
         return constraint
 
     def add_initial_value(self, initial_value):
+        """
+        Adds initial port value which will be used to initialise the pyomo var/param
+
+        Args:
+            initial_value: dict of initial values
+
+        """
         self.initial_value = initial_value
 
     def add_initial_value_from_array(self, array, expansion_periods=1):
+        """
+        Adds initial port value which is used to initialise the pyomo var/param
+
+        Args:
+            array: array, list of initial values
+            expansion_periods: number of expansion periods (int)
+
+        """
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
     def add_active_periods_from_array(self, array, expansion_periods=1):
+        """
+        Adds port active periods
+
+        Args:
+            array: array, list of active periods as bool values
+            expansion_periods: number of expansion periods (int)
+
+        """
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.active_periods = vals
 
     def add_objective(self, model):
+        """
+        Adds port-specific objective terms to pyomo model
+
+        Args:
+            model: pyomo concrete model
+
+        """
         objective = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
@@ -424,8 +475,12 @@ class Port(BaseModel):
         return objective
 
 class Node(BaseModel):
-    """Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
-    this allows transformations to be implemented."""
+    """
+
+    Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
+    this allows transformations to be implemented.
+
+    """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     node_name: Optional[str] = None
     ports: dict = {}
@@ -444,6 +499,15 @@ class Node(BaseModel):
 
     @staticmethod
     def fix_port_variable(model, var_name, new_values, expansion_periods=1):
+        """
+        Updates existing pyomo variable to have fixed values.
+        Args:
+            model: pyomo concrete model
+            var_name: pyomo variable name (str)
+            new_values: array or list of new values
+            expansion_periods: number of expansion periods (int)
+
+        """
         var = getattr(model, var_name)
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
         fixed_vals = dict(zip(keys, new_values))
@@ -451,28 +515,55 @@ class Node(BaseModel):
         var.fix()
 
     def add_named_electrical_ports(self, name_list):
+        """
+        Adds named electrical ports to node.
+        Args:
+            name_list: list of port names as strings
+        """
         if type(name_list) is not list:
             return ConfigurationError('Please enter named ports as list of port names.')
         for name in name_list:
             self.ports[name] = ElectricalPort()
 
     def add_named_flex_ports(self, name_list, unit=Units.NA):
+        """
+        Adds named ports of specified type to node.
+        Args:
+            name_list: list of port names as strings
+            unit: Unit
+        """
         if type(name_list) is not list:
             return ConfigurationError('Please enter named ports as list of port names.')
         for name in name_list:
-            self.ports[name] = FlexPort()
-            if unit is not Units.NA:
-                self.ports[name].units = unit
+            self.add_named_flex_port(name, unit)
 
     def add_named_flex_port(self, name, unit=Units.NA):
+        """
+        Adds named port of specified type to node.
+        Args:
+            name: port name as string
+            unit: Unit
+        """
         self.ports[name] = FlexPort()
         if unit is not Units.NA:
             self.ports[name].units = unit
 
     def add_transformation(self, transformation_obj):
+        """
+        Adds a transformation object to a node.
+        Args:
+            transformation_obj: Transform
+        """
         self.transformations[transformation_obj.uid] = transformation_obj
 
     def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
+        """
+        Creates an emission transformation and adds to the node.
+        Args:
+            emitting_port: port object that generates emissions when exporting (when negative)
+            carbon_port: port object that represents carbon flows
+            emission_factor: a ratio = emissions generated/emitting unit generated (float)
+        """
         # Create appropriate transformation
         t = Transform()
         if carbon_port not in self.ports.values():
@@ -542,8 +633,12 @@ class Node(BaseModel):
         return len(self.ports)
 
 class Edge(BaseModel):
-    """ Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
-    the edge value is equal to the flow from x->y plus the flow from y->x. """
+    """
+
+    Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
+    the edge value is equal to the flow from x->y plus the flow from y->x.
+
+    """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     edge_name: Optional[str] = None
     opt_type: int = OptimisationType.NA
@@ -558,6 +653,12 @@ class Edge(BaseModel):
         return values
 
     def add_vertices(self, obj1, obj2):
+        """
+        Adds edge vertices (which are ports)
+        Args:
+            obj1: port object
+            obj2: port object
+        """
         self.vertices = (obj1, obj2)
 
     def verify_edge(self):
@@ -570,6 +671,11 @@ class Edge(BaseModel):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
 
     def initialise_edge(self, model):
+        """
+        Applies edge constraint
+        Args:
+            mode: pyomo concrete model
+        """
 
         port1 = self.vertices[0]
         port2 = self.vertices[1]
@@ -593,7 +699,9 @@ class Edge(BaseModel):
         self.initial_edge_capacity = initial_capacity
 
 class Transform(BaseModel):
-    """ An object for carrying a generic linear node transformation."""
+    """
+    An object for carrying a generic linear node transformation.
+    """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     transform_name: Optional[str] = None
     rhs: list = []
@@ -607,10 +715,26 @@ class Transform(BaseModel):
         return values
 
     def add_rhs_term(self, var, rule, weight):
+        """
+        Adds a right hand side (RHS) term to the transform
+        Args:
+            var: pyomo var name
+            rule: TransformationRule object
+            weight: linear factor (float)
+
+        """
         term = {'var': var, 'rule': rule, 'weight': weight}
         self.rhs.append(term)
 
     def add_lhs_term(self, var, rule, weight):
+        """
+        Adds a left hand side (RHS) term to the transform
+        Args:
+            var: pyomo var name
+            rule: TransformationRule object
+            weight: linear factor (float)
+
+        """
         term = {'var': var, 'rule': rule, 'weight': weight}
         self.lhs.append(term)
 

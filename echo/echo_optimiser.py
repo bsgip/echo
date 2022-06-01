@@ -244,3 +244,6 @@ class EchoOptimiser(object):
 
     def get_objective_value(self, objective_obj, expansion_period: int):
         return objective_obj.objective_val(optimiser=self, expansion_period=expansion_period)
+
+    def get_objective_value(self):
+        return en.value(self.objective)
