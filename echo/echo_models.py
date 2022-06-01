@@ -1,5 +1,6 @@
 import uuid
 
+import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from networkx import Graph
@@ -153,6 +154,15 @@ class OptimisationGraph(Graph):
 
         self.paths = all_paths
         self.verify_paths()
+
+    def draw(self, with_labels=False, labels=None):
+        if labels:
+            nx.draw_networkx(self, with_labels=with_labels, labels=labels)
+        else:
+            nx.draw_networkx(self, with_labels=with_labels)
+        plt.show()
+        return
+
 
 class ConfigurationError(Exception):
     pass
