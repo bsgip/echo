@@ -11,7 +11,8 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES, objective_set, optimiser_engine=None):
+    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES,
+                 objective_set, optimiser_engine=None):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.number_of_expansion_intervals = number_of_expansion_intervals
@@ -22,7 +23,8 @@ class EchoOptimiser(object):
         if optimiser_engine:
             self.optimiser_engine = optimiser_engine
         else:
-            self.optimiser_engine = 'cplex' if not os.environ.get('OPTIMISER_ENGINE') else os.environ.get('OPTIMISER_ENGINE') # Default to cplex, as we seem to want quadratic costs
+            self.optimiser_engine = 'cplex' if not os.environ.get('OPTIMISER_ENGINE') else os.environ.get(
+                'OPTIMISER_ENGINE')  # Default to cplex, as we seem to want quadratic costs
         self.optimiser_engine_executable = os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
 
         # These values have been arbitrarily chosen
@@ -30,7 +32,6 @@ class EchoOptimiser(object):
         self.bigM = 5000000
         self.smallM = 0.0001
         self.discount_rate = discount_rate
-
 
         self.build_model()
         self.apply_constraints()
@@ -51,7 +52,7 @@ class EchoOptimiser(object):
         self.model = en.ConcreteModel()
         self.model.interval_duration = self.interval_duration
         self.model.number_of_intervals = self.number_of_intervals
-        self.model.paths = self.ES.paths #Todo better way of making all path variables available for constructing objectives
+        self.model.paths = self.ES.paths  # Todo better way of making all path variables available for constructing objectives
 
         #### Bias Values ####
 
@@ -138,9 +139,11 @@ class EchoOptimiser(object):
                 # get the node obj
                 current_node_obj = self.ES.node_obj[current_node_name]
                 for path_vertices, path_obj in self.ES.paths.items():  # Iterate through all paths
-                    if current_node_name is path_vertices[0]:  # If we find a path where the current node is the first node on that path
+                    if current_node_name is path_vertices[
+                        0]:  # If we find a path where the current node is the first node on that path
                         current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
-                    elif current_node_name is path_vertices[-1]:  # If we find a path where the current node is the last node on that path
+                    elif current_node_name is path_vertices[
+                        -1]:  # If we find a path where the current node is the last node on that path
                         current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
 
                 setattr(self.model, f"path_flow_con1_{current_node_name}",
@@ -149,7 +152,7 @@ class EchoOptimiser(object):
                 # Create an indicator var for when there are flows into a node
                 current_node_obj.inflow = f"inflow_{current_node_name}"
                 setattr(self.model, current_node_obj.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
-                                                                domain=en.Binary))
+                                                                    domain=en.Binary))
 
                 setattr(self.model, f"path_flow_con2_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_one))
@@ -193,7 +196,7 @@ class EchoOptimiser(object):
         """
         Extract all vars from the solution as a dataframe
         """
-        #todo extend this to do other nice things
+        # todo extend this to do other nice things
         dct = {}
 
         for var_obj in self.model.component_objects(en.Var):
@@ -206,7 +209,6 @@ class EchoOptimiser(object):
         df = pd.DataFrame(dct)
 
         return df
-
 
     def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""
@@ -250,8 +252,8 @@ class EchoOptimiser(object):
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_single_objective_value(self, objective_obj, expansion_period: int):
-        return objective_obj.objective_val(optimiser=self, expansion_period=expansion_period)
+    def get_single_objective_total_value(self, objective_obj):
+        return objective_obj.objective_val(optimiser=self, expansion_period=0)
 
     def get_total_objective_value(self):
         return en.value(self.objective)

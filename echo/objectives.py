@@ -151,9 +151,8 @@ class ImportTariff(Tariff):
                    model.interval_duration/60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
     def objective_val(self, optimiser, expansion_period):
-        pass
-        # return optimiser.values(self.component.pos, expansion_period) * \
-        #        optimiser.values(self.component.import_tariff, expansion_period)
+        time_series = optimiser.values(self.component.pos, expansion_period) * optimiser.values(self.import_tariff, expansion_period)
+        return sum(time_series)
 
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
@@ -185,9 +184,9 @@ class ExportTariff(Tariff):
                    model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
     def objective_val(self, optimiser, expansion_period):
-        pass
-        # return optimiser.values(self.component.neg, expansion_period) * \
-        #        optimiser.values(self.component.export_tariff, expansion_period)
+        time_series = optimiser.values(self.component.neg, expansion_period) * \
+               optimiser.values(self.export_tariff, expansion_period)
+        return sum(time_series)
 
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
@@ -235,8 +234,9 @@ class ThroughputCost(Objective):
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
 
     def objective_val(self, optimiser, expansion_period):
-        return (optimiser.values(self.component.pos, expansion_period) -
+        time_series = (optimiser.values(self.component.pos, expansion_period) -
                 optimiser.values(self.component.neg, expansion_period)) * self.rate
+        return sum(time_series)
 
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
