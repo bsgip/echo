@@ -647,7 +647,7 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
             battery_port = battery_node.ports[list(battery_node.ports.keys())[0]] #todo less hacky
             output[node_name]['SOC'] = optimiser.values(battery_port.soc_value, 0)
             output[node_name]['delta'] = optimiser.values(battery_port.port_name, 0)
-            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_storage_capacity, 0)
+            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
         elif 'ev' in node_name:
             ev_node = system.node_obj[node_uid]
             output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)

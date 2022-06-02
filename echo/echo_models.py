@@ -185,7 +185,6 @@ class Port(BaseModel):
     initial_value: dict = 0.
     opt_type: int = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    name: str = 'default_user_specified_name'
     port_name: Optional[str] = None
     flows: int = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
@@ -209,27 +208,20 @@ class Port(BaseModel):
     neg: Optional[str]  #todo don't love having to define every one of these.. is there an alternative?
     active: Optional[str]
 
-    @root_validator()
-    def assign_port_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["port_name"] = 'port_' + str(uid)
-        return values
-
-    @root_validator()
-    def assign_pyomo_var_names(cls, values):
-        port_name = values.get("port_name")
-        if port_name is not None:
-            values["import_con_val"] = f"import_con_val_{port_name}"
-            values['export_con_val'] = f"export_con_val_{port_name}"
-            values['import_slack'] = 'import_slack_' + port_name
-            values['import_slack_max'] = 'import_slack_max_' + port_name
-            values['export_slack'] = 'export_slack' + port_name
-            values['export_slack_max'] = 'export_slack_max_' + port_name
-            values['pos'] = positive_variable_component + port_name
-            values['neg'] = negative_variable_component + port_name
-            values['is_pos'] = f"is_pos_{port_name}"
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.port_name is None:
+            # if no name is provided, give it a default name using the uid
+            self.port_name = 'port_' + str(self.uid)
+        self.import_con_val = f"import_con_val_{self.port_name}"
+        self.export_con_val = f"export_con_val_{self.port_name}"
+        self.import_slack = f"import_slack_{self.port_name}"
+        self.import_slack_max = f"import_slack_max_{self.port_name}"
+        self.export_slack = f"export_slack_{self.port_name}"
+        self.export_slack_max = f"export_slack_max_{self.port_name}"
+        self.pos = positive_variable_component + self.port_name
+        self.neg = negative_variable_component + self.port_name
+        self.is_pos = f"is_pos_{self.port_name}"
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """
@@ -719,12 +711,10 @@ class Transform(BaseModel):
     rhs: list = []
     lhs: list = []
 
-    @root_validator()
-    def assign_transform_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["transform_name"] = 'transform_' + str(uid)
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.transform_name is None:
+            self.transform_name = 'transform_' + str(self.uid)
 
     def add_rhs_term(self, var, rule, weight):
         """
@@ -781,19 +771,11 @@ class Path(BaseModel):
     path_tariff: Optional[str]
     slack: Optional[str]
 
-    @root_validator()
-    def assign_path_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["path_name"] = 'path_' + str(uid)
-        return values
-
-    @root_validator()
-    def assign_var_names(cls, values):
-        path_name = values.get('path_name')
-        if path_name is not None:
-            values['flow_value'] = 'flow_value_' + path_name
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.path_name is None:
+            self.path_name = 'path_' + str(self.uid)
+        self.flow_value = 'flow_value_' + self.path_name
 
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
@@ -838,10 +820,16 @@ class Source(Port):
     flows: int = Flows.Export
     opt_type: int = OptimisationType.Parameter
 
+    # Source should have non positive initial values
+    non_pos_check = validator("initial_value", allow_reuse=True)(all_nonpositive_array)
+
 class Sink(Port):
     """ The sink for a commodity. """
     flows = Flows.Import
     opt_type = OptimisationType.Parameter
+
+    # Sink should have non negative initial values
+    non_neg_check = validator("initial_value", allow_reuse=True)(all_nonnegative_array)
 
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
@@ -858,7 +846,8 @@ class Storage(Port):
     import_constraint = FlowConstraint.Fixed
     export_constraint = FlowConstraint.Fixed
     max_capacity: float
-    depth_of_discharge_limit: float = 0
+    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
+    min_soc: float = 0
     charging_power_limit: float
     discharging_power_limit: float
     charging_efficiency: float = 1
@@ -876,27 +865,46 @@ class Storage(Port):
 
     # All our optional fields/fields created when building pyomo model
     soc_value: Optional[str]
-    optimised_storage_capacity: Optional[str]
+    optimised_capacity: Optional[str]
     trip_slack: Optional[Union[ArrayType, list]]
     cons_slack: Optional[str]
     trip_slack: Optional[str]
+    optimised_capacity: Optional[str]
 
     @root_validator()
-    def set_attr_names(cls, values):
-        values['import_constraint_value'] = values.get('charging_power_limit')
-        values['export_constraint_value'] = values.get('discharging_power_limit')
-        port_name = values.get("port_name")
-        if port_name is not None:
-            values['soc_value'] = 'storage_soc_' + port_name
-            values['cons_slack'] = 'con_slack' + port_name
-            values['trip_slack'] = 'trip_slack_' + port_name
+    def dod_checks(cls, values):
+        # Check which dod representation we have
+        dod_lim = values.get('depth_of_discharge_limit')
+        max_cap = values.get('max_capacity')
+        init_soc = values.get('initial_state_of_charge')
+        # Check dod representation
+        if 0 <= dod_lim <= 1:
+            # Assume decimal representation
+             min_soc = max_cap * dod_lim
+        elif 1 < dod_lim <= 100:
+            # Assume percentage representation
+            min_soc = max_cap * dod_lim/100.0
+        else:
+            raise ValueError('DoD must be entered as decimal fraction or percentage of max capacity')
+        # Check initial soc is within bounds
+        if (init_soc < min_soc) or (init_soc > max_cap):
+            raise ValueError('Initial state of charge, {}, must be between min soc, {}, and max capacity, {}'.format(init_soc, min_soc, max_cap))
+        values['min_soc'] = min_soc
         return values
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.import_constraint_value = self.charging_power_limit
+        self.export_constraint_value = self.discharging_power_limit
+        # Define our pyomo var names
+        self.soc_value = 'storage_soc_' + self.port_name
+        self.cons_slack = 'con_slack' + self.port_name
+        self.trip_slack = 'trip_slack_' + self.port_name
+        self.optimised_capacity = 'optimised_storage_capacity_' + self.port_name
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
-
-        setattr(model, self.soc_value,
-                en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
+        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(self.min_soc, self.max_capacity)))  # Actual SOC
 
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
@@ -908,23 +916,19 @@ class Storage(Port):
         if self.soc_conserv is not None:
             assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
             assert self.available is not None, 'soc_conserve requires available'
-            con_name = 'cons_soc' + self.port_name
-            setattr(model, self.cons_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
+            setattr(model, self.cons_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            setattr(model, f"cons_soc_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
 
         # def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
         #     return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
 
-        self.optimised_storage_capacity = 'optimised_storage_capacity_' + self.port_name
         if self.fixed_storage_capacity is False:
-            setattr(model, self.optimised_storage_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
+            setattr(model, self.optimised_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
         else:
-            setattr(model, self.optimised_storage_capacity,
-                    en.Param(initialize=self.max_capacity, domain=en.NonNegativeReals))
+            setattr(model, self.optimised_capacity, en.Param(initialize=self.max_capacity, domain=en.NonNegativeReals))
 
         def cap_limit(model, p, t):  # Ensure SOC is within max capacity
-            return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_storage_capacity)
+            return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_capacity)
 
         setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
@@ -983,11 +987,7 @@ class Storage(Port):
                        getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
 
         if self.enable_trip_slack is True:
-            # con_name = 'min_soc_con_' + self.port_name
-
-            setattr(model, self.trip_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            # setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=min_soc_rule_slack))
+            setattr(model, self.trip_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
                 setattr(model, f"soc_lim_trip_slack{self.port_name}",
                         en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
@@ -1002,19 +1002,6 @@ class Storage(Port):
             else:
                 self.constrain_pos_neg(model)
                 setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
-
-    def calc_capacity(self):
-        capacity = self.max_capacity
-        if 0 <= self.depth_of_discharge_limit <= 1:
-            # Assume we have a decimal representation of the dod limit
-            capacity *= (1 - self.depth_of_discharge_limit)
-        elif 1 < self.depth_of_discharge_limit <= 100:
-            # Assume we have a percentage representation of the dod limit
-            capacity *= (1 - self.depth_of_discharge_limit / 100.0)
-        else:
-            raise ConfigurationError('The DoD limit should be between 0 - 100')
-
-        return capacity
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
@@ -1051,7 +1038,6 @@ class ControlledLoadOrGen(Port):
     units: int = Units.KW
 
     def initialise_port(self, model):
-
         super(ControlledLoadOrGen, self).initialise_port(model)
 
         def min_power_rule(model, p, t):
@@ -1593,3 +1579,12 @@ class GasTellegenNode(Node):
         super(GasTellegenNode, self).__init__()
         self.node_rule = NodeRule.Tellegen
         self.units = Units.Jps
+
+# some utils #todo maybe these should go in a separate file
+def format_as_dict(time_series, num_time_intervals, num_expansion_intervals):
+    """ Formats a 1d time series into a dict."""
+
+
+def tile_time_series_data(time_series, num_tiles):
+    """ This function takes a 1d time series array and tiles it to create multiple planning arrays.
+    It returns a dict that can be used directly as an initial value for a port. """
