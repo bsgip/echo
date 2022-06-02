@@ -821,7 +821,7 @@ class Source(Port):
     opt_type: int = OptimisationType.Parameter
 
     # Source should have non positive initial values
-    non_pos_check = validator("initial_value", allow_reuse=True)(all_nonpositive_array)
+    non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
 class Sink(Port):
     """ The sink for a commodity. """
@@ -829,7 +829,7 @@ class Sink(Port):
     opt_type = OptimisationType.Parameter
 
     # Sink should have non negative initial values
-    non_neg_check = validator("initial_value", allow_reuse=True)(all_nonnegative_array)
+    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load)
 
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
@@ -1071,8 +1071,6 @@ class ControlledLoadOrGen(Port):
                     en.Constraint(rule=sum_of_energy_must_be_less_than_max))
 
     def add_demand_profile_from_array(self, array, expansion_periods=1):
-        if type(array) is np.ndarray:
-            assert (array >= 0).all(), 'power demand must be non negative'
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
@@ -1137,8 +1135,6 @@ class ElectricalGeneration(Source):
         self.add_initial_value(generation)
 
     def add_generation_profile_from_array(self, array, expansion_periods=1):
-        if type(array) is np.ndarray:
-            assert (array <= 0).all(), 'power generation must be non positive'
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)

@@ -33,23 +33,21 @@ def export_cons_check(cls, v):
             raise ValueError('Export constraint should be negative')
 
 
-def all_nonnegative_array(cls, v):
+def nonnegative_load(cls, v):
     """ Validate array field that should have non negative entries"""
-
     if v is not None:
         array = np.array([x for x in v.values()])
         if not (array >= 0).all():
-            raise ValueError('Array entries should all be non negative.')
+            raise ValueError('Load array entries should all be non negative.')
     return v
 
 
-def all_nonpositive_array(cls, v):
+def nonpositive_generation(cls, v):
     """ Validate array field that should have non positive entries"""
     if v is not None:
         array = np.array([x for x in v.values()])
         if not (array <= 0).all():
-            raise ValueError('Array entries should all be non positive.')
-
+            raise ValueError('Generation array entries should all be non positive.')
     return v
 
 
