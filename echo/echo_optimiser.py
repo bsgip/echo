@@ -31,9 +31,20 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
+
         self.build_model()
         self.apply_constraints()
         self.build_objective()
+
+    def _validate_network_graph(self):
+        """
+        Validates that a pyomo model can be built from the provided network graph. Checks for:
+        - name consistency between objects (eg node.node_name) and graph nodes
+        - others...
+        """
+        for node_name, node_obj in self.ES.node_obj.items():
+            assert node_obj.node_name == node_name, \
+                'Node {} name has been updated after being added to the network graph.'.format(node_name)
 
     def build_model(self):
         # Set up the Pyomo model
@@ -239,8 +250,8 @@ class EchoOptimiser(object):
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_objective_value(self, objective_obj, expansion_period: int):
+    def get_single_objective_value(self, objective_obj, expansion_period: int):
         return objective_obj.objective_val(optimiser=self, expansion_period=expansion_period)
 
-    def get_objective_value(self):
+    def get_total_objective_value(self):
         return en.value(self.objective)

@@ -18,7 +18,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -41,7 +41,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     inverter.add_dc_port('pv')
 
     cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -89,7 +89,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -113,7 +113,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     inverter.add_dc_port('pv')
 
     cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -170,7 +170,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -193,7 +193,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
     inverter.add_dc_port('pv')
 
     cp = Node()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()

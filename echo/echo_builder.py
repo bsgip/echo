@@ -486,7 +486,7 @@ def create_tellegen_node(node_dict):
     tnode = ecm.TellegenNode()
     port_params = node_dict.get('parameters') if node_dict.get('parameters') is not None else None
     for port in port_list:
-        tnode.add_named_flex_port(port, unit=echo_unit)
+        tnode.add_flex_port(port, unit=echo_unit)
         # check for any parameters/constraints on ports - todo this will be a similar process for other node types -- make it a function
         if port_params:
             if port_params.get(port):
@@ -504,7 +504,7 @@ def create_flex_node(node_dict):
     port_unit = node_dict['units']
     echo_unit = get_echo_port_units(node_dict['id'], port_unit)
     fnode = ecm.Node()
-    fnode.add_named_flex_ports(port_list, unit=echo_unit)
+    fnode.add_flex_ports_from_list(port_list, unit=echo_unit)
     return fnode
 
 

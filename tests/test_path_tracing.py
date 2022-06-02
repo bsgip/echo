@@ -25,7 +25,7 @@ def test_partitioning_regions_for_path_flow():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -49,7 +49,7 @@ def test_partitioning_regions_for_path_flow():
     inverter.add_dc_port('pv')
 
     cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -114,7 +114,7 @@ def test_regularisation_of_path_flows():
     source2.ports['s2'] = s2
 
     cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['s1', 's2', 'l1', 'l2'])
+    cp.add_electrical_ports_from_list(['s1', 's2', 'l1', 'l2'])
 
     load1 = Node()
     l1 = ElectricalDemand()

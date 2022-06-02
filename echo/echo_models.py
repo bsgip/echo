@@ -32,16 +32,18 @@ class OptimisationGraph(Graph):
         self.edge_obj = dict()
         self.paths = {}
 
-    def add_node_obj(self, node):
-        def add_single_node(node_obj):
-            self.add_node(node_obj.node_name)
-            self.node_obj[node_obj.node_name] = node_obj
+    def _add_single_node(self, node_obj):
+        self.add_node(node_obj.node_name)
+        self.node_obj[node_obj.node_name] = node_obj
 
+    def add_node_obj(self, node):
         if type(node) is list:
             for n in node:
-                add_single_node(n)
+                # check if node is already defined
+                assert n.node_name not in self.nodes, 'Node \'{}\' already defined'.format(n.node_name)
+                self._add_single_node(n)
         else:
-            add_single_node(node)
+            self._add_single_node(node)
 
     def add_edge_obj(self, edge):
         def add_single_edge(edge_obj):
@@ -500,8 +502,8 @@ class Node(BaseModel):
     this allows transformations to be implemented.
 
     """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    node_name: Optional[str] = None
+    node_name: Optional[str]
+    uid: Optional[uuid.UUID]
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
@@ -509,12 +511,11 @@ class Node(BaseModel):
 
     inflow: Optional[str]
 
-    @root_validator()
-    def assign_node_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["node_name"] = 'node_' + str(uid)
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.uid = uuid.uuid4()
+        self.node_name = 'node_' + str(self.uid)  #we define the node uid and name like this so that the user can redefine them if desired.
+
 
     @staticmethod
     def fix_port_variable(model, var_name, new_values, expansion_periods=1):
@@ -533,30 +534,7 @@ class Node(BaseModel):
         var.set_values(fixed_vals)
         var.fix()
 
-    def add_named_electrical_ports(self, name_list):
-        """
-        Adds named electrical ports to node.
-        Args:
-            name_list: list of port names as strings
-        """
-        if type(name_list) is not list:
-            return ConfigurationError('Please enter named ports as list of port names.')
-        for name in name_list:
-            self.ports[name] = ElectricalPort()
-
-    def add_named_flex_ports(self, name_list, unit=Units.NA):
-        """
-        Adds named ports of specified type to node.
-        Args:
-            name_list: list of port names as strings
-            unit: Unit
-        """
-        if type(name_list) is not list:
-            return ConfigurationError('Please enter named ports as list of port names.')
-        for name in name_list:
-            self.add_named_flex_port(name, unit)
-
-    def add_named_flex_port(self, name, unit=Units.NA):
+    def add_flex_port(self, name, unit=Units.NA):
         """
         Adds named port of specified type to node.
         Args:
@@ -566,6 +544,21 @@ class Node(BaseModel):
         self.ports[name] = FlexPort()
         if unit is not Units.NA:
             self.ports[name].units = unit
+
+    def add_electrical_port(self, port_name):
+        self.add_flex_port(port_name, unit=Units.KW)
+
+    def add_electrical_ports_from_list(self, name_list):
+        if type(name_list) is not list:
+            return ConfigurationError('Please enter named ports as list of port names.')
+        for name in name_list:
+            self.add_electrical_port(port_name=name)
+
+    def add_flex_ports_from_list(self, name_list, unit=Units.NA):
+        if type(name_list) is not list:
+            return ConfigurationError('Please enter named ports as list of port names.')
+        for name in name_list:
+            self.add_flex_port(name, unit)
 
     def add_transformation(self, transformation_obj):
         """

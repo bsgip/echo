@@ -28,11 +28,13 @@ def test_v0g():
 
     # Create assets
     grid = Node()  # create node representing upstream grid
-    grid.add_named_electrical_ports(['grid'])  # create a port which will be used to connect this with the connection_point
+    grid.add_electrical_ports_from_list(
+        ['grid'])  # create a port which will be used to connect this with the connection_point
 
     # create the connection point (where we will sum everything up)
     connection_point = ElectricalTellegenNode()
-    connection_point.add_named_electrical_ports(['ev', 'grid'])  # create ports to connect to the grid, the load, and the inverter
+    connection_point.add_electrical_ports_from_list(
+        ['ev', 'grid'])  # create ports to connect to the grid, the load, and the inverter
 
     # Create V0G vehicle
 

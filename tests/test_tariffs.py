@@ -50,7 +50,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=battery_capacity,
@@ -70,7 +70,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     dc_window = [0] * 24 + [1] * 12 + [0] * 12
 
     site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])
@@ -120,7 +120,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -140,7 +140,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     solar.ports['solar'] = pv1
 
     site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess', 'pv'])
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
     cp1 = site1.ports['cp']
 
     load1 = Node()
@@ -206,7 +206,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -224,7 +224,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     load1.ports['demand'] = l1
 
     site1 = ElectricalNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     site1.node_rule = NodeRule.Tellegen
     cp1 = site1.ports['cp']
 
@@ -274,7 +274,7 @@ def test_path_flows_respect_port_constraints():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -294,7 +294,7 @@ def test_path_flows_respect_port_constraints():
     solar.ports['solar'] = pv1
 
     site = ElectricalNode()
-    site.add_named_electrical_ports(['cp', 'load', 'bess', 'pv'])
+    site.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
     site.node_rule = NodeRule.Tellegen
     cp1 = site.ports['cp']
 

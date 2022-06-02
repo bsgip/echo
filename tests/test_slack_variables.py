@@ -27,7 +27,7 @@ def test_export_slack_var_is_minimised():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -36,7 +36,7 @@ def test_export_slack_var_is_minimised():
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
     system.add_node_obj([grid, solar, inverter])
@@ -73,7 +73,7 @@ def test_import_slack_var_is_minimised():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
     grid.ports['grid'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
     solar = Node()
@@ -83,7 +83,7 @@ def test_import_slack_var_is_minimised():
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
 
     system.add_node_obj([grid, solar, inverter])
 
@@ -120,7 +120,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -129,7 +129,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
 

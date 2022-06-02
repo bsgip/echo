@@ -18,7 +18,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -36,7 +36,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'bess', 'pv'])
+    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
@@ -81,7 +81,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -100,7 +100,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     solar.ports['solar'] = pv1
 
     inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'bess', 'pv'])
+    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
@@ -202,7 +202,7 @@ def test_positive_contingency_calculation_with_storage_full():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -225,7 +225,7 @@ def test_positive_contingency_calculation_with_storage_full():
     inverter.add_dc_port('pv')
 
     cp = Node()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()

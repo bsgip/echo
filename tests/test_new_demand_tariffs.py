@@ -26,7 +26,7 @@ def test_system_import_demand_tariff():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     load1 = Node()
     l1 = ElectricalDemand()
@@ -74,7 +74,7 @@ def test_system_export_demand_tariff():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     gen = Node()
     g1 = ElectricalGeneration()
@@ -122,7 +122,7 @@ def test_system_import_demand_tariff_two_resets():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     load1 = Node()
     l1 = ElectricalDemand()

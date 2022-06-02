@@ -71,10 +71,10 @@ system = OptimisationGraph()
 
 # Create assets
 grid = Node()
-grid.add_named_electrical_ports(['grid'])
+grid.add_electrical_ports_from_list(['grid'])
 
 connection_point = ElectricalTellegenNode()
-connection_point.add_named_electrical_ports(['load', 'bess', 'pv', 'grid'])
+connection_point.add_electrical_ports_from_list(['load', 'bess', 'pv', 'grid'])
 
 load = Node()
 l1 = FixedElectricalPort()
@@ -179,8 +179,8 @@ storage_energy_delta = optimiser.values(b.port_name, 0)
 storage_energy_soc = optimiser.values(b.soc_value, 0)
 optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
 
-optimiser.get_objective_value(rnetwork[0], 0)
-optimiser.get_objective_value(throughput_cost, 0)
+optimiser.get_single_objective_value(rnetwork[0], 0)
+optimiser.get_single_objective_value(throughput_cost, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4

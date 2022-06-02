@@ -147,7 +147,7 @@ def test_carbon_aggregation():
     load1.ports['demand'] = l1
 
     site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
 
     carbon_aggr = CarbonAggregation()
     carbon_aggr.ports['grid'] = CarbonSink()
