@@ -164,17 +164,12 @@ class OptimisationGraph(Graph):
 
     def print_network_hierarchy(self):
         """
-        Prints the model hierarchy:
-
-        node names
-            port_name
-
+        Prints the model hierarchy as node names --> port names
         """
         for n_name, n_object in self.node_obj.items():
             print(n_name)
             for p_name, p_object in n_object.ports.items():
                 print('  port_name: ', p_name)
-
 
 
 class ConfigurationError(Exception):
@@ -188,6 +183,7 @@ class Port(BaseModel):
     initial_value: dict = 0.
     opt_type: int = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    name: str = 'default_user_specified_name'
     port_name: Optional[str] = None
     flows: int = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
@@ -199,7 +195,7 @@ class Port(BaseModel):
     slack: bool = False
     optional: bool = False
 
-    # All our optional fields/fields created when building pyomo model
+    # All our optional fields/fields that are created when building pyomo model, and used to define variable names
     import_con_val: Optional[str]
     export_con_val: Optional[str]
     import_slack: Optional[str]

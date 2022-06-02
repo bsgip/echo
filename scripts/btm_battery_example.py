@@ -183,3 +183,8 @@ ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
 plt.show()
+
+# print(optimiser.get_objective_value())
+# system.draw(with_labels=True)
+# system.print_network_hierarchy()
+# df = optimiser.df()

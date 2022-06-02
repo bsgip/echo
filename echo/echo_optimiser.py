@@ -200,6 +200,31 @@ class EchoOptimiser(object):
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
         self.opt_status = results['Solver'][0]
 
+    def df(self):
+        """
+        Extract all vars from the solution as a dataframe
+        """
+        #todo extend this to do other nice things
+        dct = {}
+
+        for var_obj in self.model.component_objects(en.Var):
+            if 'soc' in var_obj.name:
+                dct[var_obj.name] = var_obj.extract_values()
+            if 'port' in var_obj.name:
+                dct[var_obj.name] = var_obj.extract_values()
+
+        # Handle multiple indexes
+        df = pd.DataFrame(dct)
+
+        return df
+
+    def get_results_df(self):
+        """
+        Returns a df of the results, where the col name is the var_name
+        """
+
+
+
     def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""
 
