@@ -236,13 +236,10 @@ class EchoOptimiser(object):
                 for i in var_obj:
                     output[i] = var_obj[i].value
                 return output
-                # if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
-                #     return var_obj[expansion]
-                # else:  # Var
-                #     return var_obj[expansion].value
             else:
                 # if it has no index, we can directly return value
                 return var_obj.value
+
 
     def node_values(self, node_obj, expansion_period=0):
         """ Returns all values of all ports in a specified node for a single specified expansion period."""
@@ -253,7 +250,9 @@ class EchoOptimiser(object):
         return outputs
 
     def get_single_objective_total_value(self, objective_obj):
-        return objective_obj.objective_val(optimiser=self, expansion_period=0)
+        assert self.objective_set is not None, 'No objectives defined for this optimiser.'
+        return objective_obj.get_objective_total(optimiser=self)
 
     def get_total_objective_value(self):
+        assert self.objective_set is not None, 'No objectives defined for this optimiser.'
         return en.value(self.objective)

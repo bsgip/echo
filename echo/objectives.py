@@ -12,19 +12,15 @@ from echo.echo_models import Port, ConfigurationError
 
 
 class Objective(BaseModel):
-    """
-    Parent class for objectives
-    """
+
     component: Union[Port, Path]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
-    obj_name: Optional[str]
+    obj_name: Optional[str] = None
 
-    @root_validator()
-    def assign_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["obj_name"] = 'obj_' + str(uid)
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.obj_name is None:
+            self.obj_name = 'obj_' + str(self.uid)
 
     def verify_objective(self, model):
         pass
@@ -34,6 +30,14 @@ class Objective(BaseModel):
 
     def create_vars(self, model):
         pass
+
+    def objective_expr(self, model):
+        pass
+
+    def get_objective_total(self, optimiser):
+        obj_expr = self.objective_expr(optimiser.model) # Retrieve the objective expression
+        return en.value(obj_expr) # Return the value of the summed expression
+
 
 class ObjectiveSet(BaseModel):
     """ Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
@@ -57,12 +61,9 @@ class PeakPositivePower(Objective):
     component: Port
     max_pos: Optional[str]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['max_pos'] = 'max_pos_' + name
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.max_pos = 'max_pos_' + self.obj_name
 
     def create_vars(self, model):
         setattr(model, self.max_pos, en.Var(initialize=0, domain=en.NonNegativeReals))
@@ -86,12 +87,9 @@ class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
     max_neg: Optional[str]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['max_neg'] = 'max_neg_' + name
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.max_neg = 'max_neg_' + self.obj_name
 
     def create_vars(self, model):
         setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
@@ -127,15 +125,9 @@ class ImportTariff(Tariff):
     import_tariff: Optional[str]
     import_tariff_dict: Optional[dict]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['import_tariff'] = 'import_tariff_' + name
-        return values
-    
-    def __init__(self, **data) -> None:
+    def __init__(self, **data):
         super().__init__(**data)
+        self.import_tariff = 'import_tariff_' + self.obj_name
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model):
@@ -150,9 +142,9 @@ class ImportTariff(Tariff):
         return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.import_tariff)[p, t] *
                    model.interval_duration/60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-    def objective_val(self, optimiser, expansion_period):
-        time_series = optimiser.values(self.component.pos, expansion_period) * optimiser.values(self.import_tariff, expansion_period)
-        return sum(time_series)
+    def _objective_time_series(self, opt):
+        time_series = opt.values(self.component.pos) * opt.values(self.import_tariff) * opt.model.interval_duration/60 * opt.values(opt.model.dr)
+        return time_series
 
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
@@ -161,15 +153,9 @@ class ExportTariff(Tariff):
     export_tariff: Optional[str]
     export_tariff_dict: Optional[dict]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['export_tariff'] = 'export_tariff_' + name
-        return values
-
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        self.export_tariff = 'export_tariff_' + self.obj_name
         self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model):
@@ -194,15 +180,9 @@ class PathTariff(Tariff):
     path_tariff: Optional[str]
     path_tariff_dict: Optional[dict]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['path_tariff'] = 'path_tariff_' + name
-        return values
-
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        self.path_tariff = 'path_tariff_' + self.obj_name
         self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model):
@@ -229,14 +209,11 @@ class ThroughputCost(Objective):
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(
+        obj = sum(
             (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
+        return obj
 
-    def objective_val(self, optimiser, expansion_period):
-        time_series = (optimiser.values(self.component.pos, expansion_period) -
-                optimiser.values(self.component.neg, expansion_period)) * self.rate
-        return sum(time_series)
 
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
@@ -251,9 +228,6 @@ class QuadraticPower(Objective):
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.component.port_name, expansion_period) * \
-               optimiser.values(self.component.port_name, expansion_period)
 
 class Contingency(Objective):
     component: Path
@@ -263,12 +237,9 @@ class ContingencyNegative(Objective):
     duration: PositiveFloat
     contingency_neg: Optional[str]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['contingency_neg'] = 'cont_neg_' + name
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.contingency_neg = 'cont_neg_' + self.obj_name
 
     def create_vars(self, model):
         setattr(model, self.contingency_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
@@ -328,12 +299,9 @@ class ContingencyPositive(Objective):
     duration: PositiveFloat
     contingency_pos: Optional[str]
 
-    @root_validator()
-    def add_var_name(cls, values):
-        name = values.get('obj_name')
-        if name is not None:
-            values['contingency_pos'] = 'cont_pos_' + name
-        return values
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.contingency_pos = 'cont_pos_' + self.obj_name
 
     def create_vars(self, model):
         setattr(model, self.contingency_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
@@ -384,9 +352,6 @@ class ContingencyPositive(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.contingency_pos)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)*-1
-
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.contingency_pos, expansion_period) * -1
 
 class DemandTariffObjective(Objective):
     """ A demand tariff objective contains a set of one or more demand charges."""
@@ -482,9 +447,9 @@ class DemandTariffObjective(Objective):
 class DemandCharge(BaseModel):
     """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
-    name: Optional[str]
+    name: Optional[str] = None
     rate: PositiveFloat
-    min_demand: float
+    min_demand: float = 0.0
     window_array: Union[ArrayType, List]
     reset_period_length: int = None
 
@@ -494,20 +459,10 @@ class DemandCharge(BaseModel):
     max_demand_val: Optional[str]
 
     @root_validator()
-    def assign_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["name"] = 'dc_' + str(uid)
-        return values
-
-    @root_validator()
     def assign_var_names(cls, values):
         name = values.get('name')
         window_array = values.get('window_array')
         reset_period_length = values.get('reset_period_length')
-        if name is not None:
-            values['max_demand_val'] = 'max_demand_' + name
-            values['window_active'] = 'window_active_' + name
         if reset_period_length is None:
             temp_reset_period_len = len(window_array)
         else:
@@ -518,6 +473,13 @@ class DemandCharge(BaseModel):
         values['reset_index'] = en.RangeSet(0, values.get('num_reset_periods')-1)
         values['reset_period_length'] = temp_reset_period_len
         return values
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.name is None:
+            self.name = 'dc_' + str(self.uid)
+        self.max_demand_val = 'max_demand_' + self.name
+        self.window_active = 'window_active_' + self.name
 
     def create_params(self, model):
         #todo make this work for multiple planning intervals, make it less hacky:)
