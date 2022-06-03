@@ -29,7 +29,7 @@ def test_solar_generation_limited_by_inverter_size():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
@@ -77,7 +77,7 @@ def test_non_curtailable_system_not_curtailed():
     pv1.curtailable = False
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
@@ -128,7 +128,7 @@ def test_curtailable_system_curtailed():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 

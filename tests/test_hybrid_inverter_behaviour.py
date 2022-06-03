@@ -42,7 +42,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()

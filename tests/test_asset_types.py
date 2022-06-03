@@ -146,7 +146,7 @@ def test_carbon_aggregation():
     l1.add_demand_profile_from_array(np.array([6] * time_periods), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
 
     carbon_aggr = CarbonAggregation()

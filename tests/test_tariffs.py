@@ -69,7 +69,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
 
     dc_window = [0] * 24 + [1] * 12 + [0] * 12
 
-    site1 = ElectricalTellegenNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
@@ -139,7 +139,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     pv1.export_constraint_value = 0
     solar.ports['solar'] = pv1
 
-    site1 = ElectricalTellegenNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
     cp1 = site1.ports['cp']
 

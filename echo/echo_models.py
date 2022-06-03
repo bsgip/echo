@@ -808,6 +808,15 @@ class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
     node_rule = NodeRule.Tellegen
 
+    def verify_node(self):
+        # Check that all ports on the node have the same units
+        u = None
+        for p in self.ports.values():
+            if u is not None:
+                assert p.units == u, 'Tellegen node ports must have the same units.'
+            else:
+                u = p.units
+
 class FlexPort(Port):
     """ Flexible port """
     flows = Flows.Both
@@ -1101,10 +1110,6 @@ class ControlledGen(ControlledLoadOrGen):
 
 class ElectricalNode(Node):
     units = Units.KW
-
-class ElectricalTellegenNode(ElectricalNode):
-    """A node that implements a Kirchoff / Tellegen constraint requiring that electrical power is conserved"""
-    node_rule = NodeRule.Tellegen
 
 class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
@@ -1442,8 +1447,7 @@ class Chiller(Node):
     temp_array: list = None
     coeff_array: list = None
     n_breakpoints: int = 4
-
-    dummy: Optional[str]
+    #todo temperature
 
     @root_validator()
     def validate_chiller_transformation(cls, values):
@@ -1462,7 +1466,6 @@ class Chiller(Node):
             return ValueError('Coefficients for a quadratic function should be used (ie 3 coefficients).')
         return values
 
-
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
@@ -1480,15 +1483,6 @@ class Chiller(Node):
         cp.export_constraint_value = self.max_output
         self.ports['output'] = cp
         self.node_rule = NodeRule.Custom
-
-    # def add_temperature_profile_from_array(self, array, expansion_periods=1):
-    #     # Calculate temperature correction factor
-    #     y = np.subtract(array, np.average(array))
-    #     cf = y / np.linalg.norm(y)
-    #     keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-    #     vals = dict(zip(keys, cf))
-    #     self.temp_correction_factors = vals
-
 
     def initialise_node(self, model):
         super(Chiller, self).initialise_node(model)
@@ -1525,32 +1519,35 @@ class Chiller(Node):
             yvar, xvar, pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
 
 
-class ThermalLoad(Sink):
-    """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
-    # todo think abt this
+""" 
+Thermal assets
+"""
+
+class HeatingOrCoolingLoad(Sink):
 
     def __init__(self):
-        super(ThermalLoad, self).__init__()
+        super(HeatingOrCoolingLoad, self).__init__()
         self.units = Units.KWT
-        self.flows = Flows.Both
-        self.import_constraint = FlowConstraint.NoConstraint
-        self.export_constraint = FlowConstraint.NoConstraint
-
-class GasPort(Port):
-
-    def __init__(self):
-        super(GasPort, self).__init__()
-        self.units = Units.JPS
-        self.flows = Flows.Both
-        self.import_constraint = FlowConstraint.NoConstraint
-        self.export_constraint = FlowConstraint.NoConstraint
-        self.opt_type = OptimisationType.Variable
 
 class ThermalPort(Port):
 
     def __init__(self):
         super(ThermalPort, self).__init__()
         self.units = Units.KWT
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+
+"""
+Gas assets
+"""
+
+class GasPort(Port):
+
+    def __init__(self):
+        super(GasPort, self).__init__()
+        self.units = Units.JPS
         self.flows = Flows.Both
         self.import_constraint = FlowConstraint.NoConstraint
         self.export_constraint = FlowConstraint.NoConstraint
@@ -1566,12 +1563,6 @@ class GasDemand(Sink):
     def add_demand_profile_from_array(self, array, expansion_intervals):
         self.add_sink_profile_from_array(array, expansion_intervals)
 
-class GasTellegenNode(Node):
-
-    def __init__(self):
-        super(GasTellegenNode, self).__init__()
-        self.node_rule = NodeRule.Tellegen
-        self.units = Units.Jps
 
 # some utils #todo maybe these should go in a separate file
 def format_as_dict(time_series, num_time_intervals, num_expansion_intervals):

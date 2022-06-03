@@ -40,7 +40,7 @@ def many_node_system_tree(num_sites):
 
     # create line of nodes
     for i in range(num_sites):
-        cp = ElectricalTellegenNode()
+        cp = TellegenNode()
         cp.add_electrical_ports_from_list(['upstream', 'site', 'downstream'])
         system.add_node_obj(cp)
         if i == 0:
@@ -51,7 +51,7 @@ def many_node_system_tree(num_sites):
             system.connect_ports_and_create_edge(cp.ports['upstream'], upstream_port)
             previous_node = cp
 
-        site_cp = ElectricalTellegenNode()
+        site_cp = TellegenNode()
         site_cp.add_electrical_ports_from_list(['load', 'pv', 'bess', 'cp'])
         system.add_node_obj(site_cp)
         system.connect_ports_and_create_edge(site_cp.ports['cp'], cp.ports['site'])
@@ -149,7 +149,7 @@ for run in (t10, t100, t1000):
 #
 #     # Create echo nodes and edges for tellegen nodes
 #     for node in rand_tree.nodes:
-#         n = ElectricalTellegenNode()
+#         n = TellegenNode()
 #         node_name_map[str(node)] = n
 #         system.add_node(n)
 #

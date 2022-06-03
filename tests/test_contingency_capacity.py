@@ -40,7 +40,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
@@ -112,7 +112,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()

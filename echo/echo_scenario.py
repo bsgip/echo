@@ -585,7 +585,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
     grid.add_electrical_ports_from_list(['grid'])
 
 
-    connection_point = ecm.ElectricalTellegenNode()      # summation node
+    connection_point = ecm.TellegenNode()      # summation node
     connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     if (site_max_import is not None) or (site_max_export is not None):
         connection_point.ports['grid'].set_flow_constraints(max_import=site_max_import,max_export=site_max_export, slack=True)
@@ -653,7 +653,7 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                     raise Exception(ev['name']+' available must have same length as load_profile')
             if len(usage) != num_time_periods:
                     raise Exception(ev['name']+' usage must have same length as load_profile')
-            ev_cp = ecm.ElectricalTellegenNode()
+            ev_cp = ecm.TellegenNode()
             ev_cp.add_electrical_ports_from_list(['cp', 'ev', 'usage'])
             ev_cp.ports['cp'].add_active_periods_from_array(np.array(available,dtype=int), expansion_periods)
 

@@ -69,7 +69,7 @@ grid = Node()                                   # create node representing upstr
 grid.add_electrical_ports_from_list(
     ['grid'])  # create a port which will be used to connect this with the connection_point
 
-connection_point = ElectricalTellegenNode()     # create the connection point
+connection_point = TellegenNode()     # create the connection point
 connection_point.add_electrical_ports_from_list(
     ['load', 'inv', 'grid'])  # create ports to connect to the grid, the load, and the inverter
 # set flow constraints for the port that connects to the grid,

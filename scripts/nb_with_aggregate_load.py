@@ -73,7 +73,7 @@ system = OptimisationGraph()
 grid = Node()
 grid.add_electrical_ports_from_list(['grid'])
 
-connection_point = ElectricalTellegenNode()
+connection_point = TellegenNode()
 connection_point.add_electrical_ports_from_list(['load', 'bess', 'pv', 'grid'])
 
 load = Node()

@@ -28,7 +28,7 @@ grid.add_electrical_ports_from_list(
     ['grid'])  # create a port which will be used to connect this with the connection_point
 
 # create the connection point (where we will sum everything up)
-connection_point = ElectricalTellegenNode()
+connection_point = TellegenNode()
 connection_point.add_electrical_ports_from_list(
     ['ev', 'grid', 'load'])  # create ports to connect to the grid, the load, and the inverter
 

@@ -36,7 +36,7 @@ l1 = ElectricalDemand()
 l1.add_demand_profile_from_array([2] * time_periods, expansion_periods)
 load1.ports['demand'] = l1
 
-site1 = ElectricalTellegenNode()
+site1 = TellegenNode()
 site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
 cp1 = site1.ports['cp']
 

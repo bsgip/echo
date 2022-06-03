@@ -41,7 +41,7 @@ def test_peak_positive_power_objective():
     l1.add_demand_profile_from_array([0.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
@@ -98,7 +98,7 @@ def test_peak_negative_power_objective():
     l1.add_initial_value_from_array([-2.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 

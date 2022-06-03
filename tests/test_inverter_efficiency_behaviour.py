@@ -43,7 +43,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
@@ -122,7 +122,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()

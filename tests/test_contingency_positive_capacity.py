@@ -35,7 +35,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     pv1.add_generation_profile_from_array([-4] * 24 + [0] * 24, expansion_periods)
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
@@ -99,7 +99,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 

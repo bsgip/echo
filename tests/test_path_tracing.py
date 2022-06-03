@@ -48,7 +48,7 @@ def test_partitioning_regions_for_path_flow():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
@@ -113,7 +113,7 @@ def test_regularisation_of_path_flows():
     s2.add_generation_profile_from_array([-3]*time_periods, expansion_periods)
     source2.ports['s2'] = s2
 
-    cp = ElectricalTellegenNode()
+    cp = TellegenNode()
     cp.add_electrical_ports_from_list(['s1', 's2', 'l1', 'l2'])
 
     load1 = Node()

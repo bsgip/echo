@@ -35,7 +35,7 @@ def test_export_slack_var_is_minimised():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
@@ -82,7 +82,7 @@ def test_import_slack_var_is_minimised():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
 
     system.add_node_obj([grid, solar, inverter])
@@ -128,7 +128,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
+    inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
