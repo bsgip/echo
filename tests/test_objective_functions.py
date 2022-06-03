@@ -97,7 +97,7 @@ def test_objectives_sum_correctly():
     optimiser.optimise()
 
     # get back each tariff component
-    optimiser.values(b1.port_name)
+    shoulder_charge.get_objective_value()
     tp = optimiser.get_single_objective_total_value(tp_cost)
     it = optimiser.get_single_objective_total_value(import_t)
     et = optimiser.get_single_objective_total_value(export_t)

@@ -80,8 +80,6 @@ class PeakPositivePower(Objective):
     def objective_expr(self, model):
         return getattr(model, self.max_pos)
 
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.max_pos, expansion_period)
 
 class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
@@ -106,8 +104,6 @@ class PeakNegativePower(Objective):
     def objective_expr(self, model):
         return getattr(model, self.max_neg)*-1
 
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.max_neg, expansion_period)*-1
 
 class Tariff(Objective):
     tariff_array: Union[ArrayType, list]  #tariff array prices should always be positive
@@ -142,10 +138,6 @@ class ImportTariff(Tariff):
         return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.import_tariff)[p, t] *
                    model.interval_duration/60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-    def _objective_time_series(self, opt):
-        time_series = opt.values(self.component.pos) * opt.values(self.import_tariff) * opt.model.interval_duration/60 * opt.values(opt.model.dr)
-        return time_series
-
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
      to the negative (exporting) component of the specified port."""
@@ -169,10 +161,6 @@ class ExportTariff(Tariff):
         return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.export_tariff)[p, t] *
                    model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-    def objective_val(self, optimiser, expansion_period):
-        time_series = optimiser.values(self.component.neg, expansion_period) * \
-               optimiser.values(self.export_tariff, expansion_period)
-        return sum(time_series)
 
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
@@ -195,9 +183,6 @@ class PathTariff(Tariff):
         return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.path_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.component.flow_value, expansion_period) * \
-               optimiser.values(self.path_tariff, expansion_period)
 
 class ThroughputCost(Objective):
     """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
@@ -291,8 +276,6 @@ class ContingencyNegative(Objective):
         return sum(getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)
 
-    def objective_val(self, optimiser, expansion_period):
-        return optimiser.values(self.contingency_neg, expansion_period)
 
 class ContingencyPositive(Objective):
     """ FCAS Lower """
@@ -444,6 +427,7 @@ class DemandTariffObjective(Objective):
 
         return objective
 
+
 class DemandCharge(BaseModel):
     """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
@@ -495,6 +479,15 @@ class DemandCharge(BaseModel):
 
         setattr(model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time,
                                                     initialize=initial_window_val, domain=en.Binary))
+
+    # def objective_expr(self, model):
+    #
+    #
+    #
+    # def get_objective_value(self):
+    #     expr = en.value(self.max_demand_val)*self.rate
+    #     return expr
+
 
 class ImportDemandTariffObjective(DemandTariffObjective):
     import_demand = True

@@ -240,19 +240,28 @@ class EchoOptimiser(object):
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-
     def node_values(self, node_obj, expansion_period=0):
         """ Returns all values of all ports in a specified node for a single specified expansion period."""
-
         outputs = {}
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
     def get_single_objective_total_value(self, objective_obj):
+        """ Returns the value of a single objective"""
         assert self.objective_set is not None, 'No objectives defined for this optimiser.'
         return objective_obj.get_objective_total(optimiser=self)
 
     def get_total_objective_value(self):
+        """ Returns the value of the objective function."""
         assert self.objective_set is not None, 'No objectives defined for this optimiser.'
         return en.value(self.objective)
+
+    def get_total_objective_at_port(self, port_obj):
+        """ Sums all objectives that take the defined port as their component."""
+        total = 0
+        for obj in self.objective_set.objective_list:
+            if obj.component == port_obj:
+                total += obj.get_objective_total(optimiser=self)
+        return total
+
