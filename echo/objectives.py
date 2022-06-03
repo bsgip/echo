@@ -38,7 +38,6 @@ class Objective(BaseModel):
         obj_expr = self.objective_expr(optimiser.model) # Retrieve the objective expression
         return en.value(obj_expr) # Return the value of the summed expression
 
-
 class ObjectiveSet(BaseModel):
     """ Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
     objective_list: list
@@ -80,7 +79,6 @@ class PeakPositivePower(Objective):
     def objective_expr(self, model):
         return getattr(model, self.max_pos)
 
-
 class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
     max_neg: Optional[str]
@@ -103,7 +101,6 @@ class PeakNegativePower(Objective):
 
     def objective_expr(self, model):
         return getattr(model, self.max_neg)*-1
-
 
 class Tariff(Objective):
     tariff_array: Union[ArrayType, list]  #tariff array prices should always be positive
@@ -161,7 +158,6 @@ class ExportTariff(Tariff):
         return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.export_tariff)[p, t] *
                    model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
     component: Path
@@ -183,7 +179,6 @@ class PathTariff(Tariff):
         return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.path_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
-
 class ThroughputCost(Objective):
     """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
     component: Port
@@ -199,7 +194,6 @@ class ThroughputCost(Objective):
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
         return obj
 
-
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
     component: Port
@@ -212,7 +206,6 @@ class QuadraticPower(Objective):
         return sum(
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
-
 
 class Contingency(Objective):
     component: Path
@@ -275,7 +268,6 @@ class ContingencyNegative(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)
-
 
 class ContingencyPositive(Objective):
     """ FCAS Lower """
@@ -427,7 +419,6 @@ class DemandTariffObjective(Objective):
 
         return objective
 
-
 class DemandCharge(BaseModel):
     """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
@@ -480,14 +471,9 @@ class DemandCharge(BaseModel):
         setattr(model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time,
                                                     initialize=initial_window_val, domain=en.Binary))
 
-    # def objective_expr(self, model):
-    #
-    #
-    #
-    # def get_objective_value(self):
-    #     expr = en.value(self.max_demand_val)*self.rate
-    #     return expr
-
+    def get_objective_total(self, optimiser):
+        expr = optimiser.values(self.max_demand_val)*self.rate
+        return sum(expr)
 
 class ImportDemandTariffObjective(DemandTariffObjective):
     import_demand = True

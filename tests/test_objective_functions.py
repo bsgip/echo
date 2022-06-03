@@ -75,7 +75,7 @@ def test_objectives_sum_correctly():
                                min_demand=0.0)
 
     # shoulder usage
-    shoulder_charge = DemandCharge(rate=1.0,
+    shoulder_charge = DemandCharge(rate=1.6,
                                    window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
                                    min_demand=0.0)
 
@@ -97,7 +97,7 @@ def test_objectives_sum_correctly():
     optimiser.optimise()
 
     # get back each tariff component
-    shoulder_charge.get_objective_value()
+    sc = optimiser.get_single_objective_total_value(shoulder_charge)
     tp = optimiser.get_single_objective_total_value(tp_cost)
     it = optimiser.get_single_objective_total_value(import_t)
     et = optimiser.get_single_objective_total_value(export_t)

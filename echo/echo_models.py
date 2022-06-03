@@ -836,6 +836,7 @@ class Sink(Port):
     """ The sink for a commodity. """
     flows = Flows.Import
     opt_type = OptimisationType.Parameter
+    import_constraint = FlowConstraint.NoConstraint
 
     # Sink should have non negative initial values
     non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load)
@@ -1036,14 +1037,13 @@ class Storage(Port):
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
 
-class ControlledLoadOrGen(Port):
+class ControlledLoadOrGen(FlexPort):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
     The load/generation must be operated within the min and max utilisation (per time unit). """
     min_utilisation: Union[float, None] = None  # Per time unit (minute)
     max_utilisation: float = None
     max_power: float = None
     min_power: float = None
-    opt_type: int = OptimisationType.Variable
     units: int = Units.KW
 
     def initialise_port(self, model):
@@ -1087,20 +1087,12 @@ class ControlledLoadOrGen(Port):
 class ControlledLoad(ControlledLoadOrGen):
     max_power: confloat(ge=0)
     min_power: confloat(ge=0)
-
-    def verify_port(self):
-        if self.max_power < 0 or self.min_power < 0:
-            raise ConfigurationError(
-                'For controlled load asset, enter max and min power using positive load convention (i.e. positive).')
+    flows = Flows.Import
 
 class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
     min_power: confloat(le=0)
-
-    def verify_port(self):
-        if self.max_power > 0 or self.min_power > 0:
-            raise ConfigurationError(
-                'For controlled gen asset, enter max and min power using positive load convention (i.e. negative).')
+    flows = Flows.Export
 
 """
 
@@ -1557,18 +1549,8 @@ class GasDemand(Sink):
 
     def __init__(self):
         super(GasDemand, self).__init__()
-        self.import_constraint = FlowConstraint.NoConstraint
         self.units = Units.Jps
 
     def add_demand_profile_from_array(self, array, expansion_intervals):
         self.add_sink_profile_from_array(array, expansion_intervals)
 
-
-# some utils #todo maybe these should go in a separate file
-def format_as_dict(time_series, num_time_intervals, num_expansion_intervals):
-    """ Formats a 1d time series into a dict."""
-
-
-def tile_time_series_data(time_series, num_tiles):
-    """ This function takes a 1d time series array and tiles it to create multiple planning arrays.
-    It returns a dict that can be used directly as an initial value for a port. """

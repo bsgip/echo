@@ -30,7 +30,7 @@ def test_gas_boiler_operation():
     boiler = GasBoiler(gas_to_heat_efficiency=0.5)
 
     heating_load = Node()
-    hl = ThermalLoad()
+    hl = HeatingOrCoolingLoad()
     hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 
@@ -80,7 +80,7 @@ def test_chiller_operation():
                       coeff_array=nonlin_array)
 
     cooling_load = Node()
-    cl = ThermalLoad()
+    cl = HeatingOrCoolingLoad()
     cl.add_sink_profile_from_array([4]*time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
