@@ -1251,10 +1251,8 @@ class EV(ElectricalNode):
     # notation for having an init function that runs after the pydantic init
     # this will first run pydantic's init, which does all the validation
     # then it will run our defined commands
-    # **data is keyword argument notation
     def __init__(self, **data) -> None:
         super().__init__(**data)
-
         # EV always has a storage port
         self.ports['vehicle'] = ElectricalStorage(**data)
         self.ports['vehicle'].enable_trip_slack = self.trip_slack
@@ -1420,8 +1418,7 @@ class GasBoiler(Node):
         gp.flows = Flows.Import
         tp = ThermalPort()
         tp.flows = Flows.Export
-        self.ports = {'gas': gp,
-                 'heat': tp}
+        self.ports = {'gas': gp, 'heat': tp}
         self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
 
     def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
@@ -1496,44 +1493,37 @@ class Chiller(Node):
     def initialise_node(self, model):
         super(Chiller, self).initialise_node(model)
 
+        # Update the bounds on our input and output ports because can't do piecewise if we have unbounded variables
+        xvar = getattr(model, self.ports['input'].port_name)  # x is our input
+        xvar.setlb(0)
+        xvar.setub(self.max_input)
+
+        yvar = getattr(model, self.ports['output'].port_name)
+        yvar.setlb(self.max_output)
+        yvar.setub(0)
+
     def apply_node_constraints(self, model):
         # We use a linear approximation of the relationship between cooling capacity in kWt and input power in kW.
         # Otherwise we will have a non-convex constraint, which cplex can't handle
 
-        # first, convert coeff array to a piecewise function
-
+        # first, generate a set of x and y pts based on the coefficient array
         xvals = np.linspace(0, self.max_input, self.n_breakpoints)
         yvals = np.zeros(len(xvals))
         for i in range(len(xvals)):
             yvals[i] = self.coeff_array[0] * xvals[i] ** 2 + self.coeff_array[1] * xvals[i] + self.coeff_array[2]
 
-        # todo less hacky way of doing this
-        self.dummy = 'dummy_var_' + self.node_name  # this is a nonnegative variable for the piecewise func
-        setattr(model, self.dummy, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # Get our input/output pyomo variables
+        xvar = getattr(model, self.ports['input'].port_name)
+        yvar = getattr(model, self.ports['output'].port_name)
 
-        xvar = getattr(model, self.ports['input'].port_name)  # x is our input
-        yvar = getattr(model, self.dummy)  # y is our dummy output
-        for i in range(len(xvar.index_set())):
-            xvar[0, i].bounds = (0, self.max_input)
-            yvar[0, i].bounds = (0, self.max_output * -1)
-
+        # Get our piecewise data points
         xdata = list(xvals)
         ydata = list(yvals)
+        # Set the piecewise function up using the variables and the data points.
         setattr(model, 'piecewise_con', en.Piecewise(
             model.Expansion, model.Time,
             yvar, xvar, pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
 
-        def node_constraint(model, p, t):
-            # add a linear temp correction factor here. temp will also be correlated with cooling load...
-            # if getattr(self, 'temp_correction_factors'):
-            #     return getattr(model, self.ports['output'].port_name)[p, t] == \
-            #            (getattr(model, self.dummy)[p, t] - self.temp_correction_factors[p, t]) * -1
-            # else:
-            return getattr(model, self.ports['output'].port_name)[p, t] == \
-                   (getattr(model, self.dummy)[p, t]) * -1
-
-        con_name = f"transformation_con_{self.node_name}"
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
 
 class ThermalLoad(Sink):
     """ Positive thermal load is a heating load, neg is a cooling load (ie heat to be removed/exported)"""
