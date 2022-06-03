@@ -1178,7 +1178,7 @@ class Inverter(ElectricalNode):
     dc_ac_efficiency: confloat(ge=0, le=1)
     ac_dc_efficiency: confloat(ge=0, le=1)
     dc_ports: dict = {}
-    ac_port_name: str = None
+    ac_port_name: str = None  # There should generally only be one ac port, so we can just keep its name
     node_rule: int = NodeRule.Custom
 
     def add_dc_port(self, port_name):
@@ -1194,6 +1194,13 @@ class Inverter(ElectricalNode):
             p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
             self.ac_port_name = port_name
             self.ports[port_name] = p
+
+    def verify_node(self):
+        # Check that all ports are either ac or dc
+        all_port_names = [x for x in self.ports.keys()]
+        named_ports = [self.ac_port_name]
+        named_ports.extend([x for x in self.dc_ports.keys()])
+        assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
 
     def initialise_node(self, model):
         super(Inverter, self).initialise_node(model)
