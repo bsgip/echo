@@ -17,7 +17,8 @@ N_INTERVALS = 48
 
 
 def test_export_slack_var_is_minimised():
-
+    """ Connect curtailable solar to a connection pt with a flow constraint and slack vars enabled.
+    The optimiser should curtail the solar rather than allowing the slack to be nonzero."""
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -26,7 +27,7 @@ def test_export_slack_var_is_minimised():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -34,10 +35,9 @@ def test_export_slack_var_is_minimised():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
-    inverter.ports['cp'].slack = True
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
+    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
     system.add_node_obj([grid, solar, inverter])
 
@@ -58,7 +58,7 @@ def test_export_slack_var_is_minimised():
 
     optimiser.optimise()
 
-    inv_export_slack = optimiser.values(inverter.ports['cp'].export_slack,0)
+    inv_export_slack = optimiser.values(inverter.ports['cp'].export_slack, 0)
 
     np.testing.assert_almost_equal(inv_export_slack, 0)
 
@@ -73,9 +73,8 @@ def test_import_slack_var_is_minimised():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
-    grid.ports['grid'].set_flow_constraints(max_export=-5.0, max_import=5.0)
-    grid.ports['grid'].slack = True
+    grid.add_electrical_ports_from_list(['grid'])
+    grid.ports['grid'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -83,8 +82,8 @@ def test_import_slack_var_is_minimised():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
 
     system.add_node_obj([grid, solar, inverter])
 
@@ -121,7 +120,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -129,8 +128,8 @@ def test_slack_vars_take_up_slack_when_forced_to():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
 

@@ -20,7 +20,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -43,8 +43,8 @@ def test_hybrid_inverter_dc_ac_efficiency():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -99,7 +99,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -122,8 +122,8 @@ def test_hybrid_inverter_dc_dc_efficiency():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()

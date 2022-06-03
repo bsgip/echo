@@ -21,7 +21,7 @@ def test_controlled_load_with_peak_power_objective():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     controlled_load = Node()
     cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0/60.0)

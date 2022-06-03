@@ -19,7 +19,7 @@ interval_duration = 30
 system = OptimisationGraph()
 
 grid = Node()
-grid.add_named_electrical_ports(['grid'])
+grid.add_electrical_ports_from_list(['grid'])
 
 battery1 = Node()
 b1 = ElectricalStorage(max_capacity=10,
@@ -36,8 +36,8 @@ l1 = ElectricalDemand()
 l1.add_demand_profile_from_array([2] * time_periods, expansion_periods)
 load1.ports['demand'] = l1
 
-site1 = ElectricalTellegenNode()
-site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+site1 = TellegenNode()
+site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
 cp1 = site1.ports['cp']
 
 system.add_node_obj([grid, battery1, load1, site1])

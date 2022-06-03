@@ -66,14 +66,16 @@ system = OptimisationGraph()
 
 # Create assets
 grid = Node()                                   # create node representing upstream grid
-grid.add_named_electrical_ports(['grid'])       # create a port which will be used to connect this with the connection_point
+grid.add_electrical_ports_from_list(
+    ['grid'])  # create a port which will be used to connect this with the connection_point
 
-connection_point = ElectricalTellegenNode()     # create the connection point
-connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])    # create ports to connect to the grid, the load, and the inverter
+connection_point = TellegenNode()     # create the connection point
+connection_point.add_electrical_ports_from_list(
+    ['load', 'inv', 'grid'])  # create ports to connect to the grid, the load, and the inverter
 # set flow constraints for the port that connects to the grid,
 # such that         max_export <= 0 <= max_import
 # set slack=True to allow the constraints to be violated if the optimisation problem would be infeasible otherwise
-connection_point.ports['grid'].set_flow_constraints(max_import=10,max_export=-10, slack=True)
+connection_point.ports['grid'].set_flow_constraints(max_import=15,max_export=-15, slack=True)
 # todo: value of slack
 
 load = Node()                       # create a node to represent the load
@@ -122,10 +124,17 @@ system.connect_ports_and_create_edge(inverter.ports['pv'], solar.ports['pv'])
 # Create objectives/tariffs
 throughput_cost = ThroughputCost(component=b, rate=0.000001)        # assign a throughput cost to the battery
 peak_power_obj = PeakNegativePower(component=grid.ports['grid'])    # assign a cost on the peak negative power
-import_cost = ImportTariff(connection_point.ports['grid'], import_tariff_array, expansion_periods)  # create the import objective cost
-export_cost = ExportTariff(connection_point.ports['grid'], export_tariff_array, expansion_periods)  # create the export objective cost
+import_cost = ImportTariff(component=connection_point.ports['grid'],
+                           tariff_array=import_tariff_array,
+                           expansion_periods=expansion_periods)  # create the import objective cost
+import_cost2 = ImportTariff(component=connection_point.ports['grid'],
+                           tariff_array=import_tariff_array,
+                           expansion_periods=expansion_periods)  # create the import objective cost
+export_cost = ExportTariff(component=connection_point.ports['grid'],
+                           tariff_array=export_tariff_array,
+                           expansion_periods=expansion_periods)  # create the export objective cost
 
-objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost])
+objective_set = ObjectiveSet(objective_list=[import_cost, import_cost2, export_cost, peak_power_obj, throughput_cost])
 
 
 ############################ ----------------------- ########################################
@@ -176,3 +185,8 @@ ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
 plt.show()
+
+# print(optimiser.get_objective_value())
+# system.draw(with_labels=True)
+# system.print_network_hierarchy()
+# df = optimiser.df()

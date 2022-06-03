@@ -21,7 +21,7 @@ def test_solar_generation_limited_by_inverter_size():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -29,8 +29,8 @@ def test_solar_generation_limited_by_inverter_size():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])
@@ -69,7 +69,7 @@ def test_non_curtailable_system_not_curtailed():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -77,8 +77,8 @@ def test_non_curtailable_system_not_curtailed():
     pv1.curtailable = False
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])
@@ -120,7 +120,7 @@ def test_curtailable_system_curtailed():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     solar = Node()
     pv1 = ElectricalGeneration()
@@ -128,8 +128,8 @@ def test_curtailable_system_curtailed():
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])

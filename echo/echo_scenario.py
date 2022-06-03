@@ -582,16 +582,16 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
 
     # Create assets
     grid = ecm.Node()       # connection point to grid
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
 
-    connection_point = ecm.ElectricalTellegenNode()      # summation node
-    connection_point.add_named_electrical_ports(['load', 'inv', 'grid'])
+    connection_point = ecm.TellegenNode()      # summation node
+    connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     if (site_max_import is not None) or (site_max_export is not None):
         connection_point.ports['grid'].set_flow_constraints(max_import=site_max_import,max_export=site_max_export, slack=True)
 
     if evs_opt is not None:
-        connection_point.add_named_electrical_ports(['ev'+str(i) for i in range(len(evs))])
+        connection_point.add_electrical_ports_from_list(['ev' + str(i) for i in range(len(evs))])
         for i, ev in enumerate(evs_opt):
             connection_point.ports['ev'+str(i)].set_flow_constraints(max_import=-ev['discharging_power_limit'],
                                                                      max_export=-ev['charging_power_limit'])
@@ -653,8 +653,8 @@ def create_echo_site(load_profile, export_tariff, import_tariff, pv_profile=None
                     raise Exception(ev['name']+' available must have same length as load_profile')
             if len(usage) != num_time_periods:
                     raise Exception(ev['name']+' usage must have same length as load_profile')
-            ev_cp = ecm.ElectricalTellegenNode()
-            ev_cp.add_named_electrical_ports(['cp', 'ev', 'usage'])
+            ev_cp = ecm.TellegenNode()
+            ev_cp.add_electrical_ports_from_list(['cp', 'ev', 'usage'])
             ev_cp.ports['cp'].add_active_periods_from_array(np.array(available,dtype=int), expansion_periods)
 
             ev_storage = ecm.ElectricalStorage(max_capacity=ev['max_capacity'],

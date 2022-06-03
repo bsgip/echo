@@ -14,9 +14,13 @@ from typing import Optional
 
 
 class NetworkSet:
-    """ A network set is a grouping of separate network pieces that we want to be able to optimise/analyse as a group.
+    """
+
+    A network set is a grouping of separate network pieces that we want to be able to optimise/analyse as a group.
     The networks in a network set must have the same interval duration and time periods.
-    This class can be used to manage single networks too, if useful."""
+    This class can be used to manage single networks too, if useful.
+
+    """
     def __init__(self, description, name='default_name'):
         self.name = name
         self.description = description
@@ -28,28 +32,57 @@ class NetworkSet:
         self.processing_errors = []
 
     def add_network(self, network: dict):
+        """ Add a single network to the network set."""
         self.networks.append(network)
         self.num_networks = len(self.networks)
 
     def add_networks_from_list(self, networks: list):
+        """ Add a list of networks to the network set."""
         self.networks.extend(networks)
         self.num_networks = len(self.networks)
 
-    def optimise_network_set(self, log_file=None):
+    def optimise_network_set(self, log_file=None, verbose=False):
+        """ Optimises the set of networks defined in the class instance. """
 
         if log_file is not None:
             prog_file = open(log_file, 'w')
         else:
             prog_file = None
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
+            # Append results to network dict
+            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose))
             # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
-            # Append results to network dict
-            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods))
         if log_file is not None:
             prog_file.close()
 
         return self.processing_errors
+
+    def to_df(self, node, port):
+        """
+        for each network segment in netset, gets the value of port on node, if that node and port combination does not exists
+        sets the result to nan.
+        :param node: name of node to look at
+        :param port: port to get value of
+        :return: dataframe with timeseries data
+        """
+
+        assert self.results is not None, "Generate results first"
+
+
+        data = {}
+        for i, res in enumerate(self.results):
+            val = np.nan
+            if node in res:
+                if port in res[node]:
+                    if 'port_val' in res[node][port]:
+                        val = res[node][port]['port_val']
+            data['seg_{}'.format(i)] = val
+
+        df = pd.DataFrame.from_dict(data)
+        return df
+
+
 
     def get_echo_model(self, network_name: str):
         """ Returns an echo model of a network in the network set"""
@@ -76,14 +109,19 @@ class NetworkSet:
         return opt
 
     def export_results_to_df(self):
+        """ Exports optimisation results to a pandas dataframe and returns that dataframe"""
         pass
 
-def process_single_network(network_dict: dict, interval_duration: int, time_periods: int):
-    print(f"Processing network {network_dict['name']}")
-    x = convert_dict_to_nx(network_dict)
-    em, node_name_dict = convert_nx_to_echo(x, None)
+def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, verbose: bool=True):
+    """ Ingests a single network in a networkset, converts it to an echo model,
+    runs the optimiser, appends results to the original network, and returns results."""
+
+    if verbose:
+        print(f"Processing network {network_dict['name']}")
+    x = convert_dict_to_nx(network_dict, verbose=verbose)
+    em, node_name_dict = convert_nx_to_echo(x, None, verbose=verbose)
     objective_dict = network_dict.get('objective')
-    obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict)
+    obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict, verbose=verbose)
 
     # Run optimiser on echo model and echo objective
     opt = run_echo_optimiser(em,
@@ -93,7 +131,8 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
                              expansion_periods=1,
                              discount_rate=0,
                              optimiser_engine='cplex',
-                             opt_display=False)
+                             opt_display=False,
+                             verbose=verbose)
 
     # Manage results
     results = extract_results(opt, node_name_dict)
@@ -103,9 +142,10 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     return results
 
 
-def convert_dict_to_nx(netw_jsn: dict):
+def convert_dict_to_nx(netw_jsn: dict, verbose: bool=True):
     """ Creates nx graph from network dictionary"""
-    print('Converting dict to networkx')
+    if verbose:
+        print('Converting dict to networkx')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
     # Node name is the unique node ID, Node dict carries all the relevant node info in a dict
@@ -134,9 +174,10 @@ def convert_dict_to_nx(netw_jsn: dict):
     return n
 
 
-def convert_nx_to_echo(g, df):
+def convert_nx_to_echo(g, df, verbose=True):
     """ Creates echo model from nx graph"""
-    print('Converting networkx model to echo')
+    if verbose:
+        print('Converting networkx model to echo')
 
     node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
@@ -172,8 +213,8 @@ def convert_nx_to_echo(g, df):
 
 
 def construct_echo_node(system, node_name_dict, node, node_dict, df):
-    """ Does logic for workingout which type of node to build.
-    Builds it and updates the echo graph, as well as the node name map."""
+    """ Does logic for working out which type of node to build.
+    Builds the node, adds to the echo graph, and updates the node name dict"""
 
     if node_dict['type'] == 'battery':
         new_node = create_battery_node(node_dict)
@@ -211,8 +252,12 @@ def construct_echo_node(system, node_name_dict, node, node_dict, df):
         node_name_dict[node] = new_node.node_name
 
 
-def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict):
-    print('Converting objectives to echo objectives')
+def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool=True):
+    """ Converts all the objectives defined in an objective set to echo objectives,
+    and returns an echo objective set. """
+
+    if verbose:
+        print('Converting objectives to echo objectives')
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
         if obj_dict['type'] == 'import_tariff':
@@ -238,18 +283,21 @@ def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict
 
 
 def create_import_tariff(tariff_dict, node_name_dict, em):
+    """ Creates an echo import tariff from a tariff dictionary"""
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em)
     t = obj.ImportTariff(component=component_obj, tariff_array=tariff_dict['prices'])
     return t
 
 
 def create_export_tariff(tariff_dict, node_name_dict, em):
+    """ Creates an echo export tariff from a tariff dictionary"""
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em)
     t = obj.ExportTariff(component=component_obj, tariff_array=tariff_dict['prices'])
     return t
 
 
 def create_demand_tariff(tariff_dict, node_name_dict, em):
+    """ Creates an echo demand tariff from a tariff dictionary"""
     echo_charge_list = []
     charges = tariff_dict['charges']  # list of charge dicts
     for c in charges:
@@ -274,6 +322,7 @@ def create_demand_tariff(tariff_dict, node_name_dict, em):
 
 
 def create_throughput_tariff(tariff_dict, node_name_dict, em):
+    """ Creates an echo throughput tariff from a tariff dictionary"""
     # todo test this
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em)
     t = obj.ThroughputCost(component=component_obj, rate=tariff_dict['rate'])
@@ -281,6 +330,7 @@ def create_throughput_tariff(tariff_dict, node_name_dict, em):
 
 
 def create_peak_power_objective(tariff_dict, node_name_dict, em):
+    """ Creates an echo peak power objective from an objective dictionary"""
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em)
     if 'pos' in tariff_dict['type']:
         t = obj.PeakPositivePower(component=component_obj)
@@ -290,12 +340,14 @@ def create_peak_power_objective(tariff_dict, node_name_dict, em):
 
 
 def create_quadratic_objective(tariff_dict, node_name_dict, em):
+    """ Creates an echo quadratic objective from an objective dictionary"""
     component_obj = get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em)
     t = obj.QuadraticPower(component=component_obj)
     return t
 
 
 def get_tariff_component_from_node_port_name(tariff_dict, node_name_dict, em):
+    """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
     target_node = tariff_dict['component']['node']
     target_port = tariff_dict['component']['port']
     assert target_node in node_name_dict.keys(), f"tariff component {tariff_dict['component']} does not correspond to a defined node/port."
@@ -311,8 +363,11 @@ def run_echo_optimiser(echo_graph,
                        expansion_periods=1,
                        discount_rate=0,
                        optimiser_engine='cplex',
-                       opt_display=False):
-    print('Performing whole model checks')
+                       opt_display=False,
+                       verbose=True):
+    """ Runs the echo optimiser on an echo graph with an echo objective set. Returns the optimiser object."""
+    if verbose:
+        print('Performing whole model checks')
     # Check we have consistent array lengths for ports
     for node_name, node_obj in echo_graph.node_obj.items():
         for port_name, port_obj in node_obj.ports.items():
@@ -346,6 +401,17 @@ def run_echo_optimiser(echo_graph,
 
 
 def connect_nodes(system, node1, node2, port1, port2):
+    """
+    Connects two nodes together via specified ports. If ports are not specified, generic ports will be created.
+
+    Args:
+        system: echo graph
+        node1: node on edge
+        node2: other node on edge
+        port1: port on edge
+        port2: other port on edge
+
+    """
     # todo clean this up
 
     if port1 is not None:
@@ -395,12 +461,8 @@ def combine_two_graphs(g1, g2, p1=None, p2=None):
     output.connect_ports_and_create_edge(port1, port2)
     return output
 
-
-def split_graph():
-    pass
-
-
 def create_battery_node(node_dict):
+    """ Creates an echo battery node from the provided node dict."""
     battery = node_dict['parameters']
     battery_node = ecm.Node()
     b = ecm.ElectricalStorage(max_capacity=battery['max_capacity'],
@@ -417,13 +479,14 @@ def create_battery_node(node_dict):
 
 
 def create_tellegen_node(node_dict):
+    """ Creates an echo tellegen node from the provided node dict."""
     port_list = node_dict['ports']
     port_unit = node_dict['units']
     echo_unit = get_echo_port_units(node_dict['id'], port_unit)
     tnode = ecm.TellegenNode()
     port_params = node_dict.get('parameters') if node_dict.get('parameters') is not None else None
     for port in port_list:
-        tnode.add_named_flex_port(port, unit=echo_unit)
+        tnode.add_flex_port(port, unit=echo_unit)
         # check for any parameters/constraints on ports - todo this will be a similar process for other node types -- make it a function
         if port_params:
             if port_params.get(port):
@@ -435,11 +498,13 @@ def create_tellegen_node(node_dict):
 
 
 def create_flex_node(node_dict):
+    """ Creates an echo flexible node from the provided node dict.
+    A flexible node is a node with a single flexible port with a specified unit."""
     port_list = node_dict['ports']
     port_unit = node_dict['units']
     echo_unit = get_echo_port_units(node_dict['id'], port_unit)
     fnode = ecm.Node()
-    fnode.add_named_flex_ports(port_list, unit=echo_unit)
+    fnode.add_flex_ports_from_list(port_list, unit=echo_unit)
     return fnode
 
 
@@ -582,12 +647,12 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
             battery_port = battery_node.ports[list(battery_node.ports.keys())[0]] #todo less hacky
             output[node_name]['SOC'] = optimiser.values(battery_port.soc_value, 0)
             output[node_name]['delta'] = optimiser.values(battery_port.port_name, 0)
-            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_storage_capacity, 0)
+            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
         elif 'ev' in node_name:
             ev_node = system.node_obj[node_uid]
             output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
             output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
-            if getattr(ev_node.ports['vehicle'], 'trip_slack') is not None:
+            if hasattr(optimiser.model, ev_node.ports['vehicle'].trip_slack):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
                 output[node_name]['charge_status'] = 'success' if all(
                     output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
@@ -598,13 +663,13 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
                 output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
-                if getattr(port_obj, 'import_slack') is not None:
+                if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max, 0)
                 else:
                     output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
                     output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
-                if getattr(port_obj, 'export_slack') is not None:
+                if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max, 0)
                 else:

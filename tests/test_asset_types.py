@@ -30,7 +30,7 @@ def test_gas_boiler_operation():
     boiler = GasBoiler(gas_to_heat_efficiency=0.5)
 
     heating_load = Node()
-    hl = ThermalLoad()
+    hl = HeatingOrCoolingLoad()
     hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 
@@ -80,7 +80,7 @@ def test_chiller_operation():
                       coeff_array=nonlin_array)
 
     cooling_load = Node()
-    cl = ThermalLoad()
+    cl = HeatingOrCoolingLoad()
     cl.add_sink_profile_from_array([4]*time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
@@ -146,8 +146,8 @@ def test_carbon_aggregation():
     l1.add_demand_profile_from_array(np.array([6] * time_periods), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1 = TellegenNode()
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
 
     carbon_aggr = CarbonAggregation()
     carbon_aggr.ports['grid'] = CarbonSink()

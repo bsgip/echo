@@ -24,7 +24,7 @@ def test_peak_positive_power_objective():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=10,
@@ -41,8 +41,8 @@ def test_peak_positive_power_objective():
     l1.add_demand_profile_from_array([0.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1 = TellegenNode()
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])
@@ -80,7 +80,7 @@ def test_peak_negative_power_objective():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=10,
@@ -98,8 +98,8 @@ def test_peak_negative_power_objective():
     l1.add_initial_value_from_array([-2.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1 = TellegenNode()
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])

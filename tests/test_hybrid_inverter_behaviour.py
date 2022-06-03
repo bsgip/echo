@@ -19,7 +19,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -42,8 +42,8 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -86,7 +86,7 @@ def test_hybrid_inverter_limits_path_flows():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -110,7 +110,7 @@ def test_hybrid_inverter_limits_path_flows():
     inverter.add_dc_port('pv')
 
     cp = Node()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()

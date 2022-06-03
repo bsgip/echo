@@ -11,7 +11,8 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES, objective_set, optimiser_engine=None):
+    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES,
+                 objective_set, optimiser_engine=None):
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
         self.number_of_expansion_intervals = number_of_expansion_intervals
@@ -22,7 +23,8 @@ class EchoOptimiser(object):
         if optimiser_engine:
             self.optimiser_engine = optimiser_engine
         else:
-            self.optimiser_engine = 'cplex' if not os.environ.get('OPTIMISER_ENGINE') else os.environ.get('OPTIMISER_ENGINE') # Default to cplex, as we seem to want quadratic costs
+            self.optimiser_engine = 'cplex' if not os.environ.get('OPTIMISER_ENGINE') else os.environ.get(
+                'OPTIMISER_ENGINE')  # Default to cplex, as we seem to want quadratic costs
         self.optimiser_engine_executable = os.environ.get('OPTIMISER_ENGINE_EXECUTABLE')
 
         # These values have been arbitrarily chosen
@@ -35,12 +37,22 @@ class EchoOptimiser(object):
         self.apply_constraints()
         self.build_objective()
 
+    def _validate_network_graph(self):
+        """
+        Validates that a pyomo model can be built from the provided network graph. Checks for:
+        - name consistency between objects (eg node.node_name) and graph nodes
+        - others...
+        """
+        for node_name, node_obj in self.ES.node_obj.items():
+            assert node_obj.node_name == node_name, \
+                'Node {} name has been updated after being added to the network graph.'.format(node_name)
+
     def build_model(self):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
         self.model.interval_duration = self.interval_duration
         self.model.number_of_intervals = self.number_of_intervals
-        self.model.paths = self.ES.paths #Todo better way of making all path variables available for constructing objectives
+        self.model.paths = self.ES.paths  # Todo better way of making all path variables available for constructing objectives
 
         #### Bias Values ####
 
@@ -82,15 +94,14 @@ class EchoOptimiser(object):
             path.initialise_path(self.model)
 
     def apply_constraints(self):
-        self.apply_node_constraints()
-        self.apply_path_constraints()
-        #self.apply_new_path_constraints()
+        self._apply_node_constraints()
+        self._apply_path_constraints()
 
-    def apply_node_constraints(self):
+    def _apply_node_constraints(self):
         for _, obj in self.ES.node_obj.items():
             obj.apply_node_constraints(self.model)
 
-    def apply_path_constraints(self):
+    def _apply_path_constraints(self):
 
         if self.ES.paths:
 
@@ -128,9 +139,11 @@ class EchoOptimiser(object):
                 # get the node obj
                 current_node_obj = self.ES.node_obj[current_node_name]
                 for path_vertices, path_obj in self.ES.paths.items():  # Iterate through all paths
-                    if current_node_name is path_vertices[0]:  # If we find a path where the current node is the first node on that path
+                    if current_node_name is path_vertices[
+                        0]:  # If we find a path where the current node is the first node on that path
                         current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
-                    elif current_node_name is path_vertices[-1]:  # If we find a path where the current node is the last node on that path
+                    elif current_node_name is path_vertices[
+                        -1]:  # If we find a path where the current node is the last node on that path
                         current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
 
                 setattr(self.model, f"path_flow_con1_{current_node_name}",
@@ -139,34 +152,13 @@ class EchoOptimiser(object):
                 # Create an indicator var for when there are flows into a node
                 current_node_obj.inflow = f"inflow_{current_node_name}"
                 setattr(self.model, current_node_obj.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
-                                                                domain=en.Binary))
+                                                                    domain=en.Binary))
 
                 setattr(self.model, f"path_flow_con2_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_one))
 
                 setattr(self.model, f"path_flow_con3_{current_node_name}",
                         en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_two))
-
-    def apply_new_path_constraints(self):
-        if self.ES.paths:
-            for path_vertices, path_obj in self.ES.paths.items():
-                # create a slack var
-                path_obj.slack = 'slack_' + str(path_obj.path_name)
-                setattr(self.model, path_obj.slack, en.Var(self.model.Expansion, self.model.Time, domain=en.Reals))
-
-                def rule1(model, p, t):
-                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
-                    b = getattr(model, path_obj.edge_ports[-1][-1].port_name)[p, t]
-                    return a*-1 + b*-1 == getattr(model, path_obj.slack)[p, t]
-
-                def rule2(model, p, t):
-                    a = getattr(model, path_obj.edge_ports[0][0].port_name)[p, t]
-                    return getattr(model, path_obj.flow_value)[p, t] == a + getattr(model, path_obj.slack)[p, t]
-
-                setattr(self.model, f"path_con1_{path_obj.path_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule1))
-                setattr(self.model, f"path_con2_{path_obj.path_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=rule2))
 
     def build_objective(self):
         self.objective = 0
@@ -200,7 +192,25 @@ class EchoOptimiser(object):
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
         self.opt_status = results['Solver'][0]
 
-    def values(self, variable_name, expansion):
+    def df(self):
+        """
+        Extract all vars from the solution as a dataframe
+        """
+        # todo extend this to do other nice things
+        dct = {}
+
+        for var_obj in self.model.component_objects(en.Var):
+            if 'soc' in var_obj.name:
+                dct[var_obj.name] = var_obj.extract_values()
+            if 'port' in var_obj.name:
+                dct[var_obj.name] = var_obj.extract_values()
+
+        # Handle multiple indexes
+        df = pd.DataFrame(dct)
+
+        return df
+
+    def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""
 
         var_obj = getattr(self.model, variable_name)
@@ -226,21 +236,32 @@ class EchoOptimiser(object):
                 for i in var_obj:
                     output[i] = var_obj[i].value
                 return output
-                # if type(var_obj[expansion]) is int or type(var_obj[expansion]) is float:  # Param
-                #     return var_obj[expansion]
-                # else:  # Var
-                #     return var_obj[expansion].value
             else:
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj, expansion_period):
+    def node_values(self, node_obj, expansion_period=0):
         """ Returns all values of all ports in a specified node for a single specified expansion period."""
-
         outputs = {}
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_objective_value(self, objective_obj, expansion_period: int):
-        return objective_obj.objective_val(optimiser=self, expansion_period=expansion_period)
+    def get_single_objective_total_value(self, objective_obj):
+        """ Returns the value of a single objective"""
+        assert self.objective_set is not None, 'No objectives defined for this optimiser.'
+        return objective_obj.get_objective_total(optimiser=self)
+
+    def get_total_objective_value(self):
+        """ Returns the value of the objective function."""
+        assert self.objective_set is not None, 'No objectives defined for this optimiser.'
+        return en.value(self.objective)
+
+    def get_total_objective_at_port(self, port_obj):
+        """ Sums all objectives that take the defined port as their component."""
+        total = 0
+        for obj in self.objective_set.objective_list:
+            if obj.component == port_obj:
+                total += obj.get_objective_total(optimiser=self)
+        return total
+

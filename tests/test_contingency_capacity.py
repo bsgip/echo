@@ -18,7 +18,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -40,8 +40,8 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -73,7 +73,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
 
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
+    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
 
     for i in range(time_periods // 2):
         np.testing.assert_almost_equal(cont_neg_p[i], -1.0)
@@ -89,7 +89,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -112,8 +112,8 @@ def test_negative_contingency_maximisation_curtails_solar():
     inverter.add_dc_port('bess')
     inverter.add_dc_port('pv')
 
-    cp = ElectricalTellegenNode()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
     load = Node()
     l1 = ElectricalDemand()
@@ -149,7 +149,7 @@ def test_negative_contingency_maximisation_curtails_solar():
 
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
+    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
 
     for i in range(time_periods // 2):
@@ -170,7 +170,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -193,7 +193,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
     inverter.add_dc_port('pv')
 
     cp = Node()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()
@@ -230,7 +230,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
 
     optimiser.optimise()
 
-    cont_neg_p = optimiser.values(bess_to_g.contingency_neg, 0)
+    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(cont_neg_p[i], 0.0, 5)  #Had to update to 5dp

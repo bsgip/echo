@@ -47,7 +47,7 @@ def test_many_node_system_no_objective():
 
     # Create echo nodes and edges for tellegen nodes
     for node in rand_tree.nodes:
-        n = ElectricalTellegenNode()
+        n = TellegenNode()
         node_name_map[str(node)] = n
         system.add_node(n)
 
@@ -176,7 +176,7 @@ def test_many_node_system_with_objectives():
 
     # Create echo nodes and edges for tellegen nodes
     for node in rand_tree.nodes:
-        n = ElectricalTellegenNode()
+        n = TellegenNode()
         node_name_map[str(node)] = n
         system.add_node(n)
 
@@ -311,7 +311,7 @@ def test_many_node_system_with_path_tracing():
 
     # Create echo nodes and edges for tellegen nodes
     for node in rand_tree.nodes:
-        n = ElectricalTellegenNode()
+        n = TellegenNode()
         node_name_map[str(node)] = n
         system.add_node(n)
 

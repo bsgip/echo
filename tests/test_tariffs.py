@@ -50,7 +50,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=battery_capacity,
@@ -69,8 +69,8 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
 
     dc_window = [0] * 24 + [1] * 12 + [0] * 12
 
-    site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1 = TellegenNode()
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])
@@ -120,7 +120,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -139,8 +139,8 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     pv1.export_constraint_value = 0
     solar.ports['solar'] = pv1
 
-    site1 = ElectricalTellegenNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess', 'pv'])
+    site1 = TellegenNode()
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
     cp1 = site1.ports['cp']
 
     load1 = Node()
@@ -206,7 +206,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery1 = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -224,7 +224,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     load1.ports['demand'] = l1
 
     site1 = ElectricalNode()
-    site1.add_named_electrical_ports(['cp', 'load', 'bess'])
+    site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
     site1.node_rule = NodeRule.Tellegen
     cp1 = site1.ports['cp']
 
@@ -274,7 +274,7 @@ def test_path_flows_respect_port_constraints():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=1000,
@@ -294,7 +294,7 @@ def test_path_flows_respect_port_constraints():
     solar.ports['solar'] = pv1
 
     site = ElectricalNode()
-    site.add_named_electrical_ports(['cp', 'load', 'bess', 'pv'])
+    site.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
     site.node_rule = NodeRule.Tellegen
     cp1 = site.ports['cp']
 
@@ -345,4 +345,59 @@ def test_path_flows_respect_port_constraints():
     np.testing.assert_array_almost_equal(optimiser.values(bess_to_solar.flow_value, 0), [0] * time_periods, 3)
     np.testing.assert_array_almost_equal(optimiser.values(load_to_solar.flow_value, 0), [0] * time_periods, 3)
     np.testing.assert_array_almost_equal(optimiser.values(grid_to_solar.flow_value, 0), [0] * time_periods, 3)
+
+
+def test_demand_tariff_reset_periods():
+
+    expansion_periods = 1
+    day_periods = 48
+    num_days = 2
+    time_periods = day_periods * num_days
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    grid = Node()
+    grid.add_electrical_ports_from_list(['load'])
+
+    load = Node()
+    l1 = ElectricalDemand()
+    demand = np.random.randint(0, 100, time_periods)
+    l1.add_demand_profile_from_array(demand, expansion_periods)
+    load.ports['demand'] = l1
+
+    system.add_node_obj([grid, load])
+    system.connect_ports_and_create_edge(grid.ports['load'], l1)
+
+    tariff_array_day = [0]*12 + [1]*12 + [0]*12 + [1]*12
+
+    reset_period_length = day_periods
+    import_charge = DemandCharge(rate=1.0,
+                                 reset_period_length=reset_period_length,
+                                 window_array=tariff_array_day * num_days)
+
+    dt = ImportDemandTariffObjective(component=l1,
+                                     demand_charges=[import_charge])
+
+    objective_set = ObjectiveSet(objective_list=[dt])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=objective_set
+    )
+
+    optimiser.optimise()
+
+    max_demand = optimiser.values(import_charge.max_demand_val)
+    demand_filtered = demand*np.array(tariff_array_day*num_days)
+    for i in range(num_days):
+        np.testing.assert_almost_equal(max_demand[i],max(demand_filtered[i*reset_period_length:i*reset_period_length + reset_period_length]),5)
+
+
+
+
 

@@ -20,7 +20,7 @@ def test_simple_controlled_load_does_minimum_energy_action():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     controlled_load = Node()
     cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0/60.0)
@@ -64,7 +64,7 @@ def test_simple_controlled_load_does_minimum_power_action():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     controlled_load = Node()
     cl = ControlledLoad(max_power=5.0, min_power=2.0, min_utilisation=5.0/60.0, max_utilisation=None)
@@ -106,7 +106,7 @@ def test_simple_controlled_load_limited_to_max_energy():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     controlled_load = Node()
     cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0/60.0, max_utilisation=5.0/30.0)
@@ -152,7 +152,7 @@ def test_simple_controlled_load_limited_to_max_power():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     controlled_load = Node()
     cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0/60.0, max_utilisation=None)

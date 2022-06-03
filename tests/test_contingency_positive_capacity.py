@@ -18,7 +18,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -35,8 +35,8 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     pv1.add_generation_profile_from_array([-4] * 24 + [0] * 24, expansion_periods)
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'bess', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
@@ -65,7 +65,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
 
     for i in range(time_periods):
         assert cont_pos_p[i] == 5.0
@@ -81,7 +81,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -99,8 +99,8 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     pv1.curtailable = True
     solar.ports['solar'] = pv1
 
-    inverter = ElectricalTellegenNode()
-    inverter.add_named_electrical_ports(['cp', 'bess', 'pv'])
+    inverter = TellegenNode()
+    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
     inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
@@ -128,7 +128,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
 
     # for i in range(0, 1):
@@ -202,7 +202,7 @@ def test_positive_contingency_calculation_with_storage_full():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_named_electrical_ports(['grid'])
+    grid.add_electrical_ports_from_list(['grid'])
 
     battery = Node()
     b1 = ElectricalStorage(max_capacity=48,
@@ -225,7 +225,7 @@ def test_positive_contingency_calculation_with_storage_full():
     inverter.add_dc_port('pv')
 
     cp = Node()
-    cp.add_named_electrical_ports(['load', 'inv', 'grid'])
+    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()
@@ -260,7 +260,7 @@ def test_positive_contingency_calculation_with_storage_full():
 
     optimiser.optimise()
 
-    cont_pos_p = optimiser.values(bess_to_g.contingency_pos, 0)
+    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(cont_pos_p[i], 0.0, 5)  #Had to update to 5dp
