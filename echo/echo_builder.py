@@ -1,16 +1,13 @@
-import pandas as pd
 import networkx as nx
-from pyomo.util.infeasible import log_infeasible_constraints
 import numpy as np
-
-import echo.objectives as obj
-import echo.echo_models as ecm
-from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
+import pandas as pd
+from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
-from pydantic import BaseModel, validator, root_validator, confloat
-from typing import Optional
+import echo.echo_models as ecm
+import echo.objectives as obj
+from echo.configuration import *
+from echo.echo_optimiser import EchoOptimiser
 
 
 class NetworkSet:
@@ -21,6 +18,7 @@ class NetworkSet:
     This class can be used to manage single networks too, if useful.
 
     """
+
     def __init__(self, description, name='default_name'):
         self.name = name
         self.description = description
@@ -28,7 +26,7 @@ class NetworkSet:
         self.num_networks = 0
         self.interval_duration = None
         self.time_periods = None
-        self.results = []  #another way of accessing results
+        self.results = []  # another way of accessing results
         self.processing_errors = []
 
     def add_network(self, network: dict):
@@ -50,7 +48,8 @@ class NetworkSet:
             prog_file = None
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
             # Append results to network dict
-            self.results.append(process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose))
+            self.results.append(
+                process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose))
             # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
         if log_file is not None:
@@ -60,7 +59,7 @@ class NetworkSet:
 
     def to_df(self, node, port):
         """
-        for each network segment in netset, gets the value of port on node, if that node and port combination does not exists
+        for each network segment in netset, gets the value of port on node, if that node and port combination does not exist
         sets the result to nan.
         :param node: name of node to look at
         :param port: port to get value of
@@ -68,7 +67,6 @@ class NetworkSet:
         """
 
         assert self.results is not None, "Generate results first"
-
 
         data = {}
         for i, res in enumerate(self.results):
@@ -82,8 +80,6 @@ class NetworkSet:
         df = pd.DataFrame.from_dict(data)
         return df
 
-
-
     def get_echo_model(self, network_name: str):
         """ Returns an echo model of a network in the network set"""
         network_dict = self.networks[network_name]
@@ -96,10 +92,10 @@ class NetworkSet:
         em, node_name_dict = self.get_echo_model(network_name)
         network_dict = self.networks[network_name]
         objective_dict = network_dict.get('objective')
-        obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict)
+        objective_set = convert_objective_to_echo_objective(em, node_name_dict, objective_dict)
 
         opt = run_echo_optimiser(em,
-                                 obj,
+                                 objective_set,
                                  interval_duration=self.interval_duration,
                                  time_periods=self.time_periods,
                                  expansion_periods=1,
@@ -112,7 +108,8 @@ class NetworkSet:
         """ Exports optimisation results to a pandas dataframe and returns that dataframe"""
         pass
 
-def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, verbose: bool=True):
+
+def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, verbose: bool = True):
     """ Ingests a single network in a networkset, converts it to an echo model,
     runs the optimiser, appends results to the original network, and returns results."""
 
@@ -136,13 +133,13 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
 
     # Manage results
     results = extract_results(opt, node_name_dict)
-    #append_results(results, network_dict, in_place=True)
+    # append_results(results, network_dict, in_place=True)
     network_dict['infeasible'] = True if 'infeasible' in opt.opt_status['Termination condition'] else False
     results['infeasible'] = network_dict['infeasible']
     return results
 
 
-def convert_dict_to_nx(netw_jsn: dict, verbose: bool=True):
+def convert_dict_to_nx(netw_jsn: dict, verbose: bool = True):
     """ Creates nx graph from network dictionary"""
     if verbose:
         print('Converting dict to networkx')
@@ -169,7 +166,7 @@ def convert_dict_to_nx(netw_jsn: dict, verbose: bool=True):
         # NB: networkx may add the edges in a different order to the way we specify
 
     check_nx_for_floating_nodes(n)  # Check that the graph is connected
-    check_port_names_are_consistent(n) # Check there are no naming issues
+    check_port_names_are_consistent(n)  # Check there are no naming issues
 
     return n
 
@@ -203,6 +200,7 @@ def convert_nx_to_echo(g, df, verbose=True):
         edge_dict = g.edges[edge]
         port1 = edge_dict['ports'][0]
         port2 = edge_dict['ports'][1]
+
         # need to check we have these round the right way
         if port1 in list(node1.ports.keys()):
             connect_nodes(system, node1, node2, port1=port1, port2=port2)
@@ -212,7 +210,7 @@ def convert_nx_to_echo(g, df, verbose=True):
     return system, node_name_dict
 
 
-def construct_echo_node(system, node_name_dict, node, node_dict, df):
+def construct_echo_node(system, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
     """ Does logic for working out which type of node to build.
     Builds the node, adds to the echo graph, and updates the node name dict"""
 
@@ -252,7 +250,7 @@ def construct_echo_node(system, node_name_dict, node, node_dict, df):
         node_name_dict[node] = new_node.node_name
 
 
-def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool=True):
+def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool = True):
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
 
@@ -399,11 +397,9 @@ def run_echo_optimiser(echo_graph,
     return optimiser
 
 
-
-def connect_nodes(system, node1, node2, port1, port2):
+def connect_nodes(system, node1, node2, port1: str, port2: str):
     """
-    Connects two nodes together via specified ports. If ports are not specified, generic ports will be created.
-
+    Connects two nodes together via specified ports. Doesn't currently handle blank port names.
     Args:
         system: echo graph
         node1: node on edge
@@ -412,7 +408,6 @@ def connect_nodes(system, node1, node2, port1, port2):
         port2: other port on edge
 
     """
-    # todo clean this up
 
     if port1 is not None:
         p1 = node1.ports[port1]
@@ -460,6 +455,7 @@ def combine_two_graphs(g1, g2, p1=None, p2=None):
     assert (port1 is not None) and (port2 is not None), 'Ports to be connected cannot be found in the graphs provided.'
     output.connect_ports_and_create_edge(port1, port2)
     return output
+
 
 def create_battery_node(node_dict):
     """ Creates an echo battery node from the provided node dict."""
@@ -604,18 +600,18 @@ def check_port_names_are_consistent(g):
     assert len(inconsistencies) == 0, inconsistencies
 
 
-def retrieve_value(dict, key):
+def retrieve_value(d, key):
     out = None
-    if key in dict.keys():
-        out = dict[key]
+    if key in d.keys():
+        out = d[key]
         if hasattr(out, '__len__'):
             if len(out) == 0:
                 out = None
     return out
 
 
-def retrieve_key(dict, val):
-    for k, v in dict.items():
+def retrieve_key(d, val):
+    for k, v in d.items():
         if v == val:
             return k
     return None
@@ -634,7 +630,7 @@ def port_connectivity_check(port_obj, graph):
     return False
 
 
-def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
+def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
     """ Extracts results from an echo model and returns them in a dict.
     Results key arg allows user to specify which results they want returned."""
 
@@ -644,7 +640,7 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
         output[node_name] = {}
         if 'battery' in node_name:
             battery_node = system.node_obj[node_uid]
-            battery_port = battery_node.ports[list(battery_node.ports.keys())[0]] #todo less hacky
+            battery_port = battery_node.ports[list(battery_node.ports.keys())[0]]  # todo less hacky
             output[node_name]['SOC'] = optimiser.values(battery_port.soc_value, 0)
             output[node_name]['delta'] = optimiser.values(battery_port.port_name, 0)
             output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
@@ -658,20 +654,22 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict=None):
                     output[node_name]['trip_infeasibility'] == 0) else 'infeasible'
                 # todo need to update this to have some tolerance rather than ==0
 
-        else: # Get port value + any slack vars
+        else:  # Get port value + any slack vars
             node_obj = system.node_obj[node_uid]
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
                 output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
-                    output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max, 0)
+                    output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
+                                                                                            0)
                 else:
                     output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
                     output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
-                    output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max, 0)
+                    output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max,
+                                                                                            0)
                 else:
                     output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
                     output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
@@ -710,7 +708,10 @@ def get_echo_port_units(node_name, port_unit):
         return unit
     else:
         valid_units = [f for f in dir(Units) if not f.startswith('_')]
-        raise ValueError('Unit {} for node {} does not match any valid unit. Valid units are {}'.format(port_unit, node_name, valid_units))
+        raise ValueError(
+            'Unit {} for node {} does not match any valid unit. Valid units are {}'.format(port_unit, node_name,
+                                                                                           valid_units))
+
 
 # Pydantic tinkering
 #
@@ -783,8 +784,7 @@ def get_echo_port_units(node_name, port_unit):
 #           'discharging_efficiency': 1.,
 #           'initial_state_of_charge': 5}
 #
-# b = BatteryParams(**b_dict)
-
+# b = BatteryParams(**b_dict
 
 def get_pyomo_var_map(optimiser):
     comp_names = [str(i) for i in optimiser.model.component_objects()]
@@ -793,10 +793,10 @@ def get_pyomo_var_map(optimiser):
     return output
 
 
-def get_pyomo_vars_from_port_name(port_name, map):
+def get_pyomo_vars_from_port_name(port_name, var_map):
     var_names = []
     ignore_vars = ['index', 'edge', 'con']
-    for var_name, var_obj in map.items():
+    for var_name, var_obj in var_map.items():
         if port_name in var_name:
             flag = [x for x in ignore_vars if x in var_name]
             if not flag:

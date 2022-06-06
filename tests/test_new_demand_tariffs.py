@@ -113,7 +113,7 @@ def test_system_export_demand_tariff():
 
 
 def test_system_import_demand_tariff_two_resets():
-    """ Test that we correctly calculate the max import demand """
+    """ Test that we correctly calculate the max import demand when we use a reset period """
 
     expansion_periods = 1
     time_periods = 48
@@ -131,17 +131,19 @@ def test_system_import_demand_tariff_two_resets():
     load1.ports['demand'] = l1
 
     system.add_node_obj([grid, load1])
-    grid_edge = Edge(vertices=[l1, grid.ports['grid']])
-    system.add_edge_obj([grid_edge])
+    system.connect_ports_and_create_edge(grid.ports['grid'], l1)
 
     dc_window = [1]*6 + [0]*6 + [0]*24 + [1]*6 + [0]*6
     minimum_demand = 1.0
     demand_tariff = ImportDemandTariffObjective(component=l1,
-                                                demand_charges=[DemandCharge(
-                                                    rate=1.0,
-                                                    window_array=dc_window,
-                                                    min_demand=minimum_demand,
-                                                    reset_period_length=1)])
+                                                demand_charges=[
+                                                    DemandCharge(
+                                                        rate=1.0,
+                                                        import_demand=True,
+                                                        window_array=dc_window,
+                                                        min_demand=minimum_demand,
+                                                        reset_periods = [23,25]
+                                                    )])
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
@@ -158,7 +160,6 @@ def test_system_import_demand_tariff_two_resets():
 
     max_demand = optimiser.values(demand_tariff.demand_charges[0].max_demand_val, 0)
 
-    for i in range(time_periods):
-        np.testing.assert_array_almost_equal(max_demand[i], (demand[i]-minimum_demand)*dc_window[i])
-        np.testing.assert_array_almost_equal(max_demand[i], (demand[i] - minimum_demand)*dc_window[i])
+    np.testing.assert_array_almost_equal(max_demand[0], 10-minimum_demand)
+    np.testing.assert_array_almost_equal(max_demand[1], 20-minimum_demand)
 
