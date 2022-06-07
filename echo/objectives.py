@@ -443,6 +443,8 @@ class Window(BaseModel):
                 for i in diff_array:
                     if i != 0:  # this indicates we have rolled over - add our total # intervals
                         _reset_periods.append(total)
+                        # reset the total
+                        total = 1
                     else:
                         total += 1
                 remaining_intervals = len(df) - sum(_reset_periods)  #need to calculate the remaining intervals and add these to the end
@@ -483,14 +485,6 @@ class DemandCharge(BaseModel):
     num_reset_periods: Optional[int]
     reset_index: Optional[RangeSet]  # index for separating different reset periods
     max_demand_val: Optional[str]
-
-    # @root_validator()
-    # def validate_import_export(cls, values):
-    #     import_demand = values.get('import_demand')
-    #     export_demand = values.get('export_demand')
-    #     if import_demand is False and export_demand is False:
-    #         raise ValueError('Either import or export demand must be True.')
-    #     return values
 
     def __init__(self, **data):
         super().__init__(**data)

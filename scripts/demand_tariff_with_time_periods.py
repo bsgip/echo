@@ -12,7 +12,7 @@ SOLVER_EXECUTABLE = None
 
 expansion_periods = 1
 profile = pd.DataFrame(
-    index=pd.date_range(start=datetime(2021, 1, 4), end=datetime(2021, 1, 6), freq='30min', closed='left'))
+    index=pd.date_range(start=datetime(2021, 1, 4), end=datetime(2021, 1, 11), freq='30min', closed='left'))
 
 time_periods = len(profile)
 interval_duration = 30
@@ -23,7 +23,7 @@ grid = Node()
 grid.add_electrical_ports_from_list(['grid'])
 
 battery1 = Node()
-b1 = ElectricalStorage(max_capacity=0.0,
+b1 = ElectricalStorage(max_capacity=15.0,
                        depth_of_discharge_limit=0,
                        charging_power_limit=2.0,
                        discharging_power_limit=-2.0,
@@ -34,7 +34,8 @@ battery1.ports['battery'] = b1
 
 load1 = Node()
 l1 = ElectricalDemand()
-l1.add_demand_profile_from_array([10] * time_periods, expansion_periods)
+
+l1.add_demand_profile_from_array([10]*time_periods, expansion_periods)
 load1.ports['demand'] = l1
 
 site1 = TellegenNode()
@@ -55,34 +56,17 @@ peak_window_new = Window(
         TimePeriod(start_time=time(18, 0),
                    end_time=time(21, 0),
                    day_type=[Day.weekday, Day.weekend]
-                   )
-    ]
+                   )],
+    reset_periods=ResetPeriod.day
 )
-
 
 peak_charge = ImportDemandCharge(name='peak',
                                  rate=10.0,
                                  window_object=peak_window_new,
                                  min_demand=0.0)
 
-shoulder_window = Window(
-        time_periods=[TimePeriod(
-            start_time=time(18, 0),
-            end_time=time(21, 0),
-            day_type=[Day.weekday, Day.weekend]
-        )
-        ],
-    reset_periods=ResetPeriod.day
-    )
-
-shoulder_charge = ImportDemandCharge(
-    name='shoulder',
-    rate=6.0,
-    window_object=shoulder_window,
-    minimum_demand=0.0)
-
 demand_tariff = DemandTariffObjective(component=cp1,
-                                      demand_charges=[peak_charge, shoulder_charge])
+                                      demand_charges=[peak_charge])
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -99,11 +83,13 @@ optimiser = EchoOptimiser(
 )
 
 optimiser.optimise()
-
-print(optimiser.values(shoulder_charge.max_demand_val))
+print(optimiser.opt_status)
 
 print(optimiser.values(peak_charge.max_demand_val))
 
+print(optimiser.values(b1.port_name))
 
-plt.plot(optimiser.values(b1.port_name, 0))
+plt.plot(optimiser.values(cp1.port_name))
+plt.plot(peak_charge.window_array+10)
 plt.show()
+plt.legend(['demand', 'active demand periods'])
