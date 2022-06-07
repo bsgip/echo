@@ -371,9 +371,9 @@ def test_demand_tariff_reset_periods():
 
     tariff_array_day = [0]*12 + [1]*12 + [0]*12 + [1]*12
 
-    reset_period_length = day_periods
+    reset_periods = [day_periods] * num_days
     import_charge = DemandCharge(rate=1.0,
-                                 reset_period_length=reset_period_length,
+                                 reset_periods=reset_periods,
                                  window_array=tariff_array_day * num_days)
 
     dt = ImportDemandTariffObjective(component=l1,
@@ -394,8 +394,12 @@ def test_demand_tariff_reset_periods():
 
     max_demand = optimiser.values(import_charge.max_demand_val)
     demand_filtered = demand*np.array(tariff_array_day*num_days)
+    reset_periods.insert(0, 0)
+    val = np.cumsum(reset_periods)
     for i in range(num_days):
-        np.testing.assert_almost_equal(max_demand[i],max(demand_filtered[i*reset_period_length:i*reset_period_length + reset_period_length]),5)
+        max_opt = max_demand[i]
+        max_calc = max(demand_filtered[val[i]:val[i+1]])
+        np.testing.assert_almost_equal(max_opt, max_calc, 5)
 
 
 

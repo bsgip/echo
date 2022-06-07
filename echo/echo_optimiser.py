@@ -11,13 +11,25 @@ import pandas as pd
 
 class EchoOptimiser(object):
 
-    def __init__(self, interval_duration, number_of_intervals, number_of_expansion_intervals, discount_rate, ES,
-                 objective_set, optimiser_engine=None):
+    def __init__(self,
+                 interval_duration,
+                 number_of_intervals,
+                 number_of_expansion_intervals,
+                 discount_rate,
+                 ES,
+                 objective_set,
+                 optimiser_engine=None,
+                 profile=None):
+
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
+        # Check consistency with profile if specified
+        if profile is not None:
+            assert self.number_of_intervals == len(profile), 'Profile length does not match number of intervals specified.'
         self.number_of_expansion_intervals = number_of_expansion_intervals
         self.ES = ES
         self.objective_set = objective_set
+        self.profile = profile
 
         # Configure the optimiser through setting appropriate environmental variables.
         if optimiser_engine:
@@ -165,7 +177,7 @@ class EchoOptimiser(object):
         # Add objectives defined in the objective set
         if hasattr(self, 'objective_set'):
             if self.objective_set is not None:
-                self.objective_set.initialise_objective(self.model)
+                self.objective_set.initialise_objective(self.model, self.profile)
                 self.objective_set.set_objective(self.model, self)
 
         # Add any other costs that are defined on graph nodes/ports/paths
