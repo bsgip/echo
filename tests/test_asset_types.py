@@ -73,7 +73,7 @@ def test_chiller_operation():
     grid.ports['grid'] = ElectricalPort()
 
     nonlin_array = [-0.0068, 5.5052, 0]
-    chiller = Chiller(input_breakpoints=[0, 2, 4, 8],
+    chiller = Chiller(input_breakpoints=[0, 2, 5, 8],
                       output_values=[0, 3, 4, 8],
                       max_output=-8,
                       max_input=8,

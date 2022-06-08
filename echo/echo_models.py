@@ -11,7 +11,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator, root_validator, NegativeFloat, PositiveFloat, confloat
 from typing import Optional, Union, List, Container
 from echo.echo_validators import *
-
+from echo.utils import *
 
 """
 
@@ -508,24 +508,6 @@ class Node(BaseModel):
         self.uid = uuid.uuid4()
         self.node_name = 'node_' + str(self.uid)  #we define the node uid and name like this so that the user can redefine them if desired.
 
-
-    @staticmethod
-    def fix_port_variable(model, var_name, new_values, expansion_periods=1):
-        """
-        Updates existing pyomo variable to have fixed values.
-        Args:
-            model: pyomo concrete model
-            var_name: pyomo variable name (str)
-            new_values: array or list of new values
-            expansion_periods: number of expansion periods (int)
-
-        """
-        var = getattr(model, var_name)
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
-        fixed_vals = dict(zip(keys, new_values))
-        var.set_values(fixed_vals)
-        var.fix()
-
     def add_flex_port(self, name, unit=Units.NA):
         """
         Adds named port of specified type to node.
@@ -628,10 +610,6 @@ class Node(BaseModel):
             node_ports = self.ports
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
-
-    def apply_piecewise_node_constraint(self, index_list, var_list, pw, fval, ):
-
-        pass
 
     def num_ports(self):
         return len(self.ports)
@@ -1509,6 +1487,77 @@ class Chiller(Node):
         setattr(model, 'piecewise_con', en.Piecewise(
             model.Expansion, model.Time,
             yvar, xvar, pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
+
+
+class LinearisedInputOutputNode(Node):
+    """ A class for a node with one input and one output.
+     The I/O may be nonlinear but is approximated with a piecewise linear function. """
+    node_rule = NodeRule.Custom
+    input_pts: list
+    output_pts: list
+    max_input: confloat(ge=0.)
+    max_output: confloat(le=0.)
+
+    def add_input_port(self, port_unit, slack=False):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Import
+        p.import_constraint = FlowConstraint.Fixed
+        p.set_flow_constraints(max_import=self.max_input, max_export=0., slack=slack)
+        self.ports['input'] = p
+
+    def add_output_port(self, port_unit, slack=False):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Export
+        p.export_constraint = FlowConstraint.Fixed
+        p.set_flow_constraints(max_import=0., max_export=self.max_output, slack=slack)
+        self.ports['output'] = p
+
+    def initialise_node(self, model):
+        super(LinearisedInputOutputNode, self).initialise_node(model)
+
+    def apply_node_constraints(self, model):
+
+        def apply_piecewise_node_cons(model, input_port, output_port, xdata, ydata, con_name):
+            """
+            Applies a piecewise input-output constraint
+            Args:
+                model: pyomo concrete model
+                input_port: input port object
+                output_port: output port object
+                xdata: xpts
+                ydata: ypts
+                con_name: constraint name
+            """
+
+            # Get our input/output pyomo variables
+            xvar = getattr(model, input_port.port_name)
+            yvar = getattr(model, output_port.port_name)
+
+            # Set the piecewise function up using the variables and the data points.
+            setattr(model, con_name, en.Piecewise(model.Expansion,
+                                                  model.Time,
+                                                  yvar,
+                                                  xvar,
+                                                  pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
+
+        con_name = 'piecewise_con' + self.node_name
+        apply_piecewise_node_cons(model, self.ports['input'], self.ports['output'], self.input_pts, self.output_pts, con_name)
+
+
+class HeatPump(LinearisedInputOutputNode):
+    """
+    A heat pump converts an electrical input to a thermal heating or cooling output.
+    """
+
+class NewChiller(LinearisedInputOutputNode):
+    """
+    A chiller converts an electrical input to a thermal cooling output.
+    """
+
+
+
 
 
 """ 
