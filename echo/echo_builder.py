@@ -576,8 +576,11 @@ def create_ev(ev_dict, df):
     return ev_cp
 
 
+
+
+
 def check_nx_for_floating_nodes(g):
-    """ Checks if we have nodes without any edge"""
+    """ Checks if we have nodes without any edge."""
     nodes = set(g.nodes)
     nodes_with_edges = set([i for edge in g.edges for i in edge])
     nodes_without_edges = nodes - nodes_with_edges
@@ -585,9 +588,9 @@ def check_nx_for_floating_nodes(g):
 
 
 def check_port_names_are_consistent(g):
+    """ Checks that there is a 1-1 correspondence between ports as defined on edges and ports as defined on nodes"""
     inconsistencies = []
     for edge in g.edges:
-        # check that there is a 1-1 correspondence between ports and nodes
         for i in range(0, 2):
             port = g.edges[edge]['ports'][i]
             node1_ports = g.nodes[edge[0]]['attr']['ports']
@@ -676,18 +679,6 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
 
     return output
 
-
-# def extract_results_from_key(results_key, optimiser, echo_obj):
-#     output = {}
-#     echo_key = {'SOC': 'soc_value',
-#                'delta': 'port_name'}
-#     for var_name, select in results_key:
-#         if select is True:
-#             if hasattr(echo_obj, echo_key[var_name]):
-#                 model_var_name = getattr(echo_obj, echo_key[var_name])
-#                 output[var_name] = optimiser.values(model_var_name, 0)
-#
-#     return output
 
 def append_results(result_dict, network_dict, in_place=False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
