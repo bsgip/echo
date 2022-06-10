@@ -179,8 +179,8 @@ storage_energy_delta = optimiser.values(b.port_name, 0)
 storage_energy_soc = optimiser.values(b.soc_value, 0)
 optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
 
-optimiser.get_single_objective_total_value(rnetwork[0], 0)
-optimiser.get_single_objective_total_value(throughput_cost, 0)
+optimiser.get_single_objective_total_value(rnetwork[0])
+optimiser.get_single_objective_total_value(throughput_cost)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
