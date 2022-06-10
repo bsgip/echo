@@ -73,11 +73,11 @@ def test_chiller_operation():
     grid.ports['grid'] = ElectricalPort()
 
     nonlin_array = [-0.0068, 5.5052, 0]
-    chiller = Chiller(input_breakpoints=[0, 2, 4, 8],
-                      output_values=[0, 3, 4, 8],
-                      max_output=-8,
-                      max_input=8,
-                      coeff_array=nonlin_array)
+    input_breakpoints = [0, 2, 3, 8]
+    output_values = [0, -3, -4, -8]
+    chiller = Chiller(max_output=-8,
+                      max_input=8)
+    chiller.set_input_output_breakpoints(input_array=input_breakpoints, output_array=output_values, time_periods=time_periods)
 
     cooling_load = Node()
     cl = HeatingOrCoolingLoad()
@@ -106,14 +106,13 @@ def test_chiller_operation():
     print('cop: ', np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0)))
 
     chiller_input = optimiser.values(chiller.ports['input'].port_name, 0)
-    chiller_output = optimiser.values(chiller.ports['output'].port_name, 0)
-    grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
-    cl_p = cl.initial_value
-    cop = np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0))
+    # chiller_output = optimiser.values(chiller.ports['output'].port_name, 0)
+    # grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
+    # cl_p = cl.initial_value
+    # cop = np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0))
 
     for i in range(time_periods):
-        np.testing.assert_almost_equal(chiller_output[i]*-1,
-                                       chiller_input[i]**2*nonlin_array[0] + chiller_input[i]*nonlin_array[1] + nonlin_array[2], 2)
+        assert chiller_input[i] == 3
 
 
 def test_carbon_aggregation():
