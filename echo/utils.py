@@ -10,12 +10,71 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
-def set_var_bounds(var_name: str, model, ub: float, lb: float) -> None:
-    """ For setting bounds on pyomo variables"""
+def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or None) -> None:
+    """
+    Updates the bounds on a pyomo variable. Only floats can be used as bounds.
+    Args:
+        model: pyomo concrete model
+        var_name: variable name (str) corresponding to a variable in the model
+        ub: upper bound value, or None
+        lb: lower bound value, or None
+    Returns:
+        None
+    """
     v = getattr(model, var_name)
-    v.setlb(lb)
-    v.setub(ub)
+    if lb is not None:
+        v.setlb(lb)
+    if ub is not None:
+        v.setub(ub)
 
+def set_var_bounds_from_dict(model, var_name: str, ub: dict or None, lb: dict or None) -> None:
+    """
+    Updates the bounds on a pyomo variable using an array of floats.
+    Args:
+        model: pyomo concrete model
+        var_name: variable name (str) corresponding to a variable in the model
+        ub: dict of floats, where dict keys match variable index sets, or None
+        lb: dict of floats, where dict keys match variable index sets, or None
+    Returns:
+        None
+    """
+    v = getattr(model, var_name)
+    if lb is not None:
+        for k, i in lb.items():
+            v[k].setlb(i)
+    if ub is not None:
+        for k, i in ub.items():
+            v[k].setub(i)
+
+def generate_array_constraint(constraint, time_periods, expansion_periods) -> dict:
+    """
+    Args:
+        constraint: float or array
+    Returns:
+        d: a formatted dict to be used in constraining a variable
+    """
+    d = {}
+    if (type(constraint) is float) or (type(constraint) is int):
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = constraint
+    elif hasattr(constraint, '__iter__'):
+        # Check length
+        if (len(constraint) != time_periods) or (len(constraint) != time_periods*expansion_periods):
+            raise ValueError('Array constraint length is not consistent with time periods/expansion periods.')
+        if len(constraint) == time_periods:
+            # Can tile across expansion periods
+            for p in range(expansion_periods):
+                for t in range(time_periods):
+                    d[(p, t)] = constraint[t]
+        if len(constraint) == time_periods*expansion_periods:
+            # No tiling
+            i = 0
+            for p in range(expansion_periods):
+                for t in range(time_periods):
+                    d[(p, t)] = constraint[i]
+                    i += 1
+    return d
 
 def fix_port_variable(model, var_name: str, new_values: ArrayType, expansion_periods=1):
     """

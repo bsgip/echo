@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import numpy as np
 
+
 class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
 
