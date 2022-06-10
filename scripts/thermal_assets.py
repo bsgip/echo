@@ -1,9 +1,5 @@
-import numpy as np
-
 from echo.echo_models import *
 from echo.echo_optimiser import *
-from echo.utils import *
-
 
 expansion_periods = 1
 time_periods = 4

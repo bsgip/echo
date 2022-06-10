@@ -1,7 +1,6 @@
-import pandas as pd
-from echo.echo_builder import *
 import numpy as np
-import pprint
+
+from echo.echo_builder import *
 
 time_periods = 48
 

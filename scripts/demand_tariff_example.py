@@ -1,13 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+
 import seaborn as sns
 
-from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
 from echo.objectives import *
-
-import os
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
