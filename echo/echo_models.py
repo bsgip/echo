@@ -1356,11 +1356,11 @@ class EV(ElectricalNode):
         super(EV, self).initialise_node(model)
         if self.charge_mode == 'V0G':
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
-            self.fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
-            self.fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility,
+            fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
+            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility,
                                    expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
-            self.fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
+            fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
 
 """
