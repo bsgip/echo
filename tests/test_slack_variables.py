@@ -37,7 +37,7 @@ def test_export_slack_var_is_minimised():
 
     inverter = TellegenNode()
     inverter.add_electrical_ports_from_list(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
+    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=[5.0]*time_periods, slack=True)
 
     system.add_node_obj([grid, solar, inverter])
 

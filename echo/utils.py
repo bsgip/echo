@@ -2,7 +2,7 @@ import numpy as np
 from echo.echo_validators import *
 from sklearn import linear_model
 import pandas as pd
-
+import pyomo.environ as en
 
 def _to_values(profile, key):
     if isinstance(profile, dict):
@@ -46,7 +46,7 @@ def set_var_bounds_from_dict(model, var_name: str, ub: dict or None, lb: dict or
         for k, i in ub.items():
             v[k].setub(i)
 
-def generate_array_constraint(constraint, time_periods, expansion_periods) -> dict:
+def generate_array_constraint(constraint, time_periods: int, expansion_periods: int) -> dict:
     """
     Args:
         constraint: float or array
@@ -201,3 +201,8 @@ def add_time_and_expansion_index_to_values(values, time_periods, expansion_perio
             output[(p, t)] = values
 
     return output
+
+
+def create_named_constraint_with_rule(model, con_name, rule):
+    """ Util function for creating pyomo constraints from a rule."""
+    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
