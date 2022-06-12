@@ -1069,8 +1069,8 @@ class Inverter(ElectricalNode):
     max_export: Union[float, None]
     dc_ac_efficiency: confloat(ge=0, le=1)
     ac_dc_efficiency: confloat(ge=0, le=1)
-    dc_ports: dict = {}
-    ac_port_name: str = None  # There should generally only be one ac port, so we can just keep its name
+    dc_ports: Optional[dict] = {}
+    ac_port_name: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
     node_rule: int = NodeRule.Custom
 
     def add_dc_port(self, port_name):
@@ -1088,6 +1088,9 @@ class Inverter(ElectricalNode):
             self.ports[port_name] = p
 
     def verify_node(self):
+        # Check that we have at least one ac and one dc port
+        assert self.ac_port_name is not None, 'Define at least one ac port on inverter.'
+        assert self.dc_ports is not None, 'Define at least one dc port on inverter.'
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
         named_ports = [self.ac_port_name]
@@ -1309,17 +1312,24 @@ class CarbonSinkNode(Node):
 
 
 class GasBoiler(Node):
-    """ Gas boiler converts gas to thermal energy """
+    """ Gas boiler converts gas to heat at a fixed COP."""
     gas_to_heat_efficiency: float
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        self._create_input_port()
+        self._create_output_port()
+        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
+
+    def _create_input_port(self):
         gp = GasPort()
         gp.flows = Flows.Import
+        self.ports['input'] = gp
+
+    def _create_output_port(self):
         tp = ThermalPort()
         tp.flows = Flows.Export
-        self.ports = {'gas': gp, 'heat': tp}
-        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
+        self.ports['output'] = tp
 
     def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
         # Create appropriate transformation
@@ -1336,13 +1346,13 @@ class InputOutputPiecewiseNode(Node):
      which are used to construct a linear piecewise function.
      Alternatively, the transformation can be defined by an array of coefficients of a polynomial function."""
     node_rule = NodeRule.Custom
+    max_input: confloat(ge=0.)
+    max_output: confloat(le=0.)
     input_pts: Optional[dict]
     output_pts: Optional[dict]
     temp_coef: Optional[ArrayType]
     input_coef: Optional[ArrayType]
     n_pts: Optional[int] = 5
-    max_input: confloat(ge=0.)
-    max_output: confloat(le=0.)
     temperature_array: Optional[ArrayType]  # temperature time series
 
     def __init__(self, **data):
@@ -1398,7 +1408,7 @@ class InputOutputPiecewiseNode(Node):
                                                                                         input_coef=self.input_coef,
                                                                                         temperature_array=self.temperature_array,
                                                                                         xpts=x,
-                                                                                        model=model)
+                                                                                        time_periods=len(model.Time))
 
         # Bound our input and output variables
         set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.max_input, lb=0.)
@@ -1435,7 +1445,7 @@ class InputOutputPiecewiseNode(Node):
 
 class HeatPump(InputOutputPiecewiseNode):
     """
-    A heat pump converts an electrical input to a thermal heating or cooling output.
+    A heat pump converts an electrical input to hot water which can be used for heating, and chilled water which can be used for cooling.
     """
 
 

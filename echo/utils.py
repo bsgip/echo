@@ -144,7 +144,7 @@ def do_multivariate_regression(X, y):
     return regr.coef_, regr.score(X, y)
 
 
-def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, model):
+def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, time_periods):
     """ Generates a set of output (y) points based on two coefficient arrays,
     one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
     Args:
@@ -152,7 +152,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
         input_coef: list of coefficients, right to left in increasing order
         temperature_array: list of temperature data for time intervals T
         xpts: number of x points we want to do our piecewise evaluation over
-        model: pyomo concrete model
+        time_periods: number of optimisation time periods
 
     Returns:
         x: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
@@ -169,7 +169,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
     temp_orders = [i for i in range(num_temp_cols)][::-1]
     input_orders = [i for i in range(num_input_cols)][::-1]
 
-    T = len(model.Time)  # get the optimisation time period
+    T = time_periods  # get the optimisation time period
 
     for t in range(T):
         # collect our temperature terms into a single term for this time period

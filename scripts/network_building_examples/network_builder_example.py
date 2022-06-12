@@ -33,8 +33,8 @@ network_dict = {
                                'dc_ports': ['bess', 'pv'],
                                'max_import': 5.,
                                'max_export': -5.,
-                               'ac_dc_eta': 1.,
-                               'dc_ac_eta': 1.}
+                               'ac_dc_efficiency': 1.,
+                               'dc_ac_efficiency': 1.}
         },
         'load': {
                 'id': 'load',

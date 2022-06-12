@@ -214,40 +214,45 @@ def construct_echo_node(system, node_name_dict: dict, node, node_dict: dict, df:
     """ Does logic for working out which type of node to build.
     Builds the node, adds to the echo graph, and updates the node name dict"""
 
+    def update():
+        system.add_node_obj(new_node)
+        node_name_dict[node] = new_node.node_name
+
     if node_dict['type'] == 'battery':
         new_node = create_battery_node(node_dict)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'tellegen':
+    elif node_dict['type'] == 'tellegen':
         new_node = create_tellegen_node(node_dict)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'flex':
+
+    elif node_dict['type'] == 'flex':
         new_node = create_flex_node(node_dict)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'load':
+    elif node_dict['type'] == 'load':
         new_node = create_load_node(node_dict, df)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'ev':
+    elif node_dict['type'] == 'ev':
         new_node = create_ev(node_dict, df)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'inverter':
+    elif node_dict['type'] == 'inverter':
         new_node = create_inverter_node(node_dict)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
 
-    if node_dict['type'] == 'solar':
+    elif node_dict['type'] == 'solar':
         new_node = create_solar_node(node_dict, df)
-        system.add_node_obj(new_node)
-        node_name_dict[node] = new_node.node_name
+        update()
+
+    elif node_dict['type'] == 'chiller':
+        new_node = create_chiller_node(node_dict, df)
+        update()
+
+    else:
+        raise ValueError('node type {} is not recognised/does not have a builder function'.format(node_dict['type']))
 
 
 def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool = True):
@@ -505,8 +510,8 @@ def create_flex_node(node_dict):
 
 
 def create_load_node(load_dict, df):
-    if df is not None:
-        load_profile = df[load_dict['data']]
+    if type(load_dict['data']) is str:
+        load_profile = get_vals_from_df(df, load_dict['data'])
     else:
         load_profile = load_dict['data']
     port_unit = load_dict['units']
@@ -533,47 +538,35 @@ def create_inverter_node(inverter_dict):
 
 
 def create_solar_node(solar_dict, df):
-    if df is not None:
-        pv_profile = df[solar_dict['data']]
+    if type(solar_dict['data']) is str:
+        pv_profile = get_vals_from_df(df, solar_dict['data'])
     else:
         pv_profile = solar_dict['data']
     solar = ecm.Node()
-    pv = ecm.ElectricalGeneration()
-    pv.curtailable = solar_dict['parameters']['curtailable']
+    pv = ecm.ElectricalGeneration(**solar_dict['parameters'])
     pv.add_generation_profile_from_array(pv_profile, expansion_periods=1)
     solar.ports[solar_dict['ports'][0]] = pv
     return solar
 
 
 def create_ev(ev_dict, df):
-    ev = ev_dict['parameters']
-    available = ev['available']  # todo could pull from dataframes using a col name instead of directly from dict
-    usage = ev['usage']
-    soc_conserv = retrieve_value(ev, 'soc_conserv')
-    soc_conserv_cost = retrieve_value(ev, 'soc_conserv_cost')
-    tod_charging = retrieve_value(ev, 'tod_charging')
-    if tod_charging is None:
-        tod_charging = False
-
-    ev_port_name = ev_dict['ports'][0]
-    ev_cp = ecm.EV(charge_mode=ev['charge_mode'],
-                   available=available,
-                   usage=usage,
-                   cp_name=ev_port_name,
-                   max_capacity=ev['max_capacity'],
-                   depth_of_discharge_limit=ev['depth_of_discharge_limit'],
-                   charging_power_limit=ev['charging_power_limit'],
-                   discharging_power_limit=-1e4,
-                   charging_efficiency=ev['charging_efficiency'],
-                   discharging_efficiency=ev['discharging_efficiency'],
-                   initial_state_of_charge=ev['initial_state_of_charge'],
-                   soc_conserv=soc_conserv if soc_conserv else None,
-                   soc_conserv_cost=soc_conserv_cost if soc_conserv_cost else 0.,
-                   interval_duration=ev['interval_duration'],
-                   tod_charging=tod_charging,
-                   trip_slack=True)
+    echo_dict = ev_dict['parameters']
+    echo_dict['available'] = process_field(echo_dict['available'], df)
+    echo_dict['usage'] = process_field(echo_dict['usage'], df)
+    echo_dict['cp_name'] = ev_dict['ports'][0]
+    ev_cp = ecm.EV(**echo_dict)  # pass all our params as kwargs
 
     return ev_cp
+
+
+def create_chiller_node(chiller_dict, df):
+    chiller = ecm.Chiller(**chiller_dict)
+    return chiller
+
+
+def create_boiler(boiler_dict, df):
+    boiler = ecm.GasBoiler(**boiler_dict)
+    return boiler
 
 
 def check_nx_for_floating_nodes(g):
@@ -802,3 +795,18 @@ def get_pyomo_vars_from_port_name(port_name, var_map):
             if not flag:
                 var_names.append(var_name)
     return var_names
+
+def process_field(field, df):
+    """ Checks if a field points to data in a df or if it contains the data directly."""
+    if type(field) is str:
+        vals = get_vals_from_df(df, field)
+    else:
+        vals = field
+    return vals
+
+def get_vals_from_df(df, col_name):
+    try:
+        x = df[col_name]
+        return x.values
+    except IndexError:
+        'No column with name {} in df'.format(col_name)
