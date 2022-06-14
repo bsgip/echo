@@ -795,6 +795,7 @@ class Storage(Port):
     discharging_efficiency: float = 1
     initial_state_of_charge: float
     fixed_storage_capacity: bool = True
+    storage_capacity_cost: Optional[float]
     var_opex: float = 0.
     regularise: bool = False
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
@@ -938,6 +939,9 @@ class Storage(Port):
         if self.soc_conserv is not None:
             objective += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
                              model.Time) * self.soc_conserv_cost
+
+        if self.storage_capacity_cost is not None:
+            objective += getattr(model, self.optimised_capacity)*self.storage_capacity_cost
 
         return objective
 
