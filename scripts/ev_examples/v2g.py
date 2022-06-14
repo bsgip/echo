@@ -1,17 +1,11 @@
 from __future__ import division
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pyomo.util.infeasible import log_infeasible_constraints
 import pprint
 
+from pyomo.util.infeasible import log_infeasible_constraints
 
-from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
 from echo.objectives import *
-from networkx import Graph, draw
 
 ## Set up hyper params
 time_periods = 48  # number of time periods to run the optimisation for

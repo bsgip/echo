@@ -1,11 +1,10 @@
 from __future__ import division
-import time as time_
-
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
 
 import os
+import time as time_
+
+from echo.echo_optimiser import EchoOptimiser
+from echo.objectives import *
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None

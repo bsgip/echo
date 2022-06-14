@@ -1,5 +1,8 @@
+import numpy as np
 from echo.echo_validators import *
-
+from sklearn import linear_model
+import pandas as pd
+import pyomo.environ as en
 
 def _to_values(profile, key):
     if isinstance(profile, dict):
@@ -7,12 +10,71 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
-def set_var_bounds(var_name: str, model, ub: float, lb: float) -> None:
-    """ For setting bounds on pyomo variables"""
+def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or None) -> None:
+    """
+    Updates the bounds on a pyomo variable. Only floats can be used as bounds.
+    Args:
+        model: pyomo concrete model
+        var_name: variable name (str) corresponding to a variable in the model
+        ub: upper bound value, or None
+        lb: lower bound value, or None
+    Returns:
+        None
+    """
     v = getattr(model, var_name)
-    v.setlb(lb)
-    v.setub(ub)
+    if lb is not None:
+        v.setlb(lb)
+    if ub is not None:
+        v.setub(ub)
 
+def set_var_bounds_from_dict(model, var_name: str, ub: dict or None, lb: dict or None) -> None:
+    """
+    Updates the bounds on a pyomo variable using an array of floats.
+    Args:
+        model: pyomo concrete model
+        var_name: variable name (str) corresponding to a variable in the model
+        ub: dict of floats, where dict keys match variable index sets, or None
+        lb: dict of floats, where dict keys match variable index sets, or None
+    Returns:
+        None
+    """
+    v = getattr(model, var_name)
+    if lb is not None:
+        for k, i in lb.items():
+            v[k].setlb(i)
+    if ub is not None:
+        for k, i in ub.items():
+            v[k].setub(i)
+
+def generate_array_constraint(constraint, time_periods: int, expansion_periods: int) -> dict:
+    """
+    Args:
+        constraint: float or array
+    Returns:
+        d: a formatted dict to be used in constraining a variable
+    """
+    d = {}
+    if (type(constraint) is float) or (type(constraint) is int):
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = constraint
+    elif hasattr(constraint, '__iter__'):
+        # Check length
+        if (len(constraint) != time_periods) or (len(constraint) != time_periods*expansion_periods):
+            raise ValueError('Array constraint length is not consistent with time periods/expansion periods.')
+        if len(constraint) == time_periods:
+            # Can tile across expansion periods
+            for p in range(expansion_periods):
+                for t in range(time_periods):
+                    d[(p, t)] = constraint[t]
+        if len(constraint) == time_periods*expansion_periods:
+            # No tiling
+            i = 0
+            for p in range(expansion_periods):
+                for t in range(time_periods):
+                    d[(p, t)] = constraint[i]
+                    i += 1
+    return d
 
 def fix_port_variable(model, var_name: str, new_values: ArrayType, expansion_periods=1):
     """
@@ -65,7 +127,24 @@ def generate_piecewise_input_output_arrays(coeff_array, pts):
     return x, y
 
 
-def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, model):
+def do_multivariate_regression(X, y):
+    """
+    Performs multivariate regression on provided data.
+    Args:
+        X:
+        Y:
+    Returns:
+        coefficient array
+        R^2
+
+    """
+    regr = linear_model.LinearRegression()
+    regr.fit(X, y)
+
+    return regr.coef_, regr.score(X, y)
+
+
+def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, time_periods):
     """ Generates a set of output (y) points based on two coefficient arrays,
     one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
     Args:
@@ -73,7 +152,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
         input_coef: list of coefficients, right to left in increasing order
         temperature_array: list of temperature data for time intervals T
         xpts: number of x points we want to do our piecewise evaluation over
-        model: pyomo concrete model
+        time_periods: number of optimisation time periods
 
     Returns:
         x: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
@@ -90,7 +169,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
     temp_orders = [i for i in range(num_temp_cols)][::-1]
     input_orders = [i for i in range(num_input_cols)][::-1]
 
-    T = len(model.Time)  # get the optimisation time period
+    T = time_periods  # get the optimisation time period
 
     for t in range(T):
         # collect our temperature terms into a single term for this time period
@@ -122,3 +201,8 @@ def add_time_and_expansion_index_to_values(values, time_periods, expansion_perio
             output[(p, t)] = values
 
     return output
+
+
+def create_named_constraint_with_rule(model, con_name, rule):
+    """ Util function for creating pyomo constraints from a rule."""
+    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
