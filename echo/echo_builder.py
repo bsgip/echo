@@ -16,9 +16,9 @@ from echo.echo_validators import ArrayType
 class Network:
     """ A class for holding our network dict"""
     name: Optional[str] = 'default_name'
-    components: {}
-    edges: {}
-    objectives: {}
+    components = {}
+    edges = {}
+    objectives = {}
 
     def add_asset_dict(self, node_id: str, node_type: str, ports: list, units: str = None, node_data: str = None):
         d = {'id': node_id, 'type': node_type}
