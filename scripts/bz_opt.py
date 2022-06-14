@@ -43,15 +43,18 @@ n = BZNetwork()
 
 # Create a BSP node
 n.add_flex_asset_dict(node_id='BSP1', ports=['downstream'])
-# Create a connection pt node
-ports = list(anu_network.keys()).append('upstream')
-n.add_flex_asset_dict(node_id='CP1', ports=ports)
+# Create a connection pt node with one port per feeder
+port_list = list(anu_network.keys())
+port_list.append('upstream')
+n.add_flex_asset_dict(node_id='CP1', ports=port_list)
 
 # Walk through feeders
 for feeder_name, sub_dict in anu_network.items():
     port_list = list(sub_dict.keys())
     port_list.append('upstream')
     # Create node for each feeder, which has ports for all connected subs plus an upstream port
+    if feeder_name == 'upstream':
+        print('error')
     n.add_flex_asset_dict(node_id=feeder_name, ports=port_list)
     # Do edges - need to look one level up in the hierarchy
     edge_name = feeder_name + '_CP1'  # we know the level up is CP1
@@ -61,6 +64,8 @@ for feeder_name, sub_dict in anu_network.items():
         # Create node for each substation
         port_list = bldg_list
         port_list.append('upstream')
+        if sub_name == 'upstream':
+            print('error')
         n.add_flex_asset_dict(node_id=sub_name, ports=port_list)
         # Do edges
         edge_name = sub_name + feeder_name  # get the feeder from lvl above
