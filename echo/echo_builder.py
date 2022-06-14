@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -8,6 +10,51 @@ import echo.echo_models as ecm
 import echo.objectives as obj
 from echo.configuration import *
 from echo.echo_optimiser import EchoOptimiser
+from echo.echo_validators import ArrayType
+
+
+class Network:
+    """ A class for holding our network dict"""
+    name: Optional[str] = 'default_name'
+    components: {}
+    edges: {}
+    objectives: {}
+
+    def add_asset_dict(self, node_id: str, node_type: str, ports: list, units: str = None, node_data: str = None):
+        d = {'id': node_id, 'type': node_type}
+        if units:
+            d['units'] = units
+        d['ports'] = ports
+        if node_data:
+            d['data'] = node_data
+        self.components[node_id] = d
+
+    def add_flex_node(self, node_id: str, ports: list):
+        self.add_asset_dict(node_id=node_id, node_type='flex', ports=ports, units='kW')
+
+    def add_tellegen_node(self, node_id: str, ports: list, units: str):
+        self.add_asset_dict(node_id=node_id, node_type='tellegen', ports=ports, units=units)
+
+    def add_data_node(self, node_id: str, node_type: str, node_data: Union[str, ArrayType], ports: list, units: str):
+        self.add_asset_dict(node_id=node_id, node_type=node_type, ports=ports, node_data=node_data, units=units)
+
+    def add_node_parameters(self, node_id: str, param_dict: dict):
+        self.components[node_id]['parameters'] = param_dict
+
+    def add_edge(self, edge_name, node_tuple, port_tuple, res):
+        e = {'nodes': node_tuple, 'ports': port_tuple, 'res': res}
+        self.edges[edge_name] = e
+
+    def add_port_to_node(self, node_id: str, port_name: str):
+        self.components[node_id]['ports'].append(port_name)
+
+    def add_objective(self, obj_name: str, obj_type: str, component: dict = None, prices: ArrayType = None):
+        o = {'type': obj_type}
+        if component:
+            o['component'] = component
+        if prices:
+            o['prices'] = prices
+        self.objectives[obj_name] = o
 
 
 class NetworkSet:
@@ -796,6 +843,7 @@ def get_pyomo_vars_from_port_name(port_name, var_map):
                 var_names.append(var_name)
     return var_names
 
+
 def process_field(field, df):
     """ Checks if a field points to data in a df or if it contains the data directly."""
     if type(field) is str:
@@ -803,6 +851,7 @@ def process_field(field, df):
     else:
         vals = field
     return vals
+
 
 def get_vals_from_df(df, col_name):
     try:
