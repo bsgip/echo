@@ -1,16 +1,15 @@
 import uuid
+from typing import Optional, Union, List, TypeVar
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
-from networkx import Graph
 import pyomo.environ as en
+from networkx import Graph
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import validator, root_validator, confloat
+
 from echo.configuration import *
 from echo.constants import *
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validator, root_validator, NegativeFloat, PositiveFloat, confloat
-from typing import Optional, Union, List, Container, TypeVar
-from echo.echo_validators import *
 from echo.utils import *
 
 DataFrame = TypeVar('pandas.core.frame.DataFrame')
@@ -194,10 +193,9 @@ class Port(BaseModel):
     flows: int = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
     import_constraint: int = FlowConstraint.NA
-    import_constraint_value: Union[
-        dict, float, None] = None  # Use Union because this could be a list, or a float, or None. todo maybe make this optional
+    import_constraint_value: Union[ArrayType, float, None] = None
     export_constraint: int = FlowConstraint.NA
-    export_constraint_value: Union[dict, float, None] = None
+    export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
     optional: bool = False
@@ -213,6 +211,10 @@ class Port(BaseModel):
     is_pos: Optional[str]
     neg: Optional[str]  # todo don't love having to define every one of these.. is there an alternative?
     active: Optional[str]
+
+    # Validators for import/export constraint values
+    import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
+    export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -241,15 +243,12 @@ class Port(BaseModel):
         """
         if max_import is not None:
             self.import_constraint = FlowConstraint.Fixed
-        else:
-            self.import_constraint = FlowConstraint.NoConstraint
-        self.import_constraint_value = max_import
+            self.import_constraint_value = max_import
 
         if max_export is not None:
             self.export_constraint = FlowConstraint.Fixed
-        else:
-            self.export_constraint = FlowConstraint.NoConstraint
-        self.export_constraint_value = max_export
+            self.export_constraint_value = max_export
+
         if slack is not None:
             self.slack = slack
 
@@ -279,24 +278,6 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-        if self.export_constraint_value is not None:
-            if type(self.export_constraint_value) is int or type(self.export_constraint_value) is float:
-                if self.export_constraint_value > 0:
-                    raise ConfigurationError('Enter export constraint using positive load convention.')
-            else:
-                for i in self.export_constraint_value:
-                    if i > 0:
-                        raise ConfigurationError('Enter export constraint using positive load convention.')
-
-        if self.import_constraint_value is not None:
-            if type(self.import_constraint_value) is int or type(self.import_constraint_value) is float:
-                if self.import_constraint_value < 0:
-                    raise ConfigurationError('Enter import constraint using positive load convention.')
-            else:
-                for i in self.import_constraint_value:
-                    if i < 0:
-                        raise ConfigurationError('Enter import constraint using positive load convention.')
-
     def initialise_port(self, model):
         """
 
@@ -307,27 +288,22 @@ class Port(BaseModel):
 
         """
 
+        time_periods = len(model.Time)
+        exp_periods = len(model.Expansion)
+
         domain = en.Reals
         if self.flows is Flows.Export:
             domain = en.NonPositiveReals
         elif self.flows is Flows.Import:
             domain = en.NonNegativeReals
 
+        setattr(model, self.port_name,
+                en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
+
         if self.opt_type is OptimisationType.Parameter:
-            setattr(model, self.port_name,
-                    en.Param(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
+            getattr(model, self.port_name).fix()
 
-        if self.opt_type is OptimisationType.Variable:
-            setattr(model, self.port_name,
-                    en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
-
-        # Import/export capacity constraint rules
-        def import_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= getattr(model, self.import_con_val)[p, t]
-
-        def export_cap_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= getattr(model, self.export_con_val)[p, t]
-
+        # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
             return getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t] <= \
                    getattr(model, self.import_con_val)[p, t]
@@ -342,50 +318,40 @@ class Port(BaseModel):
         def import_cap_slack_max_rule(model, p, t):
             return getattr(model, self.import_slack)[p, t] >= getattr(model, self.import_slack_max)
 
-        def generate_array_cons(val):
-            d = {}
-            if (type(val) is int) or (type(val) is float):
-                for i in model.Time:
-                    d[(0, i)] = val
+        if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
+            con_name = 'import_con_' + self.port_name
+            # Generate an array of constraints (ie indexed by time and expansion period)
+            import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
+            setattr(model, self.import_con_val,
+                    en.Param(model.Expansion, model.Time, initialize=import_constraint_dict, domain=en.NonNegativeReals))
+
+            if self.slack is True:
+                setattr(model, self.import_slack,
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
+                con_name = 'import_con_max_' + self.port_name
+                setattr(model, self.import_slack_max,
+                        en.Var(initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
             else:
-                for i in model.Time:
-                    d[(0, i)] = val[i]
-            return d
+                set_var_bounds_from_dict(model, self.port_name, ub=import_constraint_dict, lb=None)
 
-        if self.import_constraint is FlowConstraint.Fixed:
-            if self.opt_type is not OptimisationType.Parameter:  # only apply these constraints to variables
-                con_name = 'import_con_' + self.port_name
-                constraint_array = generate_array_cons(self.import_constraint_value)
-                setattr(model, self.import_con_val,
-                        en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonNegativeReals))
+        if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
+            con_name = 'export_con_' + self.port_name
+            export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
+            setattr(model, self.export_con_val,
+                    en.Param(model.Expansion, model.Time, initialize=export_constraint_dict, domain=en.NonPositiveReals))
 
-                if self.slack is True:
-                    setattr(model, self.import_slack,
-                            en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
-                    con_name = 'import_con_max_' + self.port_name
-                    setattr(model, self.import_slack_max,
-                            en.Var(initialize=0, domain=en.NonPositiveReals))
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
-                else:
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule))
-        if self.export_constraint is FlowConstraint.Fixed:
-            if self.opt_type is not OptimisationType.Parameter:  # only apply these constraints to variables
-                con_name = 'export_con_' + self.port_name
-                constraint_array = generate_array_cons(self.export_constraint_value)
-                setattr(model, self.export_con_val,
-                        en.Param(model.Expansion, model.Time, initialize=constraint_array, domain=en.NonPositiveReals))
-
-                if self.slack is True:
-                    setattr(model, self.export_slack,
-                            en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
-                    con_name = 'export_con_max_' + self.port_name
-                    setattr(model, self.export_slack_max,
-                            en.Var(initialize=0, domain=en.NonNegativeReals))
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
-                else:
-                    setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule))
+            if self.slack is True:
+                setattr(model, self.export_slack,
+                        en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
+                con_name = 'export_con_max_' + self.port_name
+                setattr(model, self.export_slack_max,
+                        en.Var(initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
+            else:
+                set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
 
         if self.active_periods is not None:
             def on_off_rule1(model, p, t):
@@ -419,11 +385,11 @@ class Port(BaseModel):
         def only_pos_or_neg_one(model, p, t):
             return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
 
-        def only_pos_or_neg_two(model, p, t):
-            return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
-
         setattr(model, f"pos_neg_con1_{self.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
+
+        def only_pos_or_neg_two(model, p, t):
+            return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
 
         setattr(model, f"pos_neg_con2_{self.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
@@ -438,48 +404,36 @@ class Port(BaseModel):
         return constraint
 
     def add_initial_value(self, initial_value):
-        """
-        Adds initial port value which will be used to initialise the pyomo var/param
-
+        """ Adds initial port value which will be used to initialise the pyomo var/param
         Args:
             initial_value: dict of initial values
-
         """
         self.initial_value = initial_value
 
     def add_initial_value_from_array(self, array, expansion_periods=1):
-        """
-        Adds initial port value which is used to initialise the pyomo var/param
-
+        """ Adds initial port value which is used to initialise the pyomo var/param
         Args:
             array: array, list of initial values
             expansion_periods: number of expansion periods (int)
-
         """
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
     def add_active_periods_from_array(self, array, expansion_periods=1):
-        """
-        Adds port active periods
-
+        """ Adds port active periods
         Args:
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
-
         """
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         self.active_periods = vals
 
     def add_objective(self, model):
-        """
-        Adds port-specific objective terms to pyomo model
-
+        """ Adds port-specific objective terms to pyomo model
         Args:
             model: pyomo concrete model
-
         """
         objective = 0
         if self.slack is True:
@@ -496,10 +450,8 @@ class Port(BaseModel):
 
 class Node(BaseModel):
     """
-
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
-
     """
     node_name: Optional[str]
     uid: Optional[uuid.UUID]
@@ -517,8 +469,7 @@ class Node(BaseModel):
             self.uid)  # we define the node uid and name like this so that the user can redefine them if desired.
 
     def add_flex_port(self, name, unit=Units.NA):
-        """
-        Adds named port of specified type to node.
+        """ Adds named port of specified type to node.
         Args:
             name: port name as string
             unit: Unit
@@ -543,16 +494,14 @@ class Node(BaseModel):
             self.add_flex_port(name, unit)
 
     def add_transformation(self, transformation_obj):
-        """
-        Adds a transformation object to a node.
+        """ Adds a transformation object to a node.
         Args:
             transformation_obj: Transform
         """
         self.transformations[transformation_obj.uid] = transformation_obj
 
     def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
-        """
-        Creates an emission transformation and adds to the node.
+        """ Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
             carbon_port: port object that represents carbon flows
@@ -625,10 +574,8 @@ class Node(BaseModel):
 
 class Edge(BaseModel):
     """
-
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
-
     """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     edge_name: Optional[str] = None
@@ -636,16 +583,14 @@ class Edge(BaseModel):
     vertices: tuple
     tariff: Optional[Union[list, None]]
 
-    @root_validator()
-    def assign_edge_name(cls, values):
-        uid = values.get("uid")
-        if uid is not None:
-            values["edge_name"] = 'edge_' + str(uid)
-        return values
+    def __int__(self, **data):
+        super().__init__(**data)
+        if self.edge_name is None:
+            self.edge_name = 'edge_' + str(self.uid)
+
 
     def add_vertices(self, obj1, obj2):
-        """
-        Adds edge vertices (which are ports)
+        """ Adds edge vertices (which are ports)
         Args:
             obj1: port object
             obj2: port object
@@ -662,10 +607,9 @@ class Edge(BaseModel):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
 
     def initialise_edge(self, model):
-        """
-        Applies edge constraint
+        """ Applies edge constraint: port1 = -1 *port2
         Args:
-            mode: pyomo concrete model
+            model: pyomo concrete model
         """
 
         port1 = self.vertices[0]
@@ -675,19 +619,16 @@ class Edge(BaseModel):
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
 
-    def factory_constraint_edge_builder(self, obj1, obj2):
+    @staticmethod
+    def factory_constraint_edge_builder(obj1, obj2):
         def constraint(model, expansion_interval, time_interval):
             return getattr(model, obj1)[expansion_interval, time_interval] + \
                    getattr(model, obj2)[expansion_interval, time_interval] == 0
 
         return constraint
 
-    def add_objective(self, model):
-        # Todo add edge tariffs here
-        return 0
-
     def add_initial_edge_capacity(self, initial_capacity):
-        self.initial_edge_capacity = initial_capacity
+        raise ConfigurationError('Not implemented')
 
 
 class Transform(BaseModel):
@@ -705,25 +646,21 @@ class Transform(BaseModel):
             self.transform_name = 'transform_' + str(self.uid)
 
     def add_rhs_term(self, var, rule, weight):
-        """
-        Adds a right hand side (RHS) term to the transform
+        """ Adds a right hand side (RHS) term to the transform
         Args:
             var: pyomo var name
             rule: TransformationRule object
             weight: linear factor (float)
-
         """
         term = {'var': var, 'rule': rule, 'weight': weight}
         self.rhs.append(term)
 
     def add_lhs_term(self, var, rule, weight):
-        """
-        Adds a left hand side (RHS) term to the transform
+        """ Adds a left hand side (RHS) term to the transform
         Args:
             var: pyomo var name
             rule: TransformationRule object
             weight: linear factor (float)
-
         """
         term = {'var': var, 'rule': rule, 'weight': weight}
         self.lhs.append(term)
@@ -875,29 +812,7 @@ class Storage(Port):
     trip_slack: Optional[str]
     optimised_capacity: Optional[str]
 
-    @root_validator()
-    def dod_checks(cls, values):
-        # Check which dod representation we have
-        dod_lim = values.get('depth_of_discharge_limit')
-        max_cap = values.get('max_capacity')
-        init_soc = values.get('initial_state_of_charge')
-        # Check dod representation
-        if 0 <= dod_lim <= 1:
-            # Assume decimal representation
-            min_soc = max_cap * dod_lim
-        elif 1 < dod_lim <= 100:
-            # Assume percentage representation
-            min_soc = max_cap * dod_lim / 100.0
-        else:
-            raise ValueError('DoD must be entered as decimal fraction or percentage of max capacity')
-        # Check initial soc is within bounds
-        if (init_soc < min_soc) or (init_soc > max_cap):
-            raise ValueError(
-                'Initial state of charge, {}, must be between min soc, {}, and max capacity, {}'.format(init_soc,
-                                                                                                        min_soc,
-                                                                                                        max_cap))
-        values['min_soc'] = min_soc
-        return values
+    dod_check = root_validator(allow_reuse=True)(dod_checks)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -942,17 +857,8 @@ class Storage(Port):
 
         setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
 
-        def charging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.charging_power_limit
-
-        setattr(model, f"charge_lim_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=charging_limit_rule))
-
-        def discharging_limit_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.discharging_power_limit
-
-        setattr(model, f"discharge_lim_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=discharging_limit_rule))
+        # Apply charging constraints as bounds on port_name variable
+        set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
 
         def SOC_rule(model, p, t):
             if t == 0:
@@ -1052,17 +958,8 @@ class ControlledLoadOrGen(FlexPort):
     def initialise_port(self, model):
         super(ControlledLoadOrGen, self).initialise_port(model)
 
-        def min_power_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= self.min_power
-
-        setattr(model, f"cons_{self.port_name}_min_power",
-                en.Constraint(model.Expansion, model.Time, rule=min_power_rule))
-
-        def max_power_rule(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= self.max_power
-
-        setattr(model, f"cons_{self.port_name}_max_power",
-                en.Constraint(model.Expansion, model.Time, rule=max_power_rule))
+        # Set bounds using min and max power
+        set_float_var_bounds(model=model, var_name=self.port_name, ub=self.max_power, lb=self.min_power)
 
         if self.min_utilisation is not None:
             def sum_of_energy_must_be_greater_than_min(model):
@@ -1141,30 +1038,15 @@ class ElectricalGeneration(Source):
         self.add_initial_value(generation)
 
     def add_generation_profile_from_array(self, array, expansion_periods=1):
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
+        self.add_initial_value_from_array(array, expansion_periods)
 
     def initialise_port(self, model):
-        self.port_name_max = 'port_max_' + self.port_name
-        setattr(model, self.port_name_max, en.Param(model.Expansion, model.Time,
-                                                    initialize=self.initial_value, domain=en.NonPositiveReals))
-        setattr(model, self.port_name, en.Var(model.Expansion, model.Time,
-                                              initialize=self.initial_value, domain=en.NonPositiveReals))
-        if self.curtailable:
-            def gen_less_than_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] >= getattr(model, self.port_name_max)[p, t]
-
-            setattr(model, f"cons_{self.port_name}_curtailment",
-                    en.Constraint(model.Expansion, model.Time, rule=gen_less_than_max_gen))
+        setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=en.NonPositiveReals))
+        if self.curtailable is False:
+            getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
-            # TODO This could be simplified to only set solar_p as a Param on initialisation
-            def gen_equal_max_gen(model, p, t):
-                return getattr(model, self.port_name)[p, t] == getattr(model, self.port_name_max)[p, t]
-
-            setattr(model, f"cons_{self.port_name}_curtailment",
-                    en.Constraint(model.Expansion, model.Time, rule=gen_equal_max_gen))
-
+            # Constrain solar gen to be within initial value (max value)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
 
 class ElectricalStorage(Storage):
     units = Units.KW
@@ -1187,8 +1069,8 @@ class Inverter(ElectricalNode):
     max_export: Union[float, None]
     dc_ac_efficiency: confloat(ge=0, le=1)
     ac_dc_efficiency: confloat(ge=0, le=1)
-    dc_ports: dict = {}
-    ac_port_name: str = None  # There should generally only be one ac port, so we can just keep its name
+    dc_ports: Optional[dict] = {}
+    ac_port_name: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
     node_rule: int = NodeRule.Custom
 
     def add_dc_port(self, port_name):
@@ -1206,6 +1088,9 @@ class Inverter(ElectricalNode):
             self.ports[port_name] = p
 
     def verify_node(self):
+        # Check that we have at least one ac and one dc port
+        assert self.ac_port_name is not None, 'Define at least one ac port on inverter.'
+        assert self.dc_ports is not None, 'Define at least one dc port on inverter.'
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
         named_ports = [self.ac_port_name]
@@ -1358,7 +1243,7 @@ class EV(ElectricalNode):
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
             fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
             fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility,
-                                   expansion_periods=1)
+                              expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
@@ -1427,17 +1312,24 @@ class CarbonSinkNode(Node):
 
 
 class GasBoiler(Node):
-    """ Gas boiler converts gas to thermal energy """
+    """ Gas boiler converts gas to heat at a fixed COP."""
     gas_to_heat_efficiency: float
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        self._create_input_port()
+        self._create_output_port()
+        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
+
+    def _create_input_port(self):
         gp = GasPort()
         gp.flows = Flows.Import
+        self.ports['input'] = gp
+
+    def _create_output_port(self):
         tp = ThermalPort()
         tp.flows = Flows.Export
-        self.ports = {'gas': gp, 'heat': tp}
-        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
+        self.ports['output'] = tp
 
     def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
         # Create appropriate transformation
@@ -1447,19 +1339,20 @@ class GasBoiler(Node):
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
 
+
 class InputOutputPiecewiseNode(Node):
     """ A node with one input and one output.
      The transformation between input and output is defined by an array of input and output pts,
      which are used to construct a linear piecewise function.
      Alternatively, the transformation can be defined by an array of coefficients of a polynomial function."""
     node_rule = NodeRule.Custom
+    max_input: confloat(ge=0.)
+    max_output: confloat(le=0.)
     input_pts: Optional[dict]
     output_pts: Optional[dict]
     temp_coef: Optional[ArrayType]
     input_coef: Optional[ArrayType]
     n_pts: Optional[int] = 5
-    max_input: confloat(ge=0.)
-    max_output: confloat(le=0.)
     temperature_array: Optional[ArrayType]  # temperature time series
 
     def __init__(self, **data):
@@ -1515,11 +1408,11 @@ class InputOutputPiecewiseNode(Node):
                                                                                         input_coef=self.input_coef,
                                                                                         temperature_array=self.temperature_array,
                                                                                         xpts=x,
-                                                                                        model=model)
+                                                                                        time_periods=len(model.Time))
 
         # Bound our input and output variables
-        set_var_bounds(var_name=self.ports['input'].port_name, model=model, lb=0., ub=self.max_input)
-        set_var_bounds(var_name=self.ports['output'].port_name, model=model, lb=self.max_output, ub=0.)
+        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.max_input, lb=0.)
+        set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.max_output)
 
     def apply_node_constraints(self, model):
 
@@ -1552,7 +1445,7 @@ class InputOutputPiecewiseNode(Node):
 
 class HeatPump(InputOutputPiecewiseNode):
     """
-    A heat pump converts an electrical input to a thermal heating or cooling output.
+    A heat pump converts an electrical input to hot water which can be used for heating, and chilled water which can be used for cooling.
     """
 
 

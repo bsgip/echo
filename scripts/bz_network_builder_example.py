@@ -1,7 +1,19 @@
 import pandas as pd
 from echo.echo_builder import *
+from echo.bz_utils import *
 
 time_periods = 48
+
+# Import network data as json
+netw_jsn = get_anu_electrical_network_json()
+
+# Import time series data as df
+# Units are SI (Watts)
+df = get_cleaned_electrical_data()
+
+b = ['B1', 'B2']
+c = building_name_match_wrapper(b, df)
+
 
 # Dummy data
 df = pd.DataFrame({

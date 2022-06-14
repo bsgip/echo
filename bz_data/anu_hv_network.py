@@ -1,4 +1,4 @@
-""" Manually defined HV network for Acton campus"""
+""" Manually defined HV components for Acton campus"""
 """
 
 Feeder name (eg Avenue) --> substation id (AVE00739) --> building list
