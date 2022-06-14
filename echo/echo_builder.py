@@ -41,9 +41,14 @@ class Network:
     def add_node_parameters(self, node_id: str, param_dict: dict):
         self.components[node_id]['parameters'] = param_dict
 
-    def add_edge(self, edge_name, node_tuple, port_tuple, res):
+    def add_edge(self, node_tuple, port_tuple, res, edge_name: str = None):
         e = {'nodes': node_tuple, 'ports': port_tuple, 'res': res}
-        self.edges[edge_name] = e
+        if edge_name:
+            self.edges[edge_name] = e
+        else:
+            # Autoname it by concatenating node names
+            edge_name = node_tuple[0] + '_' + node_tuple[1]
+            self.edges[edge_name] = e
 
     def add_port_to_node(self, node_id: str, port_name: str):
         self.components[node_id]['ports'].append(port_name)
@@ -55,6 +60,19 @@ class Network:
         if prices:
             o['prices'] = prices
         self.objectives[obj_name] = o
+
+    # todo future methods
+    def create_tellegen_network_from_dict(self, dict):
+        # Creates a network of only tellegen nodes from a hierarchical dictionary
+        # Could use this to automatically generate the network topologies, and add in asset nodes later
+        pass
+
+    def add_edge_no_ports(self, edge_name, node_tuple, res):
+        # Adds an edge between two nodes with no specified ports
+        # First create a port on each node
+        self.add_port_to_node(node_id=node_tuple[0], port_name=node_tuple[1])
+        self.add_port_to_node(node_id=node_tuple[1], port_name=node_tuple[0])
+        self.add_edge(edge_name=edge_name, node_tuple=node_tuple, port_tuple=node_tuple, res=res)
 
 
 class NetworkSet:
