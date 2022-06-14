@@ -14,6 +14,7 @@ df = get_cleaned_electrical_data()
 #todo
 asset_info = {}
 
+# Create an echo network
 n = Network()
 
 # Create a BSP node
