@@ -39,7 +39,6 @@ class NodeRule(object):
 
 
 class TransformRule(object):
-
     NA = 0
     Both = 1
     PositiveComponent = 2
@@ -51,6 +50,51 @@ class ExpansionType(object):
     Storage = 1
     Generation = 2
     Edge = 3
+
+class NodeType(object):
+    Flex = 'flex'
+    Tellegen = 'tellegen'
+    Battery = 'battery'
+    Load = 'load'
+    Generation = 'gen'
+    Solar = 'solar'
+    EV = 'ev'
+    Inverter = 'inverter'
+    Chiller = 'chiller'
+    Boiler = 'boiler'
+    ControlledLoad = 'cload'
+    ControlledGen = 'cgen'
+    FixedPort = 'fixed_port'
+    CarbonAggregation = 'carbon_agg'
+    HeatPump = 'heatpump'
+
+class Resource(object):
+    Electricity = 0
+    Gas = 1
+    Thermal = 2
+    CO2 = 3
+
+class TariffType:
+    import_tariff = 'import_tariff'
+    export_tariff = 'export_tariff'
+    import_demand_tariff = 'import_demand_tariff'
+    export_demand_tariff = 'export_demand_tariff'
+    time = 'daily'
+
+class TariffUnits:
+    kWh = 'kWh'
+    kW = 'kW'
+    day = 'day'
+    kVA = 'kVA'
+
+class Resets:
+    minute = 'min'
+    hourly = 'hourly'
+    daily = 'daily'
+    weekly = 'weekly'
+    yearly = 'yearly'
+
+
 
 # Define some useful container objects to define the optimisation objectives
 
