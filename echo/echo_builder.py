@@ -20,7 +20,12 @@ class Network:
     edges = {}
     objectives = {}
 
-    def add_asset_dict(self, node_id: str, node_type: NodeType, ports: list, units: Units = None, node_data: str = None):
+    def to_dict(self):
+        d = {'name': self.name, 'components': self.components, 'edges': self.edges, 'objectives': self.objectives}
+        return d
+
+    def add_asset_dict(self, node_id: str, node_type: NodeType, ports: list, units: Units = None,
+                       node_data: str = None):
         d = {'id': node_id, 'type': node_type}
         if units:
             d['units'] = units
@@ -29,20 +34,28 @@ class Network:
             d['data'] = node_data
         self.components[node_id] = d
 
-    def add_flex_node(self, node_id: str, ports: list):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Flex, ports=ports, units=Units.KW)
+    def add_flex_node(self, node_id: str, ports: list, units: Units):
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.Flex, ports=ports, units=units)
 
     def add_tellegen_node(self, node_id: str, ports: list, units: Units):
         self.add_asset_dict(node_id=node_id, node_type=NodeType.Tellegen, ports=ports, units=units)
 
-    def add_data_node(self, node_id: str, node_type: NodeType, node_data: Union[str, ArrayType], ports: list, units: Units):
+    def add_battery_node(self, node_id, ports: list, param_dict: dict = None):
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.Battery, ports=ports)
+        if param_dict:
+            self.add_node_parameters(node_id=node_id, param_dict=param_dict)
+
+    def add_data_node(self, node_id: str, node_type: NodeType, node_data: Union[str, ArrayType], ports: list,
+                      units: Units):
         self.add_asset_dict(node_id=node_id, node_type=node_type, ports=ports, node_data=node_data, units=units)
 
     def add_node_parameters(self, node_id: str, param_dict: dict):
         self.components[node_id]['parameters'] = param_dict
 
-    def add_edge(self, node_tuple, port_tuple, res, edge_name: str = None):
-        e = {'nodes': node_tuple, 'ports': port_tuple, 'res': res}
+    def add_edge(self, node_tuple: tuple, port_tuple: tuple, res=None, edge_name: str = None):
+        e = {'nodes': node_tuple, 'ports': port_tuple}
+        if res:
+            e['res'] = res
         if edge_name:
             self.edges[edge_name] = e
         else:

@@ -6,6 +6,9 @@ class Units(object):
     CO2 = 2  # Instantaneous CO2e emissions (in kg)
     KWT = 3  # Instantaneous thermal power
     JPS = 4  # Joules per second
+    KWh = 5  # kWh
+    kVA = 6  # kVA - apparent power
+    kVAR = 7  # reactive power
 
 
 class Flows(object):
@@ -75,24 +78,18 @@ class Resource(object):
     CO2 = 3
 
 class TariffType:
-    import_tariff = 'import_tariff'
-    export_tariff = 'export_tariff'
-    import_demand_tariff = 'import_demand_tariff'
-    export_demand_tariff = 'export_demand_tariff'
-    time = 'daily'
-
-class TariffUnits:
-    kWh = 'kWh'
-    kW = 'kW'
-    day = 'day'
-    kVA = 'kVA'
+    import_tariff = 0
+    export_tariff = 1
+    import_demand_tariff = 2
+    export_demand_tariff = 3
+    time = 4
 
 class Resets:
-    minute = 'min'
-    hourly = 'hourly'
-    daily = 'daily'
-    weekly = 'weekly'
-    yearly = 'yearly'
+    minute = 0
+    hourly = 1
+    daily = 2
+    weekly = 3
+    yearly = 4
 
 
 
