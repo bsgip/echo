@@ -1,29 +1,41 @@
-
+from echo.bz_config import *
 # Elec tariffs - 2022 bill
 elec_tariffs = {}
 # Retail energy tariffs ($/kWh)
-elec_tariffs['retail_energy_offpeak'] = {'rate': 0.053320}
-elec_tariffs['retail_energy_shoulder'] = {'rate': 0.090416}
-elec_tariffs['retail_energy_business'] = {'rate': 0.090416}
+elec_tariffs['retail_energy_offpeak'] = {'rate': 0.053320,
+                                         'type': TariffType.import_tariff}
+elec_tariffs['retail_energy_shoulder'] = {'rate': 0.090416,
+                                          'type': TariffType.import_tariff}
+elec_tariffs['retail_energy_business'] = {'rate': 0.090416,
+                                          'type': TariffType.import_tariff}
 # Network energy tariffs ($/kWh)
-elec_tariffs['network_offpeak'] = {'rate': 0.032460}
-elec_tariffs['network_business'] = {'rate': 0.091300}
-elec_tariffs['network_shoulder'] = {'rate': 0.054}
+elec_tariffs['network_offpeak'] = {'rate': 0.032460,
+                                   'type': TariffType.import_tariff}
+elec_tariffs['network_business'] = {'rate': 0.091300,
+                                    'type': TariffType.import_tariff}
+elec_tariffs['network_shoulder'] = {'rate': 0.054,
+                                    'type': TariffType.import_tariff}
 # supply charge ($/days)
-elec_tariffs['supply_charge'] = {'rate': 21.864}
-# HV demand charges ($/kVA/day)
+elec_tariffs['supply_charge'] = {'rate': 21.864,
+                                 'type': TariffType.time}
+# HV demand charges ($/kVA/day) #todo we don't have kVA data - could assume a constant pf
 elec_tariffs['HV_capacity_charge'] = {'rate': 0.17420}
 elec_tariffs['HV_demand_charge'] = {'rate': 0.17420}
 # Metering charges ($/day)
-elec_tariffs['metering_charge'] = {'rate': 2.19180}
+elec_tariffs['metering_charge'] = {'rate': 2.19180,
+                                   'type': TariffType.time,
+                                   'reset': Resets.daily}
 # Market charges ($/kWh)
 elec_tariffs['ancillary_services_charges'] = {'rate': 0.000414}
 elec_tariffs['pool_fees'] = {'rate': 0.000767}
-# RET
-elec_tariffs['LRET'] = {'rate': 0.003078}
-elec_tariffs['SRES'] = {'rate': 0.011232}
+# RET ($/kWh)
+elec_tariffs['LRET'] = {'rate': 0.003078,
+                        'type': TariffType.import_tariff}
+elec_tariffs['SRES'] = {'rate': 0.011232,
+                        'type': TariffType.import_tariff}
 # Other
-elec_tariffs['energy_efficiency_scheme'] = {'rate': 0.003860}
+elec_tariffs['energy_efficiency_scheme'] = {'rate': 0.003860,
+                                            'type': TariffType.import_tariff}
 
 # Gas tariffs
 # STTM = short term trading market
