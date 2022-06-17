@@ -24,9 +24,11 @@ def test_simple_load_shedding():
 
     load = Node()
     l1 = ElectricalDemand()
-    l1.add_demand_profile_from_array([5]*time_periods)
+    demand = [5]*24 + [0]*24
+    l1.add_demand_profile_from_array(demand)
     l1.can_be_shed = True
-    l1.shed_cost = 0.
+    l1.shed_cost = 0.2
+    l1.max_shed_duration = 2
     load.ports['load'] = l1
 
     system.add_node_obj([grid, load])
@@ -42,12 +44,16 @@ def test_simple_load_shedding():
     )
     # minimise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, l1.port_name)[p, i]
+    optimiser.objective += sum(getattr(optimiser.model, l1.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
-    optimiser.optimise()
+    optimiser.optimise(tee=True)
+    print(optimiser.opt_status)
     grid_export = optimiser.values(grid.ports['grid'].neg, 0)
     load_import = optimiser.values(l1.port_name, 0)
+    load_shed = optimiser.values(l1.is_shed)
 
-    np.testing.assert_almost_equal(sum(grid_export)*-1 * 30.0 / 60.0, 10.0)
-    #assert sum(optimiser.values(grid.ports['grid'].neg, 0))*-1 * 30.0 / 60.0 == 10.0
+    for i in range(time_periods):
+        assert load_import[i] == demand[i] * (1 - load_shed[i])
+
+    assert sum(load_shed) <= l1.max_shed_duration

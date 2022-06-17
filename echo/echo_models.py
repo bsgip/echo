@@ -1017,11 +1017,17 @@ class ElectricalDemand(Sink):
     units = Units.KW
     import_constraint = FlowConstraint.NoConstraint
     # Load shedding attributes
-    can_be_shed: bool = False  # Attribute for determining whether a load can be shed (ie turned off for some period)
-    max_shed_duration: int = 0  # number of consecutive periods for which load can be shed (ie turned off)
-    shed_cost: int = 0  # cost for load shedding, cost per kWh
+    can_be_shed: Optional[bool] = False # Attribute for determining whether a load can be shed (ie set to 0 for some period)
+    max_shed_duration: Optional[int]  # number of consecutive periods for which load can be shed (ie set to 0)
+    shed_cost: Optional[float] = 0 # cost for load shedding, cost per time unit that shedding occurs
 
     is_shed: Optional[str]
+    consec_shed: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.is_shed = 'shed_' + self.port_name
+        self.consec_shed = 'consec_' + self.port_name
 
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
@@ -1035,33 +1041,35 @@ class ElectricalDemand(Sink):
 
     def initialise_port(self, model):
         super(ElectricalDemand, self).initialise_port(model)
-        # Need to unfix our demand to allow the optimiser to decide whether demand is shed.
+        # Need to unfix our demand to allow the optimiser to decide new demand values
         var = getattr(model, self.port_name)
         var.unfix()
 
-        # Create var
         if self.can_be_shed is True:
-            self.is_shed = 'shed_' + self.port_name
             setattr(model, self.is_shed, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
-            # Additional big M constraint
-            def shed_rule1(model, p, t):
-                return getattr(model, self.port_name)[p, t] <= getattr(model, self.is_shed)[p, t] * model.bigM
+            # Additional constraint for load shedding
+            def shed_rule(model, p, t):
+                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * (1-getattr(model, self.is_shed)[p, t])
 
-            def shed_rule2(model, p, t):
-                return getattr(model, self.port_name)[p, t] >= - getattr(model, self.is_shed)[p, t] * model.bigM
+            setattr(model, f"shedding_con_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule))
 
-            def on_off_rule_param(model, p, t):
-                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * getattr(model, self.is_shed)[p, t]
+            # Constraint on max duration of shedding
+            setattr(model, self.consec_shed, en.Var(model.Expansion, model.Time, initialize=0,
+                                                    bounds=(0, self.max_shed_duration), domain=en.NonNegativeReals))
+            def max_shed_duration_rule(model, p, t):
+                if t == 0:
+                    return en.Constraint.Skip
+                else:
+                    return getattr(model, self.consec_shed)[p, t] == getattr(model, self.consec_shed)[p, t-1] + getattr(model, self.is_shed)[p, t - 1]
 
-            setattr(model, f"shedding_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule_param))
-            # setattr(model, f"shedding_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule2))
+            setattr(model, f"shedding_consec_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_shed_duration_rule))
 
-    # def add_objective(self, model):
-    #     objective = 0
-    #     if self.can_be_shed is True:
-    #         objective += sum(getattr(model, self.is_shed)[p, t] for p in model.Expansion for t in model.Time)*self.shed_cost
-    #     return objective
+    def add_objective(self, model):
+        objective = 0
+        if self.can_be_shed is True:
+            objective += sum(getattr(model, self.is_shed)[p, t] for p in model.Expansion for t in model.Time)*self.shed_cost
+        return objective
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
