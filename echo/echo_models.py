@@ -1048,22 +1048,28 @@ class ElectricalDemand(Sink):
         if self.can_be_shed is True:
             setattr(model, self.is_shed, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
-            # Additional constraint for load shedding
+            # Additional constraint that sets load = 0 when load shedding is occuring
             def shed_rule(model, p, t):
                 return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * (1-getattr(model, self.is_shed)[p, t])
 
             setattr(model, f"shedding_con_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule))
 
-            # Constraint on max duration of shedding
-            setattr(model, self.consec_shed, en.Var(model.Expansion, model.Time, initialize=0,
-                                                    bounds=(0, self.max_shed_duration), domain=en.NonNegativeReals))
-            def max_shed_duration_rule(model, p, t):
-                if t == 0:
-                    return en.Constraint.Skip
-                else:
-                    return getattr(model, self.consec_shed)[p, t] == getattr(model, self.consec_shed)[p, t-1] + getattr(model, self.is_shed)[p, t - 1]
+            if self.max_shed_duration is not None:
+                # Additional variable for counting the consecutive durations in which load has been shed.
+                setattr(model, self.consec_shed, en.Var(model.Expansion, model.Time, initialize=0,
+                                                        bounds=(0, self.max_shed_duration), domain=en.NonNegativeReals))
+                def max_load_shedding1(model, p, t):
+                    if t == 0:
+                        return en.Constraint.Skip
+                    else:
+                        return getattr(model, self.consec_shed)[p, t] == getattr(model, self.consec_shed)[p, t-1] + getattr(model, self.is_shed)[p, t - 1]
 
-            setattr(model, f"shedding_consec_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_shed_duration_rule))
+                def max_load_shedding2(model, p, t):
+                    return 0
+
+                setattr(model, f"shedding_consec1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_load_shedding1))
+                setattr(model, f"shedding_consec2_{self.port_name}",
+                        en.Constraint(model.Expansion, model.Time, rule=max_load_shedding2))
 
     def add_objective(self, model):
         objective = 0
