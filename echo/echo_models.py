@@ -1035,9 +1035,9 @@ class ElectricalDemand(Sink):
 
     def initialise_port(self, model):
         super(ElectricalDemand, self).initialise_port(model)
-        # # Need to unfix our demand to allow the optimiser to decide whether demand is shed.
-        # var = getattr(model, self.port_name)
-        # var.unfix()
+        # Need to unfix our demand to allow the optimiser to decide whether demand is shed.
+        var = getattr(model, self.port_name)
+        var.unfix()
 
         # Create var
         if self.can_be_shed is True:
@@ -1051,8 +1051,11 @@ class ElectricalDemand(Sink):
             def shed_rule2(model, p, t):
                 return getattr(model, self.port_name)[p, t] >= - getattr(model, self.is_shed)[p, t] * model.bigM
 
-            setattr(model, f"shedding_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule1))
-            setattr(model, f"shedding_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule2))
+            def on_off_rule_param(model, p, t):
+                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * getattr(model, self.is_shed)[p, t]
+
+            setattr(model, f"shedding_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule_param))
+            # setattr(model, f"shedding_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule2))
 
     # def add_objective(self, model):
     #     objective = 0
