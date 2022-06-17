@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import pyomo.environ as en
 from networkx import Graph
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, PositiveFloat
 from pydantic import validator, root_validator, confloat
 
 from echo.configuration import *
@@ -795,7 +795,7 @@ class Storage(Port):
     discharging_efficiency: float = 1
     initial_state_of_charge: float
     fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[float]
+    storage_capacity_cost: Optional[PositiveFloat]
     var_opex: float = 0.
     regularise: bool = False
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
