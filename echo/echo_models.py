@@ -1016,6 +1016,12 @@ class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
     units = Units.KW
     import_constraint = FlowConstraint.NoConstraint
+    # Load shedding attributes
+    can_be_shed: bool = False  # Attribute for determining whether a load can be shed (ie turned off for some period)
+    max_shed_duration: int = 0  # number of consecutive periods for which load can be shed (ie turned off)
+    shed_cost: int = 0  # cost for load shedding, cost per kWh
+
+    is_shed: Optional[str]
 
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
@@ -1027,6 +1033,32 @@ class ElectricalDemand(Sink):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
+    def initialise_port(self, model):
+        super(ElectricalDemand, self).initialise_port(model)
+        # # Need to unfix our demand to allow the optimiser to decide whether demand is shed.
+        # var = getattr(model, self.port_name)
+        # var.unfix()
+
+        # Create var
+        if self.can_be_shed is True:
+            self.is_shed = 'shed_' + self.port_name
+            setattr(model, self.is_shed, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+            # Additional big M constraint
+            def shed_rule1(model, p, t):
+                return getattr(model, self.port_name)[p, t] <= getattr(model, self.is_shed)[p, t] * model.bigM
+
+            def shed_rule2(model, p, t):
+                return getattr(model, self.port_name)[p, t] >= - getattr(model, self.is_shed)[p, t] * model.bigM
+
+            setattr(model, f"shedding_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule1))
+            setattr(model, f"shedding_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule2))
+
+    # def add_objective(self, model):
+    #     objective = 0
+    #     if self.can_be_shed is True:
+    #         objective += sum(getattr(model, self.is_shed)[p, t] for p in model.Expansion for t in model.Time)*self.shed_cost
+    #     return objective
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
@@ -1511,3 +1543,5 @@ class GasDemand(Sink):
 
     def add_demand_profile_from_array(self, array, expansion_intervals):
         self.add_sink_profile_from_array(array, expansion_intervals)
+
+
