@@ -1,4 +1,4 @@
-from echo.bz_config import *
+from echo.configuration import *
 # Elec tariffs - 2022 bill
 elec_tariffs = {}
 # Retail energy tariffs ($/kWh)
