@@ -577,7 +577,7 @@ class Edge(BaseModel):
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
     """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     edge_name: Optional[str] = None
     opt_type: int = OptimisationType.NA
     vertices: tuple
@@ -587,7 +587,6 @@ class Edge(BaseModel):
         super().__init__(**data)
         if self.edge_name is None:
             self.edge_name = 'edge_' + str(self.uid)
-
 
     def add_vertices(self, obj1, obj2):
         """ Adds edge vertices (which are ports)
@@ -1040,11 +1039,11 @@ class ElectricalDemand(Sink):
 
     def initialise_port(self, model):
         super(ElectricalDemand, self).initialise_port(model)
-        # Need to unfix our demand to allow the optimiser to decide new demand values
-        var = getattr(model, self.port_name)
-        var.unfix()
 
         if self.can_be_shed is True:
+            # Need to unfix our demand to allow the optimiser to decide new demand values
+            var = getattr(model, self.port_name)
+            var.unfix()
             setattr(model, self.is_off, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
             # Additional constraint that sets load = 0 when load shedding is occurring
@@ -1506,6 +1505,40 @@ class Chiller(InputOutputPiecewiseNode):
         super().__init__(**data)
         self.add_input_port(Units.KW)
         self.add_output_port(Units.KWT)
+
+
+class TimeDelayNode(Node):
+    """ An input output node where the input/output function has a time delay term."""
+    time_delay: float
+    node_rule = NodeRule.Custom
+
+    def add_input_port(self, port_unit):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Import
+        p.import_constraint = FlowConstraint.NoConstraint
+        self.ports['input'] = p
+
+    def add_output_port(self, port_unit):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Export
+        p.export_constraint = FlowConstraint.NoConstraint
+        self.ports['output'] = p
+
+    def apply_node_constraints(self, model):
+
+        def time_delay_rule(model, p, t):  # Tellegen node rule
+            a = getattr(model, self.ports['input'].port_name)
+            b = getattr(model, self.ports['output'].port_name)
+            if t < self.time_delay:
+                return b[p, t] == 0
+            else:
+                return b[p, t] == a[p, int(t-self.time_delay)]*-1
+
+        con_name = 'time_delay_con_' + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
+
 
 
 """ 
