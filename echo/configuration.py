@@ -1,3 +1,7 @@
+""" Enumerations of possible configurations for echo Model (Flow, Constraints and objectives).
+
+"""
+
 class Units(object):
     """ The units in which the optimisation is undertaken. """
 

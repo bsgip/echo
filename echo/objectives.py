@@ -117,7 +117,7 @@ class Tariff(Objective):
 
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
-    component: Port
+    component: Port # Port to which this Tariff applies
     import_tariff: Optional[str]
     import_tariff_dict: Optional[dict]
 
