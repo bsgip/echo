@@ -63,8 +63,8 @@ class OptimisationGraph(Graph):
         else:
             add_single_edge(edge)
 
-    def connect_ports_and_create_edge(self, port1, port2):
-        e = Edge(vertices=(port1, port2))
+    def connect_ports_and_create_edge(self, port1, port2, edge_name=None):
+        e = Edge(vertices=(port1, port2), edge_name=edge_name)
         self.add_edge_obj(e)
 
     def connect_two_nodes_create_edges_create_ports(self, node1, node2):
@@ -517,6 +517,9 @@ class Node(BaseModel):
         self.node_rule = NodeRule.Transform
 
     def verify_node(self):
+        if bool(self.ports) is False:
+            raise ConfigurationError('A node must have at least one port.')
+
         if self.node_rule is NodeRule.NA and len(self.ports) > 1:
             raise ConfigurationError('NodeRule cannot be NA if node has more than one port.')
 
@@ -1508,7 +1511,7 @@ class Chiller(InputOutputPiecewiseNode):
 
 
 class TimeDelayNode(Node):
-    """ An input output node where the input/output function has a time delay term."""
+    """ An input output node that implements a fixed delay between input and output."""
     time_delay: float
     node_rule = NodeRule.Custom
 
@@ -1525,6 +1528,10 @@ class TimeDelayNode(Node):
         p.flows = Flows.Export
         p.export_constraint = FlowConstraint.NoConstraint
         self.ports['output'] = p
+
+    def verify_node(self):
+        assert self.ports.get('output') is not None, 'An output port must be added to the Time Delay Node'
+        assert self.ports.get('input') is not None, 'An input port must be added to the Time Delay Node'
 
     def apply_node_constraints(self, model):
 

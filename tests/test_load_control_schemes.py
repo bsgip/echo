@@ -153,3 +153,76 @@ def test_time_delay_node(time_delay):
         else:
             assert load_import[i] == -1*grid[int(i - td.time_delay)]
 
+
+
+def test_feedback_loop():
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    supply = Node()
+    s = ElectricalPort()
+    s.set_flow_constraints(max_export=-10, max_import=0.)
+    supply.ports['grid'] = s
+
+    cp = TellegenNode()
+    cp.add_electrical_ports_from_list(['upstream', 'supply', 'feedback'])
+
+    td = TimeDelayNode(time_delay=0)
+    td.add_input_port(Units.KW)
+    td.add_output_port(Units.KW)
+
+    load = Node()
+    l1 = ElectricalDemand()
+    demand = [0]*24 + [5]*24
+    l1.add_demand_profile_from_array(demand)
+    excess = ElectricalPort()
+    # excess = ElectricalGeneration()
+    # excess.add_generation_profile_from_array([-1]*24)
+    load.ports['load'] = l1
+    load.ports['excess'] = excess
+    t = Transform()
+    t.add_lhs_term(l1, TransformRule.Both, 0.5)
+    t.add_rhs_term(excess, TransformRule.Both, -1)
+    load.add_transformation(t)
+    load.node_rule = NodeRule.Transform
+
+    system.add_node_obj([supply, cp, td, load])
+
+    # system.connect_ports_and_create_edge(cp.ports['upstream'], s, edge_name='upstream_to_cp')
+    # system.connect_ports_and_create_edge(cp.ports['supply'], l1, edge_name='cp_to_load')
+    # system.connect_ports_and_create_edge(excess, td.ports['input'], edge_name='excess_to_td')
+    # system.connect_ports_and_create_edge(td.ports['output'], cp.ports['feedback'], edge_name='td_to_feedback')
+
+    system.connect_ports_and_create_edge(cp.ports['upstream'], supply.ports['grid'])
+    system.connect_ports_and_create_edge(cp.ports['supply'], load.ports['load'])
+    system.connect_ports_and_create_edge(excess, td.ports['input'])
+    system.connect_ports_and_create_edge(td.ports['output'], cp.ports['feedback'])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    # optimiser.objective = sum(getattr(optimiser.model, cp.ports['supply'].port_name)[p, i]
+    #                for p in optimiser.model.Expansion for i in optimiser.model.Time)
+
+    optimiser.optimise(tee=True)
+    print(optimiser.opt_status)
+    cp = optimiser.values(cp.ports['supply'].port_name)
+    td_input = optimiser.values(td.ports['input'].port_name)
+    td_output = optimiser.values(td.ports['output'].port_name)
+    load_import = optimiser.values(l1.port_name, 0)
+
+    for i in range(time_periods):
+        if i < td.time_delay:
+            assert load_import[i] == 0
+        else:
+            assert load_import[i] == -1 * cp[int(i - td.time_delay)]
+
