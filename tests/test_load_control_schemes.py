@@ -21,13 +21,14 @@ def test_simple_load_shedding():
 
     grid = Node()
     grid.add_electrical_ports_from_list(['grid'])
+    grid.ports['grid'].set_flow_constraints(max_export=-100, max_import=100)
 
     load = Node()
     l1 = ElectricalDemand()
-    demand = [5]*24 + [0]*24
+    demand = [-5]*24 + [0]*24
     l1.add_demand_profile_from_array(demand)
     l1.can_be_shed = True
-    l1.shed_cost = 0
+    l1.shed_cost = [0]*48
     load.ports['load'] = l1
 
     system.add_node_obj([grid, load])
@@ -53,4 +54,45 @@ def test_simple_load_shedding():
     load_shed = optimiser.values(l1.is_off)
     for i in range(time_periods):
         assert load_import[i] == demand[i] * (1 - load_shed[i])
+
+
+
+def test_simple_bounded_load():
+
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    grid = Node()
+    grid.add_electrical_ports_from_list(['grid'])
+
+    load = Node()
+    ub = [4]*24 + [3]*24
+    lb = [0]*24 + [2]*24
+    l1 = BoundedElectricalLoad(upper_bound=ub, lower_bound=lb)
+    load.ports['load'] = l1
+
+    system.add_node_obj([grid, load])
+    system.connect_ports_and_create_edge(grid.ports['grid'], l1)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+    # minimise imports
+    optimiser.objective = sum(getattr(optimiser.model, l1.port_name)[p, i]
+                   for p in optimiser.model.Expansion for i in optimiser.model.Time)
+
+    optimiser.optimise(tee=True)
+    print(optimiser.opt_status)
+    load_import = optimiser.values(l1.port_name, 0)
+
+    for i in range(time_periods):
+        assert load_import[i] == min(ub[i], lb[i])
 

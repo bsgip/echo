@@ -334,7 +334,7 @@ class Port(BaseModel):
                         en.Var(initialize=0, domain=en.NonPositiveReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
             else:
-                set_var_bounds_from_dict(model, self.port_name, ub=import_constraint_dict, lb=None)
+                set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
 
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             con_name = 'export_con_' + self.port_name
@@ -351,7 +351,7 @@ class Port(BaseModel):
                         en.Var(initialize=0, domain=en.NonNegativeReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
             else:
-                set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
+                set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
 
         if self.active_periods is not None:
             def on_off_rule1(model, p, t):
@@ -1011,16 +1011,18 @@ class ControlledGen(ControlledLoadOrGen):
 class ElectricalNode(Node):
     units = Units.KW
 
-
 class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
     units = Units.KW
     import_constraint = FlowConstraint.NoConstraint
     # Load shedding attributes
     can_be_shed: Optional[bool] = False # Attribute for determining whether a load can be shed (ie set to 0 for some period)
-    shed_cost: Optional[float] = 0 # cost for load shedding, cost per time unit that shedding occurs
+    shed_cost: Optional[ArrayType] = None # cost for load shedding, cost per time unit that shedding occurs
 
+    # Pyomo vars/params
     is_off: Optional[str]
+
+    shed_cost_check = validator("shed_cost", allow_reuse=True)(nonnegative_costs)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -1055,7 +1057,7 @@ class ElectricalDemand(Sink):
     def add_objective(self, model):
         objective = 0
         if self.can_be_shed is True:
-            objective += sum(getattr(model, self.is_off)[p, t] for p in model.Expansion for t in model.Time) * self.shed_cost
+            objective += sum(getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
         return objective
 
 class ElectricalGeneration(Source):
@@ -1080,21 +1082,18 @@ class ElectricalGeneration(Source):
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
             # Constrain solar gen to be within initial value (max value)
-            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
+            set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
 
 class ElectricalStorage(Storage):
     units = Units.KW
-
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
     units = Units.KW
 
-
 class FixedElectricalPort(ElectricalPort):
     """ An electrical port with fixed values (parameters)."""
     opt_type = OptimisationType.Parameter
-
 
 class Inverter(ElectricalNode):
     """ An inverter is a node with one AC port and at least one DC port.
@@ -1150,7 +1149,6 @@ class Inverter(ElectricalNode):
         ac_port = self.ports[self.ac_port_name]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
-
 
 class EV(ElectricalNode):
     charge_mode: str = None
@@ -1281,6 +1279,22 @@ class EV(ElectricalNode):
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
+class BoundedElectricalLoad(ElectricalPort):
+    """ A port where the load has to be within a max and min value which is specified at each timestep."""
+    units = Units.KW
+    import_constraint = FlowConstraint.NoConstraint
+    upper_bound: ArrayType
+    lower_bound: ArrayType
+
+    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
+    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
+
+    def initialise_port(self, model):
+        super(BoundedElectricalLoad, self).initialise_port(model)
+        # Need to set bounds on our port variable
+        ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
+        lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
+        set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
 
 """
 
