@@ -197,6 +197,21 @@ class ThroughputCost(Objective):
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
         return obj
 
+class NotFullyChargedPenalty(Objective):
+    """ A penalty objective for penalising the battery for not being fully charged. """
+    component: Port
+    rate: PositiveFloat
+
+    def apply_constraints(self, model):
+        if hasattr(model, self.component.pos) is False:
+            self.component.constrain_pos_neg(model)
+
+    def objective_expr(self, model):
+        obj = sum(
+            (self.component.max_capacity - getattr(model, self.component.soc_value)[p, t]) *
+            getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
+        return obj
+
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
     component: Port
