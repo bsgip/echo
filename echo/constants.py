@@ -1,3 +1,7 @@
+""" Module wide constants.
+
+"""
+
 # Define some useful constants
 minutes_per_hour = 60.0
 

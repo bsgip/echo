@@ -9,7 +9,22 @@ from echo.echo_models import ConfigurationError, Path
 import pandas as pd
 
 
+## export OPTIMISER_ENGINE_EXECUTABLE=/home/anna/IBM/ILOG/CPLEX_Studio221/cplex/bin/x86-64_linux/cplex
+## export OPTIMISER_ENGINE='cplex'
+
 class EchoOptimiser(object):
+    """ EchoOptimiser class.
+
+    Attributes:
+        interval_duration (int): Duration of each interval, in minutes
+        number_of_intervals (int): Total number of intervals
+        number_of_expansion_intervals (int): Number of expansion intervals
+        discount_rate (int):
+        ES (echo_models.OptimisationGraph): Energy System Graph
+        objective_set (objectives.ObjectiveSet): Object containing a list of Optimisation objectives
+        optimiser_engine
+        profile
+    """
 
     def __init__(self,
                  interval_duration,
@@ -231,7 +246,7 @@ class EchoOptimiser(object):
         return outputs
 
     def get_single_objective_total_value(self, objective_obj):
-        """ Returns the value of a single objective"""
+        """ Returns the value of a single objective."""
         assert self.objective_set is not None, 'No objectives defined for this optimiser.'
         return objective_obj.get_objective_total(optimiser=self)
 

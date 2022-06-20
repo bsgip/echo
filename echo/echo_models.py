@@ -1,3 +1,8 @@
+""" Models for Echo Port, Node, Edge, Transform, Graph and Path.
+
+Base models definition and a library of predefined commodity specific models (Electrical, Thermal, Gas, Carbon)
+"""
+
 import uuid
 from typing import Optional, Union, List, TypeVar
 
