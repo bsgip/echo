@@ -169,7 +169,12 @@ def building_name_match_wrapper(building_names: list, df: pd.DataFrame):
     return col_names
 
 
-def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
+def gas_profiler(
+        seasonal_profile_df: pd.DataFrame,
+        season_multiplier: dict,
+        start_date: str,
+        end_date: str
+) -> pd.DataFrame:
     """Construct an hourly gas profile given a seasonal profile, start/end dates.
 
     Keeping everything in timezone unaware local time for now. #TODO see if this needs changing.
@@ -179,13 +184,15 @@ def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: s
         seasonal_profile_df: Seasonal profile dataframe. Columns must be "Timestamp", "Autumn",
             "Winter", "Spring", "Summer". Values in "Timestamp" column must be 0:00 to 23:00 in
             hourly increments and be strings. All other values are floats.
+        season_multiplier: A dictionary containing a multiplier for each season. Keys of dict must
+            be strings "Autumn", "Winter", "Spring", "Summer". Values to be floats.
         start_data: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
         end_date: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
 
     Returns:
-        hourly_gas_profile_df:
+        hourly_gas_profile_df: Dataframe of hourly gas profiles for specified date range.
     """
-    
+
     # Map each numeric month to string month (from data files)
     month_to_season_map = {
         12: "Summer", 1: "Summer", 2: "Summer",
@@ -193,6 +200,10 @@ def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: s
         6: "Winter", 7: "Winter", 8: "Winter",
         9: "Spring", 10: "Spring", 11: "Spring"
     }
+
+    # Multiply hourly profile by seasonal constant.
+    for season in set(month_to_season_map.values()):
+        seasonal_profile_df[season] = seasonal_profile_df[season] * season_multiplier[season]
 
     # Unpivot gas profile to make it easier to access
     seasonal_profile_df = seasonal_profile_df.melt(
@@ -205,10 +216,9 @@ def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: s
     # Get hour of each timestamp for profile
     seasonal_profile_df["Hour"] = seasonal_profile_df["Timestamp"].str.split(":", expand=True)[0].astype(int)
 
-
     # Generate datetimes for range specified
     hourly_gas_profile_df = pd.DataFrame(
-        index=pd.date_range(start=start_date, end=end_date),
+        index=pd.date_range(start=start_date, end=end_date, freq="1H"),
     )
 
     # Extract out variables to merge on with profile
@@ -224,6 +234,5 @@ def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: s
     # Clean up and format dataframe for returning
     hourly_gas_profile_df = hourly_gas_profile_df[["index", "profile"]]
     hourly_gas_profile_df = hourly_gas_profile_df.rename(columns={"index": "Timestamp"})
-    hourly_gas_profile_df.set_index("Timestamp")
 
     return hourly_gas_profile_df
