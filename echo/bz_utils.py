@@ -8,7 +8,6 @@ import glob
 
 from bz_data import anu_hv_network
 
-
 def munger(data_file_path, output_folder_name, output_file_name):
     """ Data munger for electrical data out of the ANU ems portal"""
 
@@ -170,3 +169,58 @@ def building_name_match_wrapper(building_names: list, df: pd.DataFrame):
     return col_names
 
 
+def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date, end_date) -> pd.DataFrame:
+    """Construct an hourly gas profile given a seasonal profile, start/end dates.
+
+    Keeping everything in timezone unaware local time for now. #TODO see if this needs changing.
+
+
+    Args:
+        seasonal_profile_df:
+        start_data:
+        end_date:
+
+    Returns:
+        hourly_gas_profile_df:
+    """
+    # Map each numeric month to string month (from data files)
+    month_to_season_map = {
+        12: "Summer", 1: "Summer", 2: "Summer",
+        3: "Autumn", 4: "Autumn", 5: "Autumn",
+        6: "Winter", 7: "Winter", 8: "Winter",
+        9: "Spring", 10: "Spring", 11: "Spring"
+    }
+
+    # Unpivot gas profile to make it easier to access
+    seasonal_profile_df = seasonal_profile_df.melt(
+        id_vars=["Timestamp"],
+        value_vars=["Summer", "Autumn", "Winter", "Spring"],
+        var_name="Season",
+        value_name="profile"
+    )
+
+    # Get hour of each timestamp for profile
+    seasonal_profile_df["Hour"] = seasonal_profile_df["Timestamp"].str.split(":", expand=True)[0].astype(int)
+
+
+    # Generate datetimes for range specified
+    hourly_gas_profile_df = pd.DataFrame(
+        index=pd.date_range(start=start_date, end=end_date),
+    )
+
+    # Extract out variables to merge on with profile
+    hourly_gas_profile_df["Season"] = hourly_gas_profile_df.index.month.map(month_to_season_map)
+    hourly_gas_profile_df["Hour"] = hourly_gas_profile_df.index.hour
+
+    # Merge on season and hour
+    hourly_gas_profile_df = hourly_gas_profile_df.reset_index().merge(
+        seasonal_profile_df[["Season", "Hour", "profile"]],
+        on=["Season", "Hour"]
+    )
+
+    # Clean up and format dataframe for returning
+    hourly_gas_profile_df = hourly_gas_profile_df[["index", "profile"]]
+    hourly_gas_profile_df = hourly_gas_profile_df.rename(columns={"index": "Timestamp"})
+    hourly_gas_profile_df.set_index("Timestamp")
+    
+    return hourly_gas_profile_df
