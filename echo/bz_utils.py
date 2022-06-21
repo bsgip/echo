@@ -169,20 +169,23 @@ def building_name_match_wrapper(building_names: list, df: pd.DataFrame):
     return col_names
 
 
-def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date, end_date) -> pd.DataFrame:
+def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
     """Construct an hourly gas profile given a seasonal profile, start/end dates.
 
     Keeping everything in timezone unaware local time for now. #TODO see if this needs changing.
 
 
     Args:
-        seasonal_profile_df:
-        start_data:
-        end_date:
+        seasonal_profile_df: Seasonal profile dataframe. Columns must be "Timestamp", "Autumn",
+            "Winter", "Spring", "Summer". Values in "Timestamp" column must be 0:00 to 23:00 in
+            hourly increments and be strings. All other values are floats.
+        start_data: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
+        end_date: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
 
     Returns:
         hourly_gas_profile_df:
     """
+    
     # Map each numeric month to string month (from data files)
     month_to_season_map = {
         12: "Summer", 1: "Summer", 2: "Summer",
@@ -222,5 +225,5 @@ def gas_profiler(seasonal_profile_df: pd.DataFrame, start_date, end_date) -> pd.
     hourly_gas_profile_df = hourly_gas_profile_df[["index", "profile"]]
     hourly_gas_profile_df = hourly_gas_profile_df.rename(columns={"index": "Timestamp"})
     hourly_gas_profile_df.set_index("Timestamp")
-    
+
     return hourly_gas_profile_df
