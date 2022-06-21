@@ -255,6 +255,8 @@ class Port(BaseModel):
     active_periods: Optional[dict]
     slack: bool = False
     optional: bool = False
+    planning: bool = False  # Attribute for indicating whether a port is part of an expansion planning problem
+    install_cost: Optional[float]
 
     # All our optional fields/fields that are created when building pyomo model, and used to define variable names
     import_con_val: Optional[str]
@@ -267,6 +269,8 @@ class Port(BaseModel):
     is_pos: Optional[str]
     neg: Optional[str]  # todo don't love having to define every one of these.. is there an alternative?
     active: Optional[str]
+    is_installed: Optional[str]
+    installed_when: Optional[str]
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -286,6 +290,8 @@ class Port(BaseModel):
         self.pos = positive_variable_component + self.port_name
         self.neg = negative_variable_component + self.port_name
         self.is_pos = f"is_pos_{self.port_name}"
+        self.is_installed = f"is_installed_{self.port_name}"
+        self.installed_when = f"installed_when_{self.port_name}"
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """
@@ -420,6 +426,14 @@ class Port(BaseModel):
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
             setattr(model, f"active_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
+
+        if self.planning is True:
+            # Add installation variables
+            setattr(model, self.is_installed, en.Var(initialize=0, domain=en.Binary))
+            setattr(model, self.installed_when, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeIntegers))
+            # Add constraint relating installation to operation
+            def install_before_active(model, p, t):
+                return getattr(model, self.port_name)[p, t]
 
     def constrain_pos_neg(self, model):
         """
