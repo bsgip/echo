@@ -15,37 +15,36 @@ class Flows(object):
     """ Can the asset support two way flows. """
 
     NA = 0
-    Import = 1
-    Export = 2
-    Both = 3
+    Import = 1  # the port can only import
+    Export = 2  # the port can only export
+    Both = 3  # the port can import and export
 
 
 class FlowConstraint(object):
     NA = 0
-    NoConstraint = 1
-    Fixed = 2
-    Series = 3
+    NoConstraint = 1  # No constraint on flow at this port
+    Fixed = 2  # A fixed constraint exists
+    Series = 3  # A time series (time varying) constraint exists
 
 
 class OptimisationType(object):
     NA = 0
-    Parameter = 1
-    Variable = 2
+    Parameter = 1  # The port variable is fixed
+    Variable = 2  # The port variable is variable/optimisable
 
 
 class NodeRule(object):
     NA = 0
-    Tellegen = 1
-    Sum = 2
-    Custom = 3
-    Transform = 4
+    Tellegen = 1  # The node sums all ports to 0.
+    Custom = 2  # The node has some custom transformation
+    Transform = 3  # The node has a transformation defined with a Transform object
 
 
 class TransformRule(object):
     NA = 0
-    Both = 1
-    PositiveComponent = 2
-    NegativeComponent = 3
+    Both = 1  # the transformation applies to both pos and neg components of the port variable
+    PositiveComponent = 2  # " " applies to only the positive component of the port variable
+    NegativeComponent = 3  # "" applies to only the negative component of the port variable
 
 
 class ExpansionType(object):
@@ -71,20 +70,23 @@ class NodeType(object):
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
 
-class Resource(object):
+class Resource:
+    """ Resources/commodities """
     Electricity = 0
     Gas = 1
     Thermal = 2
     CO2 = 3
 
 class TariffType:
+    """ Tariff types"""
     import_tariff = 0
     export_tariff = 1
     import_demand_tariff = 2
     export_demand_tariff = 3
-    time = 4
+    time = 4  # a tariff that applies per time period (eg daily supply charge)
 
 class Resets:
+    """ How often something resets """
     minute = 0
     hourly = 1
     daily = 2
@@ -92,51 +94,3 @@ class Resets:
     yearly = 4
 
 
-
-# Define some useful container objects to define the optimisation objectives
-
-class OptimiserObjective(object):
-    ConnectionPointCost = 1
-    ConnectionPointEnergy = 2
-    ThroughputCost = 3
-    Throughput = 4
-    GreedyGenerationCharging = 5
-    GreedyDemandDischarging = 6
-    EqualStorageActions = 7
-    ConnectionPointPeakPower = 8
-    ConnectionPointQuantisedPeak = 9
-    PiecewiseLinear = 10
-    LocalModelsCost = 11
-    LocalGridMinimiser = 12
-    LocalThirdParty = 13
-    LocalGridPeakPower = 14
-
-
-# below is superseded
-class OptimiserObjectiveSet(object):
-    FinancialOptimisation = [OptimiserObjective.ConnectionPointCost,
-                             # OptimiserObjective.GreedyGenerationCharging,
-                             OptimiserObjective.ThroughputCost,
-                             OptimiserObjective.EqualStorageActions]
-
-    EnergyOptimisation = [OptimiserObjective.ConnectionPointEnergy,
-                          OptimiserObjective.GreedyGenerationCharging,
-                          OptimiserObjective.GreedyDemandDischarging,
-                          OptimiserObjective.Throughput,
-                          OptimiserObjective.EqualStorageActions]
-
-    PeakOptimisation = [OptimiserObjective.ConnectionPointPeakPower]
-
-    QuantisedPeakOptimisation = [OptimiserObjective.ConnectionPointQuantisedPeak]
-
-    DispatchOptimisation = [OptimiserObjective.PiecewiseLinear] + FinancialOptimisation
-
-    LocalModels = [OptimiserObjective.LocalModelsCost,
-                   OptimiserObjective.ThroughputCost,
-                   OptimiserObjective.EqualStorageActions]
-
-    LocalModelsThirdParty = [OptimiserObjective.LocalThirdParty,
-                             OptimiserObjective.ThroughputCost,
-                             OptimiserObjective.EqualStorageActions]
-
-    LocalPeakOptimisation = [OptimiserObjective.LocalGridPeakPower]

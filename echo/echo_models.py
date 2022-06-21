@@ -357,7 +357,7 @@ class Port(BaseModel):
                 en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()
+            getattr(model, self.port_name).fix()  # Fix the variable we just created - equivalent to setting it as an 'en.Param'
 
         # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
