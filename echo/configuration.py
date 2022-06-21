@@ -25,6 +25,7 @@ class FlowConstraint(object):
     NoConstraint = 1  # No constraint on flow at this port
     Fixed = 2  # A fixed constraint exists
     Series = 3  # A time series (time varying) constraint exists
+    InRange = 4  # a lower bound constraint and upper bound constraint exist at this port
 
 
 class OptimisationType(object):

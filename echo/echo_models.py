@@ -1572,17 +1572,11 @@ class TimeDelayNode(Node):
     node_rule = NodeRule.Custom
 
     def add_input_port(self, port_unit):
-        p = FlexPort()
-        p.units = port_unit
-        p.flows = Flows.Import
-        p.import_constraint = FlowConstraint.NoConstraint
+        p = FlexPort(units=port_unit, flows=Flows.Import, import_constraint=FlowConstraint.NoConstraint)
         self.ports['input'] = p
 
     def add_output_port(self, port_unit):
-        p = FlexPort()
-        p.units = port_unit
-        p.flows = Flows.Export
-        p.export_constraint = FlowConstraint.NoConstraint
+        p = FlexPort(units=port_unit, flows=Flows.Export, export_constraint=FlowConstraint.NoConstraint)
         self.ports['output'] = p
 
     def verify_node(self):
@@ -1591,7 +1585,7 @@ class TimeDelayNode(Node):
 
     def apply_node_constraints(self, model):
 
-        def time_delay_rule(model, p, t):  # Tellegen node rule
+        def time_delay_rule(model, p, t):  # Modified tellegen node rule
             a = getattr(model, self.ports['input'].port_name)
             b = getattr(model, self.ports['output'].port_name)
             if t < self.time_delay:
@@ -1609,11 +1603,23 @@ Thermal assets
 """
 
 
-class HeatingOrCoolingLoad(Sink):
+class HCLoad(Sink):
+    """ Heating or cooling load"""
 
     def __init__(self):
-        super(HeatingOrCoolingLoad, self).__init__()
+        super(HCLoad, self).__init__()
         self.units = Units.KWT
+
+
+class ControllableHCLoad(Port):
+    temp_setpoints: Optional[ArrayType]  # Parameter for the temperature setpoints over time
+    flows = Flows.Import
+    import_constraint = FlowConstraint.InRange
+    units = Units.KWT
+
+
+
+
 
 
 class ThermalPort(Port):
@@ -1647,7 +1653,7 @@ class GasDemand(Sink):
 
     def __init__(self):
         super(GasDemand, self).__init__()
-        self.units = Units.Jps
+        self.units = Units.JPS
 
     def add_demand_profile_from_array(self, array, expansion_intervals):
         self.add_sink_profile_from_array(array, expansion_intervals)
