@@ -186,7 +186,7 @@ def gas_profiler(
             hourly increments and be strings. All other values are floats.
         season_multiplier: A dictionary containing a multiplier for each season. Keys of dict must
             be strings "Autumn", "Winter", "Spring", "Summer". Values to be floats.
-        start_data: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
+        start_date: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
         end_date: "YYYY-MM-DD" format. TODO: Test if works with other datetime formats.
 
     Returns:
