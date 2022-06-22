@@ -45,6 +45,7 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
+        self._validate_network_graph()
         self.build_model()
         self.apply_constraints()
         self.build_objective()
@@ -58,6 +59,16 @@ class EchoOptimiser(object):
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
                 'Node {} name has been updated after being added to the network graph.'.format(node_name)
+
+        # Give a warning for any ports that are not connected to anything - sometimes this is ok, eg if the port has a well defined transformation,
+        # but sometimes it will cause the optimisation to give an incorrect result
+        x = self.ES.get_port_set_on_nodes()
+        y = self.ES.get_port_set_on_edges()
+        z = x - y
+        if z:
+            print('The following ports are defined on a node but not an edge, or vice versa:', z)
+
+
 
     def build_model(self):
         # Set up the Pyomo model

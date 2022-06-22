@@ -232,6 +232,23 @@ class OptimisationGraph(Graph):
             for p_name, p_object in n_object.ports.items():
                 print('  port_name: ', p_name)
 
+    def get_port_set_on_edges(self):
+        """ Returns a set of all ports that are part of an edge."""
+        port_set = set()
+        for e in self.edge_obj.values():
+            port_set.add(e.vertices[0].port_name)
+            port_set.add(e.vertices[1].port_name)
+        return port_set
+
+    def get_port_set_on_nodes(self):
+        """ Returns a set of all ports that are part of a port."""
+        port_set = set()
+        for n in self.node_obj.values():
+            for p in n.ports.values():
+                port_set.add(p.port_name)
+                port_set.add(p.port_name)
+        return port_set
+
 
 class ConfigurationError(Exception):
     pass
@@ -452,13 +469,13 @@ class Port(BaseModel):
             # Constraints to force port = 0 before being installed
             def install_before_active1(model, p, t):
                 prev = 0
-                for i in range(p):
+                for i in range(p+1):
                     prev += getattr(model, self.is_installed)[i]
                 return getattr(model, self.port_name)[p, t] <= model.bigM * prev
 
             def install_before_active2(model, p, t):
                 prev = 0
-                for i in range(p):
+                for i in range(p+1):
                     prev += getattr(model, self.is_installed)[i]
                 return getattr(model, self.port_name)[p, t] >= - model.bigM * prev
 
@@ -1015,8 +1032,14 @@ class Storage(Port):
 
         def SOC_rule_perfect_efficiency(model, p, t):
             if t == 0:
-                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+                if p == 0:
+                    return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
+                           getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+                else:
+                    # Need to get the last value from the previous planning period
+                    return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p-1, len(model.Time)-1] + \
+                    getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+
             else:
                 return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
                        getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
@@ -1147,8 +1170,8 @@ class ElectricalDemand(Sink):
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
-    def add_demand_profile_from_array(self, array, expansion_periods=1):
-        self.add_initial_value_from_array(array, expansion_periods)
+    def add_demand_profile_from_array(self, array, expansion_periods=1, keys=None):
+        self.add_initial_value_from_array(array, expansion_periods, keys)
 
     def initialise_port(self, model):
         super(ElectricalDemand, self).initialise_port(model)
@@ -1222,6 +1245,7 @@ class Inverter(ElectricalNode):
 
     def add_dc_port(self, port_name):
         p = ElectricalPort()
+        p.optional = True  # Make this port optional so that if we don't connect it to anything, it gets set to 0.
         self.dc_ports[port_name] = p
         self.ports[port_name] = p
 

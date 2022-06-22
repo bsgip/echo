@@ -31,7 +31,7 @@ np.set_printoptions(suppress=True)
 ## Set up hyper params
 time_periods = 12 # number of time periods to run the optimisation for
 interval_duration = 60  # each time period is 15 mins long
-expansion_periods = 3  # not yet implemented leave as 1
+expansion_periods = 2  # not yet implemented leave as 1
 discount_rate = 0  # not yet implemented leave as 0
 
 # Create graph in echo
@@ -47,19 +47,19 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
-l1.add_demand_profile_from_array([10]*time_periods, expansion_periods)
+keys = generate_pyomo_indices(time_periods, expansion_periods)
+l1.add_demand_profile_from_array([0]*time_periods + [30]*time_periods, keys=keys)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 
 inverter = Inverter(max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
 inverter.add_ac_port('inv')  # add a port that is used to connect back to the connection_point
 inverter.add_dc_port('bess')  # add a port to connect to the battery
-inverter.add_dc_port('pv')  # add a port to connect to the pv
 
 # create a node for the battery
 battery = Node()
 # create an electrical storage object
-b = ElectricalStorage(max_capacity=15.0,  # max capacity of battery in kwh
+b = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
                       depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
                       charging_power_limit=2,  # max charging rate in kW
                       discharging_power_limit=-2,  # max discharging rate in kW
@@ -71,7 +71,7 @@ battery.ports['bess'] = b
 
 battery_future = Node()
 # create an electrical storage object
-b_future = ElectricalStorage(max_capacity=15.0,  # max capacity of battery in kwh
+b_future = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
                       depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
                       charging_power_limit=2,  # max charging rate in kW
                       discharging_power_limit=-2,  # max discharging rate in kW
@@ -79,32 +79,24 @@ b_future = ElectricalStorage(max_capacity=15.0,  # max capacity of battery in kw
                       discharging_efficiency=1,  # discharging efficiency in range [0,1]
                       initial_state_of_charge=0.0)  # initial state of charge in kWh
 b_future.planning = True
-b_future.install_cost = 100000
+b_future.install_cost = 5
 # connect the electrical storage to a port on the battery node
 battery_future.ports['bess'] = b_future
 inverter.add_dc_port('bess_future')
 
-# create a node for the solar
-solar = Node()
-pv = ElectricalGeneration()  # create an electrical generation object
-pv.curtailable = False  # set whether this can be curtailed or not
-pv.add_generation_profile_from_array([0]*time_periods, expansion_periods)
-solar.ports['pv'] = pv  # add the electrical generation to a port on the solar node
-
 # Populate graph with assets (nodes)
-system.add_node_obj([grid, battery, load, solar, connection_point, inverter, battery_future])
+system.add_node_obj([grid, battery, load, connection_point, inverter, battery_future])
 
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
 system.connect_ports_and_create_edge(connection_point.ports['load'], load.ports['load'])
 system.connect_ports_and_create_edge(connection_point.ports['inv'], inverter.ports['inv'])
 system.connect_ports_and_create_edge(inverter.ports['bess'], battery.ports['bess'])
-system.connect_ports_and_create_edge(inverter.ports['pv'], solar.ports['pv'])
 system.connect_ports_and_create_edge(inverter.ports['bess_future'], battery_future.ports['bess'])
 
 # Create objectives/tariffs
 import_cost = ImportTariff(component=connection_point.ports['grid'],
-                           tariff_array=[1]*6 + [2]*6,
+                           tariff_array=[2]*6 + [1]*6,
                            expansion_periods=expansion_periods)  # create the import objective cost
 import_cost.name = 'import_cost'
 
@@ -121,10 +113,11 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
                           objective_set=objective_set,
                           optimiser_engine='cplex')
 
-optimiser.optimise(tee=True)
+optimiser.optimise(tee=False)
 
 log_infeasible_constraints(optimiser.model)
 
+print('total cost:', optimiser.get_total_objective_value())
 print(optimiser.values(b_future.is_installed, 0))
 print(optimiser.values(b_future.installed_when))
 ############################ Analyse the Optimisation ########################################
