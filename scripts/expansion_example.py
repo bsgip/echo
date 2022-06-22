@@ -47,7 +47,7 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
-l1.add_demand_profile_from_array([10]*time_periods + [20]*time_periods + [30]*time_periods, expansion_periods)
+l1.add_demand_profile_from_array([10]*time_periods, expansion_periods)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 
@@ -106,6 +106,7 @@ system.connect_ports_and_create_edge(inverter.ports['bess_future'], battery_futu
 import_cost = ImportTariff(component=connection_point.ports['grid'],
                            tariff_array=[1]*6 + [2]*6,
                            expansion_periods=expansion_periods)  # create the import objective cost
+import_cost.name = 'import_cost'
 
 objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -131,62 +132,62 @@ print(optimiser.values(b_future.installed_when))
 storage_energy_delta = optimiser.values(b.port_name, 0)
 storage_energy_soc = optimiser.values(b.soc_value, 0)
 optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
-
-colors = sns.color_palette()
-hrs = np.arange(0, len(test_load)) / 4
-fig = plt.figure(figsize=(14, 7))
-ax1 = fig.add_subplot(3, 1, 1)
-line1, = ax1.plot(hrs, test_load, color=colors[0])
-line2, = ax1.plot(hrs, test_pv, color=colors[1])
-# line3, = ax1.plot(hrs, optimised_connection_point_load,colocolors[2])
-line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line2, line3], ['Load', 'PV', 'aggregate'], ncol=2)
-ax1.set_xlim([0, len(test_load) / 4])
-
-ax2 = fig.add_subplot(3, 1, 2)
-line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-ax2.set_xlim([0, len(test_load) / 4])
-
-ax3 = fig.add_subplot(3, 1, 3)
-line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-ax3.set_xlim([0, len(test_load) / 4])
-ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-plt.show()
-
-storage_energy_delta = optimiser.values(b.port_name, 1)
-storage_energy_soc = optimiser.values(b.soc_value, 1)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 1)
-
-
-colors = sns.color_palette()
-hrs = np.arange(0, len(test_load)) / 4
-fig = plt.figure(figsize=(14, 7))
-ax1 = fig.add_subplot(3, 1, 1)
-line1, = ax1.plot(hrs, test_load, color=colors[0])
-line2, = ax1.plot(hrs, test_pv, color=colors[1])
-# line3, = ax1.plot(hrs, optimised_connection_point_load,colocolors[2])
-line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line2, line3], ['Load exp2', 'PV', 'aggregate'], ncol=2)
-ax1.set_xlim([0, len(test_load) / 4])
-
-ax2 = fig.add_subplot(3, 1, 2)
-line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
-line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
-ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
-ax2.set_xlim([0, len(test_load) / 4])
-
-ax3 = fig.add_subplot(3, 1, 3)
-line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
-ax3.set_xlim([0, len(test_load) / 4])
-ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
-plt.show()
+#
+# colors = sns.color_palette()
+# hrs = np.arange(0, len(test_load)) / 4
+# fig = plt.figure(figsize=(14, 7))
+# ax1 = fig.add_subplot(3, 1, 1)
+# line1, = ax1.plot(hrs, test_load, color=colors[0])
+# line2, = ax1.plot(hrs, test_pv, color=colors[1])
+# # line3, = ax1.plot(hrs, optimised_connection_point_load,colocolors[2])
+# line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
+# ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+# ax1.legend([line1, line2, line3], ['Load', 'PV', 'aggregate'], ncol=2)
+# ax1.set_xlim([0, len(test_load) / 4])
+#
+# ax2 = fig.add_subplot(3, 1, 2)
+# line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
+# line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
+# ax2.set_xlabel('hour'), ax2.set_ylabel('price')
+# ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
+# ax2.set_xlim([0, len(test_load) / 4])
+#
+# ax3 = fig.add_subplot(3, 1, 3)
+# line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
+# line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
+# ax3.set_xlim([0, len(test_load) / 4])
+# ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
+# ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+# plt.show()
+#
+# storage_energy_delta = optimiser.values(b.port_name, 1)
+# storage_energy_soc = optimiser.values(b.soc_value, 1)
+# optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 1)
+#
+#
+# colors = sns.color_palette()
+# hrs = np.arange(0, len(test_load)) / 4
+# fig = plt.figure(figsize=(14, 7))
+# ax1 = fig.add_subplot(3, 1, 1)
+# line1, = ax1.plot(hrs, test_load, color=colors[0])
+# line2, = ax1.plot(hrs, test_pv, color=colors[1])
+# # line3, = ax1.plot(hrs, optimised_connection_point_load,colocolors[2])
+# line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
+# ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
+# ax1.legend([line1, line2, line3], ['Load exp2', 'PV', 'aggregate'], ncol=2)
+# ax1.set_xlim([0, len(test_load) / 4])
+#
+# ax2 = fig.add_subplot(3, 1, 2)
+# line1, = ax2.plot(hrs, import_tariff_array, color=colors[3])
+# line2, = ax2.plot(hrs, export_tariff_array, color=colors[4])
+# ax2.set_xlabel('hour'), ax2.set_ylabel('price')
+# ax2.legend([line1, line2], ['buy price', 'sell price'], ncol=2)
+# ax2.set_xlim([0, len(test_load) / 4])
+#
+# ax3 = fig.add_subplot(3, 1, 3)
+# line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
+# line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
+# ax3.set_xlim([0, len(test_load) / 4])
+# ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
+# ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+# plt.show()

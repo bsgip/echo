@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from echo.echo_validators import *  # need this to get our array type
 from pydantic import Field, validator, root_validator, NegativeFloat, PositiveFloat, confloat, PositiveInt
+from echo.utils import *
 
 
 from echo.echo_models import Port, ConfigurationError
@@ -110,16 +111,15 @@ class Tariff(Objective):
     expansion_periods: Optional[PositiveInt] = 1
 
     @staticmethod
-    def return_tariff_dict(array, expansion_periods):
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        if len(keys) != len(array):
-            # Tile the array
-            print(f'Tariff values are being tiled over expansion periods.')
-            array = tile_array_over_expansion_periods(array, expansion_periods)
-            # Check if lengths are correct
-            if len(keys) != len(array):
-                raise ValueError(f'Tariff array has mismatched dimensions.')
-        vals = dict(zip(keys, array))
+    def return_tariff_dict(array, expansion_periods, keys=None):
+        if keys:
+            assert len(keys) == len(array), 'Dimensions are mismatched.'
+            vals = dict(zip(keys, array))
+        else:
+            print(f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling tariff array across exp periods.')
+            keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+            tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
+            vals = dict(zip(keys, tiled_array))
         return vals
 
 class ImportTariff(Tariff):
@@ -132,6 +132,10 @@ class ImportTariff(Tariff):
         super().__init__(**data)
         self.import_tariff = 'import_tariff_' + self.name
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
+
+    def verify_objective(self, model, df):
+        optimiser_indices = generate_pyomo_indices(len(model.Time), len(model.Expansion))
+        assert optimiser_indices == list(self.import_tariff_dict.keys()), f'\'{self.name}\' tariff array length doesn\'t match optimiser indices.'
 
     def create_params(self, model, df):
 
@@ -157,6 +161,10 @@ class ExportTariff(Tariff):
         self.export_tariff = 'export_tariff_' + self.name
         self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
+    def verify_objective(self, model, df):
+        optimiser_indices = generate_pyomo_indices(len(model.Time), len(model.Expansion))
+        assert optimiser_indices == list(self.export_tariff_dict.keys()), f'\'{self.name}\' tariff array length doesn\'t match optimiser indices.'
+
     def create_params(self, model, df):
         setattr(model, self.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict))
 
@@ -178,6 +186,10 @@ class PathTariff(Tariff):
         super().__init__(**data)
         self.path_tariff = 'path_tariff_' + self.name
         self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
+
+    def verify_objective(self, model, df):
+        optimiser_indices = generate_pyomo_indices(len(model.Time), len(model.Expansion))
+        assert optimiser_indices == list(self.path_tariff_dict.keys()), f'\'{self.name}\' tariff array length doesn\'t match optimiser indices.'
 
     def create_params(self, model, df):
         setattr(model, self.path_tariff, en.Param(model.Expansion, model.Time, initialize=self.path_tariff_dict))

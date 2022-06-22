@@ -517,23 +517,20 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods=1):
+    def add_initial_value_from_array(self, array, expansion_periods=1, keys=None):
         """ Adds initial port value which is used to initialise the pyomo var/param
         Args:
             array: array, list of initial values
             expansion_periods: number of expansion periods (int)
         """
-        # Do some checks
-
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        if len(keys) != len(array):
-            # Tile the array
-            print(f'Initial values for port{self.port_name} are tiled across expansion periods.')
-            array = tile_array_over_expansion_periods(array, expansion_periods)
-            # Check if lengths are correct
-            if len(keys) != len(array):
-                raise ValueError(f'Check dimension of initial value array for port {self.port_name}')
-        vals = dict(zip(keys, array))
+        if keys:
+            assert len(keys) == len(array), 'Dimensions are mismatched.'
+            vals = dict(zip(keys, array))
+        else:
+            print(f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
+            keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+            tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
+            vals = dict(zip(keys, tiled_array))
         self.add_initial_value(vals)
 
     def add_active_periods_from_array(self, array, expansion_periods=1):
