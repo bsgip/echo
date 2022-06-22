@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Union, List, TypeVar
+from typing import Optional, Union, List, TypeVar, Any
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -257,6 +257,7 @@ class Port(BaseModel):
     optional: bool = False
     planning: Optional[bool] = False  # Attribute for indicating whether a port is part of an expansion planning problem
     install_cost: Optional[float]
+    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     # All our optional fields/fields that are created when building pyomo model, and used to define variable names
     import_con_val: Optional[str]
@@ -271,6 +272,7 @@ class Port(BaseModel):
     active: Optional[str]
     is_installed: Optional[str]
     installed_when: Optional[str]
+    max_install: Optional[str]
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -292,6 +294,7 @@ class Port(BaseModel):
         self.is_pos = f"is_pos_{self.port_name}"
         self.is_installed = f"is_installed_{self.port_name}"
         self.installed_when = f"installed_when_{self.port_name}"
+        self.max_install = f"is_installed_total_{self.port_name}"
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """
@@ -432,12 +435,9 @@ class Port(BaseModel):
             setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
             # Create an integer variable for which period the asset is installed in, if installed
             setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
+            # Create a non-indexed var to track whether we ever install the port
+            setattr(model, self.max_install, en.Var(initialize=0, domain=en.Reals))
 
-            # install only once rule
-            def install_once(model):
-                return sum(getattr(model, self.is_installed)[p] for p in model.Expansion) <= 1
-
-            setattr(model, 'install_once_' + self.port_name, en.Constraint(rule=install_once))
 
             # Set constraints on integer variables
             def integer_var_con1(model, p):
@@ -451,19 +451,25 @@ class Port(BaseModel):
 
             # Constraints to force port = 0 before being installed
             def install_before_active1(model, p, t):
-                a = 0
+                prev = 0
                 for i in range(p):
-                    a += getattr(model, self.is_installed)[i]
-                return getattr(model, self.port_name)[p, t] <= model.bigM * a
+                    prev += getattr(model, self.is_installed)[i]
+                return getattr(model, self.port_name)[p, t] <= model.bigM * prev
 
             def install_before_active2(model, p, t):
-                a = 0
+                prev = 0
                 for i in range(p):
-                    a += getattr(model, self.is_installed)[i]
-                return getattr(model, self.port_name)[p, t] >= - model.bigM * a
+                    prev += getattr(model, self.is_installed)[i]
+                return getattr(model, self.port_name)[p, t] >= - model.bigM * prev
 
             setattr(model, 'install_b4_run1_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
             setattr(model, 'install_b4_run2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
+            # Constraints for max_is_installed
+            def rule3(model, p):
+                return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
+
+            setattr(model, 'con3_' + self.port_name, en.Constraint(model.Expansion, rule=rule3))
 
 
     def constrain_pos_neg(self, model):
@@ -541,21 +547,25 @@ class Port(BaseModel):
         self.active_periods = vals
 
     def add_objective(self, model):
-        """ Adds port-specific objective terms to pyomo model
+        """ Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
         """
-        objective = 0
+        total = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
-                objective += -1 * getattr(model, self.import_slack_max) * model.bigM
-                objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
-                                      model.Time) * model.bigM * 0.1
+                total += -1 * getattr(model, self.import_slack_max) * model.bigM
+                total += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
+                                  model.Time) * model.bigM * 0.1
             if hasattr(model, self.export_slack) is True:
-                objective += getattr(model, self.export_slack_max) * model.bigM
-                objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
-                                 model.Time) * model.bigM * 0.1
-        return objective
+                total += getattr(model, self.export_slack_max) * model.bigM
+                total += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
+                             model.Time) * model.bigM * 0.1
+
+        if self.planning is True:
+            total += self.install_cost * getattr(model, self.max_install)
+
+        self.objective += total
 
 
 class Node(BaseModel):
@@ -802,6 +812,7 @@ class Path(BaseModel):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
+    objective: Optional[Any] = 0
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -827,14 +838,14 @@ class Path(BaseModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
-        objective = 0
+        super(Path, self).add_objective(model)
+        total = 0
 
         if self.regularise is True:
-            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+            total += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
                              for p in model.Expansion for t in model.Time) * 0.0000001
 
-        return objective
-
+        self.objective += total
 
 """
 
@@ -1033,27 +1044,27 @@ class Storage(Port):
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
-        objective = 0
+        total = 0
 
         # To get unique solution
         if self.regularise is True:
-            objective += sum(
+            total += sum(
                 getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
                 getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
                 for p in model.Expansion for t in model.Time) * 0.0000001
 
         if self.enable_trip_slack:
-            objective += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
+            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
 
         if self.soc_conserv is not None:
-            objective += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * self.soc_conserv_cost
+            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * self.soc_conserv_cost
 
         if self.storage_capacity_cost is not None:
-            objective += getattr(model, self.optimised_capacity)*self.storage_capacity_cost
+            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
-        return objective
+        self.objective += total
 
 
 class Demand(Sink):
@@ -1159,10 +1170,12 @@ class ElectricalDemand(Sink):
 
 
     def add_objective(self, model):
-        objective = 0
+        super(ElectricalDemand, self).add_objective(model)
+
+        total = 0
         if self.can_be_shed is True:
-            objective += sum(getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
-        return objective
+            total += sum(getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
+        self.objective += total
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """

@@ -211,3 +211,14 @@ def tile_array_over_expansion_periods(array, expansion_periods):
     output = np.tile(np.array(array), expansion_periods)
     return output
 
+def divide_array_over_expansion_periods(array, expansion_periods):
+    n = len(array)
+    t = n // expansion_periods
+    assert n % expansion_periods == 0, 'Array should evenly divide into expansion periods'
+    keys = [(x, i) for x in range(expansion_periods) for i in range(t)]
+    vals = dict(zip(keys, array))
+    return vals
+
+def generate_pyomo_indices(time_periods, expansion_periods):
+    keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
+    return keys
