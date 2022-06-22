@@ -98,3 +98,5 @@ def dod_checks(cls, values):
                                                                                                     max_cap))
     values['min_soc'] = min_soc
     return values
+
+

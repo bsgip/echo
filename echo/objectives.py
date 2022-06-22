@@ -112,6 +112,13 @@ class Tariff(Objective):
     @staticmethod
     def return_tariff_dict(array, expansion_periods):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        if len(keys) != len(array):
+            # Tile the array
+            print(f'Tariff values are being tiled over expansion periods.')
+            array = tile_array_over_expansion_periods(array, expansion_periods)
+            # Check if lengths are correct
+            if len(keys) != len(array):
+                raise ValueError(f'Tariff array has mismatched dimensions.')
         vals = dict(zip(keys, array))
         return vals
 

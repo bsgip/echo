@@ -255,7 +255,7 @@ class Port(BaseModel):
     active_periods: Optional[dict]
     slack: bool = False
     optional: bool = False
-    planning: bool = False  # Attribute for indicating whether a port is part of an expansion planning problem
+    planning: Optional[bool] = False  # Attribute for indicating whether a port is part of an expansion planning problem
     install_cost: Optional[float]
 
     # All our optional fields/fields that are created when building pyomo model, and used to define variable names
@@ -428,12 +428,43 @@ class Port(BaseModel):
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
 
         if self.planning is True:
-            # Add installation variables
-            setattr(model, self.is_installed, en.Var(initialize=0, domain=en.Binary))
-            setattr(model, self.installed_when, en.Var(model.Expansion, initialize=0, domain=en.NonNegativeIntegers))
-            # Add constraint relating installation to operation
-            def install_before_active(model, p, t):
-                return getattr(model, self.port_name)[p, t]
+            # Create an indexed binary variable for which time period if any the port is installed
+            setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+            # Create an integer variable for which period the asset is installed in, if installed
+            setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
+
+            # install only once rule
+            def install_once(model):
+                return sum(getattr(model, self.is_installed)[p] for p in model.Expansion) <= 1
+
+            setattr(model, 'install_once_' + self.port_name, en.Constraint(rule=install_once))
+
+            # Set constraints on integer variables
+            def integer_var_con1(model, p):
+                return getattr(model, self.installed_when) >= p - model.bigM*getattr(model, self.is_installed)[p] + 1
+
+            def integer_var_con2(model, p):
+                return getattr(model, self.installed_when) <= p + model.bigM * (1 - getattr(model, self.is_installed)[p])
+
+            setattr(model, 'int_con1_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con1))
+            setattr(model, 'int_con2_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con2))
+
+            # Constraints to force port = 0 before being installed
+            def install_before_active1(model, p, t):
+                a = 0
+                for i in range(p):
+                    a += getattr(model, self.is_installed)[i]
+                return getattr(model, self.port_name)[p, t] <= model.bigM * a
+
+            def install_before_active2(model, p, t):
+                a = 0
+                for i in range(p):
+                    a += getattr(model, self.is_installed)[i]
+                return getattr(model, self.port_name)[p, t] >= - model.bigM * a
+
+            setattr(model, 'install_b4_run1_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
+            setattr(model, 'install_b4_run2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
 
     def constrain_pos_neg(self, model):
         """
@@ -486,7 +517,16 @@ class Port(BaseModel):
             array: array, list of initial values
             expansion_periods: number of expansion periods (int)
         """
+        # Do some checks
+
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        if len(keys) != len(array):
+            # Tile the array
+            print(f'Initial values for port{self.port_name} are tiled across expansion periods.')
+            array = tile_array_over_expansion_periods(array, expansion_periods)
+            # Check if lengths are correct
+            if len(keys) != len(array):
+                raise ValueError(f'Check dimension of initial value array for port {self.port_name}')
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
@@ -847,9 +887,7 @@ class Sink(Port):
         self.add_initial_value(electrical_demand)
 
     def add_sink_profile_from_array(self, array, expansion_periods=1):
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
+        self.add_initial_value_from_array(array, expansion_periods)
 
 
 class Storage(Port):
@@ -1056,9 +1094,7 @@ class ControlledLoadOrGen(FlexPort):
                     en.Constraint(rule=sum_of_energy_must_be_less_than_max))
 
     def add_demand_profile_from_array(self, array, expansion_periods=1):
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
+        self.add_initial_value_from_array(array, expansion_periods)
 
 
 class ControlledLoad(ControlledLoadOrGen):
@@ -1104,11 +1140,7 @@ class ElectricalDemand(Sink):
         self.add_initial_value(electrical_demand)
 
     def add_demand_profile_from_array(self, array, expansion_periods=1):
-        if type(array) is np.ndarray:
-            assert (array >= 0).all(), 'power demand must be non negative'
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
+        self.add_initial_value_from_array(array, expansion_periods)
 
     def initialise_port(self, model):
         super(ElectricalDemand, self).initialise_port(model)
