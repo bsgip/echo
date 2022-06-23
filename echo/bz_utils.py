@@ -236,6 +236,6 @@ def gas_profiler(
     hourly_gas_profile_df = hourly_gas_profile_df.rename(columns={"index": "Timestamp"})
 
     # Sort by date and time
-    hourly_gas_profile_df.sort_values(by="Timestamp", inplace=True)
+    hourly_gas_profile_df = hourly_gas_profile_df.sort_values("Timestamp")
 
     return hourly_gas_profile_df
