@@ -22,48 +22,58 @@ def var_in_range(var1, range_min, range_max):
         return ValueError()
 
 
-def import_cons_check(v):
+def is_non_negative(v, err_msg):
     if v is not None:
         if hasattr(v, '__iter__'):
-            for i in v:
-                if i < 0:
-                    raise ValueError('Import constraint should be positive, following positive load convention')
+            if type(v) is dict:
+                for i in v.values():
+                    if i < 0:
+                        raise ValueError(err_msg)
+            else:
+                for i in v:
+                    if i < 0:
+                        raise ValueError(err_msg)
         else:
             if v < 0:
-                raise ValueError('Import constraint should be positive following positive load convention.')
+                raise ValueError(err_msg)
     return v
 
 
-def export_cons_check(v):
+def is_non_positive(v, err_msg):
     if v is not None:
         if hasattr(v, '__iter__'):
-            for i in v:
-                if i > 0:
-                    raise ValueError('Export constraint should be negative following positive load convention.')
+            if type(v) is dict:
+                for i in v.values():
+                    if i > 0:
+                        raise ValueError(err_msg)
+            else:
+                for i in v:
+                    if i > 0:
+                        raise ValueError(err_msg)
         else:
             if v > 0:
-                raise ValueError('Export constraint should be negative following positive load convention.')
-
+                raise ValueError(err_msg)
     return v
 
+def import_cons_check(v):
+    v = is_non_negative(v, 'Import constraint should be positive, following positive load convention')
+    return v
+
+def export_cons_check(v):
+    v = is_non_positive(v, 'Export constraint should be negative following positive load convention.')
+    return v
 
 def nonnegative_load(v):
-    """ Validate array field that should have non negative entries"""
-    if v is not None:
-        array = np.array([x for x in v.values()])
-        if not (array >= 0).all():
-            raise ValueError('Load array entries should all be non negative.')
+    v = is_non_negative(v, 'Load array entries should all be non negative.')
     return v
-
 
 def nonpositive_generation(v):
-    """ Validate array field that should have non positive entries"""
-    if v is not None:
-        array = np.array([x for x in v.values()])
-        if not (array <= 0).all():
-            raise ValueError('Generation array entries should all be non positive.')
+    v = is_non_positive(v, 'Generation array entries should all be non positive.')
     return v
 
+def nonnegative_costs(v):
+    v = is_non_negative(v, 'Costs should be positive')
+    return v
 
 def dod_checks(cls, values):
     """ Validator for depth of discharge."""

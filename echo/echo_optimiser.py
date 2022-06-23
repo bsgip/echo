@@ -107,70 +107,15 @@ class EchoOptimiser(object):
 
     def apply_constraints(self):
         self._apply_node_constraints()
-        self._apply_path_constraints()
+        if self.ES.paths:
+            self._apply_path_constraints()
 
     def _apply_node_constraints(self):
         for _, obj in self.ES.node_obj.items():
             obj.apply_node_constraints(self.model)
 
     def _apply_path_constraints(self):
-
-        if self.ES.paths:
-
-            def path_flow_rule(model, p, t):
-                a = 0
-                # Iterate through all paths in the model
-                for _, path in self.ES.paths.items():
-                    # If the path starts at the current node
-                    if path.vertices[0] is current_node_name:
-                        # Add the flow value
-                        a += getattr(model, path.flow_value)[p, t]
-                    # If the path ends at the current node
-                    if path.vertices[-1] is current_node_name:
-                        # Subtract the flow value
-                        a -= getattr(model, path.flow_value)[p, t]
-                # Enforce that flows out minus flows in = -1 * port
-                return a == getattr(model, current_port.port_name)[p, t] * -1
-
-            def only_inflow_or_outflow_one(model, p, t):
-                a = 0
-                for _, path in self.ES.paths.items():
-                    if path.vertices[-1] is current_node_name:
-                        a += getattr(model, path.flow_value)[p, t]
-                return a <= getattr(model, current_node_obj.inflow)[p, t] * self.model.bigM
-
-            def only_inflow_or_outflow_two(model, p, t):
-                a = 0
-                for _, path in self.ES.paths.items():
-                    if path.vertices[0] is current_node_name:
-                        a += getattr(model, path.flow_value)[p, t]
-                return a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * self.model.bigM
-
-            sources_and_sinks = self.ES.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
-            for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
-                # get the node obj
-                current_node_obj = self.ES.node_obj[current_node_name]
-                for path_vertices, path_obj in self.ES.paths.items():  # Iterate through all paths
-                    if current_node_name is path_vertices[
-                        0]:  # If we find a path where the current node is the first node on that path
-                        current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
-                    elif current_node_name is path_vertices[
-                        -1]:  # If we find a path where the current node is the last node on that path
-                        current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
-
-                setattr(self.model, f"path_flow_con1_{current_node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=path_flow_rule))
-
-                # Create an indicator var for when there are flows into a node
-                current_node_obj.inflow = f"inflow_{current_node_name}"
-                setattr(self.model, current_node_obj.inflow, en.Var(self.model.Expansion, self.model.Time, initialize=0,
-                                                                    domain=en.Binary))
-
-                setattr(self.model, f"path_flow_con2_{current_node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_one))
-
-                setattr(self.model, f"path_flow_con3_{current_node_name}",
-                        en.Constraint(self.model.Expansion, self.model.Time, rule=only_inflow_or_outflow_two))
+        self.ES.apply_path_constraints(self.model)
 
     def build_objective(self):
         self.objective = 0

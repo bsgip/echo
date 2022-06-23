@@ -27,24 +27,22 @@ def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or N
     if ub is not None:
         v.setub(ub)
 
-def set_var_bounds_from_dict(model, var_name: str, ub: dict or None, lb: dict or None) -> None:
+def set_var_bounds_from_dict(var, ub: dict or None, lb: dict or None) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
     Args:
-        model: pyomo concrete model
-        var_name: variable name (str) corresponding to a variable in the model
+        var: pyomo variable
         ub: dict of floats, where dict keys match variable index sets, or None
         lb: dict of floats, where dict keys match variable index sets, or None
     Returns:
         None
     """
-    v = getattr(model, var_name)
     if lb is not None:
         for k, i in lb.items():
-            v[k].setlb(i)
+            var[k].setlb(i)
     if ub is not None:
         for k, i in ub.items():
-            v[k].setub(i)
+            var[k].setub(i)
 
 def generate_array_constraint(constraint, time_periods: int, expansion_periods: int) -> dict:
     """
