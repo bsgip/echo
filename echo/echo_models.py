@@ -815,6 +815,7 @@ class Source(Port):
     """ A source of a commodity. """
     flows: int = Flows.Export
     opt_type: int = OptimisationType.Parameter
+    export_constraint = FlowConstraint.NoConstraint
 
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
@@ -1416,16 +1417,17 @@ class CarbonSinkNode(Node):
 
 """
 
-
 class GasBoiler(Node):
-    """ Gas boiler converts gas to heat at a fixed COP."""
-    gas_to_heat_efficiency: float
+    """ Gas boiler converts gas to heat."""
+    max_output: Optional[float]
+    min_output: Optional[float]
+    max_input: Optional[float]
+    min_input: Optional[float]
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         self._create_input_port()
         self._create_output_port()
-        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
 
     def _create_input_port(self):
         gp = GasPort()
@@ -1437,13 +1439,31 @@ class GasBoiler(Node):
         tp.flows = Flows.Export
         self.ports['output'] = tp
 
-    def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
+    def add_boiler_transformation(self, gas_port, heat_port, cop):
         # Create appropriate transformation
         t = Transform()
         t.add_lhs_term(heat_port, TransformRule.NegativeComponent, -1)
-        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, gas_to_heat_efficiency)
+        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, cop)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
+
+
+class GasBoilerFixedCOP(GasBoiler):
+    """
+     Fixed COP gas boiler converts gas to heat at a fixed Coefficient of Performance (COP).
+    The boiler is either on at max rating, or off.
+    """
+    cop: float  # COP is the output / input, it is unitless
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        self.add_boiler_transformation(self.ports['input'], self.ports['output'], self.cop)
+
+class ModulatingGasBoiler(GasBoiler):
+    """ Modulating gas boiler converts gas to heat but can adjust its firing rate (adjusting its output)."""
+    temp_setpoints: ArrayType
+    part_load_efficiencies: ArrayType  # Array of efficiencies per ratio = current load / max load
+    temperature_array: ArrayType
 
 
 class InputOutputPiecewiseNode(Node):
@@ -1604,7 +1624,7 @@ Thermal assets
 
 
 class HCLoad(Sink):
-    """ Heating or cooling load"""
+    """ Heating or cooling load. Fixed parameter."""
 
     def __init__(self):
         super(HCLoad, self).__init__()
@@ -1612,12 +1632,21 @@ class HCLoad(Sink):
 
 
 class ControllableHCLoad(Port):
-    temp_setpoints: Optional[ArrayType]  # Parameter for the temperature setpoints over time
+    """
+    Heating or cooling load, that is controllable via a temperature setpoint parameter.
+    Therefore the load is controllable, and is a variable in the optimisation.
+    To write down the appropriate constraints with respect to the desired temperature setpoint, we need to know:
+    - external air temp
+    - parameter representing the building size/footprint.
+
+    """
     flows = Flows.Import
     import_constraint = FlowConstraint.InRange
     units = Units.KWT
-
-
+    temp_setpoints: Optional[ArrayType]  # Parameter for the temperature setpoints over time
+    # The below parameter is used to create a heating load in kW from the
+    # difference between the temp setpoint and outside air temp. It represents the building size/volume.
+    factor: Optional[float]
 
 
 
@@ -1655,7 +1684,11 @@ class GasDemand(Sink):
         super(GasDemand, self).__init__()
         self.units = Units.JPS
 
-    def add_demand_profile_from_array(self, array, expansion_intervals):
-        self.add_sink_profile_from_array(array, expansion_intervals)
+
+class GasSource(Source):
+
+    def __init__(self):
+        super(GasSource, self).__init__()
+        self.units = Units.JPS
 
 

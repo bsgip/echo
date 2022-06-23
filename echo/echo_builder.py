@@ -643,7 +643,7 @@ def create_chiller_node(chiller_dict, df):
 
 
 def create_boiler(boiler_dict, df):
-    boiler = ecm.GasBoiler(**boiler_dict)
+    boiler = ecm.GasBoilerFixedCOP(**boiler_dict)
     return boiler
 
 
