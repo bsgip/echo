@@ -1692,3 +1692,71 @@ class GasSource(Source):
         self.units = Units.JPS
 
 
+# Assets in progress
+
+
+class BoilerWithTemps(GasBoiler):
+
+    temp_in: Optional[str]
+    temp_out: Optional[str]
+    specific_heat = 4200   # specific heat for water
+    node_rule = NodeRule.Custom
+
+
+class TemperatureControlledHeatingLoad(FlexPort):
+    """ A thermal port with an additional temperature variable that is influenced by the value of the port
+    (i.e. how much heat is being delivered). The temperature variable is also influenced by an external temp parameter and a loss factor."""
+    units = Units.KWT
+    flows = Flows.Import
+    temp_setpoint = 20  # Desired temperature
+    temp_ub: ArrayType  # Upper bound of acceptable temperature for each time interval
+    temp_lb: ArrayType  # Lower bound of acceptable temperature for each time interval
+    external_temp: ArrayType  # External temp
+    loss_factor: Optional[float]  # Losses via the difference between the internal temp and the external temp
+    minimise_temp_error: bool = True   # bool var to control whether we try to minimise the temp error
+
+    internal_temp: Optional[str]
+    temp_error: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = 'internal_temp_' + self.port_name
+        self.temp_error = 'temp_error_' + self.port_name
+
+    def initialise_port(self, model):
+        super(TemperatureControlledHeatingLoad, self).initialise_port(model)
+        # Create temperature variable
+        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # # Bound variable to be within acceptable range
+        ub_dict = generate_array_constraint(self.temp_ub, time_periods=len(model.Time), expansion_periods=len(model.Expansion))
+        lb_dict = generate_array_constraint(self.temp_lb, time_periods=len(model.Time), expansion_periods=len(model.Expansion))
+        set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=ub_dict, lb=lb_dict)
+#        Create an error variable for difference between setpoint and actual temperature
+        setattr(model, self.temp_error, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+
+        # def temp_error_rule(model, p, t):
+        #     return getattr(model, self.temp_error)[p, t] == self.temp_setpoint - getattr(model, self.internal_temp)[p, t]
+        #
+        # setattr(model, 'temp_error_con_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=temp_error_rule))
+
+        # Constraint for internal temp vs external temp vs supplied heat
+        def rule2(model, p, t):
+            if t == 0:
+                return getattr(model, self.port_name)[p, t] == getattr(model, self.internal_temp)[p, t]
+            else:
+                internal_temp_delta = getattr(model, self.port_name)[p, t] - getattr(model, self.port_name)[p, t-1]
+                #loss_term = getattr(model, self.internal_temp)[p, t] - self.external_temp[p, t]
+                return getattr(model, self.port_name)[p, t] == internal_temp_delta
+
+        setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule2))
+
+
+
+
+    def add_objective(self, model):
+        total = 0
+        if self.minimise_temp_error is True:
+            total += sum(getattr(model, self.temp_error)[p, t] for p in model.Expansion for t in model.Time)  # minimise the temperature error
+        return total
+
+

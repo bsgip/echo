@@ -61,45 +61,6 @@ def test_gas_boiler_fixed_cop():
         assert gas_mains[i] * boiler.cop == hl_p[(0, i)]*-1
 
 
-def test_modulating_gas_boiler():
-
-    expansion_periods = 1
-    time_periods = 48
-    interval_duration = 30
-
-    system = OptimisationGraph()
-
-    gas_mains = Node()
-    gas_mains.ports['mains'] = GasSource()
-
-    boiler = GasBoilerFixedCOP(cop=0.8)
-
-    heating_load = Node()
-    hl = HCLoad()
-    hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
-    heating_load.ports['load'] = hl
-
-    system.add_node_obj([gas_mains, boiler, heating_load])
-    system.connect_ports_and_create_edge(gas_mains.ports['mains'], boiler.ports['input'])
-    system.connect_ports_and_create_edge(boiler.ports['output'], hl)
-
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None
-    )
-
-    optimiser.optimise()
-
-    boiler_input = optimiser.values(boiler.ports['input'].port_name, 0)
-    boiler_output = optimiser.values(boiler.ports['output'].port_name, 0)
-
-    for i in range(time_periods):
-        assert boiler_input[i] * boiler.cop == -1*boiler_output[i]
-
 
 def test_chiller_operation():
 
