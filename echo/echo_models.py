@@ -3,11 +3,13 @@ from typing import Optional, Union, List, TypeVar
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import pandas as pd
 import pyomo.environ as en
 from networkx import Graph
 from pydantic import BaseModel as PydanticBaseModel, PositiveFloat
 from pydantic import validator, root_validator, confloat
 
+from echo.bz_utils import train_arx_on_data
 from echo.configuration import *
 from echo.constants import *
 from echo.utils import *
@@ -1684,6 +1686,9 @@ class GasDemand(Sink):
         super(GasDemand, self).__init__()
         self.units = Units.JPS
 
+    def add_demand_profile_from_array(self, array, expansion_periods=1):
+        self.add_sink_profile_from_array(array, expansion_periods)
+
 
 class GasSource(Source):
 
@@ -1741,12 +1746,14 @@ class TemperatureControlledHeatingLoad(FlexPort):
 
         # Constraint for internal temp vs external temp vs supplied heat
         def rule2(model, p, t):
-            if t == 0:
-                return getattr(model, self.port_name)[p, t] == getattr(model, self.internal_temp)[p, t]
+            if p==0 and t==0:
+                return en.Constraint.Skip
             else:
-                internal_temp_delta = getattr(model, self.port_name)[p, t] - getattr(model, self.port_name)[p, t-1]
-                #loss_term = getattr(model, self.internal_temp)[p, t] - self.external_temp[p, t]
-                return getattr(model, self.port_name)[p, t] == internal_temp_delta
+                # temp(t) = temp(t-1) + added_heat(t)
+                # loss term = diff between internal and external temp, x some factor
+                temp_diff = getattr(model, self.internal_temp)[p, t] - getattr(model, self.internal_temp)[p, t-1]
+                loss_term = self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t]
+                return getattr(model, self.port_name)[p, t] == temp_diff - loss_term
 
         setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule2))
 
@@ -1760,3 +1767,44 @@ class TemperatureControlledHeatingLoad(FlexPort):
         return total
 
 
+#
+# class ARXPort(FlexPort):
+#     """ An ARX port has additional input variables """
+#     input_data: pd.DataFrame
+#     output_data: pd.DataFrame
+#     controllable_input: str  # string of name of input col that is controllable
+#
+#     control_var: Optional[str]
+#
+#     def __init__(self, **data):
+#         super().__init__(**data)
+#         self.ports['input'] = FlexPort()
+#         self.ports['output'] = FlexPort()
+#         mse_test, mse_trained, model_coef = train_arx_on_data(u=self.input_data,
+#                                                               y=self.output_data,
+#                                                               na=2, nb=2,
+#                                                               training_test_split=80)
+#         self.control_var = self.controllable_input + self.node_name
+#
+#     def initialise_node(self, model):
+#         super(ARXInputOutputNode, self).initialise_node(model)
+#         setattr(model, self.control_var, en.Var())
+#     def apply_node_constraints(self, model):
+
+
+
+class ThermalStorage(Storage):
+    self_discharge: float = 0  # rate at which energy is lost from storage
+    units = Units.KWT
+    external_temp: ArrayType
+
+    # pyomo vars/params
+    internal_temp: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = 'internal_temp_' + self.port_name
+
+    def initialise_port(self, model):
+        super(ThermalStorage, self).initialise_port(model)
+        # Create a variable for the internal temperature

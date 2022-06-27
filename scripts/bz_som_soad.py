@@ -91,11 +91,11 @@ bulk_gas.emission_factor = 60  # 60 kg per GJ gas
 bulk_gas.add_emission_transformation(bulk_gas.ports['gas'], bulk_gas.ports['emissions'], bulk_gas.emission_factor)  # units
 labels[bulk_gas] = 'bulk_gas'
 
-connection_point = ElectricalTellegenNode()
-connection_point.add_named_electrical_ports(['grid', 'soad', 'som'])
+connection_point = TellegenNode()
+connection_point.add_electrical_ports_from_list(['grid', 'soad', 'som'])
 labels[connection_point] = 'elec_cp'
 
-gas_cp = GasTellegenNode()
+gas_cp = TellegenNode()
 gas_cp.ports['bulk'] = GasPort()
 gas_cp.ports['soad'] = GasPort()
 gas_cp.ports['som'] = GasPort()
@@ -104,8 +104,8 @@ labels[gas_cp] = 'gas_cp'
 ### School of Art and Design (SoAD)
 
 # Electrical assets
-elec_conn_pt_soad = ElectricalTellegenNode()
-elec_conn_pt_soad.add_named_electrical_ports(['heat_pump', 'pv', 'kiln'])
+elec_conn_pt_soad = TellegenNode()
+elec_conn_pt_soad.add_electrical_ports_from_list(['heat_pump', 'pv', 'kiln'])
 elec_conn_pt_soad.ports['cp'] = ElectricalDemand()
 elec_conn_pt_soad.ports['cp'].add_demand_profile_from_array(df_elec_new['SoA_kW'].values, expansion_intervals)
 labels[elec_conn_pt_soad] = 'soad_elec_cp'
@@ -127,7 +127,7 @@ solar.ports['pv'] = pv
 labels[solar] = 'soad_solar'
 
 # Gas assets
-gas_cp_soad = GasTellegenNode()
+gas_cp_soad = TellegenNode()
 gas_cp_soad.ports['cp'] = GasPort()
 gas_cp_soad.ports['b1'] = GasPort()
 gas_cp_soad.ports['b2'] = GasPort()
@@ -176,10 +176,10 @@ system.connect_ports_and_create_edge(gas_cp_soad.ports['b2'], boiler2_soad.ports
 ### School of Music (SoM)
 
 # Electrical assets
-elec_conn_pt_som = ElectricalTellegenNode()
+elec_conn_pt_som = TellegenNode()
 metered_cp = ElectricalPort()
 elec_conn_pt_som.ports['cp'] = metered_cp
-elec_conn_pt_som.add_named_electrical_ports(['chiller', 'other'])
+elec_conn_pt_som.add_electrical_ports_from_list(['chiller', 'other'])
 labels[elec_conn_pt_som] = 'som_elec_cp'
 
 chiller = Node()
@@ -195,7 +195,7 @@ other.ports['other'] = ot
 labels[other] = 'som_other_elec'
 
 # Gas assets
-gas_cp_som = GasTellegenNode()
+gas_cp_som = TellegenNode()
 gas_cp_som.ports['cp'] = GasDemand()
 gas_cp_som.ports['cp'].add_demand_profile_from_array(df_gas['SoM_Gj'].values, expansion_intervals)
 gas_cp_som.ports['som'] = GasPort()

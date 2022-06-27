@@ -2,9 +2,12 @@ import pandas as pd
 from sklearn import linear_model
 import json
 import os
+
+from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 import pandas as pd
 import glob
+import numpy as np
 
 from bz_data import anu_hv_network
 
@@ -239,3 +242,71 @@ def gas_profiler(
     hourly_gas_profile_df = hourly_gas_profile_df.sort_values("Timestamp")
 
     return hourly_gas_profile_df
+
+def train_arx_on_data(u: pd.DataFrame, y: pd.DataFrame, na: int, nb: int, training_test_split: int):
+    """
+    Trains an ARX model on the provided data. Returns the model parameters as well as the absoulte % error for the test dataset and training dataset.
+    """
+
+    def build_phi_matrix(na, nb, u, y):
+        """ Builds the regressor matrix phi"""
+        n = len(y)
+        ns = max(na, nb)
+        phi = np.zeros([n - ns, na + nb])
+        for row in range(n - ns):
+            phi[row, 0:na] = y[row:row + na]
+            phi[row, na:na + nb] = u[row + 1:row + nb + 1]  # why the plus one?
+        return phi
+
+    def calculate_mse(y, yhat):
+        """ Calculates mean squared error between y and yhat"""
+        assert len(y) == len(yhat)
+        sum = 0
+        for i in range(len(y)):
+            sum += (y[i] - yhat[i]) ** 2
+        return sum/len(y)
+
+    def use_coef_to_predict_y(phi, model):
+        """ Uses coefficients from regression, as well as regressor matrix, to predict y values"""
+        y_predicted = np.matmul(phi, model.coef_)
+        return y_predicted
+
+    def split_training_validation(y, u, split_percentage):
+        total = len(y)
+        assert total // split_percentage == 0, 'Test/train split % does not give an unambiguous split'
+        training_y = y[0:int(total * split_percentage / 100)]
+        training_u = u[0:int(total * split_percentage / 100)]
+        validation_y = y[int(total * split_percentage / 100):]
+        validation_u = u[int(total * split_percentage / 100):]
+        return training_y, training_u, validation_y, validation_u
+
+    def fit_model_params(phi, y):
+        """ Creates a linear regression model and fits the params, returning the model object"""
+        model = LinearRegression()
+        model.fit(phi, y)
+        return model
+
+    # 1. Split data
+    training_y, training_u, test_y, test_u = split_training_validation(y.values, u.values, training_test_split)
+    # 2. Calculate phi from training data
+    training_phi = build_phi_matrix(na=na, nb=nb, u=training_u, y=training_y)
+    # 3. Fit model params (and trim y in the process)
+    trained_model = fit_model_params(training_phi, training_y[max(na, nb):])
+    # 4. Calculate phi test
+    test_phi = build_phi_matrix(na=na, nb=nb, u=test_u, y=test_y)
+    # 5. Predict outputs of test set
+    yhat_test = use_coef_to_predict_y(test_phi, trained_model)
+    # 6. Calculate MSE for test and training data
+    mse_test = calculate_mse(test_y[max(na, nb):], yhat_test)
+    # 7. Do the same for training data, for comparison
+    yhat_training = use_coef_to_predict_y(training_phi, trained_model)
+    mse_trained = calculate_mse(training_y[max(na, nb):], yhat_training)
+
+    return mse_test, mse_trained, trained_model.coef_
+
+
+
+
+
+
+
