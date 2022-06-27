@@ -14,7 +14,7 @@ from echo.echo_optimiser import EchoOptimiser
 import echo.objectives as obj
 from pyomo.util.infeasible import log_infeasible_constraints
 
-import echo.echo_sgt as ecsgt
+
 
 
 
@@ -43,6 +43,7 @@ class EchoScenario:
         # import sgt and sgt-e-json for power flows
         import sgt
         import sgt_e_json
+        import echo.echo_sgt as ecsgt
         sgt.set_message_log_level(sgt.LogLevel.NONE)
         sgt.set_warning_log_level(sgt.LogLevel.NONE)
 
