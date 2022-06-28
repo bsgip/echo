@@ -412,6 +412,7 @@ class Port(BaseModel):
                 set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
 
         if self.active_periods is not None:
+
             def on_off_rule1(model, p, t):
                 return getattr(model, self.port_name)[p, t] <= self.active_periods[p, t] * model.bigM
 
@@ -422,6 +423,18 @@ class Port(BaseModel):
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
             setattr(model, f"active_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
+
+    @staticmethod
+    def generic_bigM_1(var, binary_var):
+        def constraint(model, p, t):
+            return getattr(model, var)[p, t] <= getattr(model, binary_var)[p, t] * model.bigM
+        return constraint
+
+    @staticmethod
+    def generic_bigM_2(var, binary_var):
+        def constraint(model, p, t):
+            return getattr(model, var)[p, t] >= - getattr(model, binary_var)[p, t] * model.bigM
+        return constraint
 
     def constrain_pos_neg(self, model):
         """
@@ -1791,6 +1804,66 @@ class TemperatureControlledHeatingLoad(FlexPort):
 #         setattr(model, self.control_var, en.Var())
 #     def apply_node_constraints(self, model):
 
+
+class InputOutputNode(Node):
+    input_unit: int
+    output_unit: int
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.add_flex_port('input', unit=self.input_unit)
+        self.add_flex_port('output', unit=self.output_unit)
+
+
+class TempControlledBoiler(InputOutputNode):
+    """ A temp controlled boiler has an input and output port. """
+    input_unit = Units.JPS
+    output_unit = Units.KWT
+    max_input: float
+    max_output: float
+    outlet_temp_setpoint = 80
+    node_rule = NodeRule.Custom
+
+    # pyomo vars
+    is_on: Optional[str]
+    return_temp: Optional[str]
+    exit_temp: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports['input'].set_flow_constraints(max_import=self.max_input, max_export=0.)
+        self.ports['output'].set_flow_constraints(max_import=0., max_export=self.max_output)
+        self.return_temp = 'inlet_temp_' + self.node_name
+        self.exit_temp = 'outlet_temp_' + self.node_name
+
+    def initialise_node(self, model):
+        super(TempControlledBoiler, self).initialise_node(model)
+        # Define extra variables
+        setattr(model, self.return_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+        setattr(model, self.exit_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+
+    def apply_node_constraints(self, model):
+
+        def constraint1(model, p, t):
+            return getattr(model, self.exit_temp)[p, t] == self.outlet_temp_setpoint
+
+        setattr(model, 'boiler_temp_con1_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint1))
+
+
+        def constraint2(model, p, t):
+            """ return at time t = exiting at time t-1 minus energy removed at t-1"""
+            return getattr(model, self.return_temp)[p, t] == getattr(model, self.exit_temp)[p, t] + getattr(model, self.ports['output'].port_name)[p, t]
+
+        setattr(model, 'boiler_temp_con2_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint2))
+
+        def constraint3(model, p, t):
+            """ exiting at time t = return at time t-1 + energy added at time t-1"""
+            return getattr(model, self.exit_temp)[p, t] == getattr(model, self.ports['input'].port_name)[p, t] + getattr(model, self.return_temp)[p, t]
+
+        setattr(model, 'boiler_temp_con3_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint3))
 
 
 class ThermalStorage(Storage):
