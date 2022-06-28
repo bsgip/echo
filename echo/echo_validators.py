@@ -98,3 +98,12 @@ def dod_checks(cls, values):
                                                                                                     max_cap))
     values['min_soc'] = min_soc
     return values
+
+
+def check_bound_order(cls, values):
+    """ Checks that lower bound is smaller than upper bound."""
+    lb = values.get('lower_bound')
+    ub = values.get('upper_bound')
+    if lb >= ub:
+        raise ValueError('Lower bound should be less than upper bound.')
+    return values

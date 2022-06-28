@@ -6,7 +6,7 @@ import networkx as nx
 import pandas as pd
 import pyomo.environ as en
 from networkx import Graph
-from pydantic import BaseModel as PydanticBaseModel, PositiveFloat
+from pydantic import BaseModel as PydanticBaseModel, PositiveFloat, NonPositiveFloat, NonNegativeFloat
 from pydantic import validator, root_validator, confloat
 
 from echo.configuration import *
@@ -557,6 +557,12 @@ class Node(BaseModel):
         """
         self.transformations[transformation_obj.uid] = transformation_obj
 
+    def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
+        t = Transform()
+        t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
+        t.add_rhs_term(var=input_port, rule=TransformRule.Both, weight=input_weight)
+        self.add_transformation(t)
+
     def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
         """ Creates an emission transformation and adds to the node.
         Args:
@@ -1065,6 +1071,28 @@ class ControlledGen(ControlledLoadOrGen):
     min_power: confloat(le=0)
     flows = Flows.Export
 
+class OffOrConstrainedPort(FlexPort):
+    """ A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
+    lower_bound: float
+    upper_bound: float
+
+    bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
+
+    def initialise_port(self, model):
+        super(OffOrConstrainedPort, self).initialise_port(model)
+        # Define an on/off variable
+        self.active = 'active_' + self.port_name
+        setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
+        def on_off_constraint1(model, p, t):
+            return getattr(model, self.port_name)[p, t] >= getattr(model, self.active)[p, t] * self.lower_bound
+
+        def on_off_constraint2(model, p, t):
+            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * self.upper_bound
+
+        setattr(model, 'on_off1_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint1))
+        setattr(model, 'on_off2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint2))
 
 """
 
@@ -1454,16 +1482,22 @@ class GasBoiler(Node):
         self.node_rule = NodeRule.Transform
 
 
-class GasBoilerFixedCOP(GasBoiler):
-    """
-     Fixed COP gas boiler converts gas to heat at a fixed Coefficient of Performance (COP).
-    The boiler is either on at max rating, or off.
-    """
-    cop: float  # COP is the output / input, it is unitless
+class GasBoilerFixedCOP(Node):
+    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
+    max_output: Optional[NonPositiveFloat]
+    min_output: Optional[NonPositiveFloat]
+    max_input: Optional[NonNegativeFloat]
+    min_input: Optional[NonNegativeFloat]
+    cop: NonNegativeFloat
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.add_boiler_transformation(self.ports['input'], self.ports['output'], self.cop)
+        # Add an input and output node, and create the appropriate transformation object
+        self.ports['input'] = OffOrConstrainedPort(upper_bound=self.max_input, lower_bound=self.min_input, units=Units.JPS)
+        self.ports['output'] = OffOrConstrainedPort(upper_bound=self.min_output, lower_bound=self.max_output, units=Units.KWT)
+        self.add_input_output_transformation(input_port=self.ports['input'],
+                                             output_port=self.ports['output'],
+                                             input_weight=self.cop)
 
 class ModulatingGasBoiler(GasBoiler):
     """ Modulating gas boiler converts gas to heat but can adjust its firing rate (adjusting its output)."""
