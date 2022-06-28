@@ -3,10 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to echo's documentation!
+echo: Energy and Commodity Holistic Optimiser
 ==========================================================================
-**echo** (Energy and Commodity Holistic Optimiser) is a python-based multi-commodity energy system modelling tool
+**echo** is a python-based multi-commodity energy system modelling tool
 designed to answer grid integration questions.
+
+This project is developed and maintained by the Battery Storage and Integration Program group at Australian National University.
 
 .. note::
    This project is under active development.
@@ -15,7 +17,16 @@ designed to answer grid integration questions.
    :maxdepth: 2
    :caption: Contents:
 
-
+   getting_started
+   user_guide
+   nodes
+   ports
+   edges
+   echo_graph
+   flows
+   constraints
+   objectives
+   examples
 
 Indices and tables
 ==================
