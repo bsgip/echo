@@ -10,27 +10,27 @@ system = OptimisationGraph()
 grid = Node()
 grid.ports['grid'] = ElectricalPort()
 
-# create an indexed coefficient array
-# temperature_array = np.array([i for i in range(time_periods)])*0.5
-# temp_coef = [-1,0]
-# input_coef = [1,0]
 
-# chiller = NewChiller(max_output=-1000,
-#                      max_input=1000,
-#                      temp_coef=temp_coef,
-#                      input_coef=input_coef,
-#                      temperature_array=temperature_array)
+temperature_array = [5] * time_periods
+temp_coef = [0,0]  # no dependence on temperature
+input_coef = [2,0]  # output = input*1 + 0
+
+chiller = NewChiller(max_output=-1000,
+                     max_input=1000,
+                     temp_coefficients=temp_coef,
+                     input_coefficients=input_coef,
+                     external_temp=temperature_array)
+
+
+# input_pts = [0,1,2,3,4]
+# output_pts = [0,-2,-3,-10, -20]
 #
-
-input_pts = [0,1,2,3,4]
-output_pts = [0,-2,-3,-10, -20]
-
-chiller = Chiller(max_output=-1000,
-                     max_input=1000)
-chiller.set_input_output_breakpoints(input_pts, output_pts, time_periods)
+# chiller = Chiller(max_output=-1000,
+#                      max_input=1000)
+# chiller.set_input_output_breakpoints(input_pts, output_pts, time_periods)
 
 cooling_load = Node()
-cl = HeatingOrCoolingLoad()
+cl = ThermalLoad()
 cl.add_sink_profile_from_array([20] * time_periods, expansion_periods)
 cooling_load.ports['load'] = cl
 

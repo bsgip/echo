@@ -556,6 +556,7 @@ class Node(BaseModel):
             transformation_obj: Transform
         """
         self.transformations[transformation_obj.uid] = transformation_obj
+        self.node_rule = NodeRule.Transform
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         t = Transform()
@@ -800,14 +801,16 @@ class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
     node_rule = NodeRule.Tellegen
 
-    def verify_node(self):
-        # Check that all ports on the node have the same units
-        u = None
-        for p in self.ports.values():
-            if u is not None:
-                assert p.units == u, 'Tellegen node ports must have the same units.'
-            else:
-                u = p.units
+    tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+
+    # def verify_node(self):
+    #     # Check that all ports on the node have the same units
+    #     u = None
+    #     for p in self.ports.values():
+    #         if u is not None:
+    #             assert p.units == u, 'Tellegen node ports must have the same units.'
+    #         else:
+    #             u = p.units
 
 
 class FlexPort(Port):
@@ -818,9 +821,11 @@ class FlexPort(Port):
     opt_type = OptimisationType.Variable
 
 class FlexPortImport(FlexPort):
+    """ Flexible port, imports only"""
     flows = Flows.Import
 
 class FlexPortExport(FlexPort):
+    """ Flexible ports, exports only"""
     flows = Flows.Export
 
 class Source(Port):
@@ -839,16 +844,13 @@ class Sink(Port):
     opt_type = OptimisationType.Parameter
     import_constraint = FlowConstraint.NoConstraint
 
-    # Sink should have non negative initial values
-    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load)
+    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load) # Sink should have non negative initial values
 
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
     def add_sink_profile_from_array(self, array, expansion_periods=1):
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        self.add_initial_value(vals)
+        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
 
 
 class Storage(Port):
@@ -1024,6 +1026,7 @@ class Demand(Sink):
 class ControlledLoadOrGen(FlexPort):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
     The load/generation must be operated within the min and max utilisation (per time unit). """
+    # todo review this model
     min_utilisation: Union[float, None] = None  # Per time unit (minute)
     max_utilisation: float = None
     max_power: float = None
@@ -1197,7 +1200,7 @@ class Inverter(ElectricalNode):
     ac_dc_efficiency: confloat(ge=0, le=1)
     dc_ports: Optional[dict] = {}
     ac_port_name: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
-    node_rule: int = NodeRule.Custom
+    node_rule = NodeRule.Custom
 
     def add_dc_port(self, port_name):
         p = ElectricalPort()
@@ -1372,22 +1375,34 @@ class EV(ElectricalNode):
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
-class BoundedElectricalLoad(ElectricalPort):
-    """ A port where the load has to be within a max and min value which is specified at each timestep."""
-    units = Units.KW
-    import_constraint = FlowConstraint.NoConstraint
-    upper_bound: ArrayType
-    lower_bound: ArrayType
 
-    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
-    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
+class BoundedPort(FlexPort):
+    """ A flex port with an upper and lower bound"""
+    upper_bound: Union[ArrayType, float]
+    lower_bound: Union[ArrayType, float]
+
+    bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
 
     def initialise_port(self, model):
-        super(BoundedElectricalLoad, self).initialise_port(model)
+        super(BoundedPort, self).initialise_port(model)
         # Need to set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
         set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
+
+class BoundedLoad(BoundedPort):
+    """ A port where the load has to be within a max and min value which is specified at each timestep."""
+    import_constraint = FlowConstraint.NoConstraint
+
+    # Do additional validation to make sure both bounds are >= 0
+    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
+    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
+
+    def initialise_port(self, model):
+        super(BoundedLoad, self).initialise_port(model)
+
+class BoundedElectricalLoad(BoundedLoad):
+    units = Units.KW
 
 """
 
@@ -1395,54 +1410,39 @@ class BoundedElectricalLoad(ElectricalPort):
 
 """
 
-
-class CarbonSource(Port):
-    """ For doing carbon emissions from an asset (node) """
-    flows = Flows.Export
-    export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
+class CarbonPort(FlexPort):
+    """ A flexible carbon port"""
     units = Units.CO2
+
+
+class CarbonSource(CarbonPort):
+    """ A variable source of CO2 """
+    flows = Flows.Export
 
 
 class CarbonSink(Port):
-    """ For sinking carbon emissions into an aggregation node """
+    """ A variable sink of CO2 """
     flows = Flows.Import
-    import_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
-    units = Units.CO2
 
 
 class CarbonAggregation(Node):
-    sum: Optional[BaseModel]
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        aggregation_port = CarbonSink()
-        self.ports['sum'] = aggregation_port
-        setattr(self, 'sum', aggregation_port)
 
-    def add_aggregation_transformation(self):
+    def add_aggregation_transformation(self, sum_port_name: str):
+        assert self.ports.get(sum_port_name) is not None, 'Sum port has not been defined as a port on this node.'
         # Create appropriate transformation
         t = Transform()
+        # Collect all our other port variables
         for port_name, port_obj in self.ports.items():
-            if port_name != 'sum':
+            if port_name != sum_port_name:
                 t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
-        t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
+        t.add_rhs_term(self.ports[sum_port_name], TransformRule.PositiveComponent, 1)
         self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
-        self.add_aggregation_transformation()
         super(CarbonAggregation, self).verify_node()
-
-
-class CarbonSinkNode(Node):
-    node_rule = NodeRule.Custom
-
-    def verify_node(self):
-        for port in self.ports.values():
-            if port.units is not Units.CO2:
-                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
 
 
 """"
@@ -1451,43 +1451,22 @@ class CarbonSinkNode(Node):
 
 """
 
-class GasBoiler(Node):
-    """ Gas boiler converts gas to heat."""
-    max_output: Optional[float]
-    min_output: Optional[float]
-    max_input: Optional[float]
-    min_input: Optional[float]
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self._create_input_port()
-        self._create_output_port()
-
-    def _create_input_port(self):
-        gp = GasPort()
-        gp.flows = Flows.Import
-        self.ports['input'] = gp
-
-    def _create_output_port(self):
-        tp = ThermalPort()
-        tp.flows = Flows.Export
-        self.ports['output'] = tp
-
-    def add_boiler_transformation(self, gas_port, heat_port, cop):
-        # Create appropriate transformation
-        t = Transform()
-        t.add_lhs_term(heat_port, TransformRule.NegativeComponent, -1)
-        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, cop)
-        self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
-
-
-class GasBoilerFixedCOP(Node):
-    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
+class InputOutputNode(Node):
+    """
+    An input-output node has one input port and one output port.
+    We assume the input port only ever imports, and the output port only ever exports.
+    """
+    input_port_unit: int
+    output_port_unit: int
+    # Some optional parameters for controlling input/output port flows
     max_output: Optional[NonPositiveFloat]
     min_output: Optional[NonPositiveFloat]
     max_input: Optional[NonNegativeFloat]
     min_input: Optional[NonNegativeFloat]
+
+
+class GasBoilerFixedCOP(InputOutputNode):
+    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
     cop: NonNegativeFloat
 
     def __init__(self, **data) -> None:
@@ -1499,177 +1478,115 @@ class GasBoilerFixedCOP(Node):
                                              output_port=self.ports['output'],
                                              input_weight=self.cop)
 
-class ModulatingGasBoiler(GasBoiler):
-    """ Modulating gas boiler converts gas to heat but can adjust its firing rate (adjusting its output)."""
-    temp_setpoints: ArrayType
-    part_load_efficiencies: ArrayType  # Array of efficiencies per ratio = current load / max load
-    temperature_array: ArrayType
 
-
-class InputOutputPiecewiseNode(Node):
-    """ A node with one input and one output.
-     The transformation between input and output is defined by an array of input and output pts,
-     which are used to construct a linear piecewise function.
-     Alternatively, the transformation can be defined by an array of coefficients of a polynomial function."""
+class TimeVaryingPiecewiseIONode(InputOutputNode):
+    """ Node with an input and output port. it is assumed that the input port is always importing,
+    and the output port is always exporting. The relationship between input and output is defined at each time
+    interval by an array of input-->output point pairs, which are used to construct a piecewise constraint. """
     node_rule = NodeRule.Custom
-    max_input: confloat(ge=0.)
-    max_output: confloat(le=0.)
-    input_pts: Optional[dict]
-    output_pts: Optional[dict]
-    temp_coef: Optional[ArrayType]
-    input_coef: Optional[ArrayType]
-    n_pts: Optional[int] = 5
-    temperature_array: Optional[ArrayType]  # temperature time series
+    max_input: NonNegativeFloat
+    min_input = 0.
+    max_output: NonPositiveFloat
+    min_output = 0.
+    input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
+    output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.temp_coef is not None:
-            assert self.temperature_array is not None, 'if using temperature coefficients please enter temperature array'
+        self.ports['input'] = FlexPortImport(units=self.input_port_unit, import_constraint_value=self.max_input)
+        self.ports['output'] = FlexPortExport(units=self.output_port_unit, export_constraint_value=self.max_output)
 
-    def set_input_output_breakpoints(self, input_array, output_array, time_periods, expansion_periods=1):
-        self._validate_input_output_breakpoints(input_array, output_array)
-        self._add_input_pts_from_array(input_array, time_periods, expansion_periods)
-        self._add_output_pts_from_array(output_array, time_periods, expansion_periods)
-
-    def _validate_input_output_breakpoints(self, input_array, output_array):
-        assert len(input_array) == len(output_array), 'input and output arrays should be same length.'
-        if (min(input_array) > 0) or (max(input_array) < self.max_input):
-            print('Input breakpoints should ideally be defined over the entire input range.')
-        if (min(output_array) > self.max_output) or (max(output_array) < 0):
-            print('Output breakpoints should ideally be defined over the entire output range.')
-
-    def _add_input_pts_from_array(self, array, time_periods, expansion_periods):
-        self.input_pts = add_time_and_expansion_index_to_values(array, time_periods, expansion_periods)
-
-    def _add_output_pts_from_array(self, array, time_periods, expansion_periods):
-        self.output_pts = add_time_and_expansion_index_to_values(array, time_periods, expansion_periods)
-
-    def add_input_port(self, port_unit, slack=False):
-        p = FlexPort()
-        p.units = port_unit
-        p.flows = Flows.Import
-        p.import_constraint = FlowConstraint.Fixed
-        p.set_flow_constraints(max_import=self.max_input, max_export=0., slack=slack)
-        self.ports['input'] = p
-
-    def add_output_port(self, port_unit, slack=False):
-        p = FlexPort()
-        p.units = port_unit
-        p.flows = Flows.Export
-        p.export_constraint = FlowConstraint.Fixed
-        p.set_flow_constraints(max_import=0., max_export=self.max_output, slack=slack)
-        self.ports['output'] = p
+    def verify_node(self):
+        assert self.input_pts is not None, 'No input points defined'
+        assert self.output_pts is not None, 'No output points defined'
 
     def initialise_node(self, model):
-        """ Creating and modifying variables """
-        super(InputOutputPiecewiseNode, self).initialise_node(model)
-        if self.temp_coef is not None:
-            # Create x and y points for piecewise function from coefficient array
-            x = np.linspace(0, self.max_input, self.n_pts)
-            if self.input_pts is not None:
-                print('Input points have already been specified, overwriting.')
-            if self.output_pts is not None:
-                print('Output points have already been specified, overwriting.')
-            self.input_pts, self.output_pts = create_input_output_pts_from_coefficients(temp_coef=self.temp_coef,
-                                                                                        input_coef=self.input_coef,
-                                                                                        temperature_array=self.temperature_array,
-                                                                                        xpts=x,
-                                                                                        time_periods=len(model.Time))
-
-        # Bound our input and output variables
+        super(TimeVaryingPiecewiseIONode, self).initialise_node(model)
+        # Need to bound our input and output port variables that we will use for piecewise
         set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.max_input, lb=0.)
         set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.max_output)
 
     def apply_node_constraints(self, model):
-
-        # Get our input/output pyomo variables
-        xvar = getattr(model, self.ports['input'].port_name)
+        xvar = getattr(model, self.ports['input'].port_name) # Get input/output pyomo variables
         yvar = getattr(model, self.ports['output'].port_name)
-
-        # Get our piecewise points
-        xdata = self.input_pts
+        xdata = self.input_pts # Get piecewise points
         ydata = self.output_pts
 
-        # Set the piecewise function up using the variables and the data points.
-        con_name = f"piecewise_con_{self.node_name}"
-        setattr(model, con_name, en.Piecewise(model.Expansion,
-                                              model.Time,
+        self.apply_piecewise_constraint(model,xvar, yvar, xdata, ydata)
+
+    def apply_piecewise_constraint(self, model, xvar, yvar, xdata: dict, ydata: dict):
+        con_name = 'piecewise_con_' + self.node_name
+        setattr(model, con_name, en.Piecewise(model.Expansion, model.Time,
                                               yvar,
                                               xvar,
                                               pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
 
+class SinglePiecewiseIONode(TimeVaryingPiecewiseIONode):
+    """ The relationship between input and output for all time intervals
+    is given by an array of input-->output point pairs, which are used to construct a piecewise constraint."""
+
+    def add_input_pts(self, array, time_periods, expansion_periods):
+        self.input_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
+
+    def add_output_pts(self, array, time_periods, expansion_periods):
+        self.output_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
+
+
+class NewChiller(TimeVaryingPiecewiseIONode):
+    """
+    A chiller converts an electrical input to a thermal cooling output.
+    The conversion is defined by a piecewise constraint relating input/output.
+    This constraint can be different for different time periods, reflecting that chiller performance depends on
+    external air temperature which can be included as a parameter.
+    """
+    input_port_unit = Units.KW
+    output_port_unit = Units.KWT
+    external_temp: Optional[ArrayType]  # array of external temperatures
+    input_coefficients: Optional[ArrayType]  # coefficients on the input power
+    temp_coefficients: Optional[ArrayType]  # coefficients on external temp
+    n_pts: Optional[int] = 5  # number of points per piecewise approximation
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.external_temp is not None:
+            assert self.input_coefficients is not None, 'If temp data is provided, temp coefficients are required.'
+            assert self.temp_coefficients is not None, 'If temp data is provided, input coefficients are required.'
+            self.generate_input_output_pts_from_coefficients()
+
+    def generate_input_output_pts_from_coefficients(self):
+        xpts = np.linspace(0, self.max_input, self.n_pts)
+        time_periods = len(self.external_temp)
+        self.input_pts, self.output_pts = create_input_output_pts_from_coefficients(self.temp_coefficients,
+                                                                                    self.input_coefficients,
+                                                                                    self.external_temp,
+                                                                                    xpts,
+                                                                                    time_periods)
     def get_cop(self, optimiser):
         """ Returns the coefficient of performance (output/input)"""
+        #todo not set up for expansion planning
         _input = optimiser.values(self.ports['input'].port_name)
         _output = optimiser.values(self.ports['output'].port_name)
         cop = np.zeros(len(_input))
         for i in range(len(_input)):
-            cop[i] = _output[i] / _input[i]
-
-        return cop * -1
-
-
-class HeatPump(InputOutputPiecewiseNode):
-    """
-    A heat pump converts an electrical input to hot water which can be used for heating, and chilled water which can be used for cooling.
-    """
-
-
-class Chiller(InputOutputPiecewiseNode):
-    """
-    A chiller converts an electrical input to a thermal cooling output.
-    """
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.add_input_port(Units.KW)
-        self.add_output_port(Units.KWT)
-
-
-class TimeDelayNode(Node):
-    """ An input output node that implements a fixed delay between input and output."""
-    time_delay: float
-    input_unit: Units
-    output_unit: Units
-    node_rule = NodeRule.Custom
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.ports['input'] = FlexPortImport(units=self.input_unit)
-        self.ports['output'] = FlexPortExport(units=self.output_unit)
-
-    def apply_node_constraints(self, model):
-
-        def time_delay_rule(model, p, t):  # Modified tellegen node rule
-            a = getattr(model, self.ports['input'].port_name)
-            b = getattr(model, self.ports['output'].port_name)
-            if t < self.time_delay:
-                return b[p, t] == 0
-            else:
-                return b[p, t] == a[p, int(t-self.time_delay)]*-1
-
-        con_name = 'time_delay_con_' + self.node_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
-
+            cop[i] = _output[i] / _input[i] * -1
+        return cop
 
 
 """ 
-Thermal assets
+Thermal models
 """
-class ThermalPort(FlexPort):
 
+class ThermalPort(FlexPort):
+    """ Flexible thermal port."""
     def __init__(self):
         super(ThermalPort, self).__init__()
         self.units = Units.KWT
 
-
-class HCLoad(Sink):
+class ThermalLoad(Sink):
     """ Heating or cooling load. Fixed parameter."""
-
     def __init__(self):
-        super(HCLoad, self).__init__()
+        super(ThermalLoad, self).__init__()
         self.units = Units.KWT
-
 
 class ControllableHCLoad(Port):
     """
@@ -1690,7 +1607,7 @@ class ControllableHCLoad(Port):
 
 
 """
-Gas assets
+Gas models
 """
 
 class GasPort(FlexPort):
@@ -1712,3 +1629,32 @@ class GasSource(Source):
         self.units = Units.JPS
 
 
+
+""" 
+Control system models 
+"""
+
+class TimeDelayNode(Node):
+    """ An input output node that implements a fixed delay between input and output."""
+    time_delay: float
+    input_unit: int
+    output_unit: int
+    node_rule = NodeRule.Custom
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports['input'] = FlexPortImport(units=self.input_unit)
+        self.ports['output'] = FlexPortExport(units=self.output_unit)
+
+    def apply_node_constraints(self, model):
+
+        def time_delay_rule(model, p, t):  # Modified tellegen node rule
+            a = getattr(model, self.ports['input'].port_name)
+            b = getattr(model, self.ports['output'].port_name)
+            if t < self.time_delay:
+                return b[p, t] == 0
+            else:
+                return b[p, t] == a[p, int(t-self.time_delay)]*-1
+
+        con_name = 'time_delay_con_' + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))

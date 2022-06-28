@@ -27,10 +27,10 @@ def test_gas_boiler_fixed_cop():
     gas_mains = Node()
     gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoilerFixedCOP(cop=0.5)
+    boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5)
 
     heating_load = Node()
-    hl = HCLoad()
+    hl = ThermalLoad()
     hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 

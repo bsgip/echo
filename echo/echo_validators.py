@@ -104,6 +104,28 @@ def check_bound_order(cls, values):
     """ Checks that lower bound is smaller than upper bound."""
     lb = values.get('lower_bound')
     ub = values.get('upper_bound')
-    if lb >= ub:
-        raise ValueError('Lower bound should be less than upper bound.')
+    if (lb is not None) and (ub is not None):
+        if hasattr(lb, '__iter__'):
+            assert len(lb) == len(ub), 'Lower bound and upper bound are mismatched lengths.'
+            for i in range(len(lb)):
+                if lb[i] >= ub[i]:
+                    raise ValueError('Lower bound should be less than upper bound.')
+        else:
+            if lb >= ub:
+                raise ValueError('Lower bound should be less than upper bound.')
     return values
+
+
+def node_unit_validator(cls, values):
+    """ Checks that a tellegen node's ports all have the same units."""
+    ports = values.get('ports')
+    u = None
+    if ports is not None:
+        for p in ports.values():
+            if u is not None:
+                assert p.units == u, 'Tellegen node ports must have the same units.'
+            else:
+                u = p.units
+
+    return values
+
