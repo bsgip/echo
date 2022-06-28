@@ -16,6 +16,40 @@ SOLVER_EXECUTABLE = None
 N_INTERVALS = 48
 
 
+def test_off_or_constrained_port():
+    expansion_periods = 1
+    time_periods = 48
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    mains = Node()
+    mains.add_electrical_port('grid')
+
+    load = Node()
+    l1 = OffOrConstrainedPort(lower_bound=5, upper_bound=10, units=Units.KW)
+    load.ports['load'] = l1
+
+    system.add_node_obj([mains, load])
+    system.connect_ports_and_create_edge(mains.ports['grid'], l1)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    model = optimiser.model
+    optimiser.objective += sum(getattr(model, l1.port_name)[p, t] for p in model.Expansion for t in model.Time)*-1
+
+    optimiser.optimise(tee=True)
+
+    opt_loads = optimiser.values(l1.port_name)
+
+
 def test_gas_boiler_fixed_cop():
 
     expansion_periods = 1
@@ -27,7 +61,7 @@ def test_gas_boiler_fixed_cop():
     gas_mains = Node()
     gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoilerFixedCOP(cop=0.5)
+    boiler = GasBoilerFixedCOP(max_input=10, min_input=5, max_output=-10, min_output=-2, cop=1)
 
     heating_load = Node()
     hl = HCLoad()
@@ -47,7 +81,7 @@ def test_gas_boiler_fixed_cop():
         objective_set=None
     )
 
-    optimiser.optimise()
+    optimiser.optimise(tee=True)
 
     print('mains gas: ', optimiser.values(gas_mains.ports['mains'].port_name, 0))
     print('boiler input (gas): ', optimiser.values(boiler.ports['input'].port_name, 0))

@@ -6,7 +6,7 @@ import networkx as nx
 import pandas as pd
 import pyomo.environ as en
 from networkx import Graph
-from pydantic import BaseModel as PydanticBaseModel, PositiveFloat
+from pydantic import BaseModel as PydanticBaseModel, PositiveFloat, NonPositiveFloat, NonNegativeFloat
 from pydantic import validator, root_validator, confloat
 
 from echo.bz_utils import train_arx_on_data
@@ -288,6 +288,7 @@ class Port(BaseModel):
         self.pos = positive_variable_component + self.port_name
         self.neg = negative_variable_component + self.port_name
         self.is_pos = f"is_pos_{self.port_name}"
+        self.active = 'active_' + self.port_name
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """
@@ -570,8 +571,16 @@ class Node(BaseModel):
             transformation_obj: Transform
         """
         self.transformations[transformation_obj.uid] = transformation_obj
+        self.node_rule = NodeRule.Transform
 
-    def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
+    def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
+        t = Transform()
+        t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
+        t.add_rhs_term(var=input_port, rule=TransformRule.Both, weight=input_weight)
+        self.add_transformation(t)
+
+    def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor: float):
+        # todo update this to make carbon port required input
         """ Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
@@ -580,12 +589,9 @@ class Node(BaseModel):
         """
         # Create appropriate transformation
         t = Transform()
-        if carbon_port not in self.ports.values():
-            self.ports['CO2'] = carbon_port
-        t.add_lhs_term(carbon_port, TransformRule.Both, 1)
+        t.add_lhs_term(carbon_port, TransformRule.PositiveComponent, 1)
         t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
         self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
         if bool(self.ports) is False:
@@ -825,6 +831,18 @@ class FlexPort(Port):
     export_constraint = FlowConstraint.NoConstraint
     opt_type = OptimisationType.Variable
 
+
+class FlexImportPort(Port):
+    """ Flexible port, imports only """
+    flows = Flows.Import
+    import_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+
+class FlexExportPort(Port):
+    """ Flexible port, exports only """
+    flows = Flows.Export
+    export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
 
 class Source(Port):
     """ A source of a commodity. """
@@ -1073,6 +1091,30 @@ class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
     min_power: confloat(le=0)
     flows = Flows.Export
+
+
+class OffOrConstrainedPort(FlexPort):
+    """ A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
+    lower_bound: float
+    upper_bound: float
+
+    bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
+
+    def initialise_port(self, model):
+        super(OffOrConstrainedPort, self).initialise_port(model)
+        # Define an on/off variable
+        self.active = 'active_' + self.port_name
+        setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
+        def on_off_constraint1(model, p, t):
+            return getattr(model, self.port_name)[p, t] >= getattr(model, self.active)[p, t] * self.lower_bound
+
+        def on_off_constraint2(model, p, t):
+            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * self.upper_bound
+
+        setattr(model, 'on_off1_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint1))
+        setattr(model, 'on_off2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint2))
 
 
 """
@@ -1432,49 +1474,25 @@ class CarbonSinkNode(Node):
 
 """
 
-class GasBoiler(Node):
-    """ Gas boiler converts gas to heat."""
-    max_output: Optional[float]
-    min_output: Optional[float]
-    max_input: Optional[float]
-    min_input: Optional[float]
+class GasBoilerFixedCOP(Node):
+    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
+    max_output: Optional[NonPositiveFloat]
+    min_output: Optional[NonPositiveFloat]
+    max_input: Optional[NonNegativeFloat]
+    min_input: Optional[NonNegativeFloat]
+    cop: NonNegativeFloat
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self._create_input_port()
-        self._create_output_port()
-
-    def _create_input_port(self):
-        gp = GasPort()
-        gp.flows = Flows.Import
-        self.ports['input'] = gp
-
-    def _create_output_port(self):
-        tp = ThermalPort()
-        tp.flows = Flows.Export
-        self.ports['output'] = tp
-
-    def add_boiler_transformation(self, gas_port, heat_port, cop):
-        # Create appropriate transformation
-        t = Transform()
-        t.add_lhs_term(heat_port, TransformRule.NegativeComponent, -1)
-        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, cop)
-        self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
+        # Add an input and output node, and create the appropriate transformation object
+        self.ports['input'] = OffOrConstrainedPort(upper_bound=self.max_input, lower_bound=self.min_input, units=Units.JPS)
+        self.ports['output'] = OffOrConstrainedPort(upper_bound=self.min_output, lower_bound=self.max_output, units=Units.KWT)
+        self.add_input_output_transformation(input_port=self.ports['input'],
+                                             output_port=self.ports['output'],
+                                             input_weight=self.cop)
 
 
-class GasBoilerFixedCOP(GasBoiler):
-    """
-     Fixed COP gas boiler converts gas to heat at a fixed Coefficient of Performance (COP).
-    The boiler is either on at max rating, or off.
-    """
-    cop: float  # COP is the output / input, it is unitless
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.add_boiler_transformation(self.ports['input'], self.ports['output'], self.cop)
-
-class ModulatingGasBoiler(GasBoiler):
+class ModulatingGasBoiler(Node):
     """ Modulating gas boiler converts gas to heat but can adjust its firing rate (adjusting its output)."""
     temp_setpoints: ArrayType
     part_load_efficiencies: ArrayType  # Array of efficiencies per ratio = current load / max load
@@ -1664,8 +1682,6 @@ class ControllableHCLoad(Port):
     factor: Optional[float]
 
 
-
-
 class ThermalPort(Port):
 
     def __init__(self):
@@ -1711,14 +1727,6 @@ class GasSource(Source):
 
 
 # Assets in progress
-
-
-class BoilerWithTemps(GasBoiler):
-
-    temp_in: Optional[str]
-    temp_out: Optional[str]
-    specific_heat = 4200   # specific heat for water
-    node_rule = NodeRule.Custom
 
 
 class TemperatureControlledHeatingLoad(FlexPort):
@@ -1881,3 +1889,5 @@ class ThermalStorage(Storage):
     def initialise_port(self, model):
         super(ThermalStorage, self).initialise_port(model)
         # Create a variable for the internal temperature
+
+

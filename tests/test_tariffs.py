@@ -402,6 +402,3 @@ def test_demand_tariff_reset_periods():
         np.testing.assert_almost_equal(max_opt, max_calc, 5)
 
 
-
-
-
