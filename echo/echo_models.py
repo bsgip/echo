@@ -3,6 +3,7 @@ from typing import Optional, Union, List, TypeVar
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import pandas as pd
 import pyomo.environ as en
 from networkx import Graph
 from pydantic import BaseModel as PydanticBaseModel, PositiveFloat
