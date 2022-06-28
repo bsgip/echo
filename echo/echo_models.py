@@ -811,6 +811,11 @@ class FlexPort(Port):
     export_constraint = FlowConstraint.NoConstraint
     opt_type = OptimisationType.Variable
 
+class FlexPortImport(FlexPort):
+    flows = Flows.Import
+
+class FlexPortExport(FlexPort):
+    flows = Flows.Export
 
 class Source(Port):
     """ A source of a commodity. """
@@ -1590,19 +1595,14 @@ class Chiller(InputOutputPiecewiseNode):
 class TimeDelayNode(Node):
     """ An input output node that implements a fixed delay between input and output."""
     time_delay: float
+    input_unit: Units
+    output_unit: Units
     node_rule = NodeRule.Custom
 
-    def add_input_port(self, port_unit):
-        p = FlexPort(units=port_unit, flows=Flows.Import, import_constraint=FlowConstraint.NoConstraint)
-        self.ports['input'] = p
-
-    def add_output_port(self, port_unit):
-        p = FlexPort(units=port_unit, flows=Flows.Export, export_constraint=FlowConstraint.NoConstraint)
-        self.ports['output'] = p
-
-    def verify_node(self):
-        assert self.ports.get('output') is not None, 'An output port must be added to the Time Delay Node'
-        assert self.ports.get('input') is not None, 'An input port must be added to the Time Delay Node'
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports['input'] = FlexPortImport(units=self.input_unit)
+        self.ports['output'] = FlexPortExport(units=self.output_unit)
 
     def apply_node_constraints(self, model):
 
@@ -1622,6 +1622,11 @@ class TimeDelayNode(Node):
 """ 
 Thermal assets
 """
+class ThermalPort(FlexPort):
+
+    def __init__(self):
+        super(ThermalPort, self).__init__()
+        self.units = Units.KWT
 
 
 class HCLoad(Sink):
@@ -1650,41 +1655,21 @@ class ControllableHCLoad(Port):
     factor: Optional[float]
 
 
-
-
-class ThermalPort(Port):
-
-    def __init__(self):
-        super(ThermalPort, self).__init__()
-        self.units = Units.KWT
-        self.flows = Flows.Both
-        self.import_constraint = FlowConstraint.NoConstraint
-        self.export_constraint = FlowConstraint.NoConstraint
-        self.opt_type = OptimisationType.Variable
-
-
 """
 Gas assets
 """
 
-
-class GasPort(Port):
+class GasPort(FlexPort):
 
     def __init__(self):
         super(GasPort, self).__init__()
         self.units = Units.JPS
-        self.flows = Flows.Both
-        self.import_constraint = FlowConstraint.NoConstraint
-        self.export_constraint = FlowConstraint.NoConstraint
-        self.opt_type = OptimisationType.Variable
-
 
 class GasDemand(Sink):
 
     def __init__(self):
         super(GasDemand, self).__init__()
         self.units = Units.JPS
-
 
 class GasSource(Source):
 
