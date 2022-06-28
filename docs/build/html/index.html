@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to echo’s documentation! &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+  <title>echo: Energy and Commodity Holistic Optimiser &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -18,7 +18,8 @@
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="getting_started.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,12 +37,18 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">Welcome to echo’s documentation!</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
-</div>
+
         </div>
       </div>
     </nav>
@@ -56,7 +63,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home"></a> &raquo;</li>
-      <li>Welcome to echo’s documentation!</li>
+      <li>echo: Energy and Commodity Holistic Optimiser</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -66,15 +73,58 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="welcome-to-echo-s-documentation">
-<h1>Welcome to echo’s documentation!<a class="headerlink" href="#welcome-to-echo-s-documentation" title="Permalink to this heading"></a></h1>
-<p><strong>echo</strong> (Energy and Commodity Holistic Optimiser) is a python-based multi-commodity energy system modelling tool
+  <section id="echo-energy-and-commodity-holistic-optimiser">
+<h1>echo: Energy and Commodity Holistic Optimiser<a class="headerlink" href="#echo-energy-and-commodity-holistic-optimiser" title="Permalink to this heading"></a></h1>
+<p><strong>echo</strong> is a python-based multi-commodity energy system modelling tool
 designed to answer grid integration questions.</p>
+<p>This project is developed and maintained by the Battery Storage and Integration Program group at Australian National University.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This project is under active development.</p>
 </div>
 <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#solver-executable">Solver executable</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nodes.html#flow-tracing">Flow tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nodes.html#electrical-nodes">Electrical Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nodes.html#gas-nodes">Gas Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nodes.html#thermal-nodes">Thermal Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nodes.html#custom-nodes">Custom Nodes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="edges.html#edge-capacity">Edge capacity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="edges.html#edge-validation">Edge validation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo_graph.html#adding-nodes-and-edges">Adding Nodes and Edges</a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo_graph.html#path-tracing">Path tracing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="flows.html#flow-tracing">Flow tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flows.html#flow-resolution">Flow resolution</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="constraints.html#node-constraints">Node constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constraints.html#port-constraints">Port constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constraints.html#unpacking-individual-constrains">Unpacking individual constrains</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#behind-the-meter-battery-optimisation">Behind the meter battery optimisation</a></li>
+</ul>
+</li>
+</ul>
 </div>
 </section>
 <section id="indices-and-tables">
@@ -89,7 +139,9 @@ designed to answer grid integration questions.</p>
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
