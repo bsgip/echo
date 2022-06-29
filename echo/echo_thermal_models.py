@@ -216,6 +216,7 @@ class TimeDelayNode(Node):
 
 
 
+
 class TemperatureControlledHeatingLoad(FlexPort):
     """ A thermal port with an additional temperature variable that is influenced by the value of the port
     (i.e. how much heat is being delivered). The temperature variable is also influenced by an external temp parameter and a loss factor."""
