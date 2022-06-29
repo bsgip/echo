@@ -90,10 +90,10 @@ class SinglePiecewiseIONode(TimeVaryingPiecewiseIONode):
     """ The relationship between input and output for all time intervals
     is given by an array of input-->output point pairs, which are used to construct a piecewise constraint."""
 
-    def add_input_pts(self, array, time_periods, expansion_periods):
+    def add_input_pts(self, array, time_periods, expansion_periods=1):
         self.input_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
 
-    def add_output_pts(self, array, time_periods, expansion_periods):
+    def add_output_pts(self, array, time_periods, expansion_periods=1):
         self.output_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
 
 

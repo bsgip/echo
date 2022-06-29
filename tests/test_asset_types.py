@@ -32,8 +32,8 @@ def test_gas_boiler_fixed_cop():
                                cop=0.8)
 
     heating_load = Node()
-    hl = ThermalLoad()
-    hl.add_sink_profile_from_array([0] * 24 + [5] * 24, expansion_periods)
+    hl = FixedThermalPort()
+    hl.add_initial_value_from_array([0] * 24 + [5] * 24, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([gas_mains, boiler, heating_load])
@@ -76,17 +76,17 @@ def test_chiller_operation():
     grid = Node()
     grid.ports['grid'] = ElectricalPort()
 
-    nonlin_array = [-0.0068, 5.5052, 0]
+    # nonlin_array = [-0.0068, 5.5052, 0]
     input_breakpoints = [0, 2, 3, 8]
     output_values = [0, -3, -4, -8]
-    chiller = Chiller(max_output=-8,
+    chiller = SimpleChiller(max_output=-8,
                       max_input=8)
-    chiller.set_input_output_breakpoints(input_array=input_breakpoints, output_array=output_values,
-                                         time_periods=time_periods)
+    chiller.add_input_pts(array=input_breakpoints, time_periods=time_periods)
+    chiller.add_output_pts(array=output_values, time_periods=time_periods)
 
     cooling_load = Node()
-    cl = HeatingOrCoolingLoad()
-    cl.add_sink_profile_from_array([4] * time_periods, expansion_periods)
+    cl = FixedThermalPort()
+    cl.add_initial_value_from_array([4] * time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -186,56 +186,6 @@ def test_carbon_aggregation():
         assert aggr[i] * -1 == grid_emissions[i] + bess_emissions[i]
 
 
-def test_temp_controlled_load():
-    expansion_periods = 1
-    time_periods = 24
-    interval_duration = 60
-
-    system = OptimisationGraph()
-
-    source = Node()
-    source.ports['source'] = ThermalPort()
-
-    hl_node = Node()
-    external_temp = np.array([2] * time_periods)
-    external_temp = generate_array_constraint(external_temp, time_periods, expansion_periods)
-    temp_lb = np.array(
-        [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
-    temp_ub = np.array(temp_lb) + 5
-    heating_load = TemperatureControlledHeatingLoad(temp_ub=temp_ub,
-                                                    temp_lb=temp_lb,
-                                                    external_temp=external_temp,
-                                                    loss_factor=1
-                                                    )
-    hl_node.ports['load'] = heating_load
-
-    system.add_node_obj([source, hl_node])
-    system.connect_ports_and_create_edge(source.ports['source'], heating_load)
-
-    throughput_cost = ThroughputCost(component=source.ports['source'],
-                                     rate=0.00001)
-
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=ObjectiveSet(objective_list=[throughput_cost])
-    )
-
-    optimiser.optimise(tee=True)
-
-    internal_temp = optimiser.values(heating_load.internal_temp)
-    power_drawn = optimiser.values(heating_load.port_name)
-    plt.plot(internal_temp)
-    plt.plot(power_drawn)
-    plt.plot(temp_ub)
-    plt.plot(temp_lb)
-
-    plt.legend(['Internal temp', 'Power drawn', 'Temp upper bound', 'Temp lower bound'])
-    plt.show()
-
 
 def test_temp_controlled_boiler():
     expansion_periods = 1
@@ -250,8 +200,8 @@ def test_temp_controlled_boiler():
     boiler = TempControlledBoiler()
 
     heating_load = Node()
-    hl = ThermalLoad()
-    hl.add_sink_profile_from_array([0] * 24 + [5] * 24, expansion_periods)
+    hl = FixedThermalPort()
+    hl.add_initial_value_from_array([0] * 24 + [5] * 24, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([source, boiler, heating_load])
@@ -268,107 +218,7 @@ def test_temp_controlled_boiler():
     )
 
 
-def test_building_thermal_load():
-    expansion_periods = 1
-    time_periods = 24
-    interval_duration = 60
-
-    system = OptimisationGraph()
-
-    heatsource = Node()
-    heatsource.ports['source'] = ThermalPort()
-    # heatsource.ports['source'].set_flow_constraints(max_import=0., max_export=0.)
-
-    coolingsource = Node()
-    coolingsource.ports['source'] = ThermalPort()
-    # coolingsource.ports['source'].set_flow_constraints(max_import=0., max_export=0.)
-
-    external_temp = np.array([2] * time_periods)
-    external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
-    temp_lb = np.array(
-        [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
-    temp_ub = np.array(temp_lb) + 5
-    building_node = BuildingThermalLoad(temp_ub=temp_ub,
-                                        temp_lb=temp_lb,
-                                        external_temp=external_temp_dict,
-                                        loss_factor=0,
-                                        temp_to_energy_coef=2.5
-                                        )
-
-    system.add_node_obj([heatsource, coolingsource, building_node])
-    system.connect_ports_and_create_edge(heatsource.ports['source'], building_node.ports['heating'])
-    system.connect_ports_and_create_edge(coolingsource.ports['source'], building_node.ports['cooling'])
-
-    throughput_cost1 = ThroughputCost(component=heatsource.ports['source'],
-                                      rate=0.00001)
-    throughput_cost2 = ThroughputCost(component=coolingsource.ports['source'],
-                                      rate=0.00001)
-
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=ObjectiveSet(objective_list=[throughput_cost1, throughput_cost2])
-    )
-
-    optimiser.optimise(tee=True)
-
-    internal_temp = optimiser.values(building_node.internal_temp)
-    heating_draw = optimiser.values(building_node.ports['heating'].port_name)
-    cooling_draw = optimiser.values(building_node.ports['cooling'].port_name)
-
-
-def test_heat_pump():
-    expansion_periods = 1
-    time_periods = 24
-    interval_duration = 60
-
-    system = OptimisationGraph()
-
-    grid = Node()
-    grid.ports['grid'] = ElectricalPort()
-
-    heating_cop = np.linspace(1.6, 4.45, num=time_periods)
-    heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
-    cooling_cop = np.linspace(4.5, 2.15, num=time_periods)
-    cool_cop_dict = generate_dict_with_pyomo_keys_from_array(cooling_cop, time_periods, expansion_periods)
-
-    heat_pump = HeatPump(heating_cop_time_series=heat_cop_dict,
-                         cooling_cop_time_series=cool_cop_dict)
-
-    heating_load = Node()
-    hl = ThermalLoad()
-    hl.add_sink_profile_from_array([5] * 12 + [0] * 10 + [1] * 2)
-    heating_load.ports['load'] = hl
-
-    cooling_load = Node()
-    cl = ThermalLoad()
-    cl.add_sink_profile_from_array([0] * 12 + [5] * 10 + [1] * 2)
-    cooling_load.ports['load'] = cl
-
-    system.add_node_obj([grid, heat_pump, heating_load, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports['grid'], heat_pump.ports['input'])
-    system.connect_ports_and_create_edge(heat_pump.ports['heating_out'], hl)
-    system.connect_ports_and_create_edge(heat_pump.ports['cooling_out'], cl)
-
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None
-    )
-
-    optimiser.optimise(tee=True)
-
-    hp_cop = heat_pump.get_heating_cop(optimiser)
-    print(optimiser.node_values(heat_pump))
-
-
-def test_new_thermal_load():
+def test_controllable_thermal_load():
     expansion_periods = 1
     time_periods = 24
     interval_duration = 60
@@ -385,11 +235,11 @@ def test_new_thermal_load():
     temp_ub = np.array(temp_lb) + 5
 
     heating_load = Node()
-    hl = NewCombinedHCLoad(temp_ub=temp_ub,
-                           temp_lb=temp_lb,
-                           external_temp=external_temp_dict,
-                           temp_to_energy_coef=1
-                           )
+    hl = ControllableThermalLoad(temp_ub=temp_ub,
+                                 temp_lb=temp_lb,
+                                 external_temp=external_temp_dict,
+                                 temp_to_energy_coef=1
+                                 )
     heating_load.ports['load'] = hl
 
     system.add_node_obj([source, heating_load])
@@ -408,6 +258,7 @@ def test_new_thermal_load():
 
     print()
 
+
 def test_new_heat_pump():
     expansion_periods = 1
     time_periods = 24
@@ -424,20 +275,18 @@ def test_new_heat_pump():
     heat_pump = HeatPump(heating_cop_time_series=heat_cop_dict,
                          cooling_cop_time_series=heat_cop_dict)
 
-
     external_temp = np.array([2] * time_periods)
     external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
     temp_lb = np.array(
         [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
     temp_ub = np.array(temp_lb) + 5
 
-
     thermal_load = Node()
     hl = ControllableThermalLoad(temp_ub=temp_ub,
-                           temp_lb=temp_lb,
-                           external_temp=external_temp_dict,
-                           temp_to_energy_coef=1
-                           )
+                                 temp_lb=temp_lb,
+                                 external_temp=external_temp_dict,
+                                 temp_to_energy_coef=1
+                                 )
     thermal_load.ports['load'] = hl
 
     system.add_node_obj([source, heat_pump, thermal_load])
@@ -456,4 +305,3 @@ def test_new_heat_pump():
     optimiser.optimise(True)
 
     print()
-
