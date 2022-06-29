@@ -14,6 +14,7 @@ import time as time_
 
 
 from echo.echo_models import *
+from echo.echo_thermal_models import *
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
 

@@ -26,7 +26,7 @@ gas_load = gas_profiler(seasonal_profile_df=df,
                         season_multiplier=seasonal_gas_averages,
                         start_date="2019-01-01",
                         end_date="2020-01-01")
-
+gas_load.set_index('Timestamp', inplace=True)
 # Trim gas load (to be fixed)
 gas_profile = gas_load['profile'][:8760]
 

@@ -215,3 +215,27 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
 def create_named_constraint_with_rule(model, con_name, rule):
     """ Util function for creating pyomo constraints from a rule."""
     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
+
+
+def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion_periods: int = 1):
+    """
+    Generates a dict suitable for initializing a pyomo var or param.
+    The dict keys are a tuple (expansion period, time period)
+    """
+    d = {}
+    assert hasattr(array, '__iter__'), 'Please enter an iterable array'
+    if (len(array) != time_periods) or (len(array) != time_periods*expansion_periods):
+        raise ValueError('Array constraint length is not consistent with combination of time/expansion periods.')
+    if len(array) == time_periods:
+        print('Repeating array across {} expansion period(s).'.format(expansion_periods))
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = array[t]
+    elif len(array) == time_periods*expansion_periods:
+        print('Dividing array between {} expansion period(s).'.format(expansion_periods))
+        i = 0
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = array[i]
+                i += 1
+    return d

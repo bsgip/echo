@@ -522,8 +522,8 @@ class Node(BaseModel):
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
     """
-    node_name: Optional[str]
-    uid: Optional[uuid.UUID]
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    node_name: Optional[str] = None
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
@@ -533,9 +533,8 @@ class Node(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.uid = uuid.uuid4()
-        self.node_name = 'node_' + str(
-            self.uid)  # we define the node uid and name like this so that the user can redefine them if desired.
+        if self.node_name is None:
+            self.node_name = 'node_' + str(self.uid)
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
@@ -572,8 +571,8 @@ class Node(BaseModel):
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         t = Transform()
-        t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
-        t.add_rhs_term(var=input_port, rule=TransformRule.Both, weight=input_weight)
+        t.add_lhs_term(var=output_port, rule=TransformRule.NegativeComponent, weight=1)
+        t.add_rhs_term(var=input_port, rule=TransformRule.PositiveComponent, weight=input_weight)
         self.add_transformation(t)
 
     def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor: float):
