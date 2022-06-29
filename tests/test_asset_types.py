@@ -421,7 +421,7 @@ def test_new_heat_pump():
     heating_cop = np.array([2] * time_periods)
     heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
 
-    heat_pump = NewHeatPump(heating_cop_time_series=heat_cop_dict,
+    heat_pump = HeatPump(heating_cop_time_series=heat_cop_dict,
                          cooling_cop_time_series=heat_cop_dict)
 
 
@@ -433,7 +433,7 @@ def test_new_heat_pump():
 
 
     thermal_load = Node()
-    hl = NewCombinedHCLoad(temp_ub=temp_ub,
+    hl = ControllableThermalLoad(temp_ub=temp_ub,
                            temp_lb=temp_lb,
                            external_temp=external_temp_dict,
                            temp_to_energy_coef=1

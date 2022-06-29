@@ -840,7 +840,6 @@ class Source(Port):
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
-
 class Sink(Port):
     """ The sink for a commodity. """
     flows = Flows.Import
@@ -1020,10 +1019,8 @@ class Storage(Port):
 
         return objective
 
-
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
-
 
 class ControlledLoadOrGen(FlexPort):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
@@ -1063,12 +1060,10 @@ class ControlledLoadOrGen(FlexPort):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
-
 class ControlledLoad(ControlledLoadOrGen):
     max_power: confloat(ge=0)
     min_power: confloat(ge=0)
     flows = Flows.Import
-
 
 class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
@@ -1122,6 +1117,13 @@ class BoundedLoad(BoundedPort):
 
     def initialise_port(self, model):
         super(BoundedLoad, self).initialise_port(model)
+
+class FixedPort(Port):
+    opt_type = OptimisationType.Parameter
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+
 
 """
 

@@ -37,7 +37,7 @@ temp_ub = np.array(temp_lb) + 5
 
 
 thermal_load = Node()
-hl = NewCombinedHCLoad(temp_ub=temp_ub,
+hl = ControllableThermalLoad(temp_ub=temp_ub,
                        temp_lb=temp_lb,
                        external_temp=external_temp_dict,
                        temp_to_energy_coef=1
