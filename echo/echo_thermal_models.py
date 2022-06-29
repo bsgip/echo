@@ -213,3 +213,169 @@ class TimeDelayNode(Node):
 
         con_name = 'time_delay_con_' + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
+
+
+
+
+class TemperatureControlledHeatingLoad(FlexPort):
+    """ A thermal port with an additional temperature variable that is influenced by the value of the port
+    (i.e. how much heat is being delivered). The temperature variable is also influenced by an external temp parameter and a loss factor."""
+    units = Units.KWT
+    flows = Flows.Import
+    temp_setpoint = 20  # Desired temperature
+    temp_ub: ArrayType  # Upper bound of acceptable temperature for each time interval
+    temp_lb: ArrayType  # Lower bound of acceptable temperature for each time interval
+    external_temp: ArrayType  # External temp
+    loss_factor: Optional[float]  # Losses via the difference between the internal temp and the external temp
+    minimise_temp_error: bool = True   # bool var to control whether we try to minimise the temp error
+
+    internal_temp: Optional[str]
+    temp_error: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = 'internal_temp_' + self.port_name
+        self.temp_error = 'temp_error_' + self.port_name
+
+    def initialise_port(self, model):
+        super(TemperatureControlledHeatingLoad, self).initialise_port(model)
+        # Create temperature variable
+        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # # Bound variable to be within acceptable range
+        ub_dict = generate_array_constraint(self.temp_ub, time_periods=len(model.Time), expansion_periods=len(model.Expansion))
+        lb_dict = generate_array_constraint(self.temp_lb, time_periods=len(model.Time), expansion_periods=len(model.Expansion))
+        set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=ub_dict, lb=lb_dict)
+#        Create an error variable for difference between setpoint and actual temperature
+        setattr(model, self.temp_error, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+
+        # def temp_error_rule(model, p, t):
+        #     return getattr(model, self.temp_error)[p, t] == self.temp_setpoint - getattr(model, self.internal_temp)[p, t]
+        #
+        # setattr(model, 'temp_error_con_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=temp_error_rule))
+
+        # Constraint for internal temp vs external temp vs supplied heat
+        def rule2(model, p, t):
+            if p==0 and t==0:
+                return en.Constraint.Skip
+            else:
+                # temp(t) = temp(t-1) + added_heat(t)
+                # loss term = diff between internal and external temp, x some factor
+                temp_diff = getattr(model, self.internal_temp)[p, t] - getattr(model, self.internal_temp)[p, t-1]
+                loss_term = self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t]
+                return getattr(model, self.port_name)[p, t] == temp_diff - loss_term
+
+        setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule2))
+
+
+
+
+    def add_objective(self, model):
+        total = 0
+        if self.minimise_temp_error is True:
+            total += sum(getattr(model, self.temp_error)[p, t] for p in model.Expansion for t in model.Time)  # minimise the temperature error
+        return total
+
+
+#
+# class ARXPort(FlexPort):
+#     """ An ARX port has additional input variables """
+#     input_data: pd.DataFrame
+#     output_data: pd.DataFrame
+#     controllable_input: str  # string of name of input col that is controllable
+#
+#     control_var: Optional[str]
+#
+#     def __init__(self, **data):
+#         super().__init__(**data)
+#         self.ports['input'] = FlexPort()
+#         self.ports['output'] = FlexPort()
+#         mse_test, mse_trained, model_coef = train_arx_on_data(u=self.input_data,
+#                                                               y=self.output_data,
+#                                                               na=2, nb=2,
+#                                                               training_test_split=80)
+#         self.control_var = self.controllable_input + self.node_name
+#
+#     def initialise_node(self, model):
+#         super(ARXInputOutputNode, self).initialise_node(model)
+#         setattr(model, self.control_var, en.Var())
+#     def apply_node_constraints(self, model):
+
+
+class InputOutputNode(Node):
+    input_unit: int
+    output_unit: int
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.add_flex_port('input', unit=self.input_unit)
+        self.add_flex_port('output', unit=self.output_unit)
+
+
+class TempControlledBoiler(InputOutputNode):
+    """ A temp controlled boiler has an input and output port. """
+    input_unit = Units.JPS
+    output_unit = Units.KWT
+    max_input: float
+    max_output: float
+    outlet_temp_setpoint = 80
+    node_rule = NodeRule.Custom
+
+    # pyomo vars
+    is_on: Optional[str]
+    return_temp: Optional[str]
+    exit_temp: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports['input'].set_flow_constraints(max_import=self.max_input, max_export=0.)
+        self.ports['output'].set_flow_constraints(max_import=0., max_export=self.max_output)
+        self.return_temp = 'inlet_temp_' + self.node_name
+        self.exit_temp = 'outlet_temp_' + self.node_name
+
+    def initialise_node(self, model):
+        super(TempControlledBoiler, self).initialise_node(model)
+        # Define extra variables
+        setattr(model, self.return_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+        setattr(model, self.exit_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+
+    def apply_node_constraints(self, model):
+
+        def constraint1(model, p, t):
+            return getattr(model, self.exit_temp)[p, t] == self.outlet_temp_setpoint
+
+        setattr(model, 'boiler_temp_con1_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint1))
+
+
+        def constraint2(model, p, t):
+            """ return at time t = exiting at time t-1 minus energy removed at t-1"""
+            return getattr(model, self.return_temp)[p, t] == getattr(model, self.exit_temp)[p, t] + getattr(model, self.ports['output'].port_name)[p, t]
+
+        setattr(model, 'boiler_temp_con2_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint2))
+
+        def constraint3(model, p, t):
+            """ exiting at time t = return at time t-1 + energy added at time t-1"""
+            return getattr(model, self.exit_temp)[p, t] == getattr(model, self.ports['input'].port_name)[p, t] + getattr(model, self.return_temp)[p, t]
+
+        setattr(model, 'boiler_temp_con3_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint3))
+
+
+class ThermalStorage(Storage):
+    self_discharge: float = 0  # rate at which energy is lost from storage
+    units = Units.KWT
+    external_temp: ArrayType
+
+    # pyomo vars/params
+    internal_temp: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = 'internal_temp_' + self.port_name
+
+    def initialise_port(self, model):
+        super(ThermalStorage, self).initialise_port(model)
+        # Create a variable for the internal temperature
+
+
