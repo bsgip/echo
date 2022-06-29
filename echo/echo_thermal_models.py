@@ -378,8 +378,8 @@ class BuildingThermalLoad(Node):
     def __init__(self, **data):
         super().__init__(**data)
         self.internal_temp = 'internal_temp_' + self.node_name
-        self.ports['heating'] = FlexPortImport(units=Units.KWT)
-        self.ports['cooling'] = FlexPortImport(units=Units.KWT)
+        # self.ports['heating'] = FlexPortImport(units=Units.KWT)
+        # self.ports['cooling'] = FlexPortImport(units=Units.KWT)
 
     def initialise_node(self, model):
         super(BuildingThermalLoad, self).initialise_node(model)
@@ -422,6 +422,10 @@ class HeatPump(Node):
     node_rule = NodeRule.Custom
     heating_cop_time_series: dict
     cooling_cop_time_series: dict
+    max_input: float = 100
+    min_input: float = 0.
+    max_output: float = -100
+    min_output: float = 0.
 
     # pyomo vars/params
     heating_cop: Optional[str]
@@ -432,9 +436,10 @@ class HeatPump(Node):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
-        self.ports['heating_out'] = FlexPortExport(units=Units.KWT) # Heat pump has a thermal port for heating output
-        self.ports['cooling_out'] = FlexPortExport(units=Units.KWT)  # Heat pump has a thermal port for cooling output
+
+        # self.ports['input'] = OffOrConstrainedPort(lower_bound=self.min_input, upper_bound=self.max_input, units=Units.KW)  # Heat pump has electrical input port
+        # self.ports['heating_out'] = OffOrConstrainedPort(lower_bound=self.max_output, upper_bound=self.min_output, units=Units.KWT)
+        # self.ports['cooling_out'] = OffOrConstrainedPort(lower_bound=self.max_output, upper_bound=self.min_output, units=Units.KW)
 
         # Naming variables
         self.heating_cop = 'heating_cop_' + self.node_name
@@ -461,15 +466,15 @@ class HeatPump(Node):
         heating_cop = getattr(model, self.heating_cop)
         cooling_cop = getattr(model, self.cooling_cop)
 
-        def only_heat_or_cool1(model, p, t):
-            return getattr(model, self.heat_in)[p, t] <= getattr(model, self.is_heating)[p, t] * model.bigM
-
-        setattr(model, 'only_heat_or_cool1_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool1))
-
-        def only_heat_or_cool2(model, p, t):
-            return getattr(model, self.cool_in)[p, t] <= (1 - getattr(model, self.is_heating)[p, t]) * model.bigM
-
-        setattr(model, 'only_heat_or_cool2_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool2))
+        # def only_heat_or_cool1(model, p, t):
+        #     return getattr(model, self.heat_in)[p, t] <= getattr(model, self.is_heating)[p, t] * model.bigM
+        #
+        # setattr(model, 'only_heat_or_cool1_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool1))
+        #
+        # def only_heat_or_cool2(model, p, t):
+        #     return getattr(model, self.cool_in)[p, t] <= (1 - getattr(model, self.is_heating)[p, t]) * model.bigM
+        #
+        # setattr(model, 'only_heat_or_cool2_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool2))
 
         def sum_rule(model, p, t):
             return p_in[p, t] == getattr(model, self.heat_in)[p, t] + getattr(model, self.cool_in)[p, t]
@@ -533,3 +538,130 @@ class TimeDelayNode(Node):
         con_name = 'time_delay_con_' + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
 
+
+class NewCombinedHCLoad(FlexPort):
+    """  Port where +ve indicates heating load (ie adding heat) and -ve indicates cooling load (ie removing heat). """
+    units = Units.KWT
+    temp_ub: ArrayType  # Upper bound of acceptable temperature for each time interval
+    temp_lb: ArrayType  # Lower bound of acceptable temperature for each time interval
+    external_temp: dict  # External temp
+    loss_factor: Optional[float]  # Losses via the difference between the internal temp and the external temp
+    temp_to_energy_coef: float = 1
+
+    # Pyomo vars/params
+    internal_temp: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = 'internal_temp_' + self.port_name
+
+    def initialise_port(self, model):
+        super(NewCombinedHCLoad, self).initialise_port(model)
+        self.constrain_pos_neg(model)
+        # Create temperature variable
+        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # Bound variable to be within acceptable range
+        ub_dict = generate_array_constraint(self.temp_ub, time_periods=len(model.Time),
+                                            expansion_periods=len(model.Expansion))
+        lb_dict = generate_array_constraint(self.temp_lb, time_periods=len(model.Time),
+                                            expansion_periods=len(model.Expansion))
+        set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=ub_dict, lb=lb_dict)
+
+
+        # Constraint for internal temp vs external temp vs supplied heat
+        def rule1(model, p, t):
+            cooling = getattr(model, self.neg)[p, t]
+            heating = getattr(model, self.pos)[p, t]
+            internal_temp = getattr(model, self.internal_temp)
+            if self.loss_factor is not None:
+                external_temp_diff = (self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t])
+                energy_diff = external_temp_diff * self.loss_factor * self.temp_to_energy_coef
+            else:
+                energy_diff = 0
+
+            if p == 0 and t == 0:
+                return heating + cooling == internal_temp[p, t] * self.temp_to_energy_coef - energy_diff
+            else:
+                temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
+                return heating + cooling == temp_diff * self.temp_to_energy_coef - energy_diff
+
+        setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
+
+
+class NewHeatPump(Node):
+    """ HP is input output where output can be pos for heating, neg for cooling."""
+    node_rule = NodeRule.Custom
+    heating_cop_time_series: dict
+    cooling_cop_time_series: dict
+
+    # pyomo vars/params
+    heating_cop: Optional[str]
+    cooling_cop: Optional[str]
+    heat_in: Optional[str]
+    cool_in: Optional[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
+        self.ports['output'] = FlexPort(units=Units.KWT)
+
+        # Naming variables
+        self.heating_cop = 'heating_cop_' + self.node_name
+        self.cooling_cop = 'cooling_cop_' + self.node_name
+        self.heat_in = 'heat_in_' + self.node_name
+        self.cool_in = 'cool_in_' + self.node_name
+
+    def initialise_node(self, model):
+        super(NewHeatPump, self).initialise_node(model)
+        # Need to split pos/neg on output. Pos will become cooling ('importing' heat), and neg will become heating
+        self.ports['output'].constrain_pos_neg(model)
+
+        # Variables for assigning the input electrical energy to either heating or cooling operation
+        setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+        setattr(model, self.cool_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+
+        # Create params
+        setattr(model, self.heating_cop, en.Param(model.Expansion, model.Time, initialize=self.heating_cop_time_series, domain=en.NonNegativeReals))
+        setattr(model, self.cooling_cop, en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series, domain=en.NonNegativeReals))
+
+    def apply_node_constraints(self, model):
+        is_cooling = getattr(model, self.ports['output'].is_pos)  # binary var for whether we are cooling
+        p_in = getattr(model, self.ports['input'].port_name)  # input electrical power
+        heat_out = getattr(model, self.ports['output'].neg)  # heating delivered
+        cool_out = getattr(model, self.ports['output'].pos)  # cooling delivered
+        heating_cop = getattr(model, self.heating_cop)
+        cooling_cop = getattr(model, self.cooling_cop)
+
+        def only_heat_or_cool1(model, p, t):
+            return getattr(model, self.heat_in)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
+
+        setattr(model, 'only_heat_or_cool1_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool1))
+
+        def only_heat_or_cool2(model, p, t):
+            return getattr(model, self.cool_in)[p, t] <= is_cooling[p, t] * model.bigM
+
+        setattr(model, 'only_heat_or_cool2_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool2))
+
+        def sum_rule(model, p, t):
+            return p_in[p, t] == getattr(model, self.heat_in)[p, t] + getattr(model, self.cool_in)[p, t]
+
+        setattr(model, 'sum_heat_cool_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+
+        def heating_output_rule(model, p, t):
+            return heat_out[p, t] == getattr(model, self.heat_in)[p, t] * heating_cop[p, t] * -1
+
+        def cooling_output_rule(model, p, t):
+            return cool_out[p, t] == getattr(model, self.cool_in)[p, t] * cooling_cop[p, t]
+
+        setattr(model, 'heat_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=heating_output_rule))
+        setattr(model, 'cool_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule))
+
+    def get_heating_cop(self, optimiser):
+        _out = optimiser.values(self.ports['output'].pos)
+        _in = optimiser.values(self.heat_in)
+        return _out/_in
+
+    def get_cooling_cop(self, optimiser):
+        _out = optimiser.values(self.ports['output'].neg)
+        _in = optimiser.values(self.cool_in)
+        return _out/_in

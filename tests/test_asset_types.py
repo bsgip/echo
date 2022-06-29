@@ -277,9 +277,11 @@ def test_building_thermal_load():
 
     heatsource = Node()
     heatsource.ports['source'] = ThermalPort()
+    # heatsource.ports['source'].set_flow_constraints(max_import=0., max_export=0.)
 
     coolingsource = Node()
     coolingsource.ports['source'] = ThermalPort()
+    # coolingsource.ports['source'].set_flow_constraints(max_import=0., max_export=0.)
 
     external_temp = np.array([2] * time_periods)
     external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
@@ -319,7 +321,6 @@ def test_building_thermal_load():
 
 
 def test_heat_pump():
-
     expansion_periods = 1
     time_periods = 24
     interval_duration = 60
@@ -328,7 +329,6 @@ def test_heat_pump():
 
     grid = Node()
     grid.ports['grid'] = ElectricalPort()
-
 
     heating_cop = np.linspace(1.6, 4.45, num=time_periods)
     heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
@@ -340,12 +340,12 @@ def test_heat_pump():
 
     heating_load = Node()
     hl = ThermalLoad()
-    hl.add_sink_profile_from_array([5]*12 + [0]*12)
+    hl.add_sink_profile_from_array([5] * 12 + [0] * 10 + [1] * 2)
     heating_load.ports['load'] = hl
 
     cooling_load = Node()
     cl = ThermalLoad()
-    cl.add_sink_profile_from_array([0]*12 + [5]*12)
+    cl.add_sink_profile_from_array([0] * 12 + [5] * 10 + [1] * 2)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, heat_pump, heating_load, cooling_load])
@@ -366,4 +366,94 @@ def test_heat_pump():
 
     hp_cop = heat_pump.get_heating_cop(optimiser)
     print(optimiser.node_values(heat_pump))
+
+
+def test_new_thermal_load():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    source = Node()
+    source.ports['source'] = ThermalPort()
+
+    external_temp = np.array([2] * time_periods)
+    external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
+    temp_lb = np.array(
+        [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
+    temp_ub = np.array(temp_lb) + 5
+
+    heating_load = Node()
+    hl = NewCombinedHCLoad(temp_ub=temp_ub,
+                           temp_lb=temp_lb,
+                           external_temp=external_temp_dict,
+                           temp_to_energy_coef=1
+                           )
+    heating_load.ports['load'] = hl
+
+    system.add_node_obj([source, heating_load])
+    system.connect_ports_and_create_edge(source.ports['source'], hl)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    print()
+
+def test_new_heat_pump():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    source = Node()
+    source.ports['source'] = ElectricalPort()
+
+    heating_cop = np.array([2] * time_periods)
+    heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
+
+    heat_pump = NewHeatPump(heating_cop_time_series=heat_cop_dict,
+                         cooling_cop_time_series=heat_cop_dict)
+
+
+    external_temp = np.array([2] * time_periods)
+    external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
+    temp_lb = np.array(
+        [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
+    temp_ub = np.array(temp_lb) + 5
+
+
+    thermal_load = Node()
+    hl = NewCombinedHCLoad(temp_ub=temp_ub,
+                           temp_lb=temp_lb,
+                           external_temp=external_temp_dict,
+                           temp_to_energy_coef=1
+                           )
+    thermal_load.ports['load'] = hl
+
+    system.add_node_obj([source, heat_pump, thermal_load])
+    system.connect_ports_and_create_edge(source.ports['source'], heat_pump.ports['input'])
+    system.connect_ports_and_create_edge(heat_pump.ports['output'], hl)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    print()
 

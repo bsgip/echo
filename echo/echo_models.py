@@ -55,6 +55,9 @@ class OptimisationGraph(Graph):
             port2 = edge_obj.vertices[1]
             node1 = self.lookup_node_from_port(port1)
             node2 = self.lookup_node_from_port(port2)
+            # Need to check whether an edge already exists between these two nodes
+            if self.edge_obj.get((node1.node_name, node2.node_name)) is not None:
+                raise ValueError('An edge between these nodes already exists')
             self.add_edge(node1.node_name, node2.node_name)
             self.edge_obj[(node1.node_name, node2.node_name)] = edge_obj
 
