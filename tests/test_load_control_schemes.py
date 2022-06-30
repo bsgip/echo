@@ -170,9 +170,7 @@ def test_feedback_loop():
     cp = TellegenNode()
     cp.add_electrical_ports_from_list(['upstream', 'supply', 'feedback'])
 
-    td = TimeDelayNode(time_delay=0)
-    td.add_input_port(Units.KW)
-    td.add_output_port(Units.KW)
+    td = TimeDelayNode(input_unit=Units.KW, output_unit=Units.KW, time_delay=0)
 
     load = Node()
     l1 = ElectricalDemand()
