@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>echo API Reference &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+  <title>echo API &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -14,11 +14,12 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="echo.configuration module" href="echo.configuration.html" />
+    <link rel="prev" title="Behind the meter battery optimisation" href="example.btm.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -37,15 +38,32 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_builder.html">echo.echo_builder module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_models.html">echo.echo_models module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_optimiser.html">echo.echo_optimiser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_scenario.html">echo.echo_scenario module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_validators.html">echo.echo_validators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.html">echo.objectives module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.utils.html">echo.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-echo">Module contents</a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -62,7 +80,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>echo API Reference</li>
+      <li><em>echo</em> API</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/echo.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -72,50 +90,35 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="echo-api-reference">
-<h1>echo API Reference<a class="headerlink" href="#echo-api-reference" title="Permalink to this heading"></a></h1>
+  <section id="echo-api">
+<h1><em>echo</em> API<a class="headerlink" href="#echo-api" title="Permalink to this headline"></a></h1>
 <section id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.echo_builder.html">echo.echo_builder module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.echo_models.html">echo.echo_models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.echo_optimiser.html">echo.echo_optimiser module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.echo_scenario.html">echo.echo_scenario module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.echo_validators.html">echo.echo_validators module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.objectives.html">echo.objectives module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.utils.html">echo.utils module</a></li>
+</ul>
+</div>
 </section>
-<section id="echo-configuration-module">
-<h2>echo.configuration module<a class="headerlink" href="#echo-configuration-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-constants-module">
-<h2>echo.constants module<a class="headerlink" href="#echo-constants-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-builder-module">
-<h2>echo.echo_builder module<a class="headerlink" href="#echo-echo-builder-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-models-module">
-<h2>echo.echo_models module<a class="headerlink" href="#echo-echo-models-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-optimiser-module">
-<h2>echo.echo_optimiser module<a class="headerlink" href="#echo-echo-optimiser-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-scenario-module">
-<h2>echo.echo_scenario module<a class="headerlink" href="#echo-echo-scenario-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-sgt-module">
-<h2>echo.echo_sgt module<a class="headerlink" href="#echo-echo-sgt-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-echo-validators-module">
-<h2>echo.echo_validators module<a class="headerlink" href="#echo-echo-validators-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-objectives-module">
-<h2>echo.objectives module<a class="headerlink" href="#echo-objectives-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="echo-utils-module">
-<h2>echo.utils module<a class="headerlink" href="#echo-utils-module" title="Permalink to this heading"></a></h2>
-</section>
-<section id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
+<section id="module-echo">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-echo" title="Permalink to this headline"></a></h2>
 </section>
 </section>
 
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="example.btm.html" class="btn btn-neutral float-left" title="Behind the meter battery optimisation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.configuration.html" class="btn btn-neutral float-right" title="echo.configuration module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 

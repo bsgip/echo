@@ -14,13 +14,12 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="echo OptimisationGraph" href="echo_graph.html" />
-    <link rel="prev" title="&lt;no title&gt;" href="ports.html" /> 
+    <link rel="prev" title="echo Port object" href="ports.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,17 +40,20 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">echo Edge object</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Edge object</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#edge-capacity">Edge capacity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#edge-validation">Edge validation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -68,7 +70,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>echo Edge object</li>
+      <li><em>echo</em> Edge object</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/edges.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -79,12 +81,14 @@
            <div itemprop="articleBody">
              
   <section id="echo-edge-object">
-<h1>echo Edge object<a class="headerlink" href="#echo-edge-object" title="Permalink to this heading"></a></h1>
+<h1><em>echo</em> Edge object<a class="headerlink" href="#echo-edge-object" title="Permalink to this headline"></a></h1>
+<p>Edges represent a physical flow of a single commodity.
+An edge is terminated on each end by connection to a port. Edges must begin and end on ports that have the same commodity type.</p>
 <section id="edge-capacity">
-<h2>Edge capacity<a class="headerlink" href="#edge-capacity" title="Permalink to this heading"></a></h2>
+<h2>Edge capacity<a class="headerlink" href="#edge-capacity" title="Permalink to this headline"></a></h2>
 </section>
 <section id="edge-validation">
-<h2>Edge validation<a class="headerlink" href="#edge-validation" title="Permalink to this heading"></a></h2>
+<h2>Edge validation<a class="headerlink" href="#edge-validation" title="Permalink to this headline"></a></h2>
 </section>
 </section>
 
@@ -92,7 +96,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ports.html" class="btn btn-neutral float-left" title="&lt;no title&gt;" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ports.html" class="btn btn-neutral float-left" title="echo Port object" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="echo_graph.html" class="btn btn-neutral float-right" title="echo OptimisationGraph" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

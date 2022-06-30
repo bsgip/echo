@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+  <title>User Guide &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -39,15 +38,27 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">User Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#design-philosophy">Design Philosophy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-a-model">Creating a model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Creating a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-a-model-from-scratch">Creating a model from scratch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-model-from-external-file">Loading model from external file</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -64,7 +75,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>&lt;no title&gt;</li>
+      <li>User Guide</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/user_guide.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -74,7 +85,29 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  
+  <section id="user-guide">
+<h1>User Guide<a class="headerlink" href="#user-guide" title="Permalink to this headline"></a></h1>
+<section id="design-philosophy">
+<h2>Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permalink to this headline"></a></h2>
+<p>Echo models multi-commodity energy systems as networks comprised of <strong>edges</strong>, <strong>ports</strong>,
+and <strong>nodes</strong>.
+Edges represents physical flows of a single commodity. Ports represent the connection of an edge to a node, and therefore represent the flow of a single commodity into or out of a node.
+Nodes define a transformation between the ports on the node.</p>
+</section>
+<section id="creating-a-model">
+<h2>Creating a model<a class="headerlink" href="#creating-a-model" title="Permalink to this headline"></a></h2>
+<section id="id1">
+<h3>Creating a model<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+</section>
+<section id="creating-a-model-from-scratch">
+<h3>Creating a model from scratch<a class="headerlink" href="#creating-a-model-from-scratch" title="Permalink to this headline"></a></h3>
+</section>
+<section id="loading-model-from-external-file">
+<h3>Loading model from external file<a class="headerlink" href="#loading-model-from-external-file" title="Permalink to this headline"></a></h3>
+</section>
+</section>
+</section>
+
 
            </div>
           </div>

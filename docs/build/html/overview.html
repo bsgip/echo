@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+  <title>Overview &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -39,13 +38,16 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -62,7 +64,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>&lt;no title&gt;</li>
+      <li>Overview</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/overview.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -72,7 +74,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline"></a></h1>
+<p>Echo models multi-commodity energy systems as networks comprised of :ref: edges, ports,
+and nodes.</p>
+<p>Edges represents physical flows of a single commodity. Ports represent the connection of an edge to a node, and therefore represent the flow of a single commodity into or out of a node.
+Nodes define a transformation between the ports on the node.</p>
+</section>
+
 
            </div>
           </div>

@@ -14,12 +14,11 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="user_guide.html" />
+    <link rel="next" title="User Guide" href="user_guide.html" />
     <link rel="prev" title="echo: Energy and Commodity Holistic Optimiser" href="index.html" /> 
 </head>
 
@@ -42,16 +41,23 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#solver-executable">Solver executable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#solver-executable">Solver executable</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#free-for-academic-use-only">Free for academic use only:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#open-source">Open source:</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -79,12 +85,39 @@
            <div itemprop="articleBody">
              
   <section id="getting-started">
-<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this heading"></a></h1>
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline"></a></h1>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<p>This package requires that you have python 3.7+ installed and it is recommended you use a virtual environment.
+To install this package you need to:</p>
+<p>1. clone this repo
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:bsgip/echo.git</span></code></p>
+<p>2. go into <em>echo</em> directory
+<code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">echo</span></code></p>
+<p>3. with your virtual environment active install using pip
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.[test,validation]</span></code></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This package is not on pypi. Doing <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">echo</span></code> will NOT install this package. It will install a different package.</p>
+</div>
 </section>
 <section id="solver-executable">
-<h2>Solver executable<a class="headerlink" href="#solver-executable" title="Permalink to this heading"></a></h2>
+<h2>Solver executable<a class="headerlink" href="#solver-executable" title="Permalink to this headline"></a></h2>
+<p><em>echo</em> uses <a class="reference external" href="https://pyomo.readthedocs.io/en/stable/index.html">pyomo</a> module to solve optimisation problems and thus needs at least one solver package installed.</p>
+<p>The following solvers can be used.</p>
+<section id="free-for-academic-use-only">
+<h3>Free for academic use only:<a class="headerlink" href="#free-for-academic-use-only" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>CPLEX <em>(recommended)</em>: This has been tested the most. It requires a license but is free for academic users. To install, follow instructions <a class="reference external" href="https://www.ibm.com/products/ilog-cplex-optimization-studio">IBM website</a>.</p></li>
+<li><p>GUROBI: Minimal testing: It requires a license but is free for academic users. Check <a class="reference external" href="https://www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html">gurobi website</a> for instructions on installing.</p></li>
+</ul>
+</section>
+<section id="open-source">
+<h3>Open source:<a class="headerlink" href="#open-source" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>CBC: This solver can be used provided you only include linear costs (no quadratic costs or regularisation). Information on the solver is available <a class="reference external" href="https://github.com/coin-or/Cbc">here</a>. For installing on ubuntu run <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt-get</span> <span class="pre">install</span> <span class="pre">-y</span> <span class="pre">coinor-cbc1</span></code></p></li>
+</ul>
+</section>
 </section>
 </section>
 
@@ -93,7 +126,7 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="echo: Energy and Commodity Holistic Optimiser" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="user_guide.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="user_guide.html" class="btn btn-neutral float-right" title="User Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

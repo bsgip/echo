@@ -14,13 +14,12 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="ports.html" />
-    <link rel="prev" title="&lt;no title&gt;" href="user_guide.html" /> 
+    <link rel="next" title="echo Port object" href="ports.html" />
+    <link rel="prev" title="User Guide" href="user_guide.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,7 +40,8 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">echo Nodes</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Nodes</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#flow-tracing">Flow tracing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electrical-nodes">Electrical Nodes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#gas-nodes">Gas Nodes</a></li>
@@ -49,12 +49,14 @@
 <li class="toctree-l2"><a class="reference internal" href="#custom-nodes">Custom Nodes</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1"><a class="reference internal" href="echo_graph.html">echo OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -71,7 +73,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>echo Nodes</li>
+      <li><em>echo</em> Nodes</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/nodes.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -82,21 +84,27 @@
            <div itemprop="articleBody">
              
   <section id="echo-nodes">
-<h1>echo Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this heading"></a></h1>
+<h1><em>echo</em> Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this headline"></a></h1>
+<p>Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports,
+with a well-defined relationship between ports. In general, the relationship between ports will be defined by a system of (non)linear constraints . A node can be thought of as defining a transformation between the ports on the node, where ports are used to represent flows of different commodities. Nodes may also include other variables and parameters and constraints necessary to model:</p>
+<ul class="simple">
+<li><p><em>Assets</em>: A node that represents a physical asset that is a source, sink, storage or transformation between commodities.</p></li>
+<li><p><em>Interconnection / Hub</em>: A node that represents a physical or logical interconnection between edges in the network.</p></li>
+</ul>
 <section id="flow-tracing">
-<h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this heading"></a></h2>
+<h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this headline"></a></h2>
 </section>
 <section id="electrical-nodes">
-<h2>Electrical Nodes<a class="headerlink" href="#electrical-nodes" title="Permalink to this heading"></a></h2>
+<h2>Electrical Nodes<a class="headerlink" href="#electrical-nodes" title="Permalink to this headline"></a></h2>
 </section>
 <section id="gas-nodes">
-<h2>Gas Nodes<a class="headerlink" href="#gas-nodes" title="Permalink to this heading"></a></h2>
+<h2>Gas Nodes<a class="headerlink" href="#gas-nodes" title="Permalink to this headline"></a></h2>
 </section>
 <section id="thermal-nodes">
-<h2>Thermal Nodes<a class="headerlink" href="#thermal-nodes" title="Permalink to this heading"></a></h2>
+<h2>Thermal Nodes<a class="headerlink" href="#thermal-nodes" title="Permalink to this headline"></a></h2>
 </section>
 <section id="custom-nodes">
-<h2>Custom Nodes<a class="headerlink" href="#custom-nodes" title="Permalink to this heading"></a></h2>
+<h2>Custom Nodes<a class="headerlink" href="#custom-nodes" title="Permalink to this headline"></a></h2>
 </section>
 </section>
 
@@ -104,8 +112,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="user_guide.html" class="btn btn-neutral float-left" title="&lt;no title&gt;" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="ports.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="user_guide.html" class="btn btn-neutral float-left" title="User Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ports.html" class="btn btn-neutral float-right" title="echo Port object" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
