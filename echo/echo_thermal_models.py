@@ -198,6 +198,7 @@ class ControllableThermalLoad(ThermalPort):
     loss_factor: Optional[float] = 0  # Losses due to ambient temp being lower than internal temp
     gain_factor: Optional[float] = 0  # Free gains due to ambient temp being higher than internal temp
     temp_to_energy_coef: float = 1
+    initial_internal_temp: float = 0
 
     # Pyomo vars/params
     internal_temp: Optional[str]
@@ -262,7 +263,7 @@ class ControllableThermalLoad(ThermalPort):
             gain = getattr(model, self.gains)[p, t] * self.gain_factor
 
             if p == 0 and t == 0:
-                return heating_kw + cooling_kw  + loss + gain == internal_temp[p, t] * self.temp_to_energy_coef
+                return heating_kw + cooling_kw + loss + gain == (internal_temp[p, t] - self.initial_internal_temp) * self.temp_to_energy_coef
             else:
                 temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
                 return heating_kw + cooling_kw + loss + gain == temp_diff * self.temp_to_energy_coef
@@ -270,11 +271,20 @@ class ControllableThermalLoad(ThermalPort):
         setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
 
+class ControllableHeatingLoad(ControllableThermalLoad):
+    flows = Flows.Import
+
+
+class ControllableCoolingLoad(ControllableThermalLoad):
+    flows = Flows.Export
+
+
 class HeatPump(Node):
     """ HP is input output where output can be pos for heating, neg for cooling."""
     node_rule = NodeRule.Custom
     heating_cop_time_series: dict
     cooling_cop_time_series: dict
+    output_flows = Flows.Both  # attribute for dictating whether heat pump does heating and cooling or heating only
 
     # pyomo vars/params
     heating_cop: Optional[str]
@@ -285,7 +295,7 @@ class HeatPump(Node):
     def __init__(self, **data):
         super().__init__(**data)
         self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
-        self.ports['output'] = FlexPort(units=Units.KWT)
+        self.ports['output'] = FlexPort(units=Units.KWT, flows=self.output_flows)
 
         # Naming variables
         self.heating_cop = 'heating_cop_' + self.node_name
@@ -353,6 +363,10 @@ class HeatPump(Node):
         _out = optimiser.values(self.ports['output'].neg)
         _in = optimiser.values(self.cool_in)
         return _out / _in
+
+
+class HeatPumpHeatingOnly(HeatPump):
+    output_flows = Flows.Export  # Heating only
 
 
 class HeatPump4Pipe(Node):
