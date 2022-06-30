@@ -521,9 +521,8 @@ class Node(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.uid = uuid.uuid4()
-        self.node_name = 'node_' + str(
-            self.uid)  # we define the node uid and name like this so that the user can redefine them if desired.
+        if self.node_name is None:
+            self.node_name = 'node_' + str(self.uid)
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
