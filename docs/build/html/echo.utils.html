@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.utils module &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="echo.objectives module" href="echo.objectives.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html"><em>echo</em> API</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_builder.html">echo.echo_builder module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_models.html">echo.echo_models module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_optimiser.html">echo.echo_optimiser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_scenario.html">echo.echo_scenario module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.echo_validators.html">echo.echo_validators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.html">echo.objectives module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.html#module-echo">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="echo.html"><em>echo</em> API</a> &raquo;</li>
+      <li>echo.utils module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/echo.utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.utils">
+<span id="echo-utils-module"></span><h1>echo.utils module<a class="headerlink" href="#module-echo.utils" title="Permalink to this headline"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.add_time_and_expansion_index_to_values">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">add_time_and_expansion_index_to_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.add_time_and_expansion_index_to_values" title="Permalink to this definition"></a></dt>
+<dd><p>Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.create_input_output_pts_from_coefficients">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">create_input_output_pts_from_coefficients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temp_coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xpts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.create_input_output_pts_from_coefficients" title="Permalink to this definition"></a></dt>
+<dd><p>Generates a set of output (y) points based on two coefficient arrays,
+one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
+:param temp_coef: list of coefficients, right to left in increasing order
+:param input_coef: list of coefficients, right to left in increasing order
+:param temperature_array: list of temperature data for time intervals T
+:param xpts: number of x points we want to do our piecewise evaluation over
+:param time_periods: number of optimisation time periods</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
+y: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>x</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.create_named_constraint_with_rule">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">create_named_constraint_with_rule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rule</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.create_named_constraint_with_rule" title="Permalink to this definition"></a></dt>
+<dd><p>Util function for creating pyomo constraints from a rule.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.do_multivariate_regression">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">do_multivariate_regression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.do_multivariate_regression" title="Permalink to this definition"></a></dt>
+<dd><p>Performs multivariate regression on provided data.
+:param X:
+:param Y:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>coefficient array
+R^2</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.fix_port_variable">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">fix_port_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_values</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="echo.echo_validators.html#echo.echo_validators.ArrayType" title="echo.echo_validators.ArrayType"><span class="pre">echo.echo_validators.ArrayType</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.fix_port_variable" title="Permalink to this definition"></a></dt>
+<dd><p>Updates existing pyomo variable to have fixed values.
+:param model: pyomo concrete model
+:param var_name: pyomo variable name (str)
+:param new_values: array or list of new values
+:param expansion_periods: number of expansion periods (int)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_array_constraint">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_array_constraint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#echo.utils.generate_array_constraint" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>constraint</strong> – float or array</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a formatted dict to be used in constraining a variable</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>d</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_input_output_values_from_polynomial_coeff_array">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_input_output_values_from_polynomial_coeff_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.generate_input_output_values_from_polynomial_coeff_array" title="Permalink to this definition"></a></dt>
+<dd><p>Generates x and y values for the polynomial function with coefficients defined by the coeff array
+:param coeff array: list of polynomial function coefficients
+:param pts: list of x values for which we want to evaluate the function described by the coeff array</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_piecewise_input_output_arrays">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_piecewise_input_output_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.generate_piecewise_input_output_arrays" title="Permalink to this definition"></a></dt>
+<dd><p>Generates x and y values for the polynomial function with coefficients defined by the coeff array
+:param coeff array: list of polynomial function coefficients, indexed by time
+:param pts: list of x values for which we want to evaluate the function described by the coeff array</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.set_float_var_bounds">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">set_float_var_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lb</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.set_float_var_bounds" title="Permalink to this definition"></a></dt>
+<dd><p>Updates the bounds on a pyomo variable. Only floats can be used as bounds.
+:param model: pyomo concrete model
+:param var_name: variable name (str) corresponding to a variable in the model
+:param ub: upper bound value, or None
+:param lb: lower bound value, or None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.set_var_bounds_from_dict">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">set_var_bounds_from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lb</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.set_var_bounds_from_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Updates the bounds on a pyomo variable using an array of floats.
+:param var: pyomo variable
+:param ub: dict of floats, where dict keys match variable index sets, or None
+:param lb: dict of floats, where dict keys match variable index sets, or None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.objectives.html" class="btn btn-neutral float-left" title="echo.objectives module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

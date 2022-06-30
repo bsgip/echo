@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -41,9 +40,11 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nodes.html">echo Nodes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html">echo Edge object</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">echo OptimisationGraph</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> OptimisationGraph</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#adding-nodes-and-edges">Adding Nodes and Edges</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#path-tracing">Path tracing</a></li>
 </ul>
@@ -52,6 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
 
         </div>
@@ -68,7 +70,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>echo OptimisationGraph</li>
+      <li><em>echo</em> OptimisationGraph</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/echo_graph.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -79,12 +81,15 @@
            <div itemprop="articleBody">
              
   <section id="echo-optimisationgraph">
-<h1>echo OptimisationGraph<a class="headerlink" href="#echo-optimisationgraph" title="Permalink to this heading"></a></h1>
+<h1><em>echo</em> OptimisationGraph<a class="headerlink" href="#echo-optimisationgraph" title="Permalink to this headline"></a></h1>
 <section id="adding-nodes-and-edges">
-<h2>Adding Nodes and Edges<a class="headerlink" href="#adding-nodes-and-edges" title="Permalink to this heading"></a></h2>
+<h2>Adding Nodes and Edges<a class="headerlink" href="#adding-nodes-and-edges" title="Permalink to this headline"></a></h2>
 </section>
 <section id="path-tracing">
-<h2>Path tracing<a class="headerlink" href="#path-tracing" title="Permalink to this heading"></a></h2>
+<h2>Path tracing<a class="headerlink" href="#path-tracing" title="Permalink to this headline"></a></h2>
+<p>Echo can calculate path flows within the network. A path is simply a sequence of distinct edges.
+Usually a path begins at a node that is a source of some commodity, and terminates at a node that is a sink for the same commodity.
+Currently, path tracing is only supported for networks with a single commodity type.</p>
 </section>
 </section>
 

@@ -27,6 +27,7 @@ This project is developed and maintained by the Battery Storage and Integration 
    constraints
    objectives
    examples
+   echo
 
 Indices and tables
 ==================

@@ -1,6 +1,6 @@
-""" Models for Echo Port, Node, Edge, Transform, Graph and Path.
+""" Models for Echo components: Port, Node, Edge, Transform, Graph and Path.
 
-Base models definition and a library of predefined commodity specific models (Electrical, Thermal, Gas, Carbon)
+This module contains Base models definition and a library of predefined commodity specific models (Electrical, Thermal, Gas, Carbon)
 """
 
 import uuid
@@ -34,6 +34,9 @@ class BaseModel(PydanticBaseModel):
 
 
 class OptimisationGraph(Graph):
+    """
+
+    """
     # todo do we need anything pydantic related for this class?
 
     def __init__(self):

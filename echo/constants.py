@@ -1,4 +1,4 @@
-""" Module wide constants.
+""" echo Module wide constants.
 
 """
 
