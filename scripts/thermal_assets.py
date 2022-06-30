@@ -16,7 +16,8 @@ temperature_array = [5] * time_periods
 temp_coef = [0,0]  # no dependence on temperature
 input_coef = [2,0]  # output = input*1 + 0
 
-chiller = NewChiller(max_output=-1000,
+chiller = SimpleChiller()
+chiller = SimpleChiller(max_output=-1000,
                      max_input=1000,
                      temp_coefficients=temp_coef,
                      input_coefficients=input_coef,

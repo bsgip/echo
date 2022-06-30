@@ -44,21 +44,24 @@ class GasBoilerFixedCOP(InputOutputNode):
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
-    """ Node with an input and output port. it is assumed that the input port is always importing,
-    and the output port is always exporting. The relationship between input and output is defined at each time
+    """ Node with an input and output port. The relationship between input and output is defined at each time
     interval by an array of input-->output point pairs, which are used to construct a piecewise constraint. """
     node_rule = NodeRule.Custom
-    max_input: NonNegativeFloat
-    min_input: float = 0.
-    max_output: NonPositiveFloat
-    min_output: float = 0.
+    input_ub: NonNegativeFloat  # input upper bound
+    output_ub: float
     input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
     output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
 
+    #todo validate max>min
+
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports['input'] = FlexPortImport(units=self.input_port_unit, import_constraint_value=self.max_input)
-        self.ports['output'] = FlexPortExport(units=self.output_port_unit, export_constraint_value=self.max_output)
+        self.ports['input'] = FlexPort(units=self.input_port_unit, import_constraint_value=self.input_ub)
+        # todo neater way of doing this
+        if self.output_ub >= 0:
+            self.ports['output'] = FlexPort(units=self.output_port_unit, import_constraint_value=self.output_ub)
+        else:
+            self.ports['output'] = FlexPort(units=self.output_port_unit, export_constraint_value=self.output_ub)
 
     def verify_node(self):
         assert self.input_pts is not None, 'No input points defined'
@@ -67,8 +70,11 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     def initialise_node(self, model):
         super(TimeVaryingPiecewiseIONode, self).initialise_node(model)
         # Need to bound our input and output port variables that we will use for piecewise
-        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.max_input, lb=0.)
-        set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.max_output)
+        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.input_ub, lb=0.)
+        if self.output_ub >= 0:
+            set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=self.output_ub, lb=0.)
+        else:
+            set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.output_ub)
 
     def apply_node_constraints(self, model):
         xvar = getattr(model, self.ports['input'].port_name)  # Get input/output pyomo variables

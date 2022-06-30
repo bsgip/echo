@@ -25,15 +25,15 @@ def test_gas_boiler_fixed_cop():
     gas_mains = Node()
     gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoilerFixedCOP(max_input=10,
-                               min_input=5,
-                               max_output=-10,
-                               min_output=-5,
+    boiler = GasBoilerFixedCOP(max_input=1000,
+                               min_input=0,
+                               max_output=-1000,
+                               min_output=0,
                                cop=0.8)
 
     heating_load = Node()
     hl = FixedThermalPort()
-    hl.add_initial_value_from_array([0] * 24 + [5] * 24, expansion_periods)
+    hl.add_initial_value_from_array([0.1] * 24 + [5] * 24, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([gas_mains, boiler, heating_load])
@@ -78,15 +78,15 @@ def test_chiller_operation():
 
     # nonlin_array = [-0.0068, 5.5052, 0]
     input_breakpoints = [0, 2, 3, 8]
-    output_values = [0, -3, -4, -8]
-    chiller = SimpleChiller(max_output=-8,
-                      max_input=8)
+    output_values = [0, 3, 4, 8]
+    chiller = SimpleChiller(output_ub=8,
+                            input_ub=8)
     chiller.add_input_pts(array=input_breakpoints, time_periods=time_periods)
     chiller.add_output_pts(array=output_values, time_periods=time_periods)
 
     cooling_load = Node()
     cl = FixedThermalPort()
-    cl.add_initial_value_from_array([4] * time_periods, expansion_periods)
+    cl.add_initial_value_from_array([-4] * time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -102,7 +102,7 @@ def test_chiller_operation():
         objective_set=None
     )
 
-    optimiser.optimise()
+    optimiser.optimise(tee=True)
 
     print('mains gas: ', optimiser.values(grid.ports['grid'].port_name, 0))
     print('chiller input (elec): ', optimiser.values(chiller.ports['input'].port_name, 0))

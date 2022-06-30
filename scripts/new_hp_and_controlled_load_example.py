@@ -25,7 +25,7 @@ source.ports['source'] = ElectricalPort()
 heating_cop = np.array([2] * time_periods)
 heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
 
-heat_pump = NewHeatPump(heating_cop_time_series=heat_cop_dict,
+heat_pump = HeatPump(heating_cop_time_series=heat_cop_dict,
                         cooling_cop_time_series=heat_cop_dict)
 
 
