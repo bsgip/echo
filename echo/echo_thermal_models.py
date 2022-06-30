@@ -25,25 +25,6 @@ class InputOutputNode(Node):
     min_input: Optional[NonNegativeFloat]
 
 
-class GasBoilerFixedCOP(InputOutputNode):
-    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
-    cop: NonNegativeFloat
-    input_port_unit = Units.JPS
-    output_port_unit = Units.KWT
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        # Add an input and output node, and create the appropriate transformation object
-        self.ports['input'] = OffOrConstrainedPort(upper_bound=self.max_input, lower_bound=self.min_input,
-                                                   units=self.input_port_unit)
-        self.ports['output'] = OffOrConstrainedPort(upper_bound=self.min_output, lower_bound=self.max_output,
-                                                    units=self.output_port_unit)
-        t = Transform()
-        t.add_lhs_term(var=self.ports['output'], rule=TransformRule.Both, weight=1)
-        t.add_rhs_term(var=self.ports['input'], rule=TransformRule.Both, weight=-self.cop)
-        self.add_transformation(t)
-
-
 class TimeVaryingPiecewiseIONode(InputOutputNode):
     """ Node with an input and output port. The relationship between input and output is defined at each time
     interval by an array of input-->output point pairs, which are used to construct a piecewise constraint. """
@@ -400,6 +381,29 @@ class GasSource(Source):
         self.units = Units.JPS
 
 
+
+class GasBoilerFixedCOP(InputOutputNode):
+    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
+    cop: NonNegativeFloat
+    input_port_unit = Units.JPS
+    output_port_unit = Units.KWT
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        # Add an input and output node, and create the appropriate transformation object
+        self.ports['input'] = OffOrConstrainedPort(upper_bound=self.max_input, lower_bound=self.min_input,
+                                                   units=self.input_port_unit)
+        self.ports['output'] = OffOrConstrainedPort(upper_bound=self.min_output, lower_bound=self.max_output,
+                                                    units=self.output_port_unit)
+        t = Transform()
+        t.add_lhs_term(var=self.ports['output'], rule=TransformRule.Both, weight=1)
+        t.add_rhs_term(var=self.ports['input'], rule=TransformRule.Both, weight=-self.cop)
+        self.add_transformation(t)
+
+
+class ModulatingBoiler(InputOutputNode):
+    part_load_efficiencies: ArrayType
+
 class TempControlledBoiler(InputOutputNode):
     """ A temp controlled boiler has an input and output port. """
     input_port_unit = Units.JPS
@@ -410,6 +414,7 @@ class TempControlledBoiler(InputOutputNode):
     conversion_factor: float
     node_rule = NodeRule.Custom
     cop: float
+    #todo put bounds on exit and return temperatures
 
     # pyomo vars
     is_on: Optional[str]
@@ -432,14 +437,15 @@ class TempControlledBoiler(InputOutputNode):
         setattr(model, self.exit_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
     def apply_node_constraints(self, model):
-        def constraint1(model, p, t):
-            return getattr(model, self.exit_temp)[p, t] == self.outlet_temp_setpoint
-
-        setattr(model, 'boiler_temp_con1_' + self.node_name,
-                en.Constraint(model.Expansion, model.Time, rule=constraint1))
+        # def constraint1(model, p, t):
+        #     #todo modify this
+        #     return getattr(model, self.exit_temp)[p, t] == self.outlet_temp_setpoint
+        #
+        # setattr(model, 'boiler_temp_con1_' + self.node_name,
+        #         en.Constraint(model.Expansion, model.Time, rule=constraint1))
 
         def constraint2(model, p, t):
-            """ return at time t = exiting at time t-1 minus energy removed at t-1"""
+            """ return temp at time t = exiting temp at time t-1 minus energy removed at t-1"""
             return (getattr(model, self.return_temp)[p, t] - getattr(model, self.exit_temp)[
                 p, t]) * self.conversion_factor * self.cop == \
                    getattr(model, self.ports['output'].port_name)[p, t]
@@ -448,7 +454,7 @@ class TempControlledBoiler(InputOutputNode):
                 en.Constraint(model.Expansion, model.Time, rule=constraint2))
 
         def constraint3(model, p, t):
-            """ exiting at time t = return at time t-1 + energy added at time t-1"""
+            """ exiting temp at time t = return temp at time t-1 + energy added at time t-1"""
             return getattr(model, self.exit_temp)[p, t] == getattr(model, self.ports['input'].port_name)[p, t] * (
                         1 / self.conversion_factor) + \
                    getattr(model, self.return_temp)[p, t]
@@ -456,11 +462,15 @@ class TempControlledBoiler(InputOutputNode):
         setattr(model, 'boiler_temp_con3_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=constraint3))
 
-        # def constraint4(model, p, t):
-        #     return getattr(model, self.ports['output'].port_name)[p, t] == self.cop * getattr(model, self.ports['input'].port_name)[p, t] * -1
-        #
-        # setattr(model, 'boiler_temp_con4_' + self.node_name,
-        #         en.Constraint(model.Expansion, model.Time, rule=constraint4))
+        def constraint4(model, p, t):
+            """ energy added at t <= energy added at t-1 + max input power increase"""
+            if p==0 and t==0:
+                return en.Constraint.Skip
+            else:
+                return getattr(model, self.ports['input'].port_name)[p, t] <= getattr(model, self.ports['input'].port_name)[p, t-1] + 5
+
+        setattr(model, 'boiler_temp_con4_' + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=constraint4))
 
 
 """ 
