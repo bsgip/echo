@@ -108,10 +108,10 @@ def check_bound_order(cls, values):
         if hasattr(lb, '__iter__'):
             assert len(lb) == len(ub), 'Lower bound and upper bound are mismatched lengths.'
             for i in range(len(lb)):
-                if lb[i] >= ub[i]:
+                if lb[i] > ub[i]:
                     raise ValueError('Lower bound should be less than upper bound.')
         else:
-            if lb >= ub:
+            if lb > ub:
                 raise ValueError('Lower bound should be less than upper bound.')
     return values
 

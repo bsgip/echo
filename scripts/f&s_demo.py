@@ -43,7 +43,8 @@ gas_load = gas_profiler(seasonal_profile_df=df,
 gas_load.set_index('Timestamp', inplace=True)
 # Trim gas load (to be fixed)
 gas_profile = gas_load['profile'][:8760]
-#%%
+
+
 # Plot the data
 fig = plt.figure(figsize=(12,8))
 plt.plot(gas_load['profile'].loc['2019-01-01 00:00:00':'2019-01-01 23:00:00'].values) # Jan
@@ -58,8 +59,8 @@ plt.show()
 # Print the total consumption for the year
 print('Total annual gas consumption (GJ): ', sum(gas_load['profile'].values))
 
-elec_rate = 0.09 # $/kWh
-gas_rate = 17  # $/GJ
+elec_rate_daily = [0.1]*6 + [0.5]*3 + [0.1]*6 + [0.6]*3 + [0.1]*6 # $/kWh
+gas_rate_daily = [17] * 24  # $/GJ
 
 
 bulk_grid_node = Node(node_name='bulk_grid')  # build a node
@@ -125,11 +126,14 @@ cooling_node.ports['cooling load'] = cooling_port
 # Bulk network node, with a port for emissions
 bulk_gas_node = Node(node_name='gas_supply')
 emission_factor = 60  # 60 kg Co2e/GJ gas
-bulk_gas_node.add_flex_port('gas_supply', unit=Units.JPS)
-bulk_gas_node.add_flex_port('emissions', unit=Units.CO2)
-bulk_gas_node.add_emission_transformation(emitting_port=bulk_gas_node.ports['gas_supply'],
-                                          carbon_port=bulk_gas_node.ports['emissions'],
-                                          emission_factor=emission_factor)
+gas_supply_port = FlexPortExport(units=Units.JPS)
+emission_port = FlexPortExport(units=Units.CO2)
+bulk_gas_node.ports['gas_supply'] = gas_supply_port
+bulk_gas_node.ports['emissions'] = emission_port
+t = Transform()
+t.add_lhs_term(gas_supply_port, TransformRule.Both, 1)
+t.add_rhs_term(emission_port, TransformRule.Both, emission_factor)
+bulk_gas_node.add_transformation(t)
 
 # Gas CP node
 gas_connection_pt_node = TellegenNode(node_name='gas_cp')
@@ -150,14 +154,14 @@ heating_port.add_initial_value_from_array(gas_profile.values, expansion_periods)
 heating_node.ports['heating_load'] = heating_port
 
 # Node for aggregating carbon emissions
-carbon_agg_node = CarbonAggregation(node_name='carbon_agg')
-carbon_agg_node.add_flex_port('gas_emissions', unit=Units.CO2)
-carbon_agg_node.ports['sum'] = CarbonSink()
-carbon_agg_node.add_aggregation_transformation(sum_port_name='sum')
+carbon_agg_node = Node(node_name='carbon_agg')
+gas_emissions = CarbonSink()
+carbon_agg_node.ports['gas_emissions'] = gas_emissions
 
 # Create an optimisation graph and add all our nodes to the graph
 system = OptimisationGraph()
-system.add_node_obj([bulk_grid_node, connection_pt_node, solar_node, chiller_node, battery_node, load_node, cooling_node, heating_node, bulk_gas_node, carbon_agg_node, gas_connection_pt_node, gas_boiler])
+system.add_node_obj([bulk_grid_node, connection_pt_node, solar_node, chiller_node, battery_node,
+                     load_node, cooling_node, heating_node, carbon_agg_node, bulk_gas_node, gas_connection_pt_node, gas_boiler])
 
 # Electrical
 system.connect_ports_and_create_edge(bulk_grid_node.ports['grid'], connection_pt_node.ports['upstream'])
@@ -173,17 +177,17 @@ system.connect_ports_and_create_edge(gas_connection_pt_node.ports['boiler'], gas
 system.connect_ports_and_create_edge(gas_boiler.ports['output'], heating_port)
 
 # CO2
-system.connect_ports_and_create_edge(bulk_gas_node.ports['emissions'], carbon_agg_node.ports['gas_emissions'])
+system.connect_ports_and_create_edge(emission_port, gas_emissions)
 
 
 #fig = plt.figure(figsize=(12,8))
 nx.draw_spring(system, with_labels=True)
 
 elec_tariff = ImportTariff(component=connection_pt_node.ports['upstream'],
-                           tariff_array=[elec_rate]*time_periods)
+                           tariff_array=elec_rate_daily*365)
 
 gas_tariff = ImportTariff(component=gas_connection_pt_node.ports['upstream'],
-                          tariff_array=[gas_rate]*time_periods)
+                          tariff_array=gas_rate_daily*365)
 
 # Define a set of objectives
 objective_set = ObjectiveSet(objective_list=[elec_tariff, gas_tariff])

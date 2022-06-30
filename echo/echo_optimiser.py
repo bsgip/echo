@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from pyomo.opt import SolverFactory
 import pyomo.environ as en
 import pyomo.network
@@ -222,3 +223,6 @@ class EchoOptimiser(object):
                 total += obj.get_objective_total(optimiser=self)
         return total
 
+    def plot_values(self, var_name):
+        plt.plot(self.values(var_name))
+        plt.show()

@@ -1,44 +1,35 @@
+import matplotlib.pyplot as plt
+
 from echo.echo_models import *
 from echo.echo_thermal_models import *
 from echo.echo_optimiser import *
 
+
 expansion_periods = 1
-time_periods = 4
+time_periods = 24
 interval_duration = 60
 
 system = OptimisationGraph()
 
-grid = Node()
-grid.ports['grid'] = ElectricalPort()
+source = Node()
+source.ports['source'] = GasPort()
 
+boiler = TempControlledBoiler(max_input=100,
+                              min_input=0,
+                              max_output=-100,
+                              min_output=0,
+                              conversion_factor = 0.5,
+                              cop=0.6
+                              )
 
-temperature_array = [5] * time_periods
-temp_coef = [0,0]  # no dependence on temperature
-input_coef = [2,0]  # output = input*1 + 0
+heating_load = Node()
+hl = FixedThermalPort()
+hl.add_initial_value_from_array([0] * 6 + [2] * 6 + [4] * 12, expansion_periods)
+heating_load.ports['load'] = hl
 
-chiller = SimpleChiller()
-chiller = SimpleChiller(max_output=-1000,
-                     max_input=1000,
-                     temp_coefficients=temp_coef,
-                     input_coefficients=input_coef,
-                     external_temp=temperature_array)
-
-
-# input_pts = [0,1,2,3,4]
-# output_pts = [0,-2,-3,-10, -20]
-#
-# chiller = Chiller(max_output=-1000,
-#                      max_input=1000)
-# chiller.set_input_output_breakpoints(input_pts, output_pts, time_periods)
-
-cooling_load = Node()
-cl = ThermalLoad()
-cl.add_sink_profile_from_array([20] * time_periods, expansion_periods)
-cooling_load.ports['load'] = cl
-
-system.add_node_obj([grid, chiller, cooling_load])
-system.connect_ports_and_create_edge(grid.ports['grid'], chiller.ports['input'])
-system.connect_ports_and_create_edge(chiller.ports['output'], cl)
+system.add_node_obj([source, boiler, heating_load])
+system.connect_ports_and_create_edge(source.ports['source'], boiler.ports['input'])
+system.connect_ports_and_create_edge(boiler.ports['output'], hl)
 
 optimiser = EchoOptimiser(
     interval_duration=interval_duration,
@@ -49,16 +40,24 @@ optimiser = EchoOptimiser(
     objective_set=None
 )
 
-optimiser.objective = sum(getattr(optimiser.model, grid.ports['grid'].port_name)[p, t]
-                          for p in optimiser.model.Expansion for t in optimiser.model.Time) * -1
-
 optimiser.optimise(tee=True)
 
 print(optimiser.opt_status)
 
-print('mains: ', optimiser.values(grid.ports['grid'].port_name, 0))
-print('chiller input (elec): ', optimiser.values(chiller.ports['input'].port_name, 0))
-print('chiller output (cooling): ', optimiser.values(chiller.ports['output'].port_name, 0))
-print('cooling load: ', cl.initial_value.values())
 
-print(chiller.get_cop(optimiser))
+boiler_input = optimiser.values(boiler.ports['input'].port_name)
+boiler_output = optimiser.values(boiler.ports['output'].port_name)
+
+boiler_exit_temp = optimiser.values(boiler.exit_temp)
+boiler_return_temp = optimiser.values(boiler.return_temp)
+
+hl_vals = optimiser.values(hl.port_name)
+
+fig = plt.figure()
+plt.plot(boiler_input, label='boiler input (kW)')
+plt.plot(boiler_output, label='boiler output (kW)')
+plt.plot(boiler_exit_temp, label='boiler exit temp (degC)')
+plt.plot(boiler_return_temp, label='boiler return temp (degC)')
+plt.plot(hl_vals, label='heating load (kW)')
+plt.legend()
+plt.show()

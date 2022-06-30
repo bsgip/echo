@@ -197,11 +197,15 @@ def test_temp_controlled_boiler():
     source = Node()
     source.ports['source'] = GasPort()
 
-    boiler = TempControlledBoiler()
+    boiler = TempControlledBoiler(max_input=100,
+                                  min_input=0,
+                                  max_output=-100,
+                                  min_output=0
+                                  )
 
     heating_load = Node()
     hl = FixedThermalPort()
-    hl.add_initial_value_from_array([0] * 24 + [5] * 24, expansion_periods)
+    hl.add_initial_value_from_array([0] * 12 + [5] * 12, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([source, boiler, heating_load])
@@ -216,6 +220,10 @@ def test_temp_controlled_boiler():
         ES=system,
         objective_set=None
     )
+
+    optimiser.optimise(True)
+
+    print()
 
 
 def test_controllable_thermal_load():

@@ -38,9 +38,10 @@ class GasBoilerFixedCOP(InputOutputNode):
                                                    units=self.input_port_unit)
         self.ports['output'] = OffOrConstrainedPort(upper_bound=self.min_output, lower_bound=self.max_output,
                                                     units=self.output_port_unit)
-        self.add_input_output_transformation(input_port=self.ports['input'],
-                                             output_port=self.ports['output'],
-                                             input_weight=-self.cop)  # minus sign important
+        t = Transform()
+        t.add_lhs_term(var=self.ports['output'], rule=TransformRule.Both, weight=1)
+        t.add_rhs_term(var=self.ports['input'], rule=TransformRule.Both, weight=-self.cop)
+        self.add_transformation(t)
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
@@ -52,7 +53,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
     output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
 
-    #todo validate max>min
+    # todo validate max>min
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -148,6 +149,7 @@ class TemperatureAdjustedChiller(TimeVaryingPiecewiseIONode):
             cop[i] = _output[i] / _input[i] * -1
         return cop
 
+
 # class InputOutputNode(Node):
 #     input_unit: int
 #     output_unit: int
@@ -185,7 +187,7 @@ class ThermalStorage(Storage):
     def initialise_port(self, model):
         super(ThermalStorage, self).initialise_port(model)
         # Create a variable for the internal temperature
-        #todo finish this
+        # todo finish this
 
 
 class ControllableThermalLoad(ThermalPort):
@@ -193,21 +195,29 @@ class ControllableThermalLoad(ThermalPort):
     temp_ub: ArrayType  # Upper bound of acceptable temperature for each time interval
     temp_lb: ArrayType  # Lower bound of acceptable temperature for each time interval
     external_temp: dict  # External temp
-    loss_factor: Optional[float]  # Losses via the difference between the internal temp and the external temp
+    loss_factor: Optional[float] = 0  # Losses due to ambient temp being lower than internal temp
+    gain_factor: Optional[float] = 0  # Free gains due to ambient temp being higher than internal temp
     temp_to_energy_coef: float = 1
 
     # Pyomo vars/params
     internal_temp: Optional[str]
+    is_gain: Optional[str]
+    losses: Optional[str]
+    gains: Optional[str]
 
     def __init__(self, **data):
         super().__init__(**data)
         self.internal_temp = 'internal_temp_' + self.port_name
+        self.is_gain = 'is_gain_' + self.port_name
+        self.losses = 'losses_' + self.port_name
+        self.gains = 'gains_' + self.port_name
 
     def initialise_port(self, model):
         super(ControllableThermalLoad, self).initialise_port(model)
         self.constrain_pos_neg(model)
         # Create temperature variable
         setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+
         # Bound temp variable to be within range
         ub_dict = generate_array_constraint(self.temp_ub, time_periods=len(model.Time),
                                             expansion_periods=len(model.Expansion))
@@ -215,22 +225,47 @@ class ControllableThermalLoad(ThermalPort):
                                             expansion_periods=len(model.Expansion))
         set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=ub_dict, lb=lb_dict)
 
-        # Constraint for internal temp vs external temp vs supplied heat (heating) vs removed heat (cooling)
+        def create_ambient_loss_gain_vars_and_constraints():
+            # Create variable for losses and gains
+            setattr(model, self.losses, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
+            setattr(model, self.gains, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+            setattr(model, self.is_gain, en.Var(model.Expansion, model.Time, domain=en.Binary))
+
+            def loss_gain_sum_constraint(model, p, t):
+                return getattr(model, self.losses)[p, t] + getattr(model, self.gains)[p, t] == \
+                       self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t]
+
+            setattr(model, 'loss_gain_con1_' + self.port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=loss_gain_sum_constraint))
+
+            def loss_or_gain1(model, p, t):
+                return getattr(model, self.gains)[p, t] <= getattr(model, self.is_gain)[p, t] * model.bigM
+
+            setattr(model, 'loss_gain_con2_' + self.port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=loss_or_gain1))
+
+            def loss_or_gain2(model, p, t):
+                return getattr(model, self.losses)[p, t] >= (getattr(model, self.is_gain)[p, t] - 1) * model.bigM
+
+            setattr(model, 'loss_gain_con3_' + self.port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=loss_or_gain2))
+
+
+        create_ambient_loss_gain_vars_and_constraints()
+
+        # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         def rule1(model, p, t):
-            cooling = getattr(model, self.neg)[p, t]
-            heating = getattr(model, self.pos)[p, t]
+            cooling_kw = getattr(model, self.neg)[p, t]
+            heating_kw = getattr(model, self.pos)[p, t]
             internal_temp = getattr(model, self.internal_temp)
-            if self.loss_factor is not None:
-                external_temp_diff = (self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t])
-                energy_diff = external_temp_diff * self.loss_factor * self.temp_to_energy_coef
-            else:
-                energy_diff = 0
+            loss = getattr(model, self.losses)[p, t] * self.loss_factor
+            gain = getattr(model, self.gains)[p, t] * self.gain_factor
 
             if p == 0 and t == 0:
-                return heating + cooling == internal_temp[p, t] * self.temp_to_energy_coef - energy_diff
+                return heating_kw + cooling_kw  + loss + gain == internal_temp[p, t] * self.temp_to_energy_coef
             else:
                 temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
-                return heating + cooling == temp_diff * self.temp_to_energy_coef - energy_diff
+                return heating_kw + cooling_kw + loss + gain == temp_diff * self.temp_to_energy_coef
 
         setattr(model, 'internal_temp_con_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
@@ -353,12 +388,14 @@ class GasSource(Source):
 
 class TempControlledBoiler(InputOutputNode):
     """ A temp controlled boiler has an input and output port. """
-    input_unit = Units.JPS
-    output_unit = Units.KWT
+    input_port_unit = Units.JPS
+    output_port_unit = Units.KWT
     max_input: float
     max_output: float
     outlet_temp_setpoint = 80
+    conversion_factor: float
     node_rule = NodeRule.Custom
+    cop: float
 
     # pyomo vars
     is_on: Optional[str]
@@ -367,6 +404,8 @@ class TempControlledBoiler(InputOutputNode):
 
     def __init__(self, **data):
         super().__init__(**data)
+        self.add_flex_port('input', unit=self.input_port_unit)
+        self.add_flex_port('output', unit=self.output_port_unit)
         self.ports['input'].set_flow_constraints(max_import=self.max_input, max_export=0.)
         self.ports['output'].set_flow_constraints(max_import=0., max_export=self.max_output)
         self.return_temp = 'inlet_temp_' + self.node_name
@@ -387,7 +426,8 @@ class TempControlledBoiler(InputOutputNode):
 
         def constraint2(model, p, t):
             """ return at time t = exiting at time t-1 minus energy removed at t-1"""
-            return getattr(model, self.return_temp)[p, t] == getattr(model, self.exit_temp)[p, t] + \
+            return (getattr(model, self.return_temp)[p, t] - getattr(model, self.exit_temp)[
+                p, t]) * self.conversion_factor * self.cop == \
                    getattr(model, self.ports['output'].port_name)[p, t]
 
         setattr(model, 'boiler_temp_con2_' + self.node_name,
@@ -395,13 +435,18 @@ class TempControlledBoiler(InputOutputNode):
 
         def constraint3(model, p, t):
             """ exiting at time t = return at time t-1 + energy added at time t-1"""
-            return getattr(model, self.exit_temp)[p, t] == getattr(model, self.ports['input'].port_name)[p, t] + \
+            return getattr(model, self.exit_temp)[p, t] == getattr(model, self.ports['input'].port_name)[p, t] * (
+                        1 / self.conversion_factor) + \
                    getattr(model, self.return_temp)[p, t]
 
         setattr(model, 'boiler_temp_con3_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=constraint3))
 
-
+        # def constraint4(model, p, t):
+        #     return getattr(model, self.ports['output'].port_name)[p, t] == self.cop * getattr(model, self.ports['input'].port_name)[p, t] * -1
+        #
+        # setattr(model, 'boiler_temp_con4_' + self.node_name,
+        #         en.Constraint(model.Expansion, model.Time, rule=constraint4))
 
 
 """ 

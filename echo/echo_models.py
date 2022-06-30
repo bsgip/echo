@@ -94,7 +94,7 @@ class OptimisationGraph(Graph):
             for _, p in node.ports.items():
                 if port == p:
                     return node
-        raise ConfigurationError('Port is not part of any node.')
+        raise ConfigurationError('Port is not part of any node, or node has not been added to graph.')
 
     def get_ports_on_edge_from_nodes(self, node1, node2):
         """ Gets the ports that are on the edge from node1 to node2. """
@@ -236,6 +236,10 @@ class OptimisationGraph(Graph):
             for p_name, p_object in n_object.ports.items():
                 print('  port_name: ', p_name)
 
+    def print_port_names(self):
+        for n in self.node_obj.values():
+            for pn, p in n.ports.items():
+                print(pn, ', ', p.port_name)
 
 class ConfigurationError(Exception):
     pass
