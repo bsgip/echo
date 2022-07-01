@@ -150,3 +150,12 @@ def set_bounds_from_piecewise_pts(cls, values):
         values['output_ub'] = max(max(output_pts.values()))
         values['output_lb'] = min(min(output_pts.values()))
     return values
+
+
+def set_output_bounds_from_input_bounds_and_cop(cls, values):
+    cop = values.get('cop')
+    max_in = values.get('max_input')
+    min_in = values.get('min_input')
+    values['max_output'] = max_in * cop * -1
+    values['min_output'] = min_in * cop * -1
+    return values

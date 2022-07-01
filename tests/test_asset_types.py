@@ -364,3 +364,83 @@ def test_simple_piecewise_node():
     plt.show()
 
     print()
+
+
+def test_off_or_constrained_port():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    source = Node()
+    source.ports['source'] = ElectricalPort()
+
+    node = TellegenNode()
+    p = OffOrConstrainedPort(units=Units.KW, upper_bound=-4, lower_bound=-10)
+    p2 = ElectricalPort()
+    node.ports['in'] = p2
+    node.ports['out'] = p
+
+    load = Node()
+    l1 = ElectricalDemand()
+    l1.add_demand_profile_from_array([0] * 12 + [5] * 12)
+    load.ports['load'] = l1
+
+    system.add_node_obj([source, node, load])
+    system.connect_ports_and_create_edge(source.ports['source'], node.ports['in'])
+    system.connect_ports_and_create_edge(node.ports['out'], l1)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    print()
+
+
+def test_setpoint_controlled_thermal_load():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    source = Node()
+    source.ports['source'] = ThermalPort()
+
+    external_temp = np.array([2] * time_periods)
+    external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
+    temp_setpoint = np.array(
+        [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
+
+    temp_setpoint_dict = generate_dict_with_pyomo_keys_from_array(temp_setpoint, time_periods, expansion_periods)
+    heating_load = Node()
+    hl = ControllableThermalLoad(temp_ub=temp_setpoint_dict,
+                                 temp_lb=temp_setpoint_dict,
+                                 external_temp=external_temp_dict,
+                                 temp_to_energy_coef=1
+                                 )
+    heating_load.ports['load'] = hl
+
+    system.add_node_obj([source, heating_load])
+    system.connect_ports_and_create_edge(source.ports['source'], hl)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    print()
