@@ -14,11 +14,10 @@ from echo.echo_models import *
 class InputOutputNode(Node):
     """
     An input-output node has one input port and one output port.
-    We assume the input port only ever imports, and the output port only ever exports.
     """
     input_port_unit: int
     output_port_unit: int
-    # Some optional parameters for controlling input/output port flows
+    # Optional parameters for controlling input/output port flows
     max_output: Optional[NonPositiveFloat]
     min_output: Optional[NonPositiveFloat]
     max_input: Optional[NonNegativeFloat]
@@ -26,24 +25,28 @@ class InputOutputNode(Node):
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
-    """ Node with an input and output port. The relationship between input and output is defined at each time
-    interval by an array of input-->output point pairs, which are used to construct a piecewise constraint. """
+    """
+    Node with an input and output port. The relationship between input and output is defined at each time
+    interval by an array of input-->output point pairs, which are used to construct a piecewise constraint.
+    """
     node_rule = NodeRule.Custom
-    input_ub: NonNegativeFloat  # input upper bound
-    output_ub: float
     input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
     output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
 
-    # todo validate max>min
+    # These values are automatically calculated by the 'set_bounds_from_piecewise_pts' validator
+    input_ub: float = None
+    input_lb: float = None
+    output_ub: float = None
+    output_lb: float = None
+
+    piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output pts
+    populate_bounds = root_validator(allow_reuse=True)(set_bounds_from_piecewise_pts)  # set attributes input_ub, input_lb, output_ub, output_lb from input pts/output pts
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports['input'] = FlexPort(units=self.input_port_unit, import_constraint_value=self.input_ub)
-        # todo neater way of doing this
-        if self.output_ub >= 0:
-            self.ports['output'] = FlexPort(units=self.output_port_unit, import_constraint_value=self.output_ub)
-        else:
-            self.ports['output'] = FlexPort(units=self.output_port_unit, export_constraint_value=self.output_ub)
+        # Create an input port and an outport port with the correct units
+        self.ports['input'] = FlexPort(units=self.input_port_unit)
+        self.ports['output'] = FlexPort(units=self.output_port_unit)
 
     def verify_node(self):
         assert self.input_pts is not None, 'No input points defined'
@@ -51,22 +54,16 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
 
     def initialise_node(self, model):
         super(TimeVaryingPiecewiseIONode, self).initialise_node(model)
-        # Need to bound our input and output port variables that we will use for piecewise
-        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.input_ub, lb=0.)
-        if self.output_ub >= 0:
-            set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=self.output_ub, lb=0.)
-        else:
-            set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.output_ub)
+        # Bound input and output port variables, otherwise piecewise constraint will fail
+        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.input_ub, lb=self.input_lb)
+        set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=self.output_ub, lb=self.output_lb)
 
     def apply_node_constraints(self, model):
-        xvar = getattr(model, self.ports['input'].port_name)  # Get input/output pyomo variables
+        xvar = getattr(model, self.ports['input'].port_name)
         yvar = getattr(model, self.ports['output'].port_name)
-        xdata = self.input_pts  # Get piecewise points
+        xdata = self.input_pts
         ydata = self.output_pts
 
-        self.apply_piecewise_constraint(model, xvar, yvar, xdata, ydata)
-
-    def apply_piecewise_constraint(self, model, xvar, yvar, xdata: dict, ydata: dict):
         con_name = 'piecewise_con_' + self.node_name
         setattr(model, con_name, en.Piecewise(model.Expansion, model.Time,
                                               yvar,
@@ -75,24 +72,33 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
 
 
 class SinglePiecewiseIONode(TimeVaryingPiecewiseIONode):
-    """ The relationship between input and output for all time intervals
-    is given by an array of input-->output point pairs, which are used to construct a piecewise constraint."""
+    """
+    The relationship between input and output for all time intervals
+    is given by an array of input-->output point pairs, which are used to construct a piecewise constraint.
+    """
 
     def add_input_pts(self, array, time_periods, expansion_periods=1):
+        """ Tiles input points across time and expansion periods."""
         self.input_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
 
     def add_output_pts(self, array, time_periods, expansion_periods=1):
+        """ Tiles output points across time and expansion periods."""
         self.output_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
 
 
 class SimpleChiller(SinglePiecewiseIONode):
+    """
+    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output (+ve because it is a heat sink).
+    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints used for all time periods.
+    """
     input_port_unit = Units.KW
     output_port_unit = Units.KWT
 
 
 class TemperatureAdjustedChiller(TimeVaryingPiecewiseIONode):
     """
-    A chiller converts an electrical input to a thermal cooling output.
+    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output (+ve because it is a heat sink).
+    A temperature
     The conversion is defined by a piecewise constraint relating input/output.
     This constraint can be different for different time periods, reflecting that chiller performance depends on
     external air temperature which can be included as a parameter.
@@ -130,30 +136,23 @@ class TemperatureAdjustedChiller(TimeVaryingPiecewiseIONode):
             cop[i] = _output[i] / _input[i] * -1
         return cop
 
-
-# class InputOutputNode(Node):
-#     input_unit: int
-#     output_unit: int
-#
-#     def __init__(self, **data):
-#         super().__init__(**data)
-#         self.add_flex_port('input', unit=self.input_unit)
-#         self.add_flex_port('output', unit=self.output_unit)
 """ 
 Thermal models
 """
 
 
 class ThermalPort(FlexPort):
-    """ Flexible thermal port. Pos indicates that the port is importing heat, neg indicates the port is exporting heat."""
+    """ Flexible thermal port, +ve if importing heat, -ve if exporting heat."""
     units = Units.KWT
 
 
 class FixedThermalPort(FixedPort):
+    """ Fixed thermal port, +ve if importing heat, -ve if exporting heat."""
     units = Units.KWT
 
 
 class ThermalStorage(Storage):
+    #todo finish implementing
     self_discharge: float = 0  # rate at which energy is lost from storage
     units = Units.KWT
     external_temp: ArrayType
@@ -168,18 +167,19 @@ class ThermalStorage(Storage):
     def initialise_port(self, model):
         super(ThermalStorage, self).initialise_port(model)
         # Create a variable for the internal temperature
-        # todo finish this
-
 
 class ControllableThermalLoad(ThermalPort):
-    """  Port where +ve indicates heating load (ie adding heat) and -ve indicates cooling load (ie removing heat). """
+    """
+    Port where +ve indicates heating load (ie adding heat) and -ve indicates cooling load (ie removing heat).
+    The port has an internal temperature variable, which is bound between a user-specified upper and lower bound.
+    """
     temp_ub: ArrayType  # Upper bound of acceptable temperature for each time interval
     temp_lb: ArrayType  # Lower bound of acceptable temperature for each time interval
-    external_temp: dict  # External temp
+    external_temp: dict  # External (ambient) temp
     loss_factor: Optional[float] = 0  # Losses due to ambient temp being lower than internal temp
     gain_factor: Optional[float] = 0  # Free gains due to ambient temp being higher than internal temp
-    temp_to_energy_coef: float = 1
-    initial_internal_temp: float = 0
+    temp_to_energy_coef: float = 1  # Conversion factor = added energy/temperature change
+    initial_internal_temp: float = 0  # initial internal temperature
 
     # Pyomo vars/params
     internal_temp: Optional[str]
@@ -207,33 +207,34 @@ class ControllableThermalLoad(ThermalPort):
                                             expansion_periods=len(model.Expansion))
         set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=ub_dict, lb=lb_dict)
 
-        def create_ambient_loss_gain_vars_and_constraints():
-            # Create variable for losses and gains
-            setattr(model, self.losses, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
-            setattr(model, self.gains, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
-            setattr(model, self.is_gain, en.Var(model.Expansion, model.Time, domain=en.Binary))
 
-            def loss_gain_sum_constraint(model, p, t):
-                return getattr(model, self.losses)[p, t] + getattr(model, self.gains)[p, t] == \
-                       self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t]
+        # Create variable for losses and gains
+        setattr(model, self.losses, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
+        setattr(model, self.gains, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        setattr(model, self.is_gain, en.Var(model.Expansion, model.Time, domain=en.Binary))
 
-            setattr(model, 'loss_gain_con1_' + self.port_name,
-                    en.Constraint(model.Expansion, model.Time, rule=loss_gain_sum_constraint))
+        # Apply constraints on loss and gain variables
+        def loss_gain_sum_constraint(model, p, t):
+            """ Losses + gains must equal the temperature difference between ambient and internal"""
+            return getattr(model, self.losses)[p, t] + getattr(model, self.gains)[p, t] == \
+                   self.external_temp[p, t] - getattr(model, self.internal_temp)[p, t]
 
-            def loss_or_gain1(model, p, t):
-                return getattr(model, self.gains)[p, t] <= getattr(model, self.is_gain)[p, t] * model.bigM
+        setattr(model, 'loss_gain_con1_' + self.port_name,
+                en.Constraint(model.Expansion, model.Time, rule=loss_gain_sum_constraint))
 
-            setattr(model, 'loss_gain_con2_' + self.port_name,
-                    en.Constraint(model.Expansion, model.Time, rule=loss_or_gain1))
+        def loss_or_gain1(model, p, t):
+            """ Gains can only be non-zero if is_gain = 1"""
+            return getattr(model, self.gains)[p, t] <= getattr(model, self.is_gain)[p, t] * model.bigM
 
-            def loss_or_gain2(model, p, t):
-                return getattr(model, self.losses)[p, t] >= (getattr(model, self.is_gain)[p, t] - 1) * model.bigM
+        setattr(model, 'loss_gain_con2_' + self.port_name,
+                en.Constraint(model.Expansion, model.Time, rule=loss_or_gain1))
 
-            setattr(model, 'loss_gain_con3_' + self.port_name,
-                    en.Constraint(model.Expansion, model.Time, rule=loss_or_gain2))
+        def loss_or_gain2(model, p, t):
+            """ Losses can only be non-zero if is_gain = 0 """
+            return getattr(model, self.losses)[p, t] >= (getattr(model, self.is_gain)[p, t] - 1) * model.bigM
 
-
-        create_ambient_loss_gain_vars_and_constraints()
+        setattr(model, 'loss_gain_con3_' + self.port_name,
+                en.Constraint(model.Expansion, model.Time, rule=loss_or_gain2))
 
         # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         def rule1(model, p, t):
@@ -261,11 +262,15 @@ class ControllableCoolingLoad(ControllableThermalLoad):
 
 
 class HeatPump(Node):
-    """ HP is input output where output can be pos for heating, neg for cooling."""
+    """
+    A heat pump is input output node, where input is an electrical port, and output is a thermal port.
+    It can only do heating or cooling, it cannot do both simultaneously.
+    The conversion of input electrical energy to heating or cooling output depends on provided coefficients of performance (cop) time series data.
+    """
     node_rule = NodeRule.Custom
-    heating_cop_time_series: dict
-    cooling_cop_time_series: dict
-    output_flows = Flows.Both  # attribute for dictating whether heat pump does heating and cooling or heating only
+    heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
+    cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
+    output_flows = Flows.Both  # Attribute for controlling whether heat pump does heating and cooling, or heating only
 
     # pyomo vars/params
     heating_cop: Optional[str]
@@ -275,6 +280,7 @@ class HeatPump(Node):
 
     def __init__(self, **data):
         super().__init__(**data)
+        # Create input and output ports
         self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
         self.ports['output'] = FlexPort(units=Units.KWT, flows=self.output_flows)
 
@@ -286,14 +292,14 @@ class HeatPump(Node):
 
     def initialise_node(self, model):
         super(HeatPump, self).initialise_node(model)
-        # Need to split pos/neg on output. Pos will become cooling ('importing' heat), and neg will become heating
+        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
         self.ports['output'].constrain_pos_neg(model)
 
-        # Variables for assigning the input electrical energy to either heating or cooling operation
+        # Create variables for attributing the input to either heating or cooling
         setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
         setattr(model, self.cool_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
-        # Create params
+        # Create params for heating and cooling coefficients of performance
         setattr(model, self.heating_cop, en.Param(model.Expansion, model.Time, initialize=self.heating_cop_time_series,
                                                   domain=en.NonNegativeReals))
         setattr(model, self.cooling_cop, en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series,
@@ -308,26 +314,31 @@ class HeatPump(Node):
         cooling_cop = getattr(model, self.cooling_cop)
 
         def only_heat_or_cool1(model, p, t):
+            """ Can only have input used for heating if is_cooling = 0"""
             return getattr(model, self.heat_in)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
 
         setattr(model, 'only_heat_or_cool1_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool1))
 
         def only_heat_or_cool2(model, p, t):
+            """ Can only have input used for cooling if is_cooling = 1"""
             return getattr(model, self.cool_in)[p, t] <= is_cooling[p, t] * model.bigM
 
         setattr(model, 'only_heat_or_cool2_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool2))
 
         def sum_rule(model, p, t):
+            """ Input used for heating and input used for cooling must sum to total input"""
             return p_in[p, t] == getattr(model, self.heat_in)[p, t] + getattr(model, self.cool_in)[p, t]
 
         setattr(model, 'sum_heat_cool_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
         def heating_output_rule(model, p, t):
+            """ Heat out = heat_in * heating cop * -1"""
             return heat_out[p, t] == getattr(model, self.heat_in)[p, t] * heating_cop[p, t] * -1
 
         def cooling_output_rule(model, p, t):
+            """ Cool out = cool_in * cooling cop"""
             return cool_out[p, t] == getattr(model, self.cool_in)[p, t] * cooling_cop[p, t]
 
         setattr(model, 'heat_con_' + self.node_name,
@@ -336,17 +347,20 @@ class HeatPump(Node):
                 en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule))
 
     def get_heating_cop(self, optimiser):
+        """ Returns the heating cop"""
         _out = optimiser.values(self.ports['output'].pos)
         _in = optimiser.values(self.heat_in)
         return _out / _in
 
     def get_cooling_cop(self, optimiser):
+        """ Returns the cooling cop"""
         _out = optimiser.values(self.ports['output'].neg)
         _in = optimiser.values(self.cool_in)
         return _out / _in
 
 
 class HeatPumpHeatingOnly(HeatPump):
+    """ A heat pump that can only deliver heating"""
     output_flows = Flows.Export  # Heating only
 
 
@@ -361,29 +375,22 @@ Gas models
 
 
 class GasPort(FlexPort):
-
+    """ A flexible port with flow units of Joules/second"""
     def __init__(self):
         super(GasPort, self).__init__()
         self.units = Units.JPS
 
 
-class GasDemand(Sink):
-
+class FixedGasPort(GasPort):
+    """ Same as gas port, but fixed value. """
     def __init__(self):
-        super(GasDemand, self).__init__()
-        self.units = Units.JPS
-
-
-class GasSource(Source):
-
-    def __init__(self):
-        super(GasSource, self).__init__()
-        self.units = Units.JPS
-
+        super(FixedGasPort, self).__init__()
+        self.opt_type = OptimisationType.Parameter
 
 
 class GasBoilerFixedCOP(InputOutputNode):
-    """ Gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
+    """
+    A gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
     cop: NonNegativeFloat
     input_port_unit = Units.JPS
     output_port_unit = Units.KWT
@@ -402,17 +409,21 @@ class GasBoilerFixedCOP(InputOutputNode):
 
 
 class ModulatingBoiler(InputOutputNode):
+    #todo finish implementing this
     part_load_efficiencies: ArrayType
 
 class TempControlledBoiler(InputOutputNode):
-    """ A temp controlled boiler has an input and output port. """
+    """
+    A temp controlled boiler has an input and output port.
+    It has two internal temperature variables, one for exiting water temp and one for returning water temp.
+    """
+    node_rule = NodeRule.Custom
     input_port_unit = Units.JPS
     output_port_unit = Units.KWT
     max_input: float
     max_output: float
     outlet_temp_setpoint = 80
     conversion_factor: float
-    node_rule = NodeRule.Custom
     cop: float
     #todo put bounds on exit and return temperatures
 
@@ -423,16 +434,18 @@ class TempControlledBoiler(InputOutputNode):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.add_flex_port('input', unit=self.input_port_unit)
-        self.add_flex_port('output', unit=self.output_port_unit)
+        #todo maybe should be offorconstrained ports
+        self.ports['input'] = FlexPort(unit=self.input_port_unit)
+        self.ports['output'] = FlexPort(unit=self.output_port_unit)
         self.ports['input'].set_flow_constraints(max_import=self.max_input, max_export=0.)
         self.ports['output'].set_flow_constraints(max_import=0., max_export=self.max_output)
+
         self.return_temp = 'inlet_temp_' + self.node_name
         self.exit_temp = 'outlet_temp_' + self.node_name
 
     def initialise_node(self, model):
         super(TempControlledBoiler, self).initialise_node(model)
-        # Define extra variables
+        # Define exit and return temperature variables
         setattr(model, self.return_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
         setattr(model, self.exit_temp, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
@@ -478,21 +491,20 @@ Control system models
 """
 
 
-class TimeDelayNode(Node):
-    """ An input output node that implements a fixed delay between input and output."""
-    time_delay: float
-    input_unit: int
-    output_unit: int
+class TimeDelayNode(InputOutputNode):
+    """ A time delay node is an input-output node that implements a fixed delay between input and output."""
+    time_delay: int   # number of time intervals delay between input and output
     node_rule = NodeRule.Custom
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports['input'] = FlexPortImport(units=self.input_unit)
-        self.ports['output'] = FlexPortExport(units=self.output_unit)
+        self.ports['input'] = FlexPortImport(units=self.input_port_unit)
+        self.ports['output'] = FlexPortExport(units=self.output_port_unit)
 
     def apply_node_constraints(self, model):
 
-        def time_delay_rule(model, p, t):  # Modified tellegen node rule
+        def time_delay_rule(model, p, t):
+            """ This is a modified tellegen rule """
             a = getattr(model, self.ports['input'].port_name)
             b = getattr(model, self.ports['output'].port_name)
             if t < self.time_delay:

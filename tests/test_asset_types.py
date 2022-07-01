@@ -186,7 +186,6 @@ def test_carbon_aggregation():
         assert aggr[i] * -1 == grid_emissions[i] + bess_emissions[i]
 
 
-
 def test_temp_controlled_boiler():
     expansion_periods = 1
     time_periods = 24
@@ -311,5 +310,57 @@ def test_new_heat_pump():
     )
 
     optimiser.optimise(True)
+
+    print()
+
+
+def test_simple_piecewise_node():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    source = Node()
+    source.ports['source'] = ElectricalPort()
+
+    inputs = [0, 1, 2, 3]
+    outputs = [0, -1, -2, -3]
+    input_dict = populate_values_across_time_and_expansion_indices(inputs, time_periods, expansion_periods)
+    output_dict = populate_values_across_time_and_expansion_indices(outputs, time_periods, expansion_periods)
+    io_node = TimeVaryingPiecewiseIONode(input_port_unit=Units.KW, output_port_unit=Units.KW)
+    io_node.input_pts = input_dict
+    io_node.output_pts = output_dict
+
+    sink_node = Node()
+    sp = FixedElectricalPort()
+    rand_load = np.random.uniform(0, 3, time_periods)
+    sp.add_initial_value_from_array(rand_load)
+    sink_node.ports['sink'] = sp
+
+    system.add_node_obj([source, io_node, sink_node])
+    system.connect_ports_and_create_edge(source.ports['source'], io_node.ports['input'])
+    system.connect_ports_and_create_edge(io_node.ports['output'], sp)
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    load = rand_load
+    io_output = optimiser.values(io_node.ports['output'].port_name)
+    io_input = optimiser.values(io_node.ports['input'].port_name)
+
+    plt.plot(load, label='load')
+    plt.plot(io_input, label='io input')
+    plt.plot(io_output, label='io output')
+    plt.legend()
+    plt.show()
 
     print()

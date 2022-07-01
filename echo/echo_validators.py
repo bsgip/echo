@@ -129,3 +129,24 @@ def node_unit_validator(cls, values):
 
     return values
 
+
+def validate_piecewise_arrays(cls, values):
+    input_pts = values.get('input_pts')
+    output_pts = values.get('output_pts')
+    if input_pts is not None and output_pts is not None:
+        assert len(input_pts) == len(output_pts), 'Mismatched indices for input and output dictionaries.'
+        for k, _ in input_pts.items():
+            assert len(input_pts[k]) == len(output_pts[k]), 'Input and output arrays are not equal lengths for index {}'.format(k)
+
+    return values
+
+
+def set_bounds_from_piecewise_pts(cls, values):
+    input_pts = values.get('input_pts')
+    output_pts = values.get('output_pts')
+    if input_pts is not None and output_pts is not None:
+        values['input_ub'] = max(max(input_pts.values()))
+        values['input_lb'] = min(min(input_pts.values()))
+        values['output_ub'] = max(max(output_pts.values()))
+        values['output_lb'] = min(min(output_pts.values()))
+    return values
