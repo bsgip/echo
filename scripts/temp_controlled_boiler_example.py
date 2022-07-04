@@ -25,16 +25,16 @@ boiler = TempControlledBoiler(max_input=100,
 
 external_temp = [2] * time_periods
 external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
-temp_lb = [0] * 6 + [10] * 6 + [20] * 12
-temp_ub = np.array(temp_lb) + 100
+temp_lb = [0]*8 + [20]*8 + [0]*8
+temp_ub = np.array(temp_lb) + 25
 
-thermal_load = Node()
-hl = ControllableHeatingLoad(temp_ub=temp_ub,
-                             temp_lb=temp_lb,
-                             external_temp=external_temp_dict,
-                             temp_to_energy_coef=1,
-                             loss_factor=0.05
-                             )
+thermal_load = ThermalNode(temp_ub=generate_dict_with_pyomo_keys_from_array(temp_ub, time_periods, expansion_periods),
+                           temp_lb=generate_dict_with_pyomo_keys_from_array(temp_lb, time_periods, expansion_periods),
+                           external_temp=external_temp_dict,
+                           temp_to_energy_coef=1,
+                           loss_factor=0.05
+                           )
+hl = FlexHeatSink()
 thermal_load.ports['load'] = hl
 
 system.add_node_obj([source, boiler, thermal_load])
@@ -42,7 +42,9 @@ system.connect_ports_and_create_edge(source.ports['source'], boiler.ports['input
 system.connect_ports_and_create_edge(boiler.ports['output'], hl)
 
 obj = PeakPositivePower(component=boiler.ports['input'])
+
 obj_set = ObjectiveSet(objective_list=[obj])
+
 optimiser = EchoOptimiser(
     interval_duration=interval_duration,
     number_of_intervals=time_periods,
@@ -70,7 +72,7 @@ plt.plot(boiler_input, label='boiler input (kW)')
 plt.plot(boiler_exit_temp, label='boiler exit temp (degC)')
 plt.plot(boiler_return_temp, label='boiler return temp (degC)')
 plt.plot(hl_vals, label='heating load (kW)')
-plt.plot(optimiser.values(hl.internal_temp), label='load temp')
+plt.plot(optimiser.values(thermal_load.internal_temp), label='load temp')
 
 plt.legend()
 plt.show()

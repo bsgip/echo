@@ -168,7 +168,8 @@ def set_output_bounds_from_input_bounds_and_cop_and_startup_eta(cls, values):
 def validate_startup_efficiency(cls, values):
     cop = values.get('cop')
     eta = values.get('startup_eta')
-    assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
+    if eta is not None:
+        assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
     return values
 
 

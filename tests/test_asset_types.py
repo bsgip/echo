@@ -240,12 +240,12 @@ def test_controllable_thermal_load():
         [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
     temp_ub = np.array(temp_lb) + 5
 
-    heating_load = Node()
-    hl = ControllableThermalLoad(temp_ub=temp_ub,
+    heating_load = ThermalNode(temp_ub=temp_ub,
                                  temp_lb=temp_lb,
                                  external_temp=external_temp_dict,
                                  temp_to_energy_coef=1
                                  )
+    hl = FlexHeatSink()
     heating_load.ports['load'] = hl
 
     system.add_node_obj([source, heating_load])
@@ -287,12 +287,12 @@ def test_new_heat_pump():
         [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
     temp_ub = np.array(temp_lb) + 5
 
-    thermal_load = Node()
-    hl = ControllableThermalLoad(temp_ub=temp_ub,
+    thermal_load = ThermalNode(temp_ub=temp_ub,
                                  temp_lb=temp_lb,
                                  external_temp=external_temp_dict,
                                  temp_to_energy_coef=1
                                  )
+    hl = FlexHeatSink()
     thermal_load.ports['load'] = hl
 
     system.add_node_obj([source, heat_pump, thermal_load])
