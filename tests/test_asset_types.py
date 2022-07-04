@@ -26,14 +26,13 @@ def test_gas_boiler_fixed_cop():
     gas_mains.ports['mains'] = GasPort()
 
     boiler = GasBoilerFixedCOP(max_input=1000,
-                               min_input=0,
-                               max_output=-1000,
-                               min_output=0,
-                               cop=0.8)
+                               min_input=4,
+                               cop=0.8,
+                               startup_eta=0.5)
 
     heating_load = Node()
     hl = FixedThermalPort()
-    hl.add_initial_value_from_array([0.1] * 24 + [5] * 24, expansion_periods)
+    hl.add_initial_value_from_array([0] * 24 + [20] * 24, expansion_periods)
     heating_load.ports['load'] = hl
 
     system.add_node_obj([gas_mains, boiler, heating_load])
@@ -405,32 +404,38 @@ def test_off_or_constrained_port():
     print()
 
 
-def test_setpoint_controlled_thermal_load():
+def test_thermal_node():
     expansion_periods = 1
     time_periods = 24
     interval_duration = 60
 
     system = OptimisationGraph()
 
-    source = Node()
-    source.ports['source'] = ThermalPort()
+    heating_source = Node()
+    heating_source.ports['heating_source'] = ThermalPort(flows=Flows.Export)
+
+    cooling_source = Node()
+    cooling_source.ports['cooling_source'] = ThermalPort(flows=Flows.Import)
 
     external_temp = np.array([2] * time_periods)
     external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
-    temp_setpoint = np.array(
+    temp_lb = np.array(
         [0] * 7 + [0.2] * 1 + [0.4] * 1 + [0.8] * 2 + [1] * 2 + [0.8] * 2 + [0.4] * 1 + [0.2] * 1 + [0] * 7) * 10
+    temp_ub = np.array(temp_lb) + 5
 
-    temp_setpoint_dict = generate_dict_with_pyomo_keys_from_array(temp_setpoint, time_periods, expansion_periods)
-    heating_load = Node()
-    hl = ControllableThermalLoad(temp_ub=temp_setpoint_dict,
-                                 temp_lb=temp_setpoint_dict,
-                                 external_temp=external_temp_dict,
-                                 temp_to_energy_coef=1
-                                 )
-    heating_load.ports['load'] = hl
+    ub_dict = generate_dict_with_pyomo_keys_from_array(temp_ub, time_periods, expansion_periods)
+    lb_dict = generate_dict_with_pyomo_keys_from_array(temp_lb, time_periods, expansion_periods)
+    thermal_load = ThermalNode(temp_ub=ub_dict,
+                               temp_lb=lb_dict,
+                               external_temp=external_temp_dict,
+                               temp_to_energy_coef=1,
+                               )
+    thermal_load.ports['heating'] = ThermalPort(flows=Flows.Import)
+    thermal_load.ports['cooling'] = ThermalPort(flows=Flows.Export)
 
-    system.add_node_obj([source, heating_load])
-    system.connect_ports_and_create_edge(source.ports['source'], hl)
+    system.add_node_obj([cooling_source, heating_source, thermal_load])
+    system.connect_ports_and_create_edge(heating_source.ports['heating_source'], thermal_load.ports['heating'])
+    system.connect_ports_and_create_edge(cooling_source.ports['cooling_source'], thermal_load.ports['cooling'])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,

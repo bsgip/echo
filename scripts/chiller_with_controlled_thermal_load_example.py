@@ -24,12 +24,14 @@ chiller.add_output_pts(array=output_values, time_periods=time_periods)
 
 ub = [12]*6 + [10]*6 + [5]*6 + [0]*6
 lb = [5]*10 + [0]*14
+ub_dict = generate_dict_with_pyomo_keys_from_array(ub, time_periods, expansion_periods)
+lb_dict = generate_dict_with_pyomo_keys_from_array(lb, time_periods, expansion_periods)
 #external_temp = np.array([i for i in range(0, 12)] + [j for j in range(12, 0, -1)]) + 10
 external_temp = [3]*time_periods
 external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
 cooling_node = Node()
-cooling_port = ControllableThermalLoad(temp_ub=ub,
-                                       temp_lb=lb,
+cooling_port = ControllableThermalLoad(temp_ub=ub_dict,
+                                       temp_lb=lb_dict,
                                        external_temp=external_temp_dict,
                                        temp_to_energy_coef=1,
                                        loss_factor=0,
@@ -67,12 +69,19 @@ print('gain: ', gain)
 fig = plt.figure()
 hrs = np.array([i for i in range(time_periods)])
 plt.fill_between(hrs, lb, ub, color='none', edgecolor='grey', hatch='/', label='load temp bounds')
-plt.plot(boiler_input, label='chiller in')
-plt.plot(boiler_output, label='chiller out')
-plt.plot(lb, label='temp lower bound')
-plt.plot(load_temp, label='load temp')
-plt.plot(external_temp, label='ambient temp')
+plt.plot(boiler_input, label='chiller in (kW)')
+plt.plot(boiler_output, label='chiller out (kW)')
+plt.plot(lb, label='temp lower bound (degC)')
+plt.plot(load_temp, label='load temp (degC)')
+plt.plot(external_temp, label='ambient temp (degC)')
 #plt.plot(loss, label='loss to ambient')
 #plt.plot(gain, label='gain from ambient')
 plt.legend()
+plt.show()
+
+
+fig = plt.figure()
+plt.plot(input_breakpoints, output_values)
+plt.xlabel('Input kW')
+plt.ylabel('Output kW')
 plt.show()

@@ -152,10 +152,26 @@ def set_bounds_from_piecewise_pts(cls, values):
     return values
 
 
-def set_output_bounds_from_input_bounds_and_cop(cls, values):
+def set_output_bounds_from_input_bounds_and_cop_and_startup_eta(cls, values):
     cop = values.get('cop')
+    eta = values.get('startup_eta')
     max_in = values.get('max_input')
     min_in = values.get('min_input')
     values['max_output'] = max_in * cop * -1
-    values['min_output'] = min_in * cop * -1
+    if eta is not None:
+        values['min_output'] = min_in * eta * -1
+    else:
+        values['min_output'] = min_in * cop * -1
     return values
+
+
+def validate_startup_efficiency(cls, values):
+    cop = values.get('cop')
+    eta = values.get('startup_eta')
+    assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
+    return values
+
+
+def check_temp_bounds(cls, values):
+    ub = values.get('temp_ub')
+    lb = values.get('temp_lb')
