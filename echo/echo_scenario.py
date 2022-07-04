@@ -430,7 +430,7 @@ def process_site(site_dict, interval_duration, time_periods, expansion_periods=1
                     ev['charge_status'] = 'success'
                 else:   # attempt conv
                     success, ev_soc, ev_delta, trip_infeasibility = V0G_charging(ev, interval_duration, force_conv=True)
-                    ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible'
+                    ev['charge_status'] = 'time of day infeasible, convenience success' if success else 'infeasible trips'
 
             else:
                 ev['charge_status'] = 'success' if success else 'infeasible'
@@ -527,7 +527,7 @@ def V0G_charging(ev, interval_duration, force_conv=False):
 
     success = True if (trip_infeasibility.max() == 0) else False
 
-    return success, soc[1:], delta, trip_infeasibility[:-1]
+    return success, soc[1:], delta, trip_infeasibility
 
 def ev_name_check(evs):
     """
@@ -758,7 +758,7 @@ def extract_site_results(optimiser, site, node_uid_dict):
         ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
         ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
         ev['trip_infeasibility'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
-        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible'
+        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible trips'
 
         evs.append(ev)
 
