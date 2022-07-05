@@ -511,7 +511,7 @@ class Node(BaseModel):
     this allows transformations to be implemented.
     """
     node_name: Optional[str]
-    uid: Optional[uuid.UUID]
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
