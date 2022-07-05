@@ -1,6 +1,7 @@
 import numpy as np
 
 from echo.echo_models import *
+from echo.echo_thermal_models import *
 from echo.echo_optimiser import EchoOptimiser
 from echo.configuration import *
 from echo.objectives import *

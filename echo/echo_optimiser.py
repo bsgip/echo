@@ -46,11 +46,12 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
+        self.validate_network_graph()
         self.build_model()
         self.apply_constraints()
         self.build_objective()
 
-    def _validate_network_graph(self):
+    def validate_network_graph(self):
         """
         Validates that a pyomo model can be built from the provided network graph. Checks for:
         - name consistency between objects (eg node.node_name) and graph nodes

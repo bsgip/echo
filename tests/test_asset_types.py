@@ -155,6 +155,8 @@ def test_carbon_aggregation():
     carbon_aggr = CarbonAggregation()
     carbon_aggr.ports['grid'] = CarbonSink()
     carbon_aggr.ports['bess'] = CarbonSink()
+    carbon_aggr.ports['sum'] = CarbonSink()
+    carbon_aggr.add_aggregation_transformation('sum')
 
     system.add_node_obj([grid, battery1, load1, site1, carbon_aggr])
     system.connect_ports_and_create_edge(grid.ports['grid'], site1.ports['cp'])

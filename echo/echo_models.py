@@ -53,6 +53,7 @@ class OptimisationGraph(Graph):
         def add_single_edge(edge_obj):
             port1 = edge_obj.vertices[0]
             port2 = edge_obj.vertices[1]
+            assert port1.units == port2.units, 'Ports on edge must have matching units.'
             node1 = self.lookup_node_from_port(port1)
             node2 = self.lookup_node_from_port(port2)
             # Need to check whether an edge already exists between these two nodes
@@ -529,8 +530,8 @@ class Node(BaseModel):
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
     """
+    node_name: Optional[str]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    node_name: Optional[str] = None
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
@@ -1028,6 +1029,7 @@ class Demand(Sink):
 class ControlledLoadOrGen(FlexPort):
     """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
     The load/generation must be operated within the min and max utilisation (per time unit). """
+    # todo review this model
     min_utilisation: Union[float, None] = None  # Per time unit (minute)
     max_utilisation: float = None
     max_power: float = None
@@ -1133,7 +1135,6 @@ class FixedPort(Port):
     Electrical ports and nodes
 
 """
-
 
 class ElectricalNode(Node):
     units = Units.KW
@@ -1265,20 +1266,15 @@ class Inverter(ElectricalNode):
             port.constrain_pos_neg(model)
 
         def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
-            # todo revise this
+            # todo update this, don't need to split dc ports into pos/neg
             dc_pos = 0
             dc_neg = 0
-            dc = 0
             for dc_port in self.dc_ports.values():
                 dc_pos += getattr(model, dc_port.pos)[p, t]
                 dc_neg += getattr(model, dc_port.neg)[p, t]
-                dc += getattr(model, dc_port.port_name)[p, t]
 
             return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
                    getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == - (dc_pos + dc_neg)
-
-            # return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
-            #        getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == - dc
 
         ac_port = self.ports[self.ac_port_name]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
