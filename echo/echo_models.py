@@ -56,6 +56,9 @@ class OptimisationGraph(Graph):
             assert port1.units == port2.units, 'Ports on edge must have matching units.'
             node1 = self.lookup_node_from_port(port1)
             node2 = self.lookup_node_from_port(port2)
+            # Need to check whether an edge already exists between these two nodes
+            if self.edge_obj.get((node1.node_name, node2.node_name)) is not None:
+                raise ValueError('An edge between these nodes already exists')
             self.add_edge(node1.node_name, node2.node_name)
             self.edge_obj[(node1.node_name, node2.node_name)] = edge_obj
 
@@ -92,7 +95,7 @@ class OptimisationGraph(Graph):
             for _, p in node.ports.items():
                 if port == p:
                     return node
-        raise ConfigurationError('Port is not part of any node.')
+        raise ConfigurationError('Port is not part of any node, or node has not been added to graph.')
 
     def get_ports_on_edge_from_nodes(self, node1, node2):
         """ Gets the ports that are on the edge from node1 to node2. """
@@ -234,6 +237,10 @@ class OptimisationGraph(Graph):
             for p_name, p_object in n_object.ports.items():
                 print('  port_name: ', p_name)
 
+    def print_port_names(self):
+        for n in self.node_obj.values():
+            for pn, p in n.ports.items():
+                print(pn, ', ', p.port_name)
 
 class ConfigurationError(Exception):
     pass
@@ -573,9 +580,7 @@ class Node(BaseModel):
         """
         # Create appropriate transformation
         t = Transform()
-        if carbon_port not in self.ports.values():
-            self.ports['CO2'] = carbon_port
-        t.add_lhs_term(carbon_port, TransformRule.Both, 1)
+        t.add_lhs_term(carbon_port, TransformRule.PositiveComponent, 1)
         t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
@@ -803,14 +808,6 @@ class TellegenNode(Node):
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
-    # def verify_node(self):
-    #     # Check that all ports on the node have the same units
-    #     u = None
-    #     for p in self.ports.values():
-    #         if u is not None:
-    #             assert p.units == u, 'Tellegen node ports must have the same units.'
-    #         else:
-    #             u = p.units
 
 class FlexPort(Port):
     """ Flexible port """
@@ -878,10 +875,9 @@ class Storage(Port):
     # All our optional fields/fields created when building pyomo model
     soc_value: Optional[str]
     optimised_capacity: Optional[str]
-    trip_slack: Optional[Union[ArrayType, list]]
+    trip_slack: Optional[Union[ArrayType, list]] #todo fix this?
     cons_slack: Optional[str]
     trip_slack: Optional[str]
-    optimised_capacity: Optional[str]
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
@@ -1115,6 +1111,13 @@ class BoundedLoad(BoundedPort):
     def initialise_port(self, model):
         super(BoundedLoad, self).initialise_port(model)
 
+class FixedPort(Port):
+    opt_type = OptimisationType.Parameter
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+
+
 """
 
     Electrical ports and nodes
@@ -1251,6 +1254,7 @@ class Inverter(ElectricalNode):
             port.constrain_pos_neg(model)
 
         def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
+            # todo update this, don't need to split dc ports into pos/neg
             dc_pos = 0
             dc_neg = 0
             for dc_port in self.dc_ports.values():
