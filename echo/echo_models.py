@@ -886,10 +886,9 @@ class Storage(Port):
     # All our optional fields/fields created when building pyomo model
     soc_value: Optional[str]
     optimised_capacity: Optional[str]
-    trip_slack: Optional[Union[ArrayType, list]]
+    trip_slack: Optional[Union[ArrayType, list]] #todo fix this?
     cons_slack: Optional[str]
     trip_slack: Optional[str]
-    optimised_capacity: Optional[str]
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
@@ -1266,14 +1265,20 @@ class Inverter(ElectricalNode):
             port.constrain_pos_neg(model)
 
         def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
+            # todo revise this
             dc_pos = 0
             dc_neg = 0
+            dc = 0
             for dc_port in self.dc_ports.values():
                 dc_pos += getattr(model, dc_port.pos)[p, t]
                 dc_neg += getattr(model, dc_port.neg)[p, t]
+                dc += getattr(model, dc_port.port_name)[p, t]
 
             return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
                    getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == - (dc_pos + dc_neg)
+
+            # return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
+            #        getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == - dc
 
         ac_port = self.ports[self.ac_port_name]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(

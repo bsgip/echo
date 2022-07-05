@@ -32,7 +32,7 @@ thermal_load = ThermalNode(temp_ub=generate_dict_with_pyomo_keys_from_array(temp
                            temp_lb=generate_dict_with_pyomo_keys_from_array(temp_lb, time_periods, expansion_periods),
                            external_temp=external_temp_dict,
                            temp_to_energy_coef=1,
-                           loss_factor=0.05
+                           loss_factor=1
                            )
 hl = FlexHeatSink()
 thermal_load.ports['load'] = hl
@@ -41,7 +41,8 @@ system.add_node_obj([source, boiler, thermal_load])
 system.connect_ports_and_create_edge(source.ports['source'], boiler.ports['input'])
 system.connect_ports_and_create_edge(boiler.ports['output'], hl)
 
-obj = PeakPositivePower(component=boiler.ports['input'])
+obj = ThroughputCost(component=boiler.ports['input'],
+                     rate=0.0001)
 
 obj_set = ObjectiveSet(objective_list=[obj])
 
@@ -67,12 +68,14 @@ boiler_return_temp = optimiser.values(boiler.return_t)
 hl_vals = optimiser.values(hl.port_name)
 
 fig = plt.figure()
+hrs = [i for i in range(time_periods)]
 plt.plot(boiler_input, label='boiler input (kW)')
-# plt.plot(boiler_output, label='boiler output (kW)')
+plt.plot(boiler_output, label='boiler output (kW)')
 plt.plot(boiler_exit_temp, label='boiler exit temp (degC)')
 plt.plot(boiler_return_temp, label='boiler return temp (degC)')
-plt.plot(hl_vals, label='heating load (kW)')
+#plt.plot(hl_vals, label='heating load (kW)')
 plt.plot(optimiser.values(thermal_load.internal_temp), label='load temp')
+plt.fill_between(hrs, temp_lb, temp_ub, color='none', edgecolor='grey', hatch='/', label='load temp bounds')
 
 plt.legend()
 plt.show()

@@ -229,6 +229,7 @@ class ThermalNode(Node):
     def apply_energy_balance_constraint(self, model, cooling_vars, heating_vars):
         # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         def rule1(model, p, t):
+            # todo don't even need to know whether its heating or cooling, the signs will take care of it. update
             cooling_kw = 0
             heating_kw = 0
             for c in cooling_vars:
@@ -248,25 +249,32 @@ class ThermalNode(Node):
 
         setattr(model, 'internal_temp_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
+
 class ThermalPort(FlexPort):
     """ Flexible thermal port, +ve if importing heat, -ve if exporting heat."""
     units = Units.KWT
 
+
 class FlexHeatSource(ThermalPort):
     flows = Flows.Export
+
 
 class FlexHeatSink(ThermalPort):
     flows = Flows.Import
 
+
 class FlexCoolingSource(ThermalPort):
     flows = Flows.Import
+
 
 class FlexCoolingSink(ThermalPort):
     flows = Flows.Export
 
+
 class FixedThermalPort(FixedPort):
     """ Fixed thermal port, +ve if importing heat, -ve if exporting heat."""
     units = Units.KWT
+
 
 class ThermalStorage(Storage):
     # todo finish implementing
@@ -285,8 +293,9 @@ class ThermalStorage(Storage):
         super(ThermalStorage, self).initialise_port(model)
         # Create a variable for the internal temperature
 
+
 class HeatPump(Node):
-    #todo set up the ports like for the thermal load - optional number of ports, but we construct heating/cooling components systematically and independently
+    # todo set up the ports like for the thermal load - optional number of ports, but we construct heating/cooling components systematically and independently
     """
     A heat pump is input output node, where input is an electrical port, and output is a thermal port.
     It can only do heating or cooling, it cannot do both simultaneously.
@@ -383,9 +392,11 @@ class HeatPump(Node):
         _in = optimiser.values(self.cool_in)
         return _out / _in
 
+
 class HeatPumpHeatingOnly(HeatPump):
     """ A heat pump that can only deliver heating"""
     output_flows = Flows.Export  # Heating only
+
 
 class HeatPump4Pipe(Node):
     """ a 4 pipe heat pump can produce heating and cooling simultaneously"""
@@ -404,12 +415,14 @@ class GasPort(FlexPort):
         super(GasPort, self).__init__()
         self.units = Units.JPS
 
+
 class FixedGasPort(GasPort):
     """ Same as gas port, but fixed value. """
 
     def __init__(self):
         super(FixedGasPort, self).__init__()
         self.opt_type = OptimisationType.Parameter
+
 
 class GasBoilerFixedCOP(InputOutputNode):
     """
@@ -440,15 +453,17 @@ class GasBoilerFixedCOP(InputOutputNode):
                 weighted_outputs = 0
             else:
                 weighted_inputs = (p_in[p, t] * self.startup_eta + p_in[p, t - 1] * (1 - self.startup_eta)) * self.cop
-                #todo decide whether to include past outputs in rule
+                # todo decide whether to include past outputs in rule
                 weighted_outputs = p_out[p, t - 1] * -0.0
-            return p_out[p, t] == (weighted_inputs + weighted_outputs)*-1
+            return p_out[p, t] == (weighted_inputs + weighted_outputs) * -1
 
         setattr(model, 'node_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+
 
 class ModulatingBoiler(InputOutputNode):
     # todo finish implementing this - this should be like the chiller
     part_load_efficiencies: ArrayType
+
 
 class TempControlledBoiler(InputOutputNode):
     """
@@ -461,7 +476,6 @@ class TempControlledBoiler(InputOutputNode):
     min_input: float
     exit_temp_bounds: tuple = (75, 80)
     return_temp_bounds: tuple = (50, 80)
-    exit_temp_setpoint: Optional[dict]  # optional dict of exit temp setpoints
     deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
     cop: float  # coefficient of performance, which determines how much of the input energy is delivered as heating energy
     startup_eta: Optional[float]
@@ -497,20 +511,10 @@ class TempControlledBoiler(InputOutputNode):
         input_kw = getattr(model, self.ports['input'].port_name)
         output_kw = getattr(model, self.ports['output'].port_name)
 
-        def constraint1(model, p, t):
-            """ Applied if we have a temperature setpoint time series"""
-            if self.exit_temp_setpoint is None:
-                return en.Constraint.Skip
-            else:
-                return getattr(model, self.exit_t)[p, t] == self.exit_temp_setpoint[p, t]
-
-        setattr(model, 'temp_sp_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=constraint1))
-
         def constraint2(model, p, t):
             """ return temp at time t - exiting temp at time t == energy removed at t"""
             return (getattr(model, self.return_t)[p, t] - getattr(model, self.exit_t)[
-                p, t]) * self.deg_to_kw * self.cop == \
-                   output_kw[p, t]
+                p, t]) * self.deg_to_kw * self.cop == output_kw[p, t]
 
         setattr(model, 'boiler_temp_con2_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=constraint2))
@@ -522,8 +526,6 @@ class TempControlledBoiler(InputOutputNode):
 
         setattr(model, 'boiler_temp_con3_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=constraint3))
-
-
 
 
 """ 
