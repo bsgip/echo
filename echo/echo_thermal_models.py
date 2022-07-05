@@ -175,21 +175,7 @@ class ThermalNode(Node):
         super(ThermalNode, self).initialise_node(model)
         self.create_and_bound_temp_vars(model)
         self.loss_and_gain_constraints_and_variables(model)
-        # Iterate through ports to get our cooling and heating variables
-        heating_vars = []
-        cooling_vars = []
-        for _, p in self.ports.items():
-            if p.flows == Flows.Both:
-                # Need to split the variable into a positive (heating)component and negative (cooling component)
-                p.constrain_pos_neg(model)
-                heating_vars.append(getattr(model, p.pos))
-                cooling_vars.append(getattr(model, p.neg))
-            elif p.flows == Flows.Import:
-                heating_vars.append(getattr(model, p.port_name))
-            elif p.flows == Flows.Export:
-                cooling_vars.append(getattr(model, p.port_name))
-
-        self.apply_energy_balance_constraint(model, cooling_vars=cooling_vars, heating_vars=heating_vars)
+        self.apply_energy_balance_constraint(model)
 
     def create_and_bound_temp_vars(self, model):
         # Create temperature variable
@@ -226,26 +212,23 @@ class ThermalNode(Node):
         setattr(model, 'loss_gain_con3_' + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=loss_or_gain2))
 
-    def apply_energy_balance_constraint(self, model, cooling_vars, heating_vars):
+    def apply_energy_balance_constraint(self, model):
         # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         def rule1(model, p, t):
-            # todo don't even need to know whether its heating or cooling, the signs will take care of it. update
-            cooling_kw = 0
-            heating_kw = 0
-            for c in cooling_vars:
-                cooling_kw += c[p, t]
-            for h in heating_vars:
-                heating_kw += h[p, t]
+            thermal_kw = 0
+            for v in self.ports.values():
+                thermal_kw += getattr(model, v.port_name)[p, t]  # sum together our thermal ports
+
             internal_temp = getattr(model, self.internal_temp)
             loss = getattr(model, self.losses)[p, t] * self.loss_factor
             gain = getattr(model, self.gains)[p, t] * self.gain_factor
 
             if p == 0 and t == 0:
-                return heating_kw + cooling_kw + loss + gain == (
+                return thermal_kw + loss + gain == (
                         internal_temp[p, t] - self.initial_internal_temp) * self.temp_to_energy_coef
             else:
                 temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
-                return heating_kw + cooling_kw + loss + gain == temp_diff * self.temp_to_energy_coef
+                return thermal_kw + loss + gain == temp_diff * self.temp_to_energy_coef
 
         setattr(model, 'internal_temp_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
@@ -294,17 +277,16 @@ class ThermalStorage(Storage):
         # Create a variable for the internal temperature
 
 
+
 class HeatPump(Node):
-    # todo set up the ports like for the thermal load - optional number of ports, but we construct heating/cooling components systematically and independently
     """
-    A heat pump is input output node, where input is an electrical port, and output is a thermal port.
+    A heat pump is input output node, where input is an electrical port, and either one or two output thermal ports.
     It can only do heating or cooling, it cannot do both simultaneously.
     The conversion of input electrical energy to heating or cooling output depends on provided coefficients of performance (cop) time series data.
     """
     node_rule = NodeRule.Custom
     heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
     cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
-    output_flows = Flows.Both  # Attribute for controlling whether heat pump does heating and cooling, or heating only
 
     # pyomo vars/params
     heating_cop: Optional[str]
@@ -316,7 +298,6 @@ class HeatPump(Node):
         super().__init__(**data)
         # Create input and output ports
         self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
-        self.ports['output'] = FlexPort(units=Units.KWT, flows=self.output_flows)
 
         # Naming variables
         self.heating_cop = 'heating_cop_' + self.node_name
@@ -326,8 +307,6 @@ class HeatPump(Node):
 
     def initialise_node(self, model):
         super(HeatPump, self).initialise_node(model)
-        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
-        self.ports['output'].constrain_pos_neg(model)
 
         # Create variables for attributing the input to either heating or cooling
         setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
@@ -339,13 +318,9 @@ class HeatPump(Node):
         setattr(model, self.cooling_cop, en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series,
                                                   domain=en.NonNegativeReals))
 
-    def apply_node_constraints(self, model):
-        is_cooling = getattr(model, self.ports['output'].is_pos)  # binary var for whether we are cooling
+    def apply_only_heat_or_cool_constraints(self, model, binary_var):
+        is_cooling = getattr(model, binary_var)  # binary var for whether we are cooling
         p_in = getattr(model, self.ports['input'].port_name)  # input electrical power
-        heat_out = getattr(model, self.ports['output'].neg)  # heating delivered
-        cool_out = getattr(model, self.ports['output'].pos)  # cooling delivered
-        heating_cop = getattr(model, self.heating_cop)
-        cooling_cop = getattr(model, self.cooling_cop)
 
         def only_heat_or_cool1(model, p, t):
             """ Can only have input used for heating if is_cooling = 0"""
@@ -366,6 +341,12 @@ class HeatPump(Node):
             return p_in[p, t] == getattr(model, self.heat_in)[p, t] + getattr(model, self.cool_in)[p, t]
 
         setattr(model, 'sum_heat_cool_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+
+    def apply_node_transformation_constraints(self, model, heating_out_var, cooling_out_var):
+        heat_out = getattr(model, heating_out_var)  # heating delivered
+        cool_out = getattr(model, cooling_out_var)  # cooling delivered
+        heating_cop = getattr(model, self.heating_cop)
+        cooling_cop = getattr(model, self.cooling_cop)
 
         def heating_output_rule(model, p, t):
             """ Heat out = heat_in * heating cop * -1"""
@@ -393,9 +374,48 @@ class HeatPump(Node):
         return _out / _in
 
 
-class HeatPumpHeatingOnly(HeatPump):
-    """ A heat pump that can only deliver heating"""
-    output_flows = Flows.Export  # Heating only
+class HeatPumpSingleOutput(HeatPump):
+    """
+    Heat pump with a single output port for bidirectional heating/cooling.
+    Can be used to connect to a thermal load that has heating and cooling.
+    """
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Create output port
+        self.ports['output'] = FlexPort(units=Units.KWT)
+
+    def initialise_node(self, model):
+        super(HeatPumpSingleOutput, self).initialise_node(model)
+        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
+        self.ports['output'].constrain_pos_neg(model)
+
+    def apply_node_constraints(self, model):
+        p_out = self.ports['output']
+        self.apply_only_heat_or_cool_constraints(model, binary_var=p_out.is_pos)
+        self.apply_node_transformation_constraints(model, heating_out_var=p_out.neg, cooling_out_var=p_out.pos)
+
+
+class HeatPumpDualOutput(HeatPump):
+    """
+    Heat pump with separate output ports for heating and cooling.
+    Can be used to connect to separate heating and cooling nodes.
+    """
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Create output port
+        self.ports['heating'] = FlexPortExport(units=Units.KWT)
+        self.ports['cooling'] = FlexPortImport(units=Units.KWT)
+
+    def initialise_node(self, model):
+        super(HeatPumpDualOutput, self).initialise_node(model)
+        self.ports['cooling'].constrain_pos_neg(model)  # need to do this so we have a binary variable for the constraints
+
+    def apply_node_constraints(self, model):
+        h_out = self.ports['heating']
+        c_out = self.ports['cooling']
+        self.apply_only_heat_or_cool_constraints(model, binary_var=c_out.is_pos)
+        self.apply_node_transformation_constraints(model, heating_out_var=h_out.port_name, cooling_out_var=c_out.port_name)
 
 
 class HeatPump4Pipe(Node):

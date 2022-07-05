@@ -24,8 +24,8 @@ source.ports['source'] = ElectricalPort()
 heating_cop = np.array([2] * time_periods)
 heat_cop_dict = generate_dict_with_pyomo_keys_from_array(heating_cop, time_periods)
 
-heat_pump = HeatPump(heating_cop_time_series=heat_cop_dict,
-                     cooling_cop_time_series=heat_cop_dict)
+heat_pump = HeatPumpSingleOutput(heating_cop_time_series=heat_cop_dict,
+                                 cooling_cop_time_series=heat_cop_dict)
 
 external_temp = np.array([2] * time_periods)
 external_temp_dict = generate_array_constraint(external_temp, time_periods, expansion_periods)
@@ -35,15 +35,15 @@ temp_ub = np.array(temp_lb) + 5
 temp_lb_dict = generate_dict_with_pyomo_keys_from_array(temp_lb, time_periods, expansion_periods)
 temp_ub_dict = generate_dict_with_pyomo_keys_from_array(temp_ub, time_periods, expansion_periods)
 
-thermal_load = Node()
-hl = ControllableThermalLoad(temp_ub=temp_ub_dict,
+thermal_load = ThermalNode(temp_ub=temp_ub_dict,
                              temp_lb=temp_ub_dict,
                              external_temp=external_temp_dict,
                              temp_to_energy_coef=1,
-                             loss_factor=0.09,
-                             gain_factor=0.09,
+                             loss_factor=0.0,
+                             gain_factor=0.0,
                              initial_internal_temp=0
                              )
+hl = ThermalPort()
 thermal_load.ports['load'] = hl
 
 system.add_node_obj([source, heat_pump, thermal_load])
@@ -70,9 +70,9 @@ heat_out = optimiser.values(heat_pump.ports['output'].neg)
 cool_out = optimiser.values(heat_pump.ports['output'].pos)
 
 # thermal load
-hload = optimiser.values(hl.pos)
-cload = optimiser.values(hl.neg)
-temp = optimiser.values(hl.internal_temp)
+hload = optimiser.values(hl.port_name)*[optimiser.values(hl.port_name)>=0]
+cload = optimiser.values(hl.port_name)*[optimiser.values(hl.port_name)<=0]
+temp = optimiser.values(thermal_load.internal_temp)
 
 print(elec_in, heat_out, cool_out, hload, cload)
 
