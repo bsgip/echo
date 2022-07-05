@@ -53,6 +53,7 @@ class OptimisationGraph(Graph):
         def add_single_edge(edge_obj):
             port1 = edge_obj.vertices[0]
             port2 = edge_obj.vertices[1]
+            assert port1.units == port2.units, 'Ports on edge must have matching units.'
             node1 = self.lookup_node_from_port(port1)
             node2 = self.lookup_node_from_port(port2)
             self.add_edge(node1.node_name, node2.node_name)
