@@ -1410,7 +1410,7 @@ class CarbonSource(CarbonPort):
     """ A variable source of CO2 """
     flows = Flows.Export
 
-class CarbonSink(Port):
+class CarbonSink(CarbonPort):
     """ A variable sink of CO2 """
     flows = Flows.Import
 
