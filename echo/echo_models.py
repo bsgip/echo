@@ -822,14 +822,18 @@ class TellegenNode(Node):
 
 
 class MultiCommodityTellegenNode(TellegenNode):
-    """ A node that can have ports with different commodities, and enforces a tellegen constraint for each commodity separately."""
+    """
+    A node with ports that have multiple commodities.
+    A tellegen constraint is applied per commodity.
+    """
     node_rule = NodeRule.Custom
 
     def apply_node_constraints(self, model):
 
+        # todo avoid repeating the below
         def reliability(model, p, t):  # Tellegen node rule
             a = 0
-            for _, port in commodity_ports.items():
+            for port in commodity_ports:
                 b = getattr(model, port.port_name)
                 a += b[p, t]
             return a == 0
@@ -843,7 +847,7 @@ class MultiCommodityTellegenNode(TellegenNode):
                 commodities[p.units].append(p)
 
         for ctype, commodity_ports in commodities.items():
-            setattr(model, 'node_con_' + ctype + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+            setattr(model, 'node_con_' + str(ctype) + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
 
 

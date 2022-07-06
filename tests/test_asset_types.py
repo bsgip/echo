@@ -461,3 +461,61 @@ def test_thermal_node():
     #     assert e_in[i] + e_out[i] ==
 
     print()
+
+
+def test_multi_commodity_node():
+    expansion_periods = 1
+    time_periods = 24
+    interval_duration = 60
+
+    system = OptimisationGraph()
+
+    thermal_source = Node()
+    thermal_source.add_flex_port('thermal', unit=Units.KWT)
+
+    elec_source = Node()
+    elec_source.add_flex_port('elec', unit=Units.KW)
+
+    tn = MultiCommodityTellegenNode()
+    tn.ports['thermal in'] = ThermalPort()
+    tn.ports['elec in'] = ElectricalPort()
+    tn.ports['thermal out'] = ThermalPort()
+    tn.ports['elec out1'] = ElectricalPort()
+    tn.ports['elec out2'] = ElectricalPort()
+
+    thermal_sink = Node()
+    ts = FixedThermalPort()
+    ts.add_initial_value_from_array([5]*time_periods)
+    thermal_sink.ports['thermal sink'] = ts
+
+    elec_sink = Node()
+    es = FixedElectricalPort()
+    es.add_initial_value_from_array([10]*time_periods)
+    elec_sink.ports['elec sink'] = es
+
+    elec_sink2 = Node()
+    es2 = FixedElectricalPort()
+    es2.add_initial_value_from_array([2]*time_periods)
+    elec_sink2.ports['elec sink'] = es2
+
+    system.add_node_obj([thermal_source, thermal_sink, tn, elec_sink, elec_source, elec_sink2])
+
+    system.connect_ports_and_create_edge(thermal_source.ports['thermal'], tn.ports['thermal in'])
+    system.connect_ports_and_create_edge(elec_source.ports['elec'], tn.ports['elec in'])
+    system.connect_ports_and_create_edge(ts, tn.ports['thermal out'])
+    system.connect_ports_and_create_edge(es, tn.ports['elec out1'])
+    system.connect_ports_and_create_edge(es2, tn.ports['elec out2'])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=None
+    )
+
+    optimiser.optimise(True)
+
+    print()
+
