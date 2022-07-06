@@ -70,6 +70,7 @@ class NodeType(object):
     FixedPort = 'fixed_port'
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
+    MultiCommodityTellegen = 'mctellegen'
 
 class Resource:
     """ Resources/commodities """

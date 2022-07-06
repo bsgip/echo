@@ -40,6 +40,9 @@ class Network:
     def add_tellegen_node(self, node_id: str, ports: list, units: Units):
         self.add_asset_dict(node_id=node_id, node_type=NodeType.Tellegen, ports=ports, units=units)
 
+    def add_multi_commodity_tellegen_node(self, node_id: str):
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.MultiCommodityTellegen)
+
     def add_battery_node(self, node_id, ports: list, param_dict: dict = None):
         self.add_asset_dict(node_id=node_id, node_type=NodeType.Battery, ports=ports)
         if param_dict:

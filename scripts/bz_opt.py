@@ -48,7 +48,7 @@ def add_electrical_network(n: Network):
                             res='elec')
 
             for bldg_name in bldg_list:
-                # Create a tellegen node for each building's cp
+                # Create a multi commodity tellegen node for each building's cp
                 n.add_tellegen_node(node_id=bldg_name, ports=['cp'], units=Units.KW)
                 n.add_edge(edge_name=bldg_name + sub_name, node_tuple=(bldg_name, sub_name), port_tuple=('cp', bldg_name),
                                 res='elec')
