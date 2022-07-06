@@ -25,13 +25,11 @@ Solver executable
 
 The following solvers can be used.
 
-Free for academic use only:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Free for academic use only**
 
 * CPLEX *(recommended)*: This has been tested the most. It requires a license but is free for academic users. To install, follow instructions `IBM website <https://www.ibm.com/products/ilog-cplex-optimization-studio>`_.
 * GUROBI: Minimal testing: It requires a license but is free for academic users. Check `gurobi website <https://www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html>`_ for instructions on installing.
 
-Open source:
-^^^^^^^^^^^^^
+**Open source**
 
 * CBC: This solver can be used provided you only include linear costs (no quadratic costs or regularisation). Information on the solver is available `here <https://github.com/coin-or/Cbc>`_. For installing on ubuntu run ``sudo apt-get install -y coinor-cbc1``
