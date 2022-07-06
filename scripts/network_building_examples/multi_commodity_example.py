@@ -1,4 +1,5 @@
 from echo.echo_builder import *
+from echo.configuration import *
 
 time_periods = 48
 
@@ -13,101 +14,93 @@ df = pd.DataFrame({
 network_dict = {
     'components': {
         'bulk_grid': {
-                'id': 'bulk_grid',
-                'type': 'flex',
-                'units': 'kW',
-                'ports': ['downstream']
+            'id': 'bulk_grid',
+            'type': 'flex',
+            'ports': {'downstream': {'units': Units.KW}}
         },
         'elec_cp': {
-                'id': 'elec_cp',
-                'type': 'tellegen',
-                'units': 'kW',
-                'ports': ['upstream', 'load', 'inverter']
+            'id': 'elec_cp',
+            'type': 'tellegen',
+            'ports': {'upstream': {'units': Units.KW},
+                      'load': {'units': Units.KW},
+                      'inverter': {'units': Units.KW}}
         },
         'inverter': {
-                'id': 'inverter',
-                'type': 'inverter',
-                'ports': ['ac', 'bess', 'pv'],
-                'parameters': {'ac_port': 'ac',
-                               'dc_ports': ['bess', 'pv'],
-                               'max_import': 5.,
-                               'max_export': -5.,
-                               'ac_dc_eta': 1.,
-                               'dc_ac_eta': 1.}
+            'id': 'inverter',
+            'type': 'inverter',
+            'ports': {'ac': {'units': Units.KW},
+                      'bess': {'units': Units.KW},
+                      'pv': {'units': Units.KW}},
+            'parameters': {'ac_port': 'ac',
+                           'dc_ports': ['bess', 'pv'],
+                           'max_import': 5.,
+                           'max_export': -5.,
+                           'ac_dc_eta': 1.,
+                           'dc_ac_eta': 1.}
         },
         'load': {
-                'id': 'load',
-                'type': 'load',
-                'units': 'kW',
-                'ports': ['load'],
-                'data': 'load',
+            'id': 'load',
+            'type': 'load',
+            'ports': {'load': {'units': Units.KW, 'data': 'load'}}
         },
         'battery': {
-                'id': 'bess',
-                'type': 'battery',
-                'ports': ['bess'],
-                'parameters': {'max_capacity': 15.,
-                               'depth_of_discharge_limit': 0,
-                               'charging_power_limit': 1.25,
-                               'discharging_power_limit': -1.25,
-                               'charging_efficiency': 1.,
-                               'discharging_efficiency': 1,
-                               'initial_state_of_charge': 0},
+            'id': 'bess',
+            'type': 'battery',
+            'ports': {'bess': {'units': Units.KW, 'parameters': {'max_capacity': 15.,
+                                                                 'depth_of_discharge_limit': 0,
+                                                                 'charging_power_limit': 1.25,
+                                                                 'discharging_power_limit': -1.25,
+                                                                 'charging_efficiency': 1.,
+                                                                 'discharging_efficiency': 1,
+                                                                 'initial_state_of_charge': 0}}}
         },
         'solar': {
-                'id': 'solar',
-                'type': 'solar',
-                'ports': ['solar'],
-                'data': 'solar',
-                'parameters': {'curtailable': False},
+            'id': 'solar',
+            'type': 'solar',
+            'ports': {'solar': {'units': Units.KW, 'data': 'solar', 'parameters': {'curtailable': False}}}
         },
         'bulk_gas': {
-                'id': 'bulk_gas',
-                'type': 'flex',
-                'units': 'JPS',
-                'ports': ['downstream']
+            'id': 'bulk_gas',
+            'type': 'flex',
+            'ports': {'downstream': {'units': Units.JPS}}
         },
         'gas_load': {
-                'id': 'gas_load',
-                'type': 'load',
-                'units': 'JPS',
-                'ports': ['upstream'],
-                'data': 'gas_load'
+            'id': 'gas_load',
+            'type': 'load',
+            'ports': {'upstream': {'units': Units.JPS, 'data': 'gas_load'}}
         },
     },
     'edges': {
         'edge_1': {'nodes': ('bulk_grid', 'elec_cp'),
                    'ports': ('downstream', 'upstream'),
-                   'res': 'elec'},
+                   'resource': Units.KW},
 
         'edge_2': {'nodes': ('elec_cp', 'load'),
                    'ports': ('load', 'load'),
-                   'res': 'elec'},
-
+                   'resource': Units.KW},
 
         'edge_4': {'nodes': ('elec_cp', 'inverter'),
                    'ports': ('inverter', 'ac'),
-                   'res': 'elec'},
+                   'resource': Units.KW},
 
         'edge_5': {'nodes': ('inverter', 'battery'),
                    'ports': ('bess', 'bess'),
-                   'res': 'elec'},
+                   'resource': Units.KW},
 
         'edge_6': {'nodes': ('inverter', 'solar'),
                    'ports': ('pv', 'solar'),
-                   'res': 'elec'},
+                   'resource': Units.KW},
 
         'edge_7': {'nodes': ('bulk_gas', 'gas_load'),
                    'ports': ('downstream', 'upstream'),
-                   'res': 'gas'},
+                   'resource': Units.JPS},
 
     }
 }
 
-
 objective_dict = {
     'import_tariff': {'type': 'import_tariff',
-                      'prices': [0]*48,
+                      'prices': [0] * 48,
                       'component': {'node': 'elec_cp',
                                     'port': 'upstream'}
                       },
@@ -117,16 +110,15 @@ objective_dict = {
                       'charges': [
                           {'name': 'shoulder',
                            'rate': 2.,
-                           'window': [0]*24 + [1]*24
+                           'window': [0] * 24 + [1] * 24
                            },
                           {'name': 'peak',
                            'rate': 1.,
-                           'window': [1]*24 + [0]*24
+                           'window': [1] * 24 + [0] * 24
                            },
                       ]
                       }
 }
-
 
 results_key = {}
 
@@ -169,5 +161,3 @@ print('Battery\n', opt.values(battery_node.ports['bess'].port_name, 0))
 print('Inv node in/out:', opt.node_values(inv_node, 0))
 print('Solar node: ', opt.node_values(solar_node, 0))
 print('Gas supply: ', opt.node_values(gas_node, 0))
-
-
