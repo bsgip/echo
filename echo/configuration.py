@@ -71,6 +71,7 @@ class NodeType(object):
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
     MultiCommodityTellegen = 'mctellegen'
+    SinglePort = 'single_port'
 
 class Resource:
     """ Resources/commodities """

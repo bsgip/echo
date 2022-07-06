@@ -24,36 +24,99 @@ class Network:
         d = {'name': self.name, 'components': self.components, 'edges': self.edges, 'objectives': self.objectives}
         return d
 
-    def add_asset_dict(self, node_id: str, node_type: NodeType, ports: list, units: Units = None,
+    def add_asset_dict(self, node_id: str, node_type: NodeType, ports: dict,
                        node_data: str = None):
-        d = {'id': node_id, 'type': node_type}
-        if units:
-            d['units'] = units
-        d['ports'] = ports
+        """
+        Formats inputs into a dict to add the network.
+        Args:
+            node_id: unique node identifier
+            node_type:
+            ports: dict where {port1 name: port1 unit, port2_name: port2 unit ....}
+            node_data: #todo the data belongs to a port not the node..
+
+        Returns:
+            None
+
+        """
+        d = {'id': node_id, 'type': node_type, 'ports': ports}
         if node_data:
             d['data'] = node_data
         self.components[node_id] = d
 
-    def add_flex_node(self, node_id: str, ports: list, units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Flex, ports=ports, units=units)
+    def add_flex_node(self, node_id: str, ports: dict = None):
+        """
 
-    def add_tellegen_node(self, node_id: str, ports: list, units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Tellegen, ports=ports, units=units)
+        Args:
+            node_id:
+            ports:
 
-    def add_multi_commodity_tellegen_node(self, node_id: str):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.MultiCommodityTellegen)
+        Returns:
 
-    def add_battery_node(self, node_id, ports: list, param_dict: dict = None):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Battery, ports=ports)
-        if param_dict:
-            self.add_node_parameters(node_id=node_id, param_dict=param_dict)
+        """
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.Flex, ports=ports)
 
-    def add_data_node(self, node_id: str, node_type: NodeType, node_data: Union[str, ArrayType], ports: list,
-                      units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=node_type, ports=ports, node_data=node_data, units=units)
+    def add_single_port_node(self, node_id: str, port_dict: dict, port_name: str = None):
+        """
+        A single port node can only have one port
+        Args:
+            port_dict:
+            node_id:
+            port_unit:
+            port_name:
 
-    def add_node_parameters(self, node_id: str, param_dict: dict):
-        self.components[node_id]['parameters'] = param_dict
+        Returns:
+
+        """
+        if port_name and port_dict:
+            p = {port_name: port_dict}
+            self.add_asset_dict(node_id=node_id, node_type=NodeType.SinglePort, ports=p)
+
+    def add_tellegen_node(self, node_id: str, ports: dict):
+        """
+        A tellegen node has ports that all have the same units
+        Args:
+            node_id:
+            ports:
+
+        Returns:
+
+        """
+        # todo check for consistent units
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.Tellegen, ports=ports)
+
+    def add_multi_commodity_tellegen_node(self, node_id: str, ports: dict = None):
+        """
+        A multi commodity tellegen node can have ports with different units.
+        Args:
+            node_id:
+            ports:
+
+        Returns:
+
+        """
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.MultiCommodityTellegen, ports=ports)
+
+    def add_battery_node(self, node_id, port_name: str, port_dict: dict):
+        """
+        A battery node has one electrical port.
+        Args:
+            port_dict:
+            node_id: unique node name
+            port_name: str
+            param_dict: dict of battery parameters
+
+        Returns:
+
+        """
+        self.add_asset_dict(node_id=node_id, node_type=NodeType.Battery, ports={port_name: port_dict})
+
+    def add_port_parameters(self, node_id: str, port_name: str, param_dict: dict):
+        self.components[node_id]['parameters'][port_name] = param_dict
+
+    @staticmethod
+    def create_port_dict(port_name: str, units: Units, parameters: dict = None, data: str = None):
+        formatted_dict = {port_name: {'units': units, 'parameters': parameters, 'data': data}}
+        return formatted_dict
 
     def add_edge(self, node_tuple: tuple, port_tuple: tuple, res=None, edge_name: str = None):
         e = {'nodes': node_tuple, 'ports': port_tuple}
@@ -62,12 +125,12 @@ class Network:
         if edge_name:
             self.edges[edge_name] = e
         else:
-            # Autoname it by concatenating node names
+            # Create a default name by concatenating node names
             edge_name = node_tuple[0] + '_' + node_tuple[1]
             self.edges[edge_name] = e
 
-    def add_port_to_node(self, node_id: str, port_name: str):
-        self.components[node_id]['ports'].append(port_name)
+    def add_port_to_node(self, node_id: str, port_name: str, port_unit: str):
+        self.components[node_id]['ports'][port_name] = port_unit
 
     def add_objective(self, obj_name: str, obj_type: str, component: dict = None, prices: ArrayType = None):
         o = {'type': obj_type}
@@ -562,6 +625,32 @@ def create_battery_node(node_dict):
 
 def create_tellegen_node(node_dict):
     """ Creates an echo tellegen node from the provided node dict."""
+    port_list = node_dict['ports']
+    port_unit = node_dict['units']
+    echo_unit = get_echo_port_units(node_dict['id'], port_unit)
+    tnode = ecm.TellegenNode()
+    port_params = node_dict.get('parameters') if node_dict.get('parameters') is not None else None
+    for port in port_list:
+        tnode.add_flex_port(port, unit=echo_unit)
+        # check for any parameters/constraints on ports - todo this will be a similar process for other node types -- make it a function
+        if port_params:
+            if port_params.get(port):
+                port_obj = tnode.ports[port]
+                port_obj.set_flow_constraints(max_export=port_params.get(port)['max_export'],
+                                              max_import=port_params.get(port)['max_import'],
+                                              slack=port_params.get(port)['slack'])
+    return tnode
+
+
+def create_multi_commodity_tellegen_node(node_dict: dict) -> ecm.Node:
+    """
+    Creates a multi commodity tellegen node
+    Args:
+        node_dict:
+
+    Returns:
+
+    """
     port_list = node_dict['ports']
     port_unit = node_dict['units']
     echo_unit = get_echo_port_units(node_dict['id'], port_unit)
