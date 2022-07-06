@@ -1,3 +1,7 @@
+"""
+The echo builder module contains functions and classes used for building an echo model from a dict/json network representation.
+"""
+import time
 from typing import Optional, Union
 
 import networkx as nx
@@ -228,7 +232,8 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
 def convert_dict_to_nx(netw_jsn: dict, verbose: bool = True):
     """ Creates nx graph from network dictionary"""
     if verbose:
-        print('Converting dict to networkx')
+        start_time = time.time()
+        print('Converting dict to networkx...')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
     # Node name is the unique node ID, Node dict carries all the relevant node info in a dict
@@ -254,13 +259,16 @@ def convert_dict_to_nx(netw_jsn: dict, verbose: bool = True):
     check_nx_for_floating_nodes(n)  # Check that the graph is connected
     check_port_names_are_consistent(n)  # Check there are no naming issues
 
+    end_time = time.time()
+    print('Finished converting dict to nx. Time taken (seconds): ', end_time - start_time)
     return n
 
 
 def convert_nx_to_echo(g, df, verbose=True):
     """ Creates echo model from nx graph"""
     if verbose:
-        print('Converting networkx model to echo')
+        start_time = time.time()
+        print('Converting networkx model to echo...')
 
     node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
@@ -293,6 +301,8 @@ def convert_nx_to_echo(g, df, verbose=True):
         else:
             connect_nodes(system, node1, node2, port1=port2, port2=port1)
 
+    end_time = time.time()
+    print('Finished converting nx to echo. Time taken (seconds): ', end_time-start_time)
     return system, node_name_dict
 
 
