@@ -14,6 +14,7 @@ from echo.echo_models import *
 class InputOutputNode(Node):
     """
     An input-output node has one input port and one output port.
+    A custom transformation can be defined between input and output.
     """
     input_port_unit: int
     output_port_unit: int
