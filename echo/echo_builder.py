@@ -700,7 +700,7 @@ def port_connectivity_check(port_obj, graph):
     return False
 
 
-def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
+def extract_results(optimiser, node_name_dict: dict, results_key: dict = None) -> dict:
     """ Extracts results from an echo model and returns them in a dict.
     Results key arg allows user to specify which results they want returned."""
 
@@ -708,16 +708,16 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
     output = {}  # for storing results
     for node_name, node_uid in node_name_dict.items():
         output[node_name] = {}
-        if 'battery' in node_name:
+        if 'battery' in node_name:  #todo better way of doing this, we could refer to the node types?
             battery_node = system.node_obj[node_uid]
             battery_port = battery_node.ports[list(battery_node.ports.keys())[0]]  # todo less hacky
-            output[node_name]['SOC'] = optimiser.values(battery_port.soc_value, 0)
-            output[node_name]['delta'] = optimiser.values(battery_port.port_name, 0)
-            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
+            output[node_name]['soc'] = optimiser.values(battery_port.soc_value, 0)
+            output[node_name]['p'] = optimiser.values(battery_port.port_name, 0)
+            output[node_name]['opt_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
         elif 'ev' in node_name:
             ev_node = system.node_obj[node_uid]
-            output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
-            output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
+            output[node_name]['vehicle_soc'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
+            output[node_name]['vehicle_p'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
             if hasattr(optimiser.model, ev_node.ports['vehicle'].trip_slack):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
                 output[node_name]['charge_status'] = 'success' if all(
@@ -728,36 +728,46 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
             node_obj = system.node_obj[node_uid]
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
-                output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
+                output[node_name][port_name]['p'] = optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
                                                                                             0)
                 else:
-                    output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    pass
+                    # output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    # output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max,
                                                                                             0)
                 else:
-                    output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    pass
+                    # output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    # output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
 
     return output
 
 
-# def extract_results_from_key(results_key, optimiser, echo_obj):
-#     output = {}
-#     echo_key = {'SOC': 'soc_value',
-#                'delta': 'port_name'}
-#     for var_name, select in results_key:
-#         if select is True:
-#             if hasattr(echo_obj, echo_key[var_name]):
-#                 model_var_name = getattr(echo_obj, echo_key[var_name])
-#                 output[var_name] = optimiser.values(model_var_name, 0)
-#
-#     return output
+def extract_results_as_df(optimiser, node_name_dict: dict) -> pd.DataFrame:
+    system = optimiser.ES
+    output = {}  # for storing results
+    for node_name, node_uid in node_name_dict.items():
+        if 'battery' in node_name:  #todo better way of doing this, we could refer to the node types?
+            battery_node = system.node_obj[node_uid]
+            (battery_port_name, battery_port), = battery_node.ports.items()
+            output[node_name+'_node_'+battery_port_name+'_port'+'_soc'] = optimiser.values(battery_port.soc_value, 0)
+            output[node_name+'_node_'+battery_port_name+'_port'+'_p'] = optimiser.values(battery_port.port_name, 0)
+            output[node_name+'_node_'+battery_port_name+'_port'+'_opt_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
+
+        else:  # Get port value + any slack vars
+            node_obj = system.node_obj[node_uid]
+            for port_name, port_obj in node_obj.ports.items():
+                output[node_name+'_node_'+port_name+'_port'+'_p'] = optimiser.values(port_obj.port_name, 0)
+
+    df = pd.DataFrame.from_dict(output)
+    return df
+
 
 def append_results(result_dict, network_dict, in_place=False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """

@@ -48,3 +48,7 @@ opt = run_echo_optimiser(em,
                          optimiser_engine='cplex',
                          opt_display=True)
 
+results = extract_results(opt, node_uid_dict)
+df = extract_results_as_df(opt, node_uid_dict)
+pprint(results)
+print(df)
