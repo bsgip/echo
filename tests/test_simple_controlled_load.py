@@ -40,10 +40,10 @@ def test_simple_controlled_load_does_minimum_energy_action():
 
     # minimise imports
     grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = sum(getattr(optimiser.model, cl.port_name)[p, i]
+    optimiser.objective += sum(getattr(optimiser.model, cl.port_name)[p, i]
                    for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
-    optimiser.optimise()
+    optimiser.optimise(True)
     grid_export = optimiser.values(grid.ports['grid'].neg, 0)
     load_import = optimiser.values(cl.port_name, 0)
 
