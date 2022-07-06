@@ -73,6 +73,10 @@ class NodeType(object):
     MultiCommodityTellegen = 'mctellegen'
     SinglePort = 'single_port'
 
+class PortType:
+    Storage = 0
+
+
 class Resource:
     """ Resources/commodities """
     Electricity = 0

@@ -305,8 +305,3 @@ def train_arx_on_data(u: pd.DataFrame, y: pd.DataFrame, na: int, nb: int, traini
     return mse_test, mse_trained, trained_model.coef_
 
 
-
-
-
-
-

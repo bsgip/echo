@@ -73,6 +73,6 @@ feeder_dict = {'Avenue':
                     'GAR7584': ['B118', 'B124', ]
                     },
                'Kambri':
-                   {'Kambri': ['B151', 'B152', 'B153', 'B155', 'B156']
+                   {'KambriSub': ['B151', 'B152', 'B153', 'B155', 'B156']
                     }
                }
