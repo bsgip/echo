@@ -14,6 +14,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -43,10 +44,45 @@
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Nodes</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#flow-tracing">Flow tracing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electrical-nodes">Electrical Nodes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#gas-nodes">Gas Nodes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#thermal-nodes">Thermal Nodes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#custom-nodes">Custom Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#commodity-agnostic-nodes">Commodity Agnostic Nodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#flexible-source">Flexible Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flexible-sink">Flexible Sink</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fixed-source">Fixed Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fixed-sink">Fixed Sink</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tellegen">Tellegen</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multi-commodity-tellegen-ie-building">Multi Commodity Tellegen (ie Building)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-output-node">Input Output Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#piecewise-input-output-node">Piecewise Input Output Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#controlled-load">Controlled Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#controlled-generation">Controlled Generation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#electrical-nodes">Electrical Nodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#battery">Battery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#solar">Solar</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ev">EV</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inverter">Inverter</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gas-nodes">Gas Nodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gas-boiler-fixed-cop">Gas Boiler Fixed COP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#temperature-controlled-gas-boiler">Temperature Controlled Gas Boiler</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#thermal-nodes">Thermal Nodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#thermal-load">Thermal Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#heating-load">Heating Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cooling-load">Cooling Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#heat-pump">Heat Pump</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chiller">Chiller</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#other-nodes">Other Nodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#carbon-aggregation">Carbon Aggregation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#emitting-node">Emitting Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#time-delay-node">Time Delay Node</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
@@ -84,7 +120,7 @@
            <div itemprop="articleBody">
              
   <section id="echo-nodes">
-<h1><em>echo</em> Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this headline"></a></h1>
+<h1><em>echo</em> Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this heading"></a></h1>
 <p>Nodes are the
 Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports,
 with a well-defined relationship between ports. In general, the relationship between ports will be defined by a system of (non)linear constraints .
@@ -92,23 +128,97 @@ A node can be thought of as defining a transformation between the ports on the n
 Nodes may also include other variables and parameters and constraints necessary to model:</p>
 <ul class="simple">
 <li><p><em>Assets</em>: A node that represents a physical asset that is a source, sink, storage or transformation between commodities.</p></li>
-<li><p><em>Interconnection / Hub</em>: A node that represents a physical or logical interconnection between edges in the network: such as busbar, electrical connection point,</p></li>
+<li><p><em>Interconnection / Hub</em>: A node that represents a physical or logical interconnection between edges in the network: such as busbar, electrical connection point, gas junction.</p></li>
 </ul>
-<p>gas junction.</p>
 <section id="flow-tracing">
-<h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this headline"></a></h2>
+<h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this heading"></a></h2>
+</section>
+<section id="commodity-agnostic-nodes">
+<h2>Commodity Agnostic Nodes<a class="headerlink" href="#commodity-agnostic-nodes" title="Permalink to this heading"></a></h2>
+<section id="flexible-source">
+<h3>Flexible Source<a class="headerlink" href="#flexible-source" title="Permalink to this heading"></a></h3>
+</section>
+<section id="flexible-sink">
+<h3>Flexible Sink<a class="headerlink" href="#flexible-sink" title="Permalink to this heading"></a></h3>
+</section>
+<section id="fixed-source">
+<h3>Fixed Source<a class="headerlink" href="#fixed-source" title="Permalink to this heading"></a></h3>
+</section>
+<section id="fixed-sink">
+<h3>Fixed Sink<a class="headerlink" href="#fixed-sink" title="Permalink to this heading"></a></h3>
+</section>
+<section id="tellegen">
+<h3>Tellegen<a class="headerlink" href="#tellegen" title="Permalink to this heading"></a></h3>
+</section>
+<section id="multi-commodity-tellegen-ie-building">
+<h3>Multi Commodity Tellegen (ie Building)<a class="headerlink" href="#multi-commodity-tellegen-ie-building" title="Permalink to this heading"></a></h3>
+</section>
+<section id="input-output-node">
+<h3>Input Output Node<a class="headerlink" href="#input-output-node" title="Permalink to this heading"></a></h3>
+</section>
+<section id="piecewise-input-output-node">
+<h3>Piecewise Input Output Node<a class="headerlink" href="#piecewise-input-output-node" title="Permalink to this heading"></a></h3>
+</section>
+<section id="controlled-load">
+<h3>Controlled Load<a class="headerlink" href="#controlled-load" title="Permalink to this heading"></a></h3>
+</section>
+<section id="controlled-generation">
+<h3>Controlled Generation<a class="headerlink" href="#controlled-generation" title="Permalink to this heading"></a></h3>
+</section>
 </section>
 <section id="electrical-nodes">
-<h2>Electrical Nodes<a class="headerlink" href="#electrical-nodes" title="Permalink to this headline"></a></h2>
+<h2>Electrical Nodes<a class="headerlink" href="#electrical-nodes" title="Permalink to this heading"></a></h2>
+<section id="battery">
+<h3>Battery<a class="headerlink" href="#battery" title="Permalink to this heading"></a></h3>
+</section>
+<section id="solar">
+<h3>Solar<a class="headerlink" href="#solar" title="Permalink to this heading"></a></h3>
+</section>
+<section id="ev">
+<h3>EV<a class="headerlink" href="#ev" title="Permalink to this heading"></a></h3>
+</section>
+<section id="inverter">
+<h3>Inverter<a class="headerlink" href="#inverter" title="Permalink to this heading"></a></h3>
+</section>
 </section>
 <section id="gas-nodes">
-<h2>Gas Nodes<a class="headerlink" href="#gas-nodes" title="Permalink to this headline"></a></h2>
+<h2>Gas Nodes<a class="headerlink" href="#gas-nodes" title="Permalink to this heading"></a></h2>
+<section id="gas-boiler-fixed-cop">
+<h3>Gas Boiler Fixed COP<a class="headerlink" href="#gas-boiler-fixed-cop" title="Permalink to this heading"></a></h3>
+</section>
+<section id="temperature-controlled-gas-boiler">
+<h3>Temperature Controlled Gas Boiler<a class="headerlink" href="#temperature-controlled-gas-boiler" title="Permalink to this heading"></a></h3>
+</section>
 </section>
 <section id="thermal-nodes">
-<h2>Thermal Nodes<a class="headerlink" href="#thermal-nodes" title="Permalink to this headline"></a></h2>
+<h2>Thermal Nodes<a class="headerlink" href="#thermal-nodes" title="Permalink to this heading"></a></h2>
+<section id="thermal-load">
+<h3>Thermal Load<a class="headerlink" href="#thermal-load" title="Permalink to this heading"></a></h3>
 </section>
-<section id="custom-nodes">
-<h2>Custom Nodes<a class="headerlink" href="#custom-nodes" title="Permalink to this headline"></a></h2>
+<section id="heating-load">
+<h3>Heating Load<a class="headerlink" href="#heating-load" title="Permalink to this heading"></a></h3>
+</section>
+<section id="cooling-load">
+<h3>Cooling Load<a class="headerlink" href="#cooling-load" title="Permalink to this heading"></a></h3>
+</section>
+<section id="heat-pump">
+<h3>Heat Pump<a class="headerlink" href="#heat-pump" title="Permalink to this heading"></a></h3>
+</section>
+<section id="chiller">
+<h3>Chiller<a class="headerlink" href="#chiller" title="Permalink to this heading"></a></h3>
+</section>
+</section>
+<section id="other-nodes">
+<h2>Other Nodes<a class="headerlink" href="#other-nodes" title="Permalink to this heading"></a></h2>
+<section id="carbon-aggregation">
+<h3>Carbon Aggregation<a class="headerlink" href="#carbon-aggregation" title="Permalink to this heading"></a></h3>
+</section>
+<section id="emitting-node">
+<h3>Emitting Node<a class="headerlink" href="#emitting-node" title="Permalink to this heading"></a></h3>
+</section>
+<section id="time-delay-node">
+<h3>Time Delay Node<a class="headerlink" href="#time-delay-node" title="Permalink to this heading"></a></h3>
+</section>
 </section>
 </section>
 

@@ -816,7 +816,6 @@ class TellegenNode(Node):
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
-
 class FlexPort(Port):
     """ Flexible port """
     flows = Flows.Both
