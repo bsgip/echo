@@ -30,8 +30,8 @@ n.add_edge_between_ports(node_tuple=('cp', 'battery'), port_tuple=('battery', 'b
 n.add_edge_between_ports(node_tuple=('cp', 'load'), port_tuple=('load', 'load'), resource=Units.KW)
 n.add_edge_between_ports(node_tuple=('cp', 'solar'), port_tuple=('solar', 'pv'), resource=Units.KW)
 
-pprint(n.components)
-pprint(n.to_dict())
+# pprint(n.components)
+# pprint(n.to_dict())
 
 x = convert_dict_to_nx(netw_jsn=n.to_dict())
 
@@ -50,5 +50,5 @@ opt = run_echo_optimiser(em,
 
 results = extract_results(opt, node_uid_dict)
 df = extract_results_as_df(opt, node_uid_dict)
-pprint(results)
-print(df)
+# pprint(results)
+# print(df)
