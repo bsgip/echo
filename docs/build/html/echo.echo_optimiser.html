@@ -14,6 +14,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -92,90 +93,29 @@
            <div itemprop="articleBody">
              
   <section id="module-echo.echo_optimiser">
-<span id="echo-echo-optimiser-module"></span><h1>echo.echo_optimiser module<a class="headerlink" href="#module-echo.echo_optimiser" title="Permalink to this headline"></a></h1>
+<span id="echo-echo-optimiser-module"></span><h1>echo.echo_optimiser module<a class="headerlink" href="#module-echo.echo_optimiser" title="Permalink to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">echo.echo_optimiser.</span></span><span class="sig-name descname"><span class="pre">EchoOptimiser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interval_duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_intervals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_expansion_intervals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discount_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective_set</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimiser_engine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">echo.echo_optimiser.</span></span><span class="sig-name descname"><span class="pre">EchoOptimiser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interval_duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_intervals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_expansion_intervals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discount_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective_set</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimiser_engine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>EchoOptimiser class.</p>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.interval_duration">
-<span class="sig-name descname"><span class="pre">interval_duration</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.interval_duration" title="Permalink to this definition"></a></dt>
-<dd><p>Duration of each interval, in minutes</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>int</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.number_of_intervals">
-<span class="sig-name descname"><span class="pre">number_of_intervals</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.number_of_intervals" title="Permalink to this definition"></a></dt>
-<dd><p>Total number of intervals</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>int</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.number_of_expansion_intervals">
-<span class="sig-name descname"><span class="pre">number_of_expansion_intervals</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.number_of_expansion_intervals" title="Permalink to this definition"></a></dt>
-<dd><p>Number of expansion intervals</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>int</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.discount_rate">
-<span class="sig-name descname"><span class="pre">discount_rate</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.discount_rate" title="Permalink to this definition"></a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>int</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.ES">
-<span class="sig-name descname"><span class="pre">ES</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.ES" title="Permalink to this definition"></a></dt>
-<dd><p>Energy System Graph</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="echo.echo_models.html#echo.echo_models.OptimisationGraph" title="echo.echo_models.OptimisationGraph">echo_models.OptimisationGraph</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.objective_set">
-<span class="sig-name descname"><span class="pre">objective_set</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.objective_set" title="Permalink to this definition"></a></dt>
-<dd><p>Object containing a list of Optimisation objectives</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="echo.objectives.html#echo.objectives.ObjectiveSet" title="echo.objectives.ObjectiveSet">objectives.ObjectiveSet</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.optimiser_engine">
-<span class="sig-name descname"><span class="pre">optimiser_engine</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.optimiser_engine" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.profile">
-<span class="sig-name descname"><span class="pre">profile</span></span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.profile" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.apply_constraints">
 <span class="sig-name descname"><span class="pre">apply_constraints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.apply_constraints" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.apply_new_path_constraints">
+<span class="sig-name descname"><span class="pre">apply_new_path_constraints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.apply_new_path_constraints" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.apply_node_constraints">
+<span class="sig-name descname"><span class="pre">apply_node_constraints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.apply_node_constraints" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.apply_path_constraints">
+<span class="sig-name descname"><span class="pre">apply_path_constraints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.apply_path_constraints" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -189,44 +129,13 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.df">
-<span class="sig-name descname"><span class="pre">df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.df" title="Permalink to this definition"></a></dt>
-<dd><p>Extract all vars from the solution as a dataframe</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.df_by_node">
-<span class="sig-name descname"><span class="pre">df_by_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.df_by_node" title="Permalink to this definition"></a></dt>
-<dd><p>Returns a df of results by node, using the port names given in each nodes ‘ports’ dict</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.df_by_port">
-<span class="sig-name descname"><span class="pre">df_by_port</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.df_by_port" title="Permalink to this definition"></a></dt>
-<dd><p>Returns a df of results by port, using port names given in each nodes ‘ports’ dict</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.get_single_objective_total_value">
-<span class="sig-name descname"><span class="pre">get_single_objective_total_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objective_obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.get_single_objective_total_value" title="Permalink to this definition"></a></dt>
-<dd><p>Returns the value of a single objective.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.get_total_objective_at_port">
-<span class="sig-name descname"><span class="pre">get_total_objective_at_port</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.get_total_objective_at_port" title="Permalink to this definition"></a></dt>
-<dd><p>Sums all objectives that take the defined port as their component.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.get_total_objective_value">
-<span class="sig-name descname"><span class="pre">get_total_objective_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.get_total_objective_value" title="Permalink to this definition"></a></dt>
-<dd><p>Returns the value of the objective function.</p>
-</dd></dl>
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.get_objective_value">
+<span class="sig-name descname"><span class="pre">get_objective_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objective_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.get_objective_value" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.node_values">
-<span class="sig-name descname"><span class="pre">node_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.node_values" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">node_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_period</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.node_values" title="Permalink to this definition"></a></dt>
 <dd><p>Returns all values of all ports in a specified node for a single specified expansion period.</p>
 </dd></dl>
 
@@ -236,16 +145,8 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.validate_network_graph">
-<span class="sig-name descname"><span class="pre">validate_network_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.validate_network_graph" title="Permalink to this definition"></a></dt>
-<dd><p>Validates that a pyomo model can be built from the provided network graph. Checks for:
-- name consistency between objects (eg node.node_name) and graph nodes
-- others…</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.values">
-<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.values" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.values" title="Permalink to this definition"></a></dt>
 <dd><p>Returns the value of a single specified variable during a single specified expansion period.</p>
 </dd></dl>
 
