@@ -121,6 +121,17 @@
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.check_bound_order">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">check_bound_order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.check_bound_order" title="Permalink to this definition"></a></dt>
+<dd><p>Checks that lower bound is smaller than upper bound.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.check_temp_bounds">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">check_temp_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.check_temp_bounds" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="echo.echo_validators.dod_checks">
 <span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">dod_checks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.dod_checks" title="Permalink to this definition"></a></dt>
 <dd><p>Validator for depth of discharge.</p>
@@ -147,6 +158,12 @@
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.node_unit_validator">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">node_unit_validator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.node_unit_validator" title="Permalink to this definition"></a></dt>
+<dd><p>Checks that a tellegen node’s ports all have the same units.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="echo.echo_validators.nonnegative_costs">
 <span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">nonnegative_costs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.nonnegative_costs" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
@@ -159,6 +176,26 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="echo.echo_validators.nonpositive_generation">
 <span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">nonpositive_generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.nonpositive_generation" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.set_bounds_from_piecewise_pts">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">set_bounds_from_piecewise_pts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.set_bounds_from_piecewise_pts" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.set_output_bounds_from_input_bounds_and_cop_and_startup_eta">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">set_output_bounds_from_input_bounds_and_cop_and_startup_eta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.set_output_bounds_from_input_bounds_and_cop_and_startup_eta" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.validate_piecewise_arrays">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">validate_piecewise_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.validate_piecewise_arrays" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.echo_validators.validate_startup_efficiency">
+<span class="sig-prename descclassname"><span class="pre">echo.echo_validators.</span></span><span class="sig-name descname"><span class="pre">validate_startup_efficiency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_validators.validate_startup_efficiency" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py function">

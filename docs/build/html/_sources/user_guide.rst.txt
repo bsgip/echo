@@ -12,11 +12,6 @@ Nodes define a transformation between the ports on the node.
 Creating a model
 ---------------------------
 
-
-Creating a model
-^^^^^^^^^^^^^^^^^^
-
-
 Creating a model from scratch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
