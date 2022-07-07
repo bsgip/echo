@@ -82,8 +82,25 @@ Temperature Controlled Gas Boiler
 Thermal Nodes
 ----------------------
 
-Thermal Load
+Controllable Thermal Load
 ^^^^^^^^^^^^^
+A controllable thermal load represents a heating and/or cooling load, in units of Joules. For example, this can be used to represent a building's overall thermal load, or specific loads for things like space heating, hot water heating, or other industrial processes.
+
+Heating is denoted by positive values (indicating that heat is imported), and cooling is denoted by negative values (indicating that heat is exported, i.e. removed).
+
+This node supports an arbitrary number of connections to heating/cooling sources.
+
+Variables:
+
+Parameters:
+
+Constraints: :math:x=2
+
+..math::
+
+    x=2
+
+
 
 Heating Load
 ^^^^^^^^^^^^^
@@ -111,3 +128,8 @@ Emitting Node
 
 Time Delay Node
 ^^^^^^^^^^^^^^^^
+
+
+
+Input Output ARX Node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
