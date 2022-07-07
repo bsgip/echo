@@ -195,6 +195,18 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.df_by_node">
+<span class="sig-name descname"><span class="pre">df_by_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.df_by_node" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a df of results by node, using the port names given in each nodes ‘ports’ dict</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.df_by_port">
+<span class="sig-name descname"><span class="pre">df_by_port</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.df_by_port" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a df of results by port, using port names given in each nodes ‘ports’ dict</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.get_single_objective_total_value">
 <span class="sig-name descname"><span class="pre">get_single_objective_total_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objective_obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.get_single_objective_total_value" title="Permalink to this definition"></a></dt>
 <dd><p>Returns the value of a single objective.</p>
@@ -222,6 +234,14 @@
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.optimise">
 <span class="sig-name descname"><span class="pre">optimise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tee</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.optimise" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.validate_network_graph">
+<span class="sig-name descname"><span class="pre">validate_network_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#echo.echo_optimiser.EchoOptimiser.validate_network_graph" title="Permalink to this definition"></a></dt>
+<dd><p>Validates that a pyomo model can be built from the provided network graph. Checks for:
+- name consistency between objects (eg node.node_name) and graph nodes
+- others…</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="echo.echo_optimiser.EchoOptimiser.values">

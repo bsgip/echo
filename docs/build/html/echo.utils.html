@@ -93,12 +93,6 @@
   <section id="module-echo.utils">
 <span id="echo-utils-module"></span><h1>echo.utils module<a class="headerlink" href="#module-echo.utils" title="Permalink to this headline"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="echo.utils.add_time_and_expansion_index_to_values">
-<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">add_time_and_expansion_index_to_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.add_time_and_expansion_index_to_values" title="Permalink to this definition"></a></dt>
-<dd><p>Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.</p>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="echo.utils.create_input_output_pts_from_coefficients">
 <span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">create_input_output_pts_from_coefficients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temp_coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xpts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.create_input_output_pts_from_coefficients" title="Permalink to this definition"></a></dt>
 <dd><p>Generates a set of output (y) points based on two coefficient arrays,
@@ -179,6 +173,26 @@ R^2</p>
 <dd><p>Generates x and y values for the polynomial function with coefficients defined by the coeff array
 :param coeff array: list of polynomial function coefficients, indexed by time
 :param pts: list of x values for which we want to evaluate the function described by the coeff array</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.populate_values_across_time_and_expansion_indices">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">populate_values_across_time_and_expansion_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.populate_values_across_time_and_expansion_indices" title="Permalink to this definition"></a></dt>
+<dd><p>Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
+Eg for inputs:</p>
+<blockquote>
+<div><p>values = 10
+time_periods = 4
+expansion_periods = 2</p>
+</div></blockquote>
+<p>the output dict would be:
+Output = {(0,0): 10,</p>
+<blockquote>
+<div><p>(0,1): 10,
+…
+(2,2): 10
+(2,3): 10}</p>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py function">

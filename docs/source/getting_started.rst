@@ -18,6 +18,7 @@ To install this package you need to:
 .. note::
    This package is not on pypi. Doing ``pip install echo`` will NOT install this package. It will install a different package.
 
+
 Solver executable
 ---------------------
 

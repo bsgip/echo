@@ -145,8 +145,6 @@
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.Network.add_tellegen_node">add_tellegen_node() (echo.echo_builder.Network method)</a>
 </li>
-      <li><a href="echo.utils.html#echo.utils.add_time_and_expansion_index_to_values">add_time_and_expansion_index_to_values() (in module echo.utils)</a>
-</li>
       <li><a href="echo.echo_models.html#echo.echo_models.Node.add_transformation">add_transformation() (echo.echo_models.Node method)</a>
 </li>
   </ul></td>
@@ -213,9 +211,17 @@
         <li><a href="echo.configuration.html#echo.configuration.TransformRule.Both">(echo.configuration.TransformRule attribute)</a>
 </li>
       </ul></li>
+      <li><a href="echo.echo_models.html#echo.echo_models.BoundedPort.bound_check">bound_check() (echo.echo_models.BoundedPort class method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.echo_models.html#echo.echo_models.BoundedElectricalLoad">BoundedElectricalLoad (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_models.html#echo.echo_models.BoundedLoad">BoundedLoad (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_models.html#echo.echo_models.BoundedPort">BoundedPort (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_models.html#echo.echo_models.OffOrConstrainedPort.bounds_check">bounds_check() (echo.echo_models.OffOrConstrainedPort class method)</a>
 </li>
       <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.build_model">build_model() (echo.echo_optimiser.EchoOptimiser method)</a>
 </li>
@@ -233,22 +239,22 @@
         <li><a href="echo.configuration.html#echo.configuration.NodeType.CarbonAggregation">(echo.configuration.NodeType attribute)</a>
 </li>
       </ul></li>
+      <li><a href="echo.echo_models.html#echo.echo_models.CarbonPort">CarbonPort (class in echo.echo_models)</a>
+</li>
       <li><a href="echo.echo_models.html#echo.echo_models.CarbonSink">CarbonSink (class in echo.echo_models)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.CarbonSinkNode">CarbonSinkNode (class in echo.echo_models)</a>
-</li>
       <li><a href="echo.echo_models.html#echo.echo_models.CarbonSource">CarbonSource (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.check_bound_order">check_bound_order() (in module echo.echo_validators)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.check_nx_for_floating_nodes">check_nx_for_floating_nodes() (in module echo.echo_builder)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.check_port_names_are_consistent">check_port_names_are_consistent() (in module echo.echo_builder)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.Chiller">Chiller (class in echo.echo_models)</a>
-
-      <ul>
-        <li><a href="echo.configuration.html#echo.configuration.NodeType.Chiller">(echo.configuration.NodeType attribute)</a>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.check_temp_bounds">check_temp_bounds() (in module echo.echo_validators)</a>
 </li>
-      </ul></li>
+      <li><a href="echo.configuration.html#echo.configuration.NodeType.Chiller">Chiller (echo.configuration.NodeType attribute)</a>
+</li>
       <li><a href="echo.configuration.html#echo.configuration.Resource.CO2">CO2 (echo.configuration.Resource attribute)</a>
 
       <ul>
@@ -313,10 +319,10 @@
         <li><a href="echo.configuration.html#echo.configuration.NodeType.ControlledLoad">(echo.configuration.NodeType attribute)</a>
 </li>
       </ul></li>
-      <li><a href="echo.echo_models.html#echo.echo_models.ControlledLoadOrGen">ControlledLoadOrGen (class in echo.echo_models)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="echo.echo_models.html#echo.echo_models.ControlledLoadOrGen">ControlledLoadOrGen (class in echo.echo_models)</a>
+</li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.convert_dict_to_nx">convert_dict_to_nx() (in module echo.echo_builder)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.convert_nx_to_echo">convert_nx_to_echo() (in module echo.echo_builder)</a>
@@ -423,13 +429,17 @@
         <li><a href="echo.objectives.html#echo.objectives.ImportDemandTariffObjective.demand_charges">(echo.objectives.ImportDemandTariffObjective attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.objectives.html#echo.objectives.DemandCharge">DemandCharge (class in echo.objectives)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.objectives.html#echo.objectives.DemandTariffObjective">DemandTariffObjective (class in echo.objectives)</a>
 </li>
       <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.df">df() (echo.echo_optimiser.EchoOptimiser method)</a>
+</li>
+      <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.df_by_node">df_by_node() (echo.echo_optimiser.EchoOptimiser method)</a>
+</li>
+      <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.df_by_port">df_by_port() (echo.echo_optimiser.EchoOptimiser method)</a>
 </li>
       <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.discount_rate">discount_rate (echo.echo_optimiser.EchoOptimiser attribute)</a>
 </li>
@@ -614,11 +624,15 @@
 </li>
       <li><a href="echo.configuration.html#echo.configuration.NodeType.FixedPort">FixedPort (echo.configuration.NodeType attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.configuration.html#echo.configuration.NodeType.Flex">Flex (echo.configuration.NodeType attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.echo_models.html#echo.echo_models.FlexPort">FlexPort (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_models.html#echo.echo_models.FlexPortExport">FlexPortExport (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_models.html#echo.echo_models.FlexPortImport">FlexPortImport (class in echo.echo_models)</a>
 </li>
       <li><a href="echo.configuration.html#echo.configuration.FlowConstraint">FlowConstraint (class in echo.configuration)</a>
 </li>
@@ -631,10 +645,6 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.configuration.html#echo.configuration.Resource.Gas">Gas (echo.configuration.Resource attribute)</a>
-</li>
-      <li><a href="echo.echo_models.html#echo.echo_models.GasBoiler">GasBoiler (class in echo.echo_models)</a>
-</li>
-      <li><a href="echo.echo_models.html#echo.echo_models.GasDemand">GasDemand (class in echo.echo_models)</a>
 </li>
       <li><a href="echo.utils.html#echo.utils.generate_array_constraint">generate_array_constraint() (in module echo.utils)</a>
 </li>
@@ -650,22 +660,20 @@
       </ul></li>
       <li><a href="echo.echo_scenario.html#echo.echo_scenario.EchoScenario.get_connection_point_info">get_connection_point_info() (echo.echo_scenario.EchoScenario method)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.InputOutputPiecewiseNode.get_cop">get_cop() (echo.echo_models.InputOutputPiecewiseNode method)</a>
-</li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.NetworkSet.get_echo_model">get_echo_model() (echo.echo_builder.NetworkSet method)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.NetworkSet.get_echo_optimiser">get_echo_optimiser() (echo.echo_builder.NetworkSet method)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.get_echo_port_units">get_echo_port_units() (in module echo.echo_builder)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.objectives.html#echo.objectives.DemandCharge.get_objective_total">get_objective_total() (echo.objectives.DemandCharge method)</a>
 
       <ul>
         <li><a href="echo.objectives.html#echo.objectives.Objective.get_objective_total">(echo.objectives.Objective method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.echo_models.html#echo.echo_models.OptimisationGraph.get_ports_on_edge_from_nodes">get_ports_on_edge_from_nodes() (echo.echo_models.OptimisationGraph method)</a>
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.get_pyomo_var_map">get_pyomo_var_map() (in module echo.echo_builder)</a>
@@ -694,14 +702,8 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="echo.echo_models.html#echo.echo_models.HCLoad">HCLoad (class in echo.echo_models)</a>
+      <li><a href="echo.configuration.html#echo.configuration.NodeType.HeatPump">HeatPump (echo.configuration.NodeType attribute)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.HeatPump">HeatPump (class in echo.echo_models)</a>
-
-      <ul>
-        <li><a href="echo.configuration.html#echo.configuration.NodeType.HeatPump">(echo.configuration.NodeType attribute)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.objectives.html#echo.objectives.Day.holiday">holiday (echo.objectives.Day attribute)</a>
@@ -746,24 +748,24 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="echo.echo_models.html#echo.echo_models.InputOutputPiecewiseNode.initialise_node">initialise_node() (echo.echo_models.InputOutputPiecewiseNode method)</a>
-</li>
       <li><a href="echo.objectives.html#echo.objectives.ObjectiveSet.initialise_objective">initialise_objective() (echo.objectives.ObjectiveSet method)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.BoundedElectricalLoad.initialise_port">initialise_port() (echo.echo_models.BoundedElectricalLoad method)</a>
+      <li><a href="echo.echo_models.html#echo.echo_models.BoundedLoad.initialise_port">initialise_port() (echo.echo_models.BoundedLoad method)</a>
 
       <ul>
+        <li><a href="echo.echo_models.html#echo.echo_models.BoundedPort.initialise_port">(echo.echo_models.BoundedPort method)</a>
+</li>
         <li><a href="echo.echo_models.html#echo.echo_models.ControlledLoadOrGen.initialise_port">(echo.echo_models.ControlledLoadOrGen method)</a>
 </li>
         <li><a href="echo.echo_models.html#echo.echo_models.ElectricalDemand.initialise_port">(echo.echo_models.ElectricalDemand method)</a>
 </li>
         <li><a href="echo.echo_models.html#echo.echo_models.ElectricalGeneration.initialise_port">(echo.echo_models.ElectricalGeneration method)</a>
 </li>
+        <li><a href="echo.echo_models.html#echo.echo_models.OffOrConstrainedPort.initialise_port">(echo.echo_models.OffOrConstrainedPort method)</a>
+</li>
         <li><a href="echo.echo_models.html#echo.echo_models.Storage.initialise_port">(echo.echo_models.Storage method)</a>
 </li>
       </ul></li>
-      <li><a href="echo.echo_models.html#echo.echo_models.InputOutputPiecewiseNode">InputOutputPiecewiseNode (class in echo.echo_models)</a>
-</li>
       <li><a href="echo.configuration.html#echo.configuration.FlowConstraint.InRange">InRange (echo.configuration.FlowConstraint attribute)</a>
 </li>
       <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.interval_duration">interval_duration (echo.echo_optimiser.EchoOptimiser attribute)</a>
@@ -917,13 +919,15 @@
 </li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.Network">Network (class in echo.echo_builder)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.echo_builder.html#echo.echo_builder.NetworkSet">NetworkSet (class in echo.echo_builder)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="echo.configuration.html#echo.configuration.FlowConstraint.NoConstraint">NoConstraint (echo.configuration.FlowConstraint attribute)</a>
 </li>
       <li><a href="echo.echo_models.html#echo.echo_models.Node">Node (class in echo.echo_models)</a>
+</li>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.node_unit_validator">node_unit_validator() (in module echo.echo_validators)</a>
 </li>
       <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.node_values">node_values() (echo.echo_optimiser.EchoOptimiser method)</a>
 </li>
@@ -1001,6 +1005,8 @@
 </li>
       <li><a href="echo.objectives.html#echo.objectives.ObjectiveSet">ObjectiveSet (class in echo.objectives)</a>
 </li>
+      <li><a href="echo.echo_models.html#echo.echo_models.OffOrConstrainedPort">OffOrConstrainedPort (class in echo.echo_models)</a>
+</li>
       <li><a href="echo.echo_models.html#echo.echo_models.OptimisationGraph">OptimisationGraph (class in echo.echo_models)</a>
 </li>
       <li><a href="echo.configuration.html#echo.configuration.OptimisationType">OptimisationType (class in echo.configuration)</a>
@@ -1037,6 +1043,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="echo.utils.html#echo.utils.populate_values_across_time_and_expansion_indices">populate_values_across_time_and_expansion_indices() (in module echo.utils)</a>
+</li>
       <li><a href="echo.echo_builder.html#echo.echo_builder.port_connectivity_check">port_connectivity_check() (in module echo.echo_builder)</a>
 </li>
       <li><a href="echo.configuration.html#echo.configuration.TransformRule.PositiveComponent">PositiveComponent (echo.configuration.TransformRule attribute)</a>
@@ -1081,6 +1089,8 @@
         <li><a href="echo.objectives.html#echo.objectives.ThroughputCost.rate">(echo.objectives.ThroughputCost attribute)</a>
 </li>
       </ul></li>
+      <li><a href="echo.objectives.html#echo.objectives.NotFullyChargedPenalty.rate_array">rate_array (echo.objectives.NotFullyChargedPenalty attribute)</a>
+</li>
       <li><a href="echo.objectives.html#echo.objectives.DemandCharge.reset_index">reset_index (echo.objectives.DemandCharge attribute)</a>
 
       <ul>
@@ -1131,16 +1141,20 @@
 </li>
       <li><a href="echo.configuration.html#echo.configuration.FlowConstraint.Series">Series (echo.configuration.FlowConstraint attribute)</a>
 </li>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.set_bounds_from_piecewise_pts">set_bounds_from_piecewise_pts() (in module echo.echo_validators)</a>
+</li>
       <li><a href="echo.utils.html#echo.utils.set_float_var_bounds">set_float_var_bounds() (in module echo.utils)</a>
 </li>
       <li><a href="echo.objectives.html#echo.objectives.ObjectiveSet.set_objective">set_objective() (echo.objectives.ObjectiveSet method)</a>
 </li>
-      <li><a href="echo.utils.html#echo.utils.set_var_bounds_from_dict">set_var_bounds_from_dict() (in module echo.utils)</a>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.set_output_bounds_from_input_bounds_and_cop_and_startup_eta">set_output_bounds_from_input_bounds_and_cop_and_startup_eta() (in module echo.echo_validators)</a>
 </li>
-      <li><a href="echo.echo_scenario.html#echo.echo_scenario.set_zip_total_power">set_zip_total_power() (in module echo.echo_scenario)</a>
+      <li><a href="echo.utils.html#echo.utils.set_var_bounds_from_dict">set_var_bounds_from_dict() (in module echo.utils)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="echo.echo_scenario.html#echo.echo_scenario.set_zip_total_power">set_zip_total_power() (in module echo.echo_scenario)</a>
+</li>
       <li><a href="echo.echo_models.html#echo.echo_models.Sink">Sink (class in echo.echo_models)</a>
 </li>
       <li><a href="echo.configuration.html#echo.configuration.NodeType.Solar">Solar (echo.configuration.NodeType attribute)</a>
@@ -1173,19 +1187,19 @@
         <li><a href="echo.configuration.html#echo.configuration.NodeType.Tellegen">(echo.configuration.NodeType attribute)</a>
 </li>
       </ul></li>
+      <li><a href="echo.echo_models.html#echo.echo_models.TellegenNode.tellegen_unit_check">tellegen_unit_check() (echo.echo_models.TellegenNode class method)</a>
+</li>
       <li><a href="echo.echo_models.html#echo.echo_models.TellegenNode">TellegenNode (class in echo.echo_models)</a>
 </li>
       <li><a href="echo.configuration.html#echo.configuration.Resource.Thermal">Thermal (echo.configuration.Resource attribute)</a>
 </li>
       <li><a href="echo.objectives.html#echo.objectives.ThroughputCost">ThroughputCost (class in echo.objectives)</a>
 </li>
-      <li><a href="echo.configuration.html#echo.configuration.TariffType.time">time (echo.configuration.TariffType attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="echo.objectives.html#echo.objectives.Window.time_periods">time_periods (echo.objectives.Window attribute)</a>
+      <li><a href="echo.configuration.html#echo.configuration.TariffType.time">time (echo.configuration.TariffType attribute)</a>
 </li>
-      <li><a href="echo.echo_models.html#echo.echo_models.TimeDelayNode">TimeDelayNode (class in echo.echo_models)</a>
+      <li><a href="echo.objectives.html#echo.objectives.Window.time_periods">time_periods (echo.objectives.Window attribute)</a>
 </li>
       <li><a href="echo.objectives.html#echo.objectives.TimePeriod">TimePeriod (class in echo.objectives)</a>
 </li>
@@ -1243,12 +1257,18 @@
       </ul></li>
       <li><a href="echo.echo_validators.html#echo.echo_validators.ArrayType.validate">validate() (echo.echo_validators.ArrayType class method)</a>
 </li>
-      <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.values">values() (echo.echo_optimiser.EchoOptimiser method)</a>
+      <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.validate_network_graph">validate_network_graph() (echo.echo_optimiser.EchoOptimiser method)</a>
 </li>
-      <li><a href="echo.echo_validators.html#echo.echo_validators.var_in_range">var_in_range() (in module echo.echo_validators)</a>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.validate_piecewise_arrays">validate_piecewise_arrays() (in module echo.echo_validators)</a>
+</li>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.validate_startup_efficiency">validate_startup_efficiency() (in module echo.echo_validators)</a>
+</li>
+      <li><a href="echo.echo_optimiser.html#echo.echo_optimiser.EchoOptimiser.values">values() (echo.echo_optimiser.EchoOptimiser method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="echo.echo_validators.html#echo.echo_validators.var_in_range">var_in_range() (in module echo.echo_validators)</a>
+</li>
       <li><a href="echo.configuration.html#echo.configuration.OptimisationType.Variable">Variable (echo.configuration.OptimisationType attribute)</a>
 </li>
       <li><a href="echo.objectives.html#echo.objectives.DemandTariffObjective.verify_objective">verify_objective() (echo.objectives.DemandTariffObjective method)</a>
