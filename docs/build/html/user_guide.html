@@ -90,8 +90,10 @@
 <h2>Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permalink to this headline"></a></h2>
 <p>Echo models multi-commodity energy systems as networks comprised of <strong>edges</strong>, <strong>ports</strong>,
 and <strong>nodes</strong>.
-Edges represents physical flows of a single commodity. Ports represent the connection of an edge to a node, and therefore represent the flow of a single commodity into or out of a node.
-Nodes define a transformation between the ports on the node.</p>
+Nodes represent physical assets of the energy network (at different levels of aggregation) and logical interconnection points. Each Node has at least one Port.
+Port represents the flow of a single commodity into or out of a Node. Nodes that have multiple Ports also define a Transformation of the commodity between their Ports.
+Edges represents physical flows of a single commodity between two network Nodes (assets). Ports also represent the connection of an Edge to a Node.</p>
+<img alt="_images/echo_graph.jpeg" src="_images/echo_graph.jpeg" />
 </section>
 <section id="creating-a-model">
 <h2>Creating a model<a class="headerlink" href="#creating-a-model" title="Permalink to this headline"></a></h2>
