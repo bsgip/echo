@@ -575,12 +575,12 @@ class Node(BaseModel):
         """ Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
-            carbon_port: port object that represents carbon flows
-            emission_factor: a ratio = emissions generated/emitting unit generated (float)
+            carbon_port: port object that represents carbon flows out of the node
+            emission_factor: a ratio = emissions generated/emitting unit generated (float), or an array of values
         """
         # Create appropriate transformation
         t = Transform()
-        t.add_lhs_term(carbon_port, TransformRule.PositiveComponent, 1)
+        t.add_lhs_term(carbon_port, TransformRule.NegativeComponent, 1)
         t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
@@ -616,7 +616,14 @@ class Node(BaseModel):
                 expr = 0
                 for term in x:
                     transform_rule = term['rule']
-                    weight = term['weight']
+                    #todo make this less hacky, this is a fix for marginal emission factors
+                    if hasattr(term['weight'], '__iter__'):
+                        if len(model.Time) == len(term['weight']):
+                            weight = term['weight'][t]
+                        else:
+                            raise ValueError('Weight/factor in transformation {} has inconsistent length with model time intervals.'.format(current_transform))
+                    else:
+                        weight = term['weight']
                     var = term['var']
                     if transform_rule is TransformRule.Both:
                         expr += getattr(model, var.port_name)[p, t] * weight
