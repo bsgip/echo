@@ -75,14 +75,17 @@
 <li class="toctree-l3"><a class="reference internal" href="#heating-load">Heating Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#cooling-load">Cooling Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#heat-pump">Heat Pump</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dual-heat-pump">Dual Heat Pump</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#chiller">Chiller</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#other-nodes">Other Nodes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#carbon-aggregation">Carbon Aggregation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#carbon-source">Carbon Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#carbon-sink">Carbon Sink</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#emitting-node">Emitting Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#time-delay-node">Time Delay Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#input-output-arx-node">Input Output ARX Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#template-node">Template Node</a></li>
 </ul>
 </li>
 </ul>
@@ -123,19 +126,14 @@
              
   <section id="echo-nodes">
 <h1><em>echo</em> Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this heading"></a></h1>
-<p>Nodes are the
-Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports,
-with a well-defined relationship between ports. In general, the relationship between ports will be defined by a system of (non)linear constraints .
-A node can be thought of as defining a transformation between the ports on the node, where ports are used to represent flows of different commodities.
-Nodes may also include other variables and parameters and constraints necessary to model:</p>
+<p>Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports, with a well-defined relationship between ports. Ports represent flows into and out of nodes. In general, the relationship between ports will be defined by a system of constraints, which we call the <em>node transformation</em>. Nodes may also include other variables and parameters and constraints necessary to model:</p>
 <ul class="simple">
-<li><p><em>Assets</em>: A node that represents a physical asset that is a source, sink, storage or transformation between commodities.</p></li>
-<li><p><em>Interconnection / Hub</em>: A node that represents a physical or logical interconnection between edges in the network: such as busbar, electrical connection point, gas junction.</p></li>
+<li><p><em>Assets</em>: A node can represent a physical asset that is a source, sink, storage or generic transformation between commodities.</p></li>
+<li><p><em>Interconnection / Hub</em>: A node can represent a physical or logical interconnection between edges in the network: such as busbar, electrical connection point, gas junction.</p></li>
 </ul>
 <section id="flow-tracing">
 <h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this heading"></a></h2>
-<div class="math notranslate nohighlight">
-\[x = \frac{2}{3}\]</div>
+<p>? What is intended to go here</p>
 </section>
 <section id="commodity-agnostic-nodes">
 <h2>Commodity Agnostic Nodes<a class="headerlink" href="#commodity-agnostic-nodes" title="Permalink to this heading"></a></h2>
@@ -153,21 +151,34 @@ Nodes may also include other variables and parameters and constraints necessary 
 </section>
 <section id="tellegen">
 <h3>Tellegen<a class="headerlink" href="#tellegen" title="Permalink to this heading"></a></h3>
+<p>A tellegen node is an energy conserving node. The sum of all flows through the node must equal 0. It is used to represent interconnections, either physical or logical, between different flows in a network.</p>
 </section>
 <section id="multi-commodity-tellegen-ie-building">
 <h3>Multi Commodity Tellegen (ie Building)<a class="headerlink" href="#multi-commodity-tellegen-ie-building" title="Permalink to this heading"></a></h3>
+<p>A multi commodity tellegen node is an energy conserving node. The sum of all flows of the same commodity through the node must equal 0. This node does not necessarily represent a physical interconnection, but it is useful for representing logical connections (e.g., a building that has both gas and electricity supply).</p>
 </section>
 <section id="input-output-node">
 <h3>Input Output Node<a class="headerlink" href="#input-output-node" title="Permalink to this heading"></a></h3>
+<p>An input output node has one input port, and one output port. The input port always imports a commodity, but the output port can either import or export a commodity.</p>
 </section>
 <section id="piecewise-input-output-node">
 <h3>Piecewise Input Output Node<a class="headerlink" href="#piecewise-input-output-node" title="Permalink to this heading"></a></h3>
+<p>This node has one input port and one output port. The transformation between input and output is defined by a piecewise function that approximates a nonlinear relationship. This node is useful for approximating generic nonlinear transformations where the transformation is known or can be precalculated.</p>
+<p><strong>Constraints</strong></p>
 </section>
 <section id="controlled-load">
 <h3>Controlled Load<a class="headerlink" href="#controlled-load" title="Permalink to this heading"></a></h3>
+<p>This node must be operated within a minimum and maximum utilisation, and between a minimum and maximum power/flow rate.</p>
+<p>Min utilisation is the ratio between the minimum energy consumed, and the maxinimum energy that would be consumed if the load operated at max power.</p>
+<p>Max utilisation is the ratio between the maximum energy consumed, and the maximum energy that would be consumed if the load operated at max power.</p>
+<p><strong>Constraints</strong></p>
 </section>
 <section id="controlled-generation">
 <h3>Controlled Generation<a class="headerlink" href="#controlled-generation" title="Permalink to this heading"></a></h3>
+<p>This node must be operated within a minimum and maximum utilisation, and between a minimum and maximum power/flow rate.</p>
+<p>Min utilisation is the ratio between the minimum energy generated, and the maxinimum energy that would be generated if the node was operated at max power.</p>
+<p>Max utilisation is the ratio between the maximum energy generated, and the maximum energy that would be generated if the node was operated at max power.</p>
+<p><strong>Constraints</strong></p>
 </section>
 </section>
 <section id="electrical-nodes">
@@ -180,18 +191,96 @@ Nodes may also include other variables and parameters and constraints necessary 
 </section>
 <section id="ev">
 <h3>EV<a class="headerlink" href="#ev" title="Permalink to this heading"></a></h3>
+<p>An EV node has three ports. One to connect to the grid, one representing the battery (i.e., a storage port), and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined. Only EV specific additional parameters are defined below.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^{cp}\)</span>, connection point port
+<span class="math notranslate nohighlight">\(p^{battery}\)</span>, battery port
+<span class="math notranslate nohighlight">\(p^{trip}\)</span>, trip usage port</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(p^{available}\)</span>, the availability of the EV for charging
+<span class="math notranslate nohighlight">\(p^{usage}\)</span>, the usage of the EV on a trip, in kW average per time period.</p>
+<p><span class="math notranslate nohighlight">\(p^{trip-slack}\)</span>, slack variable for the trip consumption
+<span class="math notranslate nohighlight">\(p^{conserv}\)</span>, conservative state of charge limit (i.e., soc lower bound while p^{available}=1)</p>
+<p><strong>Constraints</strong></p>
+<dl class="simple">
+<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
+</dd>
+</dl>
+<p>end{align}</p>
+<p>textbf{Optional Constraints:}</p>
+<p>If trip slack is enabled:</p>
+<dl class="simple">
+<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
+</dd>
+</dl>
+<p>end{align}</p>
+<p>If conservative state of charge is enabled:</p>
+<dl class="simple">
+<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
+</dd>
+</dl>
+<p>end{align}</p>
 </section>
 <section id="inverter">
 <h3>Inverter<a class="headerlink" href="#inverter" title="Permalink to this heading"></a></h3>
+<p>An inverter node has one AC port, and some number of DC ports</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^{dc}_{z, x, t}\)</span>, dc ports where <span class="math notranslate nohighlight">\(z \in Z = \{0,1,2...\}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^{ac}_{x, t}\)</span>, ac port</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(\eta^{dc-ac}\)</span>, dc to ac efficiency</p>
+<p><span class="math notranslate nohighlight">\(\eta^{ac-dc}\)</span>, ac to dc efficiency</p>
+<p><strong>Constraints</strong></p>
+<p>The below constraint asserts that ac imports (<span class="math notranslate nohighlight">\(p^{ac+}\)</span>) are subject to the <span class="math notranslate nohighlight">\(\eta^{ac-dc}\)</span> efficiency, and ac exports (<span class="math notranslate nohighlight">\(p^{ac-}\)</span>) are subject to the <span class="math notranslate nohighlight">\(\eta^{dc-ac}\)</span> efficiency.</p>
+<p><span class="math notranslate nohighlight">\(p^{ac+} \cdot \eta^{ac-dc} + p^{ac-} \cdot \eta^{dc-ac} = \sum_{i=1}^{z}p^{dc}_{i, x, t}\)</span></p>
 </section>
 </section>
 <section id="gas-nodes">
 <h2>Gas Nodes<a class="headerlink" href="#gas-nodes" title="Permalink to this heading"></a></h2>
 <section id="gas-boiler-fixed-cop">
 <h3>Gas Boiler Fixed COP<a class="headerlink" href="#gas-boiler-fixed-cop" title="Permalink to this heading"></a></h3>
+<p><strong>Description</strong>:
+A boiler converts gas to heat at a fixed coefficient of performance (COP). The COP is a unitless ratio between output energy and input energy. The boiler is either on, and must operate between a min and max input, or off. It has one input port (gas) and one output port (heat).</p>
+<p>A weighted average of past inputs approach is used to introduce a ramp up/ramp down effect. For example, if a 10 kW boiler has a COP of 1, but a startup COP of 0.5, in the time period when it turns on, its output is <span class="math notranslate nohighlight">\(0.5\cdot 10 + 0.5\cdot 0 = 5\)</span>, and in the next time step, its output is <span class="math notranslate nohighlight">\(0.5\cdot 10 + 0.5\cdot 10 = 10\)</span>.</p>
+<p><strong>Variables</strong>:</p>
+<p><span class="math notranslate nohighlight">\(p^{in}\)</span>, input port var</p>
+<p><span class="math notranslate nohighlight">\(p^{out}\)</span>, output port var</p>
+<p><span class="math notranslate nohighlight">\(p^{on}\)</span>, binary variable for when the boiler is on</p>
+<p><strong>Parameters</strong>:</p>
+<p><span class="math notranslate nohighlight">\(p^{max input}\)</span>, max input</p>
+<p><span class="math notranslate nohighlight">\(p^{min input}\)</span>, min input</p>
+<p><span class="math notranslate nohighlight">\(cop\)</span>, coefficient of performance = output/input</p>
+<p><span class="math notranslate nohighlight">\(cop^{init}\)</span>, initial cop in the time interval when the boiler starts. This acts as a ramp up (and ramp down) rate.</p>
+<p><strong>Constraints</strong>:</p>
+<p>Off or constrained big M constraints:</p>
+<p><span class="math notranslate nohighlight">\(p^{in} \geq p^{on} \cdot p^{min}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^{in} \leq p^{on} \cdot p^{max}\)</span></p>
+<p>Node transformation constraint:</p>
+<p><span class="math notranslate nohighlight">\(p^{out}_{x, t} = p^{in}_{x, t} \cdot cop^{init} + p^{in}_{x, t-1} \cdot (cop - cop^{init})\)</span></p>
 </section>
 <section id="temperature-controlled-gas-boiler">
 <h3>Temperature Controlled Gas Boiler<a class="headerlink" href="#temperature-controlled-gas-boiler" title="Permalink to this heading"></a></h3>
+<p>This node has a gas input port and a heating output port. It has additional variables representing its exit and return temperatures, which can be optimised.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^{in}\)</span>, power in</p>
+<p><span class="math notranslate nohighlight">\(p^{out}\)</span>, power out</p>
+<p><span class="math notranslate nohighlight">\(temp^{exit}\)</span>, exit water temperature</p>
+<p><span class="math notranslate nohighlight">\(temp^{return}\)</span>, return water temperature</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(temp^{max-exit}\)</span>, max exit temperature</p>
+<p><span class="math notranslate nohighlight">\(temp^{min-exit}\)</span>, min exit temperature</p>
+<p><span class="math notranslate nohighlight">\(temp^{max-return}\)</span>, max return temperature</p>
+<p><span class="math notranslate nohighlight">\(temp^{min-return}\)</span>, min return temperature</p>
+<p><span class="math notranslate nohighlight">\(c\)</span>, a factor for converting degrees to kW (kW/deg)</p>
+<p><span class="math notranslate nohighlight">\(cop\)</span>, coefficient of performance</p>
+<p><strong>Constraints</strong></p>
+<p>Temp bound constraints:</p>
+<p><span class="math notranslate nohighlight">\(temp^{min-exit} \leq temp^{exit} \leq temp^{max-exit}\)</span></p>
+<p><span class="math notranslate nohighlight">\(temp^{min-return} \leq temp^{return} \leq temp^{max-return}\)</span></p>
+<p>Return temp constraint:</p>
+<p>:math:<a href="#id1"><span class="problematic" id="id2">`</span></a>p^{out} = (temp^{return} - temp^{exit})cdot c cdot cop `</p>
+<p>Exit temp constraint:</p>
+<p>:math:<a href="#id3"><span class="problematic" id="id4">`</span></a>p^{in} = (temp^{exit} - temp^{return})cdot c `</p>
 </section>
 </section>
 <section id="thermal-nodes">
@@ -230,27 +319,58 @@ Nodes may also include other variables and parameters and constraints necessary 
 </section>
 <section id="cooling-load">
 <h3>Cooling Load<a class="headerlink" href="#cooling-load" title="Permalink to this heading"></a></h3>
+<p>See <a class="reference internal" href="#controllable-thermal-load"><span class="std std-ref">Controllable Thermal Load</span></a></p>
 </section>
 <section id="heat-pump">
 <h3>Heat Pump<a class="headerlink" href="#heat-pump" title="Permalink to this heading"></a></h3>
+<p>A heat pump converts electrical input to either heating output, or cooling output.</p>
+</section>
+<section id="dual-heat-pump">
+<h3>Dual Heat Pump<a class="headerlink" href="#dual-heat-pump" title="Permalink to this heading"></a></h3>
+<p>A dual heat pump is the same as a heat pump except it can convert electrical input to heating and cooling output simultaneously.</p>
 </section>
 <section id="chiller">
 <h3>Chiller<a class="headerlink" href="#chiller" title="Permalink to this heading"></a></h3>
+<p>This node has two ports, an input electrical port, and an output cooling port.</p>
 </section>
 </section>
 <section id="other-nodes">
 <h2>Other Nodes<a class="headerlink" href="#other-nodes" title="Permalink to this heading"></a></h2>
-<section id="carbon-aggregation">
-<h3>Carbon Aggregation<a class="headerlink" href="#carbon-aggregation" title="Permalink to this heading"></a></h3>
+<section id="carbon-source">
+<h3>Carbon Source<a class="headerlink" href="#carbon-source" title="Permalink to this heading"></a></h3>
+<p>A carbon source node is a source of carbon flows.</p>
+</section>
+<section id="carbon-sink">
+<h3>Carbon Sink<a class="headerlink" href="#carbon-sink" title="Permalink to this heading"></a></h3>
+<p>A carbon sink node is a sink of carbon flows.</p>
 </section>
 <section id="emitting-node">
 <h3>Emitting Node<a class="headerlink" href="#emitting-node" title="Permalink to this heading"></a></h3>
+<p>Node that generates emissions when it exports</p>
 </section>
 <section id="time-delay-node">
 <h3>Time Delay Node<a class="headerlink" href="#time-delay-node" title="Permalink to this heading"></a></h3>
+<p><strong>Description</strong>
+A time delay node has two ports, one input, and one output. The throughput from input to output is delayed by some number of time intervals. It can be used to represent delays in a system, and is particularly appropriate for discrete/process based systems.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^{in}\)</span>, flow in</p>
+<p><span class="math notranslate nohighlight">\(p^{out}\)</span>, flow out</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(td\)</span>, time delay in num. intervals</p>
+<p><strong>Constraints</strong></p>
+<p>Node transformation constraint:</p>
+<p><span class="math notranslate nohighlight">\(p^{out}_{x, t} = -p^{in}_{x, t-td}\)</span></p>
 </section>
 <section id="input-output-arx-node">
 <h3>Input Output ARX Node<a class="headerlink" href="#input-output-arx-node" title="Permalink to this heading"></a></h3>
+<p>This node has one input port and one output port. The output at each interval depends on current inputs, previous inputs, and previous outputs. The node transformation is defined by a coefficient array, which can be obtained by training an autoregressive (ARX) model on some data.</p>
+</section>
+<section id="template-node">
+<h3>Template Node<a class="headerlink" href="#template-node" title="Permalink to this heading"></a></h3>
+<p><strong>Description</strong></p>
+<p><strong>Variables</strong></p>
+<p><strong>Parameters</strong></p>
+<p><strong>Constraints</strong></p>
 </section>
 </section>
 </section>

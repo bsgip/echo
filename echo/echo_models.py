@@ -1034,8 +1034,8 @@ class Demand(Sink):
 class ControlledLoadOrGen(FlexPort):
     """
     A controlled load or generation has a max/min power, as well as a max/min utilisation.
-    Min utilisation is the ratio between the minimum energy consumed/generated, and the maxinimum energy that could be consumed/generated if the load operated at max power.
-    Max utilisation is the ratio between the maximum energy consumed/generated, and the maximum energy that could be consumed/generated if the load operated at max power.
+    Min utilisation is the ratio between the minimum energy consumed/generated, and the maxinimum energy that could be consumed/generated if the port operated at max power.
+    Max utilisation is the ratio between the maximum energy consumed/generated, and the maximum energy that could be consumed/generated if the port operated at max power.
     """
     # todo review this model
     min_utilisation: Union[float, None] = None  # Per time unit (minute)
