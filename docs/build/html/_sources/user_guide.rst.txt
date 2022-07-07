@@ -5,8 +5,12 @@ Design Philosophy
 ---------------------
 Echo models multi-commodity energy systems as networks comprised of **edges**, **ports**,
 and **nodes**.
-Edges represents physical flows of a single commodity. Ports represent the connection of an edge to a node, and therefore represent the flow of a single commodity into or out of a node.
-Nodes define a transformation between the ports on the node.
+Nodes represent physical assets of the energy network (at different levels of aggregation) and logical interconnection points. Each Node has at least one Port.
+Port represents the flow of a single commodity into or out of a Node. Nodes that have multiple Ports also define a Transformation of the commodity between their Ports.
+Edges represents physical flows of a single commodity between two network Nodes (assets). Ports also represent the connection of an Edge to a Node.
+
+.. image::
+   images/echo_graph.jpeg
 
 
 Creating a model
