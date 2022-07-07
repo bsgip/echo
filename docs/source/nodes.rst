@@ -12,7 +12,8 @@ Nodes may also include other variables and parameters and constraints necessary 
 
 Flow tracing
 -----------------
-
+.. math::
+    x = \frac{2}{3}
 
 Commodity Agnostic Nodes
 -------------------------
@@ -90,20 +91,57 @@ Heating is denoted by positive values (indicating that heat is imported), and co
 
 This node supports an arbitrary number of connections to heating/cooling sources.
 
-Variables:
+**Variables**:
 
-Parameters:
+:math:`temp^{internal}_{x, t}`, the internal temperature of the thermal load
 
-Constraints: :math:x=2
+:math:`en^{loss}_{x, t}`, energy loss due to internal temperature being > ambient temperature
 
-..math::
+:math:`en^{gain}_{x, t}`, energy gain due to internal temperature being < ambient temperature
 
-    x=2
+:math:`en^*_{x, t}`, binary variable for splitting losses and gains
+
+**Parameters**:
+
+:math:`temp^{ub}_{x, t}`, temperature upper bound
+
+:math:`temp^{lb}_{x, t}`, temperature lower bound
+
+:math:`temp^{ambient}_{x, t}`, ambient temperature
+
+:math:`c`, a factor for converting from a temperature difference to kW (heat capacity?)
+
+:math:`\eta^{loss}`, a loss factor/efficiency
+
+:math:`\eta^{gain}`, a gain factor/efficiency 
+
+
+**Constraints**:
+
+Loss and gain sum constraint:
+
+.. math::
+    en^{loss} + en^{gain} = (temp^{ambient} - temp^{internal}) \cdot c
+
+Loss and gain Big M constraints:
+
+.. math::
+    en^{loss} \geq (en^* - 1) \cdot M
+
+    en^{gain} \leq en^* \cdot M
+
+
+Node transformation constraint
+
+.. math::
+    \sum_{i=1}^{m} p_{i, x, t} + \alpha \cdot en^{loss}_{x, t}+ \beta \cdot en^{gain}_{x, t} = (temp^{internal}_{x, t} - temp^{internal}_{x, t-1}) \cdot c
 
 
 
 Heating Load
 ^^^^^^^^^^^^^
+See :ref:`Controllable Thermal Load`
+
 
 Cooling Load
 ^^^^^^^^^^^^^

@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -70,7 +71,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#thermal-nodes">Thermal Nodes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#thermal-load">Thermal Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#controllable-thermal-load">Controllable Thermal Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#heating-load">Heating Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#cooling-load">Cooling Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#heat-pump">Heat Pump</a></li>
@@ -81,6 +82,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#carbon-aggregation">Carbon Aggregation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#emitting-node">Emitting Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#time-delay-node">Time Delay Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-output-arx-node">Input Output ARX Node</a></li>
 </ul>
 </li>
 </ul>
@@ -132,6 +134,8 @@ Nodes may also include other variables and parameters and constraints necessary 
 </ul>
 <section id="flow-tracing">
 <h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this heading"></a></h2>
+<div class="math notranslate nohighlight">
+\[x = \frac{2}{3}\]</div>
 </section>
 <section id="commodity-agnostic-nodes">
 <h2>Commodity Agnostic Nodes<a class="headerlink" href="#commodity-agnostic-nodes" title="Permalink to this heading"></a></h2>
@@ -192,11 +196,37 @@ Nodes may also include other variables and parameters and constraints necessary 
 </section>
 <section id="thermal-nodes">
 <h2>Thermal Nodes<a class="headerlink" href="#thermal-nodes" title="Permalink to this heading"></a></h2>
-<section id="thermal-load">
-<h3>Thermal Load<a class="headerlink" href="#thermal-load" title="Permalink to this heading"></a></h3>
+<section id="controllable-thermal-load">
+<h3>Controllable Thermal Load<a class="headerlink" href="#controllable-thermal-load" title="Permalink to this heading"></a></h3>
+<p>A controllable thermal load represents a heating and/or cooling load, in units of Joules. For example, this can be used to represent a building’s overall thermal load, or specific loads for things like space heating, hot water heating, or other industrial processes.</p>
+<p>Heating is denoted by positive values (indicating that heat is imported), and cooling is denoted by negative values (indicating that heat is exported, i.e. removed).</p>
+<p>This node supports an arbitrary number of connections to heating/cooling sources.</p>
+<p><strong>Variables</strong>:</p>
+<p><span class="math notranslate nohighlight">\(temp^{internal}_{x, t}\)</span>, the internal temperature of the thermal load</p>
+<p><span class="math notranslate nohighlight">\(en^{loss}_{x, t}\)</span>, energy loss due to internal temperature being &gt; ambient temperature</p>
+<p><span class="math notranslate nohighlight">\(en^{gain}_{x, t}\)</span>, energy gain due to internal temperature being &lt; ambient temperature</p>
+<p><span class="math notranslate nohighlight">\(en^*_{x, t}\)</span>, binary variable for splitting losses and gains</p>
+<p><strong>Parameters</strong>:</p>
+<p><span class="math notranslate nohighlight">\(temp^{ub}_{x, t}\)</span>, temperature upper bound</p>
+<p><span class="math notranslate nohighlight">\(temp^{lb}_{x, t}\)</span>, temperature lower bound</p>
+<p><span class="math notranslate nohighlight">\(temp^{ambient}_{x, t}\)</span>, ambient temperature</p>
+<p><span class="math notranslate nohighlight">\(c\)</span>, a factor for converting from a temperature difference to kW (heat capacity?)</p>
+<p><span class="math notranslate nohighlight">\(\eta^{loss}\)</span>, a loss factor/efficiency</p>
+<p><span class="math notranslate nohighlight">\(\eta^{gain}\)</span>, a gain factor/efficiency</p>
+<p><strong>Constraints</strong>:</p>
+<p>Loss and gain sum constraint:</p>
+<div class="math notranslate nohighlight">
+\[en^{loss} + en^{gain} = (temp^{ambient} - temp^{internal}) \cdot c\]</div>
+<p>Loss and gain Big M constraints:</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}en^{loss} \geq (en^* - 1) \cdot M\\en^{gain} \leq en^* \cdot M\end{aligned}\end{align} \]</div>
+<p>Node transformation constraint</p>
+<div class="math notranslate nohighlight">
+\[\sum_{i=1}^{m} p_{i, x, t} + \alpha \cdot en^{loss}_{x, t}+ \beta \cdot en^{gain}_{x, t} = (temp^{internal}_{x, t} - temp^{internal}_{x, t-1}) \cdot c\]</div>
 </section>
 <section id="heating-load">
 <h3>Heating Load<a class="headerlink" href="#heating-load" title="Permalink to this heading"></a></h3>
+<p>See <a class="reference internal" href="#controllable-thermal-load"><span class="std std-ref">Controllable Thermal Load</span></a></p>
 </section>
 <section id="cooling-load">
 <h3>Cooling Load<a class="headerlink" href="#cooling-load" title="Permalink to this heading"></a></h3>
@@ -218,6 +248,9 @@ Nodes may also include other variables and parameters and constraints necessary 
 </section>
 <section id="time-delay-node">
 <h3>Time Delay Node<a class="headerlink" href="#time-delay-node" title="Permalink to this heading"></a></h3>
+</section>
+<section id="input-output-arx-node">
+<h3>Input Output ARX Node<a class="headerlink" href="#input-output-arx-node" title="Permalink to this heading"></a></h3>
 </section>
 </section>
 </section>
