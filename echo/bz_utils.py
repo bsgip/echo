@@ -273,7 +273,7 @@ def train_arx_on_data(u: pd.DataFrame, y: pd.DataFrame, na: int, nb: int, traini
 
     def split_training_validation(y, u, split_percentage):
         total = len(y)
-        assert total // split_percentage == 0, 'Test/train split % does not give an unambiguous split'
+        assert (total // split_percentage) % 1 == 0, 'Test/train split % does not give an unambiguous split'
         training_y = y[0:int(total * split_percentage / 100)]
         training_u = u[0:int(total * split_percentage / 100)]
         validation_y = y[int(total * split_percentage / 100):]
@@ -304,4 +304,78 @@ def train_arx_on_data(u: pd.DataFrame, y: pd.DataFrame, na: int, nb: int, traini
 
     return mse_test, mse_trained, trained_model.coef_
 
+def train_arx_multiple_inputs(u: pd.DataFrame, y: pd.DataFrame, na, n_inputs: list, training_test_split: int):
+    """
+    
+    Args:
+        u: 
+        y: 
+        na: 
+        n_inputs: 
+        training_test_split: 
+
+    Returns:
+
+    """
+    def build_phi_matrix(ns: int, na:int, n_inputs: list, u, y):
+        """ Builds the regressor matrix phi"""
+        n = len(y)
+        phi = np.zeros([n - ns, na + sum(n_inputs)])
+        for row in range(n - ns):
+            phi[row, 0:na] = y[row:row + na]
+            start_col = na
+            for i in range(len(n_inputs)):
+                current_u = u[u.columns[i]]
+                current_nb = n_inputs[i]
+                phi[row, start_col:start_col + current_nb] = current_u[row:(row + current_nb)]
+                start_col += current_nb
+        return phi
+
+    def calculate_mse(y, yhat):
+        """ Calculates mean squared error between y and yhat"""
+        assert len(y) == len(yhat)
+        sum = 0
+        for i in range(len(y)):
+            sum += (y[i] - yhat[i]) ** 2
+        return sum/len(y)
+
+    def use_coef_to_predict_y(phi, model):
+        """ Uses coefficients from regression, as well as regressor matrix, to predict y values"""
+        y_predicted = np.matmul(phi, model.coef_)
+        return y_predicted
+
+    def split_training_validation(y, u, split_percentage):
+        total = len(y)
+        assert (total // split_percentage) % 1 == 0, 'Test/train split % does not give an unambiguous split'
+        training_y = y[0:int(total * split_percentage / 100)]
+        training_u = u[0:int(total * split_percentage / 100)]
+        validation_y = y[int(total * split_percentage / 100):]
+        validation_u = u[int(total * split_percentage / 100):]
+        return training_y, training_u, validation_y, validation_u
+
+    def fit_model_params(phi, y):
+        """ Creates a linear regression model and fits the params, returning the model object"""
+        model = LinearRegression()
+        model.fit(phi, y)
+        return model
+
+    # calculate ns
+    ns = max([na] + n_inputs)  # find largest order
+    # 1. Split data
+    training_y, training_u, test_y, test_u = split_training_validation(y, u, training_test_split)
+    # 2. Calculate phi from training data
+    training_phi = build_phi_matrix(ns=ns, na=na, n_inputs=n_inputs, u=training_u, y=training_y)
+    # 3. Fit model params (and trim y in the process)
+    trained_model = fit_model_params(training_phi, training_y[ns:])
+    # 4. Calculate phi test
+    test_phi = build_phi_matrix(ns=ns, na=na, n_inputs=n_inputs, u=test_u, y=test_y)
+    # 5. Predict outputs of test set
+    yhat_test = use_coef_to_predict_y(test_phi, trained_model)
+    # 6. Calculate MSE for test and training data
+    mse_test = calculate_mse(test_y[ns:].values, yhat_test)
+    # 7. Do the same for training data, for comparison
+    yhat_training = use_coef_to_predict_y(training_phi, trained_model)
+    mse_trained = calculate_mse(training_y[ns:].values, yhat_training)
+
+    return mse_test, mse_trained, trained_model.coef_
 
