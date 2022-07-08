@@ -1,4 +1,5 @@
 import uuid
+import warnings
 from typing import Optional, Union, List, TypeVar
 
 import matplotlib.pyplot as plt
@@ -143,6 +144,8 @@ class OptimisationGraph(Graph):
 
     def create_path_objects(self, sources, sinks, regularise=False):
         """ Creates path objects according to source/sink lists provided."""
+        warnings.warn('Path tracing is still experimental. If you are generating paths to use path tariffs, '
+                      'please consider whether you can convert these tariffs to point/port tariffs.')
         all_paths = {}
         for source_node in sources:
             for sink_node in sinks:
