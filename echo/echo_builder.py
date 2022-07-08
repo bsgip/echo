@@ -1,3 +1,7 @@
+"""
+The echo builder module contains functions and classes used for building an echo model from a dict/json network representation.
+"""
+import time
 from typing import Optional, Union
 
 import networkx as nx
@@ -14,57 +18,67 @@ from echo.echo_validators import ArrayType
 
 
 class Network:
-    """ A class for holding our network dict"""
-    name: Optional[str] = 'default_name'
-    components = {}
-    edges = {}
-    objectives = {}
+    """ A class for holding our network dict and making it easier to add nodes/edges in the correct format."""
+    name: Optional[str] = 'default_name'  # name for our network
+    components = {}  # network components (nodes)
+    edges = {}  # network edges, representing connectivity
+    objectives = {}  # any objectives we want to define
 
     def to_dict(self):
+        """ Returns the network in a dict."""
         d = {'name': self.name, 'components': self.components, 'edges': self.edges, 'objectives': self.objectives}
         return d
 
-    def add_asset_dict(self, node_id: str, node_type: NodeType, ports: list, units: Units = None,
-                       node_data: str = None):
-        d = {'id': node_id, 'type': node_type}
-        if units:
-            d['units'] = units
-        d['ports'] = ports
-        if node_data:
-            d['data'] = node_data
-        self.components[node_id] = d
+    def add_node_to_components(self, n_id: str, n_type: NodeType, ports: dict = None, n_params: dict = None):
+        """
+        Adds an asset (node) to the component dictionary.
+        Args:
+            ports: dict of info on ports (names, units, parameters)
+            n_id: unique node id
+            n_type: node type from NodeType class, so we know what to build in echo
+            n_params: any params that belong to the node (asset) rather than a particular port
 
-    def add_flex_node(self, node_id: str, ports: list, units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Flex, ports=ports, units=units)
-
-    def add_tellegen_node(self, node_id: str, ports: list, units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Tellegen, ports=ports, units=units)
-
-    def add_battery_node(self, node_id, ports: list, param_dict: dict = None):
-        self.add_asset_dict(node_id=node_id, node_type=NodeType.Battery, ports=ports)
-        if param_dict:
-            self.add_node_parameters(node_id=node_id, param_dict=param_dict)
-
-    def add_data_node(self, node_id: str, node_type: NodeType, node_data: Union[str, ArrayType], ports: list,
-                      units: Units):
-        self.add_asset_dict(node_id=node_id, node_type=node_type, ports=ports, node_data=node_data, units=units)
-
-    def add_node_parameters(self, node_id: str, param_dict: dict):
-        self.components[node_id]['parameters'] = param_dict
-
-    def add_edge(self, node_tuple: tuple, port_tuple: tuple, res=None, edge_name: str = None):
-        e = {'nodes': node_tuple, 'ports': port_tuple}
-        if res:
-            e['res'] = res
-        if edge_name:
-            self.edges[edge_name] = e
+        Returns:
+            None
+        """
+        self.validate_new_port(ports)
+        if self.components.get(n_id) is not None:
+            print('Node {} is already defined in components. Updating node with any additional ports'.format(n_id))
+            self.components[n_id]['ports'].update(ports)
         else:
-            # Autoname it by concatenating node names
-            edge_name = node_tuple[0] + '_' + node_tuple[1]
-            self.edges[edge_name] = e
+            d = {'id': n_id, 'type': n_type, 'ports': ports}
+            if n_params:
+                d['parameters'] = n_params
+            self.components[n_id] = d
 
-    def add_port_to_node(self, node_id: str, port_name: str):
-        self.components[node_id]['ports'].append(port_name)
+    def add_edge_between_ports(self, node_tuple: tuple, port_tuple: tuple, resource: Units = None, edge_name: str = None):
+        """ Adds an edge between two specified ports on two specified nodes."""
+        e = {'nodes': node_tuple, 'ports': port_tuple}
+        if resource:
+            e['resource'] = resource
+        if edge_name is None: # Create a default name by concatenating node names
+            edge_name = node_tuple[0] + '_' + node_tuple[1]
+        self.validate_new_edge(edge_name, node_tuple)
+        self.edges[edge_name] = e
+
+    def add_edge_between_nodes(self, node_tuple: tuple, resource: Units, edge_name: str = None):
+        # Adds an edge between two nodes with no specified ports
+        # First create a port on each node, with units matching the res, and port name = node name at other end of edge
+        port1_dict = {node_tuple[1]: {'units': resource}}
+        port2_dict = {node_tuple[0]: {'units': resource}}
+        self.add_port_to_existing_node(n_id=node_tuple[0], port_dict=port1_dict)
+        self.add_port_to_existing_node(n_id=node_tuple[1], port_dict=port2_dict)
+        self.add_edge_between_ports(node_tuple=node_tuple, port_tuple=node_tuple, edge_name=edge_name, resource=resource)
+
+    def add_port_to_existing_node(self, n_id: str, port_dict: dict):
+        """ Updates the port dict of the node to include the new port"""
+        (new_port_name, new_port_values), = port_dict.items()
+        if self.components[n_id]['ports'].get(new_port_name) is not None:
+            print('Port {} is already defined on node {}'.format(new_port_name, n_id))
+            if new_port_values != self.components[n_id]['ports'].get(new_port_name):
+                raise ValueError('Port dicts conflict, and node could not be updated.')
+        else:
+            self.components[n_id]['ports'].update(port_dict)
 
     def add_objective(self, obj_name: str, obj_type: str, component: dict = None, prices: ArrayType = None):
         o = {'type': obj_type}
@@ -74,18 +88,18 @@ class Network:
             o['prices'] = prices
         self.objectives[obj_name] = o
 
-    # todo future methods
-    def create_tellegen_network_from_dict(self, dict):
-        # Creates a network of only tellegen nodes from a hierarchical dictionary
-        # Could use this to automatically generate the network topologies, and add in asset nodes later
-        pass
+    def validate_new_edge(self, edge_name: str, node_tuple: tuple) -> None:
+        """ Checks that edge has unique name and unique node tuple."""
+        assert self.edges.get(edge_name) is None, 'Edge with name \'{}\' is already defined.'.format(edge_name)
+        for existing_edge_name, existing_edge_dict in self.edges.items():
+            assert existing_edge_dict['nodes'] != node_tuple, \
+                'Nodes {} are already connected with existing edge named \'{}\'.'.format(node_tuple, existing_edge_name)
 
-    def add_edge_no_ports(self, edge_name, node_tuple, res):
-        # Adds an edge between two nodes with no specified ports
-        # First create a port on each node
-        self.add_port_to_node(node_id=node_tuple[0], port_name=node_tuple[1])
-        self.add_port_to_node(node_id=node_tuple[1], port_name=node_tuple[0])
-        self.add_edge(edge_name=edge_name, node_tuple=node_tuple, port_tuple=node_tuple, res=res)
+    @staticmethod
+    def validate_new_port(port_dict: dict) -> None:
+        """ Checks that each port has at least a unit key """
+        for port_name, port_attr in port_dict.items():
+            assert port_attr.get('units') is not None, 'Port {} has no units defined.'.format(port_name)
 
 
 class NetworkSet:
@@ -220,7 +234,8 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
 def convert_dict_to_nx(netw_jsn: dict, verbose: bool = True):
     """ Creates nx graph from network dictionary"""
     if verbose:
-        print('Converting dict to networkx')
+        start_time = time.time()
+        print('Converting dict to networkx...')
     n = nx.Graph()
     # Assume we have a list of components, and that all components are nodes
     # Node name is the unique node ID, Node dict carries all the relevant node info in a dict
@@ -240,19 +255,22 @@ def convert_dict_to_nx(netw_jsn: dict, verbose: bool = True):
         n.add_edge(edge_dict['nodes'][0], edge_dict['nodes'][1],
                    name=edge_name,
                    ports=edge_dict['ports'],
-                   res=edge_dict['res'])
+                   res=edge_dict['resource'])
         # NB: networkx may add the edges in a different order to the way we specify
 
     check_nx_for_floating_nodes(n)  # Check that the graph is connected
     check_port_names_are_consistent(n)  # Check there are no naming issues
 
+    end_time = time.time()
+    print('Finished converting dict to nx. Time taken (seconds): ', end_time - start_time)
     return n
 
 
 def convert_nx_to_echo(g, df, verbose=True):
     """ Creates echo model from nx graph"""
     if verbose:
-        print('Converting networkx model to echo')
+        start_time = time.time()
+        print('Converting networkx model to echo...')
 
     node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
@@ -285,52 +303,58 @@ def convert_nx_to_echo(g, df, verbose=True):
         else:
             connect_nodes(system, node1, node2, port1=port2, port2=port1)
 
+    end_time = time.time()
+    print('Finished converting nx to echo. Time taken (seconds): ', end_time-start_time)
     return system, node_name_dict
 
 
 def construct_echo_node(system, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
-    """ Does logic for working out which type of node to build.
-    Builds the node, adds to the echo graph, and updates the node name dict"""
+    """
+    Works out which type of echo node to build. Builds it, adds it to the graph, and updates the node_name dict.
+    Args:
+        system: Echo Optimisation Graph
+        node_name_dict: dict of {uid: node_name}
+        node: str, node name
+        node_dict: dict of attributes relevant to the node
+        df: dataframe containing any static time series data
+
+    Returns:
+
+    """
 
     def update():
+        """ Adds node to system and updates node uid dict"""
         system.add_node_obj(new_node)
         node_name_dict[node] = new_node.node_name
 
-    if node_dict['type'] == 'battery':
-        new_node = create_battery_node(node_dict)
-        update()
+    if node_dict['type'] == NodeType.Battery:
+        new_node = create_battery_node(node_dict, node_dict['ports'])
 
-    elif node_dict['type'] == 'tellegen':
-        new_node = create_tellegen_node(node_dict)
-        update()
+    elif node_dict['type'] == NodeType.Tellegen:
+        new_node = create_tellegen_node(node_dict, node_dict['ports'])
 
+    elif node_dict['type'] == NodeType.Flex:
+        new_node = create_flex_node(node_dict, node_dict['ports'])
 
-    elif node_dict['type'] == 'flex':
-        new_node = create_flex_node(node_dict)
-        update()
+    elif node_dict['type'] == NodeType.Load:
+        new_node = create_load_node(node_dict, node_dict['ports'], df)
 
-    elif node_dict['type'] == 'load':
-        new_node = create_load_node(node_dict, df)
-        update()
-
-    elif node_dict['type'] == 'ev':
+    elif node_dict['type'] == NodeType.EV:
         new_node = create_ev(node_dict, df)
-        update()
 
-    elif node_dict['type'] == 'inverter':
-        new_node = create_inverter_node(node_dict)
-        update()
+    elif node_dict['type'] == NodeType.Inverter:
+        new_node = create_inverter_node(node_dict, node_dict['ports'])
 
-    elif node_dict['type'] == 'solar':
-        new_node = create_solar_node(node_dict, df)
-        update()
+    elif node_dict['type'] == NodeType.Solar:
+        new_node = create_solar_node(node_dict, node_dict['ports'], df)
 
-    elif node_dict['type'] == 'chiller':
-        new_node = create_chiller_node(node_dict, df)
-        update()
+    elif node_dict['type'] == NodeType.MultiCommodityTellegen:
+        new_node = create_multi_commodity_tellegen_node(node_dict, node_dict['ports'])
 
     else:
         raise ValueError('node type {} is not recognised/does not have a builder function'.format(node_dict['type']))
+    # Update our graph
+    update()
 
 
 def convert_objective_to_echo_objective(em, node_name_dict: dict, objective_dict: dict, verbose: bool = True):
@@ -480,174 +504,103 @@ def run_echo_optimiser(echo_graph,
     return optimiser
 
 
-def connect_nodes(system, node1, node2, port1: str, port2: str):
-    """
-    Connects two nodes together via specified ports. Doesn't currently handle blank port names.
-    Args:
-        system: echo graph
-        node1: node on edge
-        node2: other node on edge
-        port1: port on edge
-        port2: other port on edge
+def connect_nodes(system: ecm.OptimisationGraph, node1: ecm.Node, node2: ecm.Node, port1: str, port2: str):
+    """ Connects two nodes together via specified ports. Doesn't currently handle blank port names. """
 
-    """
-
-    if port1 is not None:
-        p1 = node1.ports[port1]
-    if port2 is not None:
-        p2 = node2.ports[port2]
-
-    if port1 is not None and port2 is None:
-        system.connect_port_to_node_create_edges_create_port(p1, node2)
-    elif port1 is None and port2 is not None:
-        system.connect_port_to_node_create_edges_create_port(node1, p2)
-    elif port1 is None and port2 is None:
-        system.connect_two_nodes_create_edges_create_ports(node1, node2)
-    else:
-        system.connect_ports_and_create_edge(p1, p2)
+    p1 = node1.ports[port1]
+    p2 = node2.ports[port2]
+    system.connect_ports_and_create_edge(p1, p2)
 
 
-def combine_two_graphs(g1, g2, p1=None, p2=None):
-    # todo test this function
-    """ Takes two networkx graphs and combines them, returning the combination as a third graph"""
-    # Initialise a new graph
-    output = ecm.OptimisationGraph()
-
-    # Add all nodes from both graphs
-    for n in g1.node_obj.values():
-        output.add_node_obj(n)
-    for n in g2.node_obj.values():
-        output.add_node_obj(n)
-
-    # Add all edges from both graphs
-    for e in g1.edge_objs.values():
-        output.add_edge_obj(e)
-    for e in g2.edge_objs.values():
-        output.add_edge_obj(e)
-
-    # Find each port object
-    port1 = None
-    port2 = None
-    for n in output.node_obj.values():
-        for port_name, port_obj in n.ports.items():
-            if port_name == p1:
-                port1 = port_obj
-            if port_name == p2:
-                port2 = port_obj
-
-    assert (port1 is not None) and (port2 is not None), 'Ports to be connected cannot be found in the graphs provided.'
-    output.connect_ports_and_create_edge(port1, port2)
-    return output
-
-
-def create_battery_node(node_dict):
+def create_battery_node(node_dict: dict, port_dict: dict):
     """ Creates an echo battery node from the provided node dict."""
-    battery = node_dict['parameters']
-    battery_node = ecm.Node()
-    b = ecm.ElectricalStorage(max_capacity=battery['max_capacity'],
-                              depth_of_discharge_limit=battery['depth_of_discharge_limit'],
-                              charging_power_limit=battery['charging_power_limit'],
-                              discharging_power_limit=battery['discharging_power_limit'],
-                              charging_efficiency=battery['charging_efficiency'],
-                              discharging_efficiency=battery['discharging_efficiency'],
-                              initial_state_of_charge=battery['initial_state_of_charge'])
-
-    port_name = node_dict['ports'][0]
-    battery_node.ports[port_name] = b
-    return battery_node
+    check_node_has_only_one_port(node_dict)
+    node = ecm.Node(node_name=node_dict['id'])
+    (port_name, port_attr), = port_dict.items()
+    battery_params = port_attr['parameters']  #todo maybe these should be node parameters?
+    b = ecm.ElectricalStorage(**battery_params)
+    node.ports[port_name] = b
+    return node
 
 
-def create_tellegen_node(node_dict):
+def create_tellegen_node(node_dict: dict, port_dict: dict):
     """ Creates an echo tellegen node from the provided node dict."""
-    port_list = node_dict['ports']
-    port_unit = node_dict['units']
-    echo_unit = get_echo_port_units(node_dict['id'], port_unit)
-    tnode = ecm.TellegenNode()
-    port_params = node_dict.get('parameters') if node_dict.get('parameters') is not None else None
-    for port in port_list:
-        tnode.add_flex_port(port, unit=echo_unit)
-        # check for any parameters/constraints on ports - todo this will be a similar process for other node types -- make it a function
-        if port_params:
-            if port_params.get(port):
-                port_obj = tnode.ports[port]
-                port_obj.set_flow_constraints(max_export=port_params.get(port)['max_export'],
-                                              max_import=port_params.get(port)['max_import'],
-                                              slack=port_params.get(port)['slack'])
-    return tnode
+    node = ecm.TellegenNode(node_name=node_dict['id'])
+    create_flex_ports(node, port_dict)
+    return node
 
+def create_flex_ports(node_obj: ecm.Node, port_dict: dict):
+    for port_name, port_attr in port_dict.items():
+        if port_attr.get('parameters') is not None:
+            new_port = ecm.FlexPort(units=port_attr['units'], **port_attr['parameters'])
+        else:
+            new_port = ecm.FlexPort(units=port_attr['units'])
+        node_obj.ports[port_name] = new_port
 
-def create_flex_node(node_dict):
+def create_multi_commodity_tellegen_node(node_dict: dict, port_dict: dict) -> ecm.Node:
+    """ Creates a multi commodity tellegen node """
+    node = ecm.MultiCommodityTellegenNode(node_name=node_dict['id'])
+    create_flex_ports(node, port_dict)
+    return node
+
+def create_flex_node(node_dict: dict, port_dict: dict) -> ecm.Node:
     """ Creates an echo flexible node from the provided node dict.
     A flexible node is a node with a single flexible port with a specified unit."""
-    port_list = node_dict['ports']
-    port_unit = node_dict['units']
-    echo_unit = get_echo_port_units(node_dict['id'], port_unit)
-    fnode = ecm.Node()
-    fnode.add_flex_ports_from_list(port_list, unit=echo_unit)
-    return fnode
+    check_node_has_only_one_port(node_dict)
+    node = ecm.Node(node_name=node_dict['id'])
+    create_flex_ports(node, port_dict)
+    return node
 
+def create_load_node(node_dict: dict, port_dict: dict, df: pd.DataFrame) -> ecm.Node:
+    """ Creates a node with a demand (import only) port."""
+    check_node_has_only_one_port(node_dict)
+    node = ecm.Node(node_name=node_dict['id'])
+    (port_name, port_attr), = port_dict.items()
+    p = ecm.Demand(units=port_attr['units'])
+    load_profile = process_field(port_attr['data'], df)
+    p.add_initial_value_from_array(load_profile)
+    node.ports[port_name] = p
+    return node
 
-def create_load_node(load_dict, df):
-    if type(load_dict['data']) is str:
-        load_profile = get_vals_from_df(df, load_dict['data'])
-    else:
-        load_profile = load_dict['data']
-    port_unit = load_dict['units']
-    echo_unit = get_echo_port_units(load_dict['id'], port_unit)
-    load = ecm.Node()  # components load
-    l1 = ecm.Demand()
-    l1.add_sink_profile_from_array(load_profile, expansion_periods=1)
-    l1.units = echo_unit
-    port_name = load_dict['ports'][0]
-    load.ports[port_name] = l1
-    return load
-
-
-def create_inverter_node(inverter_dict):
-    inv = inverter_dict['parameters']
-    inverter = ecm.Inverter(max_import=inv['max_import'],
-                            max_export=inv['max_export'],
-                            dc_ac_efficiency=inv['dc_ac_eta'],
-                            ac_dc_efficiency=inv['ac_dc_eta'])
-    for i in inv['dc_ports']:
+def create_inverter_node(node_dict: dict, port_dict: dict) -> ecm.Node:
+    """
+    Creates an inverter node, which has one AC port, and at least one DC port.
+    """
+    inv_params = node_dict['parameters']
+    inverter = ecm.Inverter(max_import=inv_params['max_import'],
+                            max_export=inv_params['max_export'],
+                            dc_ac_efficiency=inv_params['dc_ac_eta'],
+                            ac_dc_efficiency=inv_params['ac_dc_eta'])
+    for i in inv_params['dc_ports']:
         inverter.add_dc_port(i)
-    inverter.add_ac_port(inv['ac_port'])
+    inverter.add_ac_port(inv_params['ac_port'])
     return inverter
 
-
-def create_solar_node(solar_dict, df):
-    if type(solar_dict['data']) is str:
-        pv_profile = get_vals_from_df(df, solar_dict['data'])
+def create_solar_node(node_dict: dict, port_dict: dict, df: pd.DataFrame) -> ecm.Node:
+    """ Creates a node with one electrical generation port. """
+    check_node_has_only_one_port(node_dict)
+    node = ecm.Node(node_name=node_dict['id'])
+    (port_name, port_attr), = port_dict.items()
+    if port_attr.get('parameters') is not None:
+        p = ecm.ElectricalGeneration(units=port_attr['units'], **port_attr['parameters'])
     else:
-        pv_profile = solar_dict['data']
-    solar = ecm.Node()
-    pv = ecm.ElectricalGeneration(**solar_dict['parameters'])
-    pv.add_generation_profile_from_array(pv_profile, expansion_periods=1)
-    solar.ports[solar_dict['ports'][0]] = pv
-    return solar
+        p = ecm.ElectricalGeneration(units=port_attr['units'])
+    pv_profile = process_field(port_attr['data'], df)
+    p.add_initial_value_from_array(pv_profile)
+    node.ports[port_name] = p
+    return node
+
+def create_ev(node_dict: dict, df: pd.DataFrame) -> ecm.Node:
+    check_node_has_only_one_port(node_dict)
+    ev_dict = node_dict['parameters']
+    ev_dict['available'] = process_field(ev_dict['available'], df)
+    ev_dict['usage'] = process_field(ev_dict['usage'], df)
+    ev_dict['cp_name'] = ev_dict['ports'][0]
+    node = ecm.EV(**ev_dict)  # pass all our params as kwargs
+    return node
 
 
-def create_ev(ev_dict, df):
-    echo_dict = ev_dict['parameters']
-    echo_dict['available'] = process_field(echo_dict['available'], df)
-    echo_dict['usage'] = process_field(echo_dict['usage'], df)
-    echo_dict['cp_name'] = ev_dict['ports'][0]
-    ev_cp = ecm.EV(**echo_dict)  # pass all our params as kwargs
-
-    return ev_cp
-
-
-def create_chiller_node(chiller_dict, df):
-    chiller = ecm.Chiller(**chiller_dict)
-    return chiller
-
-
-def create_boiler(boiler_dict, df):
-    boiler = ecm.GasBoilerFixedCOP(**boiler_dict)
-    return boiler
-
-
-def check_nx_for_floating_nodes(g):
+def check_nx_for_floating_nodes(g: nx.Graph):
     """ Checks if we have nodes without any edge"""
     nodes = set(g.nodes)
     nodes_with_edges = set([i for edge in g.edges for i in edge])
@@ -655,7 +608,8 @@ def check_nx_for_floating_nodes(g):
     assert len(nodes_without_edges) == 0, 'Node {} has no edge'.format(nodes_without_edges)
 
 
-def check_port_names_are_consistent(g):
+def check_port_names_are_consistent(g: nx.Graph):
+    """ Checks consistency of port names as defined in nodes and port names as defined in edges."""
     inconsistencies = []
     for edge in g.edges:
         # check that there is a 1-1 correspondence between ports and nodes
@@ -665,43 +619,30 @@ def check_port_names_are_consistent(g):
             node2_ports = g.nodes[edge[1]]['attr']['ports']
 
             if port not in node1_ports and port not in node2_ports:
-                err = 'Port {} may be misnamed in edge {}. It does not belong to either node.'.format(port, edge)
+                err = 'Port {} may be misnamed in edge {}. It does not belong to either node. ' \
+                      'One node has ports {} and the other has ports {}'.format(port, edge, list(node1_ports.keys()),
+                                                                                list(node2_ports.keys()))
                 inconsistencies.append(err)
 
     assert len(inconsistencies) == 0, inconsistencies
 
 
-def retrieve_value(d, key):
-    out = None
-    if key in d.keys():
-        out = d[key]
-        if hasattr(out, '__len__'):
-            if len(out) == 0:
-                out = None
-    return out
-
-
-def retrieve_key(d, val):
-    for k, v in d.items():
-        if v == val:
-            return k
-    return None
-
-
-def array_length_check(array, length, message, scalar_ok=False):
+def array_length_check(array, length: int, message, scalar_ok=False):
+    """ Checks if an array has the correct length."""
     if array is not None:
         if hasattr(array, '__len__') or (not scalar_ok):
             assert len(array) == length, message + str(len(array))
 
 
-def port_connectivity_check(port_obj, graph):
+def port_connectivity_check(port_obj: ecm.Port, graph: ecm.OptimisationGraph):
+    """ Checks if two ports are connected by an edge."""
     for _, edge_obj in graph.edge_obj.items():
         if port_obj in edge_obj.vertices:
             return True
     return False
 
 
-def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
+def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
     """ Extracts results from an echo model and returns them in a dict.
     Results key arg allows user to specify which results they want returned."""
 
@@ -709,16 +650,16 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
     output = {}  # for storing results
     for node_name, node_uid in node_name_dict.items():
         output[node_name] = {}
-        if 'battery' in node_name:
+        if 'battery' in node_name:  #todo better way of doing this, we could refer to the node types?
             battery_node = system.node_obj[node_uid]
             battery_port = battery_node.ports[list(battery_node.ports.keys())[0]]  # todo less hacky
-            output[node_name]['SOC'] = optimiser.values(battery_port.soc_value, 0)
-            output[node_name]['delta'] = optimiser.values(battery_port.port_name, 0)
-            output[node_name]['optimised_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
+            output[node_name]['soc'] = optimiser.values(battery_port.soc_value, 0)
+            output[node_name]['p'] = optimiser.values(battery_port.port_name, 0)
+            output[node_name]['opt_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
         elif 'ev' in node_name:
             ev_node = system.node_obj[node_uid]
-            output[node_name]['SOC'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
-            output[node_name]['delta'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
+            output[node_name]['vehicle_soc'] = optimiser.values(ev_node.ports['vehicle'].soc_value, 0)
+            output[node_name]['vehicle_p'] = optimiser.values(ev_node.ports['vehicle'].port_name, 0)
             if hasattr(optimiser.model, ev_node.ports['vehicle'].trip_slack):
                 output[node_name]['trip_infeasibility'] = optimiser.values(ev_node.ports['vehicle'].trip_slack, 0)
                 output[node_name]['charge_status'] = 'success' if all(
@@ -729,36 +670,46 @@ def extract_results(optimiser, node_name_dict: dict, results_key: dict = None):
             node_obj = system.node_obj[node_uid]
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
-                output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
+                output[node_name][port_name]['p'] = optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
                                                                                             0)
                 else:
-                    output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    pass
+                    # output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    # output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max,
                                                                                             0)
                 else:
-                    output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    pass
+                    # output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    # output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
 
     return output
 
 
-# def extract_results_from_key(results_key, optimiser, echo_obj):
-#     output = {}
-#     echo_key = {'SOC': 'soc_value',
-#                'delta': 'port_name'}
-#     for var_name, select in results_key:
-#         if select is True:
-#             if hasattr(echo_obj, echo_key[var_name]):
-#                 model_var_name = getattr(echo_obj, echo_key[var_name])
-#                 output[var_name] = optimiser.values(model_var_name, 0)
-#
-#     return output
+def extract_results_as_df(optimiser, node_name_dict: dict) -> pd.DataFrame:
+    system = optimiser.ES
+    output = {}  # for storing results
+    for node_name, node_uid in node_name_dict.items():
+        if 'battery' in node_name:  #todo better way of doing this, we could refer to the node types?
+            battery_node = system.node_obj[node_uid]
+            (battery_port_name, battery_port), = battery_node.ports.items()
+            output[node_name+'_node_'+battery_port_name+'_port'+'_soc'] = optimiser.values(battery_port.soc_value, 0)
+            output[node_name+'_node_'+battery_port_name+'_port'+'_p'] = optimiser.values(battery_port.port_name, 0)
+            output[node_name+'_node_'+battery_port_name+'_port'+'_opt_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
+
+        else:  # Get port value + any slack vars
+            node_obj = system.node_obj[node_uid]
+            for port_name, port_obj in node_obj.ports.items():
+                output[node_name+'_node_'+port_name+'_port'+'_p'] = optimiser.values(port_obj.port_name, 0)
+
+    df = pd.DataFrame.from_dict(output)
+    return df
+
 
 def append_results(result_dict, network_dict, in_place=False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
@@ -771,17 +722,6 @@ def append_results(result_dict, network_dict, in_place=False):
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['results'] = results
         return network_dict
-
-
-def get_echo_port_units(node_name, port_unit):
-    if port_unit.upper() in vars(Units):
-        unit = vars(Units)[port_unit.upper()]
-        return unit
-    else:
-        valid_units = [f for f in dir(Units) if not f.startswith('_')]
-        raise ValueError(
-            'Unit {} for node {} does not match any valid unit. Valid units are {}'.format(port_unit, node_name,
-                                                                                           valid_units))
 
 
 # Pydantic tinkering
@@ -875,18 +815,38 @@ def get_pyomo_vars_from_port_name(port_name, var_map):
     return var_names
 
 
+def check_node_has_only_one_port(node_dict: dict) -> None:
+    """ Checks that a node has only one port defined """
+    port_dict = node_dict['ports']
+    assert len(port_dict) == 1, 'Node {} is of type \'{}\' and can only have one port, but multiple are defined: {}.'.format(
+        node_dict['id'], node_dict['type'], list(port_dict.keys()))
+
+
+def retrieve_value(d, key):
+    out = None
+    if key in d.keys():
+        out = d[key]
+        if hasattr(out, '__len__'):
+            if len(out) == 0:
+                out = None
+    return out
+
+
+def retrieve_key(d, val):
+    for k, v in d.items():
+        if v == val:
+            return k
+    return None
+
+
 def process_field(field, df):
     """ Checks if a field points to data in a df or if it contains the data directly."""
     if type(field) is str:
-        vals = get_vals_from_df(df, field)
+        try:
+            x = df[field]
+            vals = x.values
+        except IndexError:
+            'No column with name {} in df'.format(field)
     else:
         vals = field
     return vals
-
-
-def get_vals_from_df(df, col_name):
-    try:
-        x = df[col_name]
-        return x.values
-    except IndexError:
-        'No column with name {} in df'.format(col_name)
