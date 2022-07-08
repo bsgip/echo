@@ -19,7 +19,6 @@ Creating a model
 Creating a model using echo_builder (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 Creating a model from scratch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

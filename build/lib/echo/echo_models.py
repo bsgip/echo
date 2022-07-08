@@ -1,18 +1,11 @@
-""" Models for Echo components: Port, Node, Edge, Transform, Graph and Path.
-
-This module contains Base models definition and a library of predefined commodity specific models (Electrical, Thermal, Gas, Carbon)
-"""
-
 import uuid
-import warnings
 from typing import Optional, Union, List, TypeVar
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import pandas as pd
 import pyomo.environ as en
 from networkx import Graph
-from pydantic import BaseModel as PydanticBaseModel, PositiveFloat, NonPositiveFloat, NonNegativeFloat
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import validator, root_validator, confloat
 
 from echo.configuration import *
@@ -34,9 +27,6 @@ class BaseModel(PydanticBaseModel):
 
 
 class OptimisationGraph(Graph):
-    """
-
-    """
     # todo do we need anything pydantic related for this class?
 
     def __init__(self):
@@ -62,12 +52,8 @@ class OptimisationGraph(Graph):
         def add_single_edge(edge_obj):
             port1 = edge_obj.vertices[0]
             port2 = edge_obj.vertices[1]
-            assert port1.units == port2.units, 'Ports on edge must have matching units.'
             node1 = self.lookup_node_from_port(port1)
             node2 = self.lookup_node_from_port(port2)
-            # Need to check whether an edge already exists between these two nodes
-            if self.edge_obj.get((node1.node_name, node2.node_name)) is not None:
-                raise ValueError('An edge between these nodes already exists')
             self.add_edge(node1.node_name, node2.node_name)
             self.edge_obj[(node1.node_name, node2.node_name)] = edge_obj
 
@@ -77,8 +63,8 @@ class OptimisationGraph(Graph):
         else:
             add_single_edge(edge)
 
-    def connect_ports_and_create_edge(self, port1, port2, edge_name=None):
-        e = Edge(vertices=(port1, port2), edge_name=edge_name)
+    def connect_ports_and_create_edge(self, port1, port2):
+        e = Edge(vertices=(port1, port2))
         self.add_edge_obj(e)
 
     def connect_two_nodes_create_edges_create_ports(self, node1, node2):
@@ -104,7 +90,7 @@ class OptimisationGraph(Graph):
             for _, p in node.ports.items():
                 if port == p:
                     return node
-        raise ConfigurationError('Port is not part of any node, or node has not been added to graph.')
+        raise ConfigurationError('Port is not part of any node.')
 
     def get_ports_on_edge_from_nodes(self, node1, node2):
         """ Gets the ports that are on the edge from node1 to node2. """
@@ -152,8 +138,6 @@ class OptimisationGraph(Graph):
 
     def create_path_objects(self, sources, sinks, regularise=False):
         """ Creates path objects according to source/sink lists provided."""
-        warnings.warn('Path tracing is still experimental. If you are generating paths to use path tariffs, '
-                      'please consider whether you can convert these tariffs to point/port tariffs.')
         all_paths = {}
         for source_node in sources:
             for sink_node in sinks:
@@ -176,62 +160,6 @@ class OptimisationGraph(Graph):
         self.paths = all_paths
         self.verify_paths()
 
-    def apply_path_constraints(self, model):
-
-        def path_flow_rule(model, p, t):
-            a = 0
-            # Iterate through all paths in the model
-            for _, path in self.paths.items():
-                # If the path starts at the current node
-                if path.vertices[0] is current_node_name:
-                    # Add the flow value
-                    a += getattr(model, path.flow_value)[p, t]
-                # If the path ends at the current node
-                if path.vertices[-1] is current_node_name:
-                    # Subtract the flow value
-                    a -= getattr(model, path.flow_value)[p, t]
-            # Enforce that flows out minus flows in = -1 * port
-            return a == getattr(model, current_port.port_name)[p, t] * -1
-
-        def only_inflow_or_outflow_one(model, p, t):
-            a = 0
-            for _, path in self.paths.items():
-                if path.vertices[-1] is current_node_name:
-                    a += getattr(model, path.flow_value)[p, t]
-            return a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM
-
-        def only_inflow_or_outflow_two(model, p, t):
-            a = 0
-            for _, path in self.paths.items():
-                if path.vertices[0] is current_node_name:
-                    a += getattr(model, path.flow_value)[p, t]
-            return a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.bigM
-
-        sources_and_sinks = self.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
-        for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
-            # get the node obj
-            current_node_obj = self.node_obj[current_node_name]
-            for path_vertices, path_obj in self.paths.items():  # Iterate through all paths
-                if current_node_name is path_vertices[0]:  # If we find a path where the current node is the first node on that path
-                    current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
-                elif current_node_name is path_vertices[
-                    -1]:  # If we find a path where the current node is the last node on that path
-                    current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
-
-            setattr(model, f"path_flow_con1_{current_node_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=path_flow_rule))
-
-            # Create an indicator var for when there are flows into a node
-            current_node_obj.inflow = f"inflow_{current_node_name}"
-            setattr(model, current_node_obj.inflow, en.Var(model.Expansion, model.Time, initialize=0,
-                                                                domain=en.Binary))
-
-            setattr(model, f"path_flow_con2_{current_node_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_one))
-
-            setattr(model, f"path_flow_con3_{current_node_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_two))
-
     def draw(self, with_labels=False, labels=None):
         """
         Draws the network with or without node labels
@@ -248,10 +176,6 @@ class OptimisationGraph(Graph):
             for p_name, p_object in n_object.ports.items():
                 print('  port_name: ', p_name)
 
-    def print_port_names(self):
-        for n in self.node_obj.values():
-            for pn, p in n.ports.items():
-                print(pn, ', ', p.port_name)
 
 class ConfigurationError(Exception):
     pass
@@ -377,7 +301,7 @@ class Port(BaseModel):
                 en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()  # Fix the variable we just created - equivalent to setting it as an 'en.Param'
+            getattr(model, self.port_name).fix()
 
         # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
@@ -410,7 +334,7 @@ class Port(BaseModel):
                         en.Var(initialize=0, domain=en.NonPositiveReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
             else:
-                set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
+                set_var_bounds_from_dict(model, self.port_name, ub=import_constraint_dict, lb=None)
 
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             con_name = 'export_con_' + self.port_name
@@ -427,7 +351,7 @@ class Port(BaseModel):
                         en.Var(initialize=0, domain=en.NonNegativeReals))
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
             else:
-                set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
+                set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
 
         if self.active_periods is not None:
             def on_off_rule1(model, p, t):
@@ -530,7 +454,7 @@ class Node(BaseModel):
     this allows transformations to be implemented.
     """
     node_name: Optional[str]
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    uid: Optional[uuid.UUID]
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
@@ -540,8 +464,9 @@ class Node(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.node_name is None:
-            self.node_name = 'node_' + str(self.uid)
+        self.uid = uuid.uuid4()
+        self.node_name = 'node_' + str(
+            self.uid)  # we define the node uid and name like this so that the user can redefine them if desired.
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
@@ -574,32 +499,24 @@ class Node(BaseModel):
             transformation_obj: Transform
         """
         self.transformations[transformation_obj.uid] = transformation_obj
-        self.node_rule = NodeRule.Transform
-
-    def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
-        t = Transform()
-        t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
-        t.add_rhs_term(var=input_port, rule=TransformRule.Both, weight=input_weight)
-        self.add_transformation(t)
 
     def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
         """ Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
-            carbon_port: port object that represents carbon flows out of the node
-            emission_factor: a ratio = emissions generated/emitting unit generated (float), or an array of values
+            carbon_port: port object that represents carbon flows
+            emission_factor: a ratio = emissions generated/emitting unit generated (float)
         """
         # Create appropriate transformation
         t = Transform()
-        t.add_lhs_term(carbon_port, TransformRule.NegativeComponent, 1)
+        if carbon_port not in self.ports.values():
+            self.ports['CO2'] = carbon_port
+        t.add_lhs_term(carbon_port, TransformRule.Both, 1)
         t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
 
     def verify_node(self):
-        if bool(self.ports) is False:
-            raise ConfigurationError('A node must have at least one port.')
-
         if self.node_rule is NodeRule.NA and len(self.ports) > 1:
             raise ConfigurationError('NodeRule cannot be NA if node has more than one port.')
 
@@ -627,14 +544,7 @@ class Node(BaseModel):
                 expr = 0
                 for term in x:
                     transform_rule = term['rule']
-                    #todo make this less hacky, this is a fix for marginal emission factors
-                    if hasattr(term['weight'], '__iter__'):
-                        if len(model.Time) == len(term['weight']):
-                            weight = term['weight'][t]
-                        else:
-                            raise ValueError('Weight/factor in transformation {} has inconsistent length with model time intervals.'.format(current_transform))
-                    else:
-                        weight = term['weight']
+                    weight = term['weight']
                     var = term['var']
                     if transform_rule is TransformRule.Both:
                         expr += getattr(model, var.port_name)[p, t] * weight
@@ -667,7 +577,7 @@ class Edge(BaseModel):
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
     """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     edge_name: Optional[str] = None
     opt_type: int = OptimisationType.NA
     vertices: tuple
@@ -678,8 +588,9 @@ class Edge(BaseModel):
         if self.edge_name is None:
             self.edge_name = 'edge_' + str(self.uid)
 
+
     def add_vertices(self, obj1, obj2):
-        """ Adds edge vertices (which are ports on nodes)
+        """ Adds edge vertices (which are ports)
         Args:
             obj1: port object
             obj2: port object
@@ -824,7 +735,15 @@ class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
     node_rule = NodeRule.Tellegen
 
-    tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+    def verify_node(self):
+        # Check that all ports on the node have the same units
+        u = None
+        for p in self.ports.values():
+            if u is not None:
+                assert p.units == u, 'Tellegen node ports must have the same units.'
+            else:
+                u = p.units
+
 
 class FlexPort(Port):
     """ Flexible port """
@@ -833,22 +752,15 @@ class FlexPort(Port):
     export_constraint = FlowConstraint.NoConstraint
     opt_type = OptimisationType.Variable
 
-class FlexPortImport(FlexPort):
-    """ Flexible port, imports only"""
-    flows = Flows.Import
-
-class FlexPortExport(FlexPort):
-    """ Flexible ports, exports only"""
-    flows = Flows.Export
 
 class Source(Port):
     """ A source of a commodity. """
     flows: int = Flows.Export
     opt_type: int = OptimisationType.Parameter
-    export_constraint = FlowConstraint.NoConstraint
 
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
+
 
 class Sink(Port):
     """ The sink for a commodity. """
@@ -856,13 +768,17 @@ class Sink(Port):
     opt_type = OptimisationType.Parameter
     import_constraint = FlowConstraint.NoConstraint
 
-    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load) # Sink should have non negative initial values
+    # Sink should have non negative initial values
+    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load)
 
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
     def add_sink_profile_from_array(self, array, expansion_periods=1):
-        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        self.add_initial_value(vals)
+
 
 class Storage(Port):
     """ Storage for a commodity. """
@@ -879,7 +795,7 @@ class Storage(Port):
     discharging_efficiency: float = 1
     initial_state_of_charge: float
     fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
+    storage_capacity_cost: Optional[float]
     var_opex: float = 0.
     regularise: bool = False
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
@@ -892,9 +808,10 @@ class Storage(Port):
     # All our optional fields/fields created when building pyomo model
     soc_value: Optional[str]
     optimised_capacity: Optional[str]
-    trip_slack: Optional[Union[ArrayType, list]] #todo fix this?
+    trip_slack: Optional[Union[ArrayType, list]]
     cons_slack: Optional[str]
     trip_slack: Optional[str]
+    optimised_capacity: Optional[str]
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
@@ -1028,16 +945,14 @@ class Storage(Port):
 
         return objective
 
+
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
 
+
 class ControlledLoadOrGen(FlexPort):
-    """
-    A controlled load or generation has a max/min power, as well as a max/min utilisation.
-    Min utilisation is the ratio between the minimum energy consumed/generated, and the maxinimum energy that could be consumed/generated if the port operated at max power.
-    Max utilisation is the ratio between the maximum energy consumed/generated, and the maximum energy that could be consumed/generated if the port operated at max power.
-    """
-    # todo review this model
+    """ A controlled load or generation has a max/min power, as well as a max/min utilisation.
+    The load/generation must be operated within the min and max utilisation (per time unit). """
     min_utilisation: Union[float, None] = None  # Per time unit (minute)
     max_utilisation: float = None
     max_power: float = None
@@ -1073,69 +988,17 @@ class ControlledLoadOrGen(FlexPort):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
+
 class ControlledLoad(ControlledLoadOrGen):
     max_power: confloat(ge=0)
     min_power: confloat(ge=0)
     flows = Flows.Import
 
+
 class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
     min_power: confloat(le=0)
     flows = Flows.Export
-
-class OffOrConstrainedPort(FlexPort):
-    """ A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
-    lower_bound: float
-    upper_bound: float
-
-    bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
-
-    def initialise_port(self, model):
-        super(OffOrConstrainedPort, self).initialise_port(model)
-        # Define an on/off variable
-        self.active = 'active_' + self.port_name
-        setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-
-        # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
-        def on_off_constraint1(model, p, t):
-            return getattr(model, self.port_name)[p, t] >= getattr(model, self.active)[p, t] * self.lower_bound
-
-        def on_off_constraint2(model, p, t):
-            return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * self.upper_bound
-
-        setattr(model, 'on_off1_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint1))
-        setattr(model, 'on_off2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint2))
-
-class BoundedPort(FlexPort):
-    """ A flex port with an upper and lower bound"""
-    upper_bound: Union[ArrayType, float]
-    lower_bound: Union[ArrayType, float]
-
-    bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
-
-    def initialise_port(self, model):
-        super(BoundedPort, self).initialise_port(model)
-        # Need to set bounds on our port variable
-        ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
-        lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
-        set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
-
-class BoundedLoad(BoundedPort):
-    """ A port where the load has to be within a max and min value which is specified at each timestep."""
-    import_constraint = FlowConstraint.NoConstraint
-
-    # Do additional validation to make sure both bounds are >= 0
-    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
-    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
-
-    def initialise_port(self, model):
-        super(BoundedLoad, self).initialise_port(model)
-
-class FixedPort(Port):
-    opt_type = OptimisationType.Parameter
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
 
 
 """
@@ -1144,26 +1007,15 @@ class FixedPort(Port):
 
 """
 
+
 class ElectricalNode(Node):
     units = Units.KW
+
 
 class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
     units = Units.KW
     import_constraint = FlowConstraint.NoConstraint
-    # Load shedding attributes
-    can_be_shed: Optional[bool] = False # Attribute for determining whether a load can be shed (ie set to 0 for some period)
-    shed_cost: Optional[ArrayType] = None # cost for load shedding, cost per time unit that shedding occurs
-    #todo should make this the analogue of curtailable generation? or not
-
-    # Pyomo vars/params
-    is_off: Optional[str]
-
-    shed_cost_check = validator("shed_cost", allow_reuse=True)(nonnegative_costs)
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.is_off = 'shed_' + self.port_name
 
     def add_demand_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
@@ -1175,27 +1027,6 @@ class ElectricalDemand(Sink):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
-    def initialise_port(self, model):
-        super(ElectricalDemand, self).initialise_port(model)
-
-        if self.can_be_shed is True:
-            # Need to unfix our demand to allow the optimiser to decide new demand values
-            var = getattr(model, self.port_name)
-            var.unfix()
-            setattr(model, self.is_off, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-
-            # Additional constraint that sets load = 0 when load shedding is occurring
-            def shed_rule(model, p, t):
-                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * (1 - getattr(model, self.is_off)[p, t])
-
-            setattr(model, f"shedding_con_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule))
-
-
-    def add_objective(self, model):
-        objective = 0
-        if self.can_be_shed is True:
-            objective += sum(getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
-        return objective
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
@@ -1219,18 +1050,21 @@ class ElectricalGeneration(Source):
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
             # Constrain solar gen to be within initial value (max value)
-            set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
 
 class ElectricalStorage(Storage):
     units = Units.KW
+
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
     units = Units.KW
 
+
 class FixedElectricalPort(ElectricalPort):
     """ An electrical port with fixed values (parameters)."""
     opt_type = OptimisationType.Parameter
+
 
 class Inverter(ElectricalNode):
     """ An inverter is a node with one AC port and at least one DC port.
@@ -1241,7 +1075,7 @@ class Inverter(ElectricalNode):
     ac_dc_efficiency: confloat(ge=0, le=1)
     dc_ports: Optional[dict] = {}
     ac_port_name: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
-    node_rule = NodeRule.Custom
+    node_rule: int = NodeRule.Custom
 
     def add_dc_port(self, port_name):
         p = ElectricalPort()
@@ -1274,7 +1108,6 @@ class Inverter(ElectricalNode):
             port.constrain_pos_neg(model)
 
         def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
-            # todo update this, don't need to split dc ports into pos/neg
             dc_pos = 0
             dc_neg = 0
             for dc_port in self.dc_ports.values():
@@ -1287,6 +1120,7 @@ class Inverter(ElectricalNode):
         ac_port = self.ports[self.ac_port_name]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
+
 
 class EV(ElectricalNode):
     charge_mode: str = None
@@ -1417,8 +1251,6 @@ class EV(ElectricalNode):
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
-class BoundedElectricalLoad(BoundedLoad):
-    units = Units.KW
 
 """
 
@@ -1426,34 +1258,256 @@ class BoundedElectricalLoad(BoundedLoad):
 
 """
 
-class CarbonPort(FlexPort):
-    """ A flexible carbon port"""
+
+class CarbonSource(Port):
+    """ For doing carbon emissions from an asset (node) """
+    flows = Flows.Export
+    export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
     units = Units.CO2
 
-class CarbonSource(CarbonPort):
-    """ A variable source of CO2 """
-    flows = Flows.Export
 
-class CarbonSink(CarbonPort):
-    """ A variable sink of CO2 """
+class CarbonSink(Port):
+    """ For sinking carbon emissions into an aggregation node """
     flows = Flows.Import
+    import_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+    units = Units.CO2
+
 
 class CarbonAggregation(Node):
+    sum: Optional[BaseModel]
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        aggregation_port = CarbonSink()
+        self.ports['sum'] = aggregation_port
+        setattr(self, 'sum', aggregation_port)
 
-    def add_aggregation_transformation(self, sum_port_name: str):
-        assert self.ports.get(sum_port_name) is not None, 'Sum port has not been defined as a port on this node.'
+    def add_aggregation_transformation(self):
         # Create appropriate transformation
         t = Transform()
-        # Collect all our other port variables
         for port_name, port_obj in self.ports.items():
-            if port_name != sum_port_name:
+            if port_name != 'sum':
                 t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
-        t.add_rhs_term(self.ports[sum_port_name], TransformRule.PositiveComponent, 1)
+        t.add_rhs_term(self.ports['sum'], TransformRule.PositiveComponent, 1)
         self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
+        self.add_aggregation_transformation()
         super(CarbonAggregation, self).verify_node()
 
+
+class CarbonSinkNode(Node):
+    node_rule = NodeRule.Custom
+
+    def verify_node(self):
+        for port in self.ports.values():
+            if port.units is not Units.CO2:
+                raise ConfigurationError('All ports on carbon sink node must have carbon units.')
+
+
+""""
+
+    Below Zero assets
+
+"""
+
+
+class GasBoiler(Node):
+    """ Gas boiler converts gas to heat at a fixed COP."""
+    gas_to_heat_efficiency: float
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        self._create_input_port()
+        self._create_output_port()
+        self.add_boiler_transformation(self.ports['gas'], self.ports['heat'], self.gas_to_heat_efficiency)
+
+    def _create_input_port(self):
+        gp = GasPort()
+        gp.flows = Flows.Import
+        self.ports['input'] = gp
+
+    def _create_output_port(self):
+        tp = ThermalPort()
+        tp.flows = Flows.Export
+        self.ports['output'] = tp
+
+    def add_boiler_transformation(self, gas_port, heat_port, gas_to_heat_efficiency):
+        # Create appropriate transformation
+        t = Transform()
+        t.add_lhs_term(heat_port, TransformRule.NegativeComponent, -1)
+        t.add_rhs_term(gas_port, TransformRule.PositiveComponent, gas_to_heat_efficiency)
+        self.add_transformation(t)
+        self.node_rule = NodeRule.Transform
+
+
+class InputOutputPiecewiseNode(Node):
+    """ A node with one input and one output.
+     The transformation between input and output is defined by an array of input and output pts,
+     which are used to construct a linear piecewise function.
+     Alternatively, the transformation can be defined by an array of coefficients of a polynomial function."""
+    node_rule = NodeRule.Custom
+    max_input: confloat(ge=0.)
+    max_output: confloat(le=0.)
+    input_pts: Optional[dict]
+    output_pts: Optional[dict]
+    temp_coef: Optional[ArrayType]
+    input_coef: Optional[ArrayType]
+    n_pts: Optional[int] = 5
+    temperature_array: Optional[ArrayType]  # temperature time series
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.temp_coef is not None:
+            assert self.temperature_array is not None, 'if using temperature coefficients please enter temperature array'
+
+    def set_input_output_breakpoints(self, input_array, output_array, time_periods, expansion_periods=1):
+        self._validate_input_output_breakpoints(input_array, output_array)
+        self._add_input_pts_from_array(input_array, time_periods, expansion_periods)
+        self._add_output_pts_from_array(output_array, time_periods, expansion_periods)
+
+    def _validate_input_output_breakpoints(self, input_array, output_array):
+        assert len(input_array) == len(output_array), 'input and output arrays should be same length.'
+        if (min(input_array) > 0) or (max(input_array) < self.max_input):
+            print('Input breakpoints should ideally be defined over the entire input range.')
+        if (min(output_array) > self.max_output) or (max(output_array) < 0):
+            print('Output breakpoints should ideally be defined over the entire output range.')
+
+    def _add_input_pts_from_array(self, array, time_periods, expansion_periods):
+        self.input_pts = add_time_and_expansion_index_to_values(array, time_periods, expansion_periods)
+
+    def _add_output_pts_from_array(self, array, time_periods, expansion_periods):
+        self.output_pts = add_time_and_expansion_index_to_values(array, time_periods, expansion_periods)
+
+    def add_input_port(self, port_unit, slack=False):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Import
+        p.import_constraint = FlowConstraint.Fixed
+        p.set_flow_constraints(max_import=self.max_input, max_export=0., slack=slack)
+        self.ports['input'] = p
+
+    def add_output_port(self, port_unit, slack=False):
+        p = FlexPort()
+        p.units = port_unit
+        p.flows = Flows.Export
+        p.export_constraint = FlowConstraint.Fixed
+        p.set_flow_constraints(max_import=0., max_export=self.max_output, slack=slack)
+        self.ports['output'] = p
+
+    def initialise_node(self, model):
+        """ Creating and modifying variables """
+        super(InputOutputPiecewiseNode, self).initialise_node(model)
+        if self.temp_coef is not None:
+            # Create x and y points for piecewise function from coefficient array
+            x = np.linspace(0, self.max_input, self.n_pts)
+            if self.input_pts is not None:
+                print('Input points have already been specified, overwriting.')
+            if self.output_pts is not None:
+                print('Output points have already been specified, overwriting.')
+            self.input_pts, self.output_pts = create_input_output_pts_from_coefficients(temp_coef=self.temp_coef,
+                                                                                        input_coef=self.input_coef,
+                                                                                        temperature_array=self.temperature_array,
+                                                                                        xpts=x,
+                                                                                        time_periods=len(model.Time))
+
+        # Bound our input and output variables
+        set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.max_input, lb=0.)
+        set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=0., lb=self.max_output)
+
+    def apply_node_constraints(self, model):
+
+        # Get our input/output pyomo variables
+        xvar = getattr(model, self.ports['input'].port_name)
+        yvar = getattr(model, self.ports['output'].port_name)
+
+        # Get our piecewise points
+        xdata = self.input_pts
+        ydata = self.output_pts
+
+        # Set the piecewise function up using the variables and the data points.
+        con_name = f"piecewise_con_{self.node_name}"
+        setattr(model, con_name, en.Piecewise(model.Expansion,
+                                              model.Time,
+                                              yvar,
+                                              xvar,
+                                              pw_pts=xdata, pw_constr_type='EQ', f_rule=ydata, pw_repn='SOS2'))
+
+    def get_cop(self, optimiser):
+        """ Returns the coefficient of performance (output/input)"""
+        _input = optimiser.values(self.ports['input'].port_name)
+        _output = optimiser.values(self.ports['output'].port_name)
+        cop = np.zeros(len(_input))
+        for i in range(len(_input)):
+            cop[i] = _output[i] / _input[i]
+
+        return cop * -1
+
+
+class HeatPump(InputOutputPiecewiseNode):
+    """
+    A heat pump converts an electrical input to hot water which can be used for heating, and chilled water which can be used for cooling.
+    """
+
+
+class Chiller(InputOutputPiecewiseNode):
+    """
+    A chiller converts an electrical input to a thermal cooling output.
+    """
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.add_input_port(Units.KW)
+        self.add_output_port(Units.KWT)
+
+
+""" 
+Thermal assets
+"""
+
+
+class HeatingOrCoolingLoad(Sink):
+
+    def __init__(self):
+        super(HeatingOrCoolingLoad, self).__init__()
+        self.units = Units.KWT
+
+
+class ThermalPort(Port):
+
+    def __init__(self):
+        super(ThermalPort, self).__init__()
+        self.units = Units.KWT
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+
+
+"""
+Gas assets
+"""
+
+
+class GasPort(Port):
+
+    def __init__(self):
+        super(GasPort, self).__init__()
+        self.units = Units.JPS
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
+
+
+class GasDemand(Sink):
+
+    def __init__(self):
+        super(GasDemand, self).__init__()
+        self.units = Units.Jps
+
+    def add_demand_profile_from_array(self, array, expansion_intervals):
+        self.add_sink_profile_from_array(array, expansion_intervals)
