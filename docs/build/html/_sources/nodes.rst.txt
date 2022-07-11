@@ -8,7 +8,7 @@ Nodes represent physical or logical connection between edges of the network. Nod
 
 Flow tracing
 -----------------
-? What is intended to go here
+What is meant to go here?
 
 Commodity Agnostic Nodes
 -------------------------
@@ -45,6 +45,8 @@ This node has one input port and one output port. The transformation between inp
 
 **Constraints**
 
+TBC
+
 Controlled Load
 ^^^^^^^^^^^^^^^^^
 This node must be operated within a minimum and maximum utilisation, and between a minimum and maximum power/flow rate.
@@ -54,6 +56,8 @@ Min utilisation is the ratio between the minimum energy consumed, and the maxini
 Max utilisation is the ratio between the maximum energy consumed, and the maximum energy that would be consumed if the load operated at max power.
 
 **Constraints**
+
+TBC
 
 Controlled Generation
 ^^^^^^^^^^^^^^^^^^^^^
@@ -80,43 +84,82 @@ Solar
 
 EV
 ^^^^^^^^^^^^^
+The EV node can be used to model the charging (and discharging) while ensuring that the EV has
+enough available charge to meet its trip requirements. The EV node requires the following data:
 
-An EV node has three ports. One to connect to the grid, one representing the battery (i.e., a storage port), and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined. Only EV specific additional parameters are defined below.
+* ``available`` (:math:`t^{available}`): An array representing the periods which the EV is plugged in and available for charging. 1=available to charge, 0=not available.
+* ``usage`` (:math:`p^{usage}`): An array representing the average power (kW) consumption from driving of the EV during a time period.
 
-**Variables**
+Both usage and available should have the same length and importantly available should be zero whenever usage has a value
+greater than zero (i.e. if the car is in use driving it is not available to charge).
 
-:math:`p^{cp}`, connection point port
-:math:`p^{battery}`, battery port
-:math:`p^{trip}`, trip usage port
+The EV can be specified to charge in 3 different modes. This is controlled by setting ``charge_mode`` to one of 'V0G', 'V1G' or 'V2G'
+which are defined as:
 
+* V0G: non-optimised convenience or time of day charging. Whenever the car is available it will charge at it's maximum charging power until full. Alternative, a time-of-day array can be supplied specifying certain time periods during which charging is allowed.
+* V1G: optimised uni-directional charging (grid to vehicle only). The car is charged from the upstream grid in a way that optimises the objectives of the model.
+* V2G: optimised bi-directional charging (grid to vehicle and vehicle to grid). The car charges and discharges from and to the upstream grid in a way that optimises the model objectives.
+
+An example of initialising an EV node is
+
+.. code-block::
+
+    available = np.array([1] * 24 + [0] * 24)    # bool when at charger
+    usage = np.array([0.0]*24 + [5]*24)        # kw average during use
+
+    ev_cp = EV(charge_mode='V2G',
+                   available=available,
+                   usage=usage,
+                   connection_port_name='cp',
+                   max_capacity=40,
+                   depth_of_discharge_limit=0,
+                   charging_power_limit=10,
+                   discharging_power_limit=-10,
+                   charging_efficiency=1,
+                   discharging_efficiency=1,
+                   initial_state_of_charge=0,
+                   soc_conserv=None,
+                   soc_conserv_cost=0.,
+                   interval_duration=30.,
+                   tod_charging=False,
+                   trip_slack=True)
+
+
+The EV node operates similar to a battery with a built in load (usage) and only certain times during which it can charge (the available).
+Hence, the EV node has three ports: one to connect to the grid, one representing the battery (i.e., a storage port),
+and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined.
+Only EV specific additional parameters/variables are defined below.
 
 **Parameters**
 
-:math:`p^{available}`, the availability of the EV for charging
-:math:`p^{usage}`, the usage of the EV on a trip, in kW average per time period.
+* ``SOC_conserv`` (:math:`L^{\text{conserv}}`): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while p^{available}=1).
+* ``SOC_conserv_cost (``:math:`C^\text{conserv}`): The cost placed on going below the conservative state of charge limit ($/kWh). That is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining) more money than this cost. Warning, this cost will be incorrectly over represented in the objective cost as it will be applied whenever the car was plugged back in below :math:`C^\text{conserv}`.
+* ``trip_slack``: A boolean enabling or disabling slack trips (recommended=True). If enabled, then any trips that require more than the available energy will be assumed to have charged at a public charger and the optimisation will still succeed and be considered feasible. The cost on this public charging is by default very high and so will be treated as a last resort by the optimisation solver. It is recommended that this is True in case the data contains any infeasible trips.
+* ``tod_charging``: Time of day charging. An array or list if enabled, otherwise false. Time of day charging allows the EV to charge only during certain time windows (1=allowed, 0=not allowed). This is because customers might not want to charge during peak windows and would most commonly be used with V0G charging.
 
-:math:`p^{trip-slack}`, slack variable for the trip consumption
-:math:`p^{conserv}`, conservative state of charge limit (i.e., soc lower bound while p^{available}=1)
+**Variables**
+
+* :math:`p^\text{cp}`: connection point port power (kW).
+* :math:`p^\text{battery}`: battery port port (kW).
+* :math:`p^\text{trip}`: trip usage port power (kW).
+* :math:`S^\text{trip}`: value of the trip slack variable (kWH). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.
+* :math:`S^\text{conserv}`: Value of a slack variable required for the implementation of the conservative lower limit.
 
 **Constraints**
 
-\begin{align}
-   p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}
-\end{align}
+Balance of power across ports:
 
-\textbf{Optional Constraints:}
+:math:`p^\text{battery}_{x, t} = p^\text{cp}_{x, t} - p^\text{trip}_{x, t}`
 
-If trip slack is enabled:
+The modified battery state of charge equations accounting for the trip slack variable (if ``trip_slack=True``):
 
-\begin{align}
-   p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}
-\end{align}
+:math:`E_{x, t} = E_{x,t-1} + \eta^\text{charge} p^{battery,+}_{x,t} d^{interval} + p^{battery, -}_{x,t} \frac{d^\text{interval}}{\eta^\text{discharge}} + S^\text{trip}_{x,t}`
 
-If conservative state of charge is enabled:
+Conservative state of charge lower limit (if ``SOC_conserv is not None``):
 
-\begin{align}
-   p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}
-\end{align}
+:math:`\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - C^\text{conserv} >=0`
+
+
 
 
 Inverter

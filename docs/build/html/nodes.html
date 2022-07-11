@@ -133,7 +133,7 @@
 </ul>
 <section id="flow-tracing">
 <h2>Flow tracing<a class="headerlink" href="#flow-tracing" title="Permalink to this heading"></a></h2>
-<p>? What is intended to go here</p>
+<p>What is meant to go here?</p>
 </section>
 <section id="commodity-agnostic-nodes">
 <h2>Commodity Agnostic Nodes<a class="headerlink" href="#commodity-agnostic-nodes" title="Permalink to this heading"></a></h2>
@@ -165,6 +165,7 @@
 <h3>Piecewise Input Output Node<a class="headerlink" href="#piecewise-input-output-node" title="Permalink to this heading"></a></h3>
 <p>This node has one input port and one output port. The transformation between input and output is defined by a piecewise function that approximates a nonlinear relationship. This node is useful for approximating generic nonlinear transformations where the transformation is known or can be precalculated.</p>
 <p><strong>Constraints</strong></p>
+<p>TBC</p>
 </section>
 <section id="controlled-load">
 <h3>Controlled Load<a class="headerlink" href="#controlled-load" title="Permalink to this heading"></a></h3>
@@ -172,6 +173,7 @@
 <p>Min utilisation is the ratio between the minimum energy consumed, and the maxinimum energy that would be consumed if the load operated at max power.</p>
 <p>Max utilisation is the ratio between the maximum energy consumed, and the maximum energy that would be consumed if the load operated at max power.</p>
 <p><strong>Constraints</strong></p>
+<p>TBC</p>
 </section>
 <section id="controlled-generation">
 <h3>Controlled Generation<a class="headerlink" href="#controlled-generation" title="Permalink to this heading"></a></h3>
@@ -191,35 +193,69 @@
 </section>
 <section id="ev">
 <h3>EV<a class="headerlink" href="#ev" title="Permalink to this heading"></a></h3>
-<p>An EV node has three ports. One to connect to the grid, one representing the battery (i.e., a storage port), and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined. Only EV specific additional parameters are defined below.</p>
-<p><strong>Variables</strong></p>
-<p><span class="math notranslate nohighlight">\(p^{cp}\)</span>, connection point port
-<span class="math notranslate nohighlight">\(p^{battery}\)</span>, battery port
-<span class="math notranslate nohighlight">\(p^{trip}\)</span>, trip usage port</p>
+<p>The EV node can be used to model the charging (and discharging) while ensuring that the EV has
+enough available charge to meet its trip requirements. The EV node requires the following data:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">available</span></code> (<span class="math notranslate nohighlight">\(t^{available}\)</span>): An array representing the periods which the EV is plugged in and available for charging. 1=available to charge, 0=not available.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">usage</span></code> (<span class="math notranslate nohighlight">\(p^{usage}\)</span>): An array representing the average power (kW) consumption from driving of the EV during a time period.</p></li>
+</ul>
+<p>Both usage and available should have the same length and importantly available should be zero whenever usage has a value
+greater than zero (i.e. if the car is in use driving it is not available to charge).</p>
+<p>The EV can be specified to charge in 3 different modes. This is controlled by setting <code class="docutils literal notranslate"><span class="pre">charge_mode</span></code> to one of ‘V0G’, ‘V1G’ or ‘V2G’
+which are defined as:</p>
+<ul class="simple">
+<li><p>V0G: non-optimised convenience or time of day charging. Whenever the car is available it will charge at it’s maximum charging power until full. Alternative, a time-of-day array can be supplied specifying certain time periods during which charging is allowed.</p></li>
+<li><p>V1G: optimised uni-directional charging (grid to vehicle only). The car is charged from the upstream grid in a way that optimises the objectives of the model.</p></li>
+<li><p>V2G: optimised bi-directional charging (grid to vehicle and vehicle to grid). The car charges and discharges from and to the upstream grid in a way that optimises the model objectives.</p></li>
+</ul>
+<p>An example of initialising an EV node is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">available</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">24</span><span class="p">)</span>    <span class="c1"># bool when at charger</span>
+<span class="n">usage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span><span class="o">*</span><span class="mi">24</span> <span class="o">+</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">*</span><span class="mi">24</span><span class="p">)</span>        <span class="c1"># kw average during use</span>
+
+<span class="n">ev_cp</span> <span class="o">=</span> <span class="n">EV</span><span class="p">(</span><span class="n">charge_mode</span><span class="o">=</span><span class="s1">&#39;V2G&#39;</span><span class="p">,</span>
+               <span class="n">available</span><span class="o">=</span><span class="n">available</span><span class="p">,</span>
+               <span class="n">usage</span><span class="o">=</span><span class="n">usage</span><span class="p">,</span>
+               <span class="n">connection_port_name</span><span class="o">=</span><span class="s1">&#39;cp&#39;</span><span class="p">,</span>
+               <span class="n">max_capacity</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+               <span class="n">depth_of_discharge_limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+               <span class="n">charging_power_limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+               <span class="n">discharging_power_limit</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span>
+               <span class="n">charging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+               <span class="n">discharging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+               <span class="n">initial_state_of_charge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+               <span class="n">soc_conserv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">soc_conserv_cost</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>
+               <span class="n">interval_duration</span><span class="o">=</span><span class="mf">30.</span><span class="p">,</span>
+               <span class="n">tod_charging</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">trip_slack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The EV node operates similar to a battery with a built in load (usage) and only certain times during which it can charge (the available).
+Hence, the EV node has three ports: one to connect to the grid, one representing the battery (i.e., a storage port),
+and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined.
+Only EV specific additional parameters/variables are defined below.</p>
 <p><strong>Parameters</strong></p>
-<p><span class="math notranslate nohighlight">\(p^{available}\)</span>, the availability of the EV for charging
-<span class="math notranslate nohighlight">\(p^{usage}\)</span>, the usage of the EV on a trip, in kW average per time period.</p>
-<p><span class="math notranslate nohighlight">\(p^{trip-slack}\)</span>, slack variable for the trip consumption
-<span class="math notranslate nohighlight">\(p^{conserv}\)</span>, conservative state of charge limit (i.e., soc lower bound while p^{available}=1)</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv</span></code> (<span class="math notranslate nohighlight">\(L^{\text{conserv}}\)</span>): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while p^{available}=1).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv_cost</span> <span class="pre">(</span></code><span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>): The cost placed on going below the conservative state of charge limit ($/kWh). That is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining) more money than this cost. Warning, this cost will be incorrectly over represented in the objective cost as it will be applied whenever the car was plugged back in below <span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">trip_slack</span></code>: A boolean enabling or disabling slack trips (recommended=True). If enabled, then any trips that require more than the available energy will be assumed to have charged at a public charger and the optimisation will still succeed and be considered feasible. The cost on this public charging is by default very high and so will be treated as a last resort by the optimisation solver. It is recommended that this is True in case the data contains any infeasible trips.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tod_charging</span></code>: Time of day charging. An array or list if enabled, otherwise false. Time of day charging allows the EV to charge only during certain time windows (1=allowed, 0=not allowed). This is because customers might not want to charge during peak windows and would most commonly be used with V0G charging.</p></li>
+</ul>
+<p><strong>Variables</strong></p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(p^\text{cp}\)</span>: connection point port power (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{battery}\)</span>: battery port port (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{trip}\)</span>: trip usage port power (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(S^\text{trip}\)</span>: value of the trip slack variable (kWH). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.</p></li>
+<li><p><span class="math notranslate nohighlight">\(S^\text{conserv}\)</span>: Value of a slack variable required for the implementation of the conservative lower limit.</p></li>
+</ul>
 <p><strong>Constraints</strong></p>
-<dl class="simple">
-<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
-</dd>
-</dl>
-<p>end{align}</p>
-<p>textbf{Optional Constraints:}</p>
-<p>If trip slack is enabled:</p>
-<dl class="simple">
-<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
-</dd>
-</dl>
-<p>end{align}</p>
-<p>If conservative state of charge is enabled:</p>
-<dl class="simple">
-<dt>begin{align}</dt><dd><p>p^{battery}_{x, t} = p^{cp}_{x, t} - p^{trip}_{x, t}</p>
-</dd>
-</dl>
-<p>end{align}</p>
+<p>Balance of power across ports:</p>
+<p><span class="math notranslate nohighlight">\(p^\text{battery}_{x, t} = p^\text{cp}_{x, t} - p^\text{trip}_{x, t}\)</span></p>
+<p>The modified battery state of charge equations accounting for the trip slack variable (if <code class="docutils literal notranslate"><span class="pre">trip_slack=True</span></code>):</p>
+<p><span class="math notranslate nohighlight">\(E_{x, t} = E_{x,t-1} + \eta^\text{charge} p^{battery,+}_{x,t} d^{interval} + p^{battery, -}_{x,t} \frac{d^\text{interval}}{\eta^\text{discharge}} + S^\text{trip}_{x,t}\)</span></p>
+<p>Conservative state of charge lower limit (if <code class="docutils literal notranslate"><span class="pre">SOC_conserv</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>):</p>
+<p><span class="math notranslate nohighlight">\(\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - C^\text{conserv} &gt;=0\)</span></p>
 </section>
 <section id="inverter">
 <h3>Inverter<a class="headerlink" href="#inverter" title="Permalink to this heading"></a></h3>

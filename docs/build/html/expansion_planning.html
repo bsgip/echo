@@ -77,8 +77,29 @@
              
   <section id="expansion-planning">
 <h1>Expansion planning<a class="headerlink" href="#expansion-planning" title="Permalink to this heading"></a></h1>
+<p>Expansion planning refers to decisions about <em>asset expansions</em> (whether to build new assets), <em>capacity expansions</em> (the size of new assets, or the increased capacity of existing assets), and <em>retirement planning</em> (whether to retire assets). Costs can be applied to these decisions that reflect the cost of building new assets, increasing capacity of existing assets, and retiring assets.</p>
 <section id="expansion-periods">
 <h2>Expansion periods<a class="headerlink" href="#expansion-periods" title="Permalink to this heading"></a></h2>
+<p>In echo, expansion planning is implemented using a planning interval, which is distinct from the time intervals over which operational decisions are made. For example, time intervals might be in 1 hr increments, while planning intervals might be in increments of years.</p>
+</section>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Permalink to this heading"></a></h2>
+<p>The user add must any potential future assets and installation costs to the network before optimisation. They therefore specify where in the network these assets might be located. They then must specify parameters such as:</p>
+<ul class="simple">
+<li><p>Maximum number of new assets per planning period, or over the entire optimisation window</p></li>
+<li><p>Maximum number of assets retired per planning period, or over the entire optimisation window</p></li>
+<li><p>Whether the assets have fixed parameters (e.g., fixed storage capacity for a battery), or whether these attributes are able to be optimised against some cost per unit capacity.</p></li>
+</ul>
+</section>
+<section id="asset-expansions">
+<h2>Asset Expansions<a class="headerlink" href="#asset-expansions" title="Permalink to this heading"></a></h2>
+</section>
+<section id="capacity-expansion">
+<h2>Capacity Expansion<a class="headerlink" href="#capacity-expansion" title="Permalink to this heading"></a></h2>
+</section>
+<section id="asset-retirement">
+<h2>Asset Retirement<a class="headerlink" href="#asset-retirement" title="Permalink to this heading"></a></h2>
+<p>Assets have a lifetime that is defined in planning period intervals (e.g., years). At the end of their lifetime, assets must either be replaced or retired. Replacement resets the lifetime of the asset to its nominal lifetime, allowing the asset to continue to be operated. Retirement means that the asset ceases to operate for all subsequent expansion periods. Appropriate costs can be applied to retirement/replacement decisions.</p>
 </section>
 </section>
 

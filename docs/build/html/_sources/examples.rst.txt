@@ -11,6 +11,8 @@ Example scripts
 
    example.btm
 
+   example.builder
+
 
 
 

@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -87,9 +88,19 @@
 Ports are associated with an individual commodity and represent the flow of the that commodity into or out of a node.</p>
 <section id="port-variables">
 <h2>Port variables<a class="headerlink" href="#port-variables" title="Permalink to this heading"></a></h2>
+<p>All ports have at least one variable, <span class="math notranslate nohighlight">\(p_{x, t}\)</span> the port flow value.</p>
+<p>If the port needs to be split into a positive and negative component, we introduce the additional variables:</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t}^+\)</span>,  the positive component of the port flow</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t}^-\)</span>,  the negative component of the port flow</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t}^{*}\)</span>, a binary variable for indicating whether <span class="math notranslate nohighlight">\(p^+\)</span> is non-zero.</p>
+<p>The following three constraints are used to split the variable.</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t} &amp;= p^+_{x, t} + p^-_{x, t}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^+_{x, t} &amp;\leq p^*_{x, t} \cdot M\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^-_{x, t} &amp;\geq (p^*_{x, t} - 1) \cdot M\)</span></p>
 </section>
 <section id="port-validation">
 <h2>Port validation<a class="headerlink" href="#port-validation" title="Permalink to this heading"></a></h2>
+<p>What is intended to go here?</p>
 </section>
 </section>
 
