@@ -16,8 +16,8 @@ Edges represents physical flows of a single commodity between two network Nodes 
 Creating a model
 ---------------------------
 
-Creating a model using the builder (recommended)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Creating a model using echo_builder (recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Creating a model from scratch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
