@@ -5,3 +5,6 @@
 .eggs
 dist
 echo.egg-info
+/build/
+/build/lib/
+/build/lib/echo/
