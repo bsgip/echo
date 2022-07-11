@@ -1,3 +1,10 @@
+"""
+
+Configuration classes
+
+"""
+
+
 class Units(object):
     """ The units in which the optimisation is undertaken. """
 
@@ -55,19 +62,24 @@ class ExpansionType(object):
     Edge = 3
 
 class NodeType(object):
-    Flex = 'flex'
-    Tellegen = 'tellegen'
+    ElectricalFlex = 'electrical_flex'
+    ElectricalTellegen = 'elec_tellegen'
+    MultiCommodityTellegen = 'multi_commodity_tellegen'
     Battery = 'battery'
-    Load = 'load'
-    Generation = 'gen'
+    ElectricalLoad = 'load'
+    ElectricalGeneration = 'elec_gen'
     Solar = 'solar'
     EV = 'ev'
+    V0GEV = 'v0g_ev'
+    V1GEV = 'v1g_ev'
+    V2GEV = 'v2g_ev'
     Inverter = 'inverter'
     Chiller = 'chiller'
-    Boiler = 'boiler'
-    ControlledLoad = 'cload'
-    ControlledGen = 'cgen'
-    FixedPort = 'fixed_port'
+    GasBoiler = 'gas_boiler'
+    ControlledElectricalLoad = 'cload_elec'
+    ControlledElectricalGen = 'cgen_elec'
+    FixedElectrical = 'fixed_elec'
+    FixedGas = 'fixed_gas'
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
 

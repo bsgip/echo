@@ -245,6 +245,13 @@ class OptimisationGraph(Graph):
             for pn, p in n.ports.items():
                 print(pn, ', ', p.port_name)
 
+    def export_as_network_dict(self):
+        d = {}
+        for n_name, n_obj in self.node_obj.items():
+            n_dict = {n_name:
+                          {'id': n_name,
+                           'type': type(n_obj)}}
+
 class ConfigurationError(Exception):
     pass
 
@@ -1433,20 +1440,60 @@ class CarbonSink(CarbonPort):
 
 class CarbonAggregation(Node):
 
+
+    # Pyomo vars
+    total: Optional[str]
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
-
-    def add_aggregation_transformation(self, sum_port_name: str):
-        assert self.ports.get(sum_port_name) is not None, 'Sum port has not been defined as a port on this node.'
-        # Create appropriate transformation
-        t = Transform()
-        # Collect all our other port variables
-        for port_name, port_obj in self.ports.items():
-            if port_name != sum_port_name:
-                t.add_lhs_term(port_obj, TransformRule.PositiveComponent, 1)
-        t.add_rhs_term(self.ports[sum_port_name], TransformRule.PositiveComponent, 1)
-        self.add_transformation(t)
+        self.total = 'total_CO2_' + self.node_name
 
     def verify_node(self):
         super(CarbonAggregation, self).verify_node()
+
+    def initialise_node(self, model):
+        super(CarbonAggregation, self).initialise_node(model)
+        # Create a variable for the total CO2
+        setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+
+    def apply_node_constraints(self, model):
+
+        def sum_rule(model):
+            a = 0
+            for _, port in self.ports.items():
+                a += (getattr(model, port.port_name)[p, t] for p in model.Expansion for t in model.Time)
+            return getattr(model, self.total) == a
+
+        setattr(model, 'co2_sum_con_'+self.node_name, en.Constraint(rule=sum_rule))
+
+"""
+
+New nodes
+
+"""
+
+
+class Battery(Node):
+    port_name: str
+    params: dict
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports[self.port_name] = ElectricalStorage(**self.params)
+
+
+class Solar(Node):
+    port_name: str
+    curtailable: Optional[bool]
+    profile: dict
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
+        self.ports[self.port_name].add_initial_value(self.profile)
+
+
+
+
+
 
