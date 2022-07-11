@@ -93,23 +93,23 @@ class Resource:
 
 class TariffType:
     """ Tariff types"""
-    ImportTariff = 0
-    ExportTariff = 1
-    ImportDemandTariff = 2
-    ExportDemandTariff = 3
-    ThroughputCost = 4
-    PeakPosPower = 5
-    PeakNegPower = 6
-    QuadraticPower = 7
-    ContingencyPositive = 8
-    ContingencyNegative = 9
+    ImportTariff = 'import tariff'
+    ExportTariff = 'export tariff'
+    ImportDemandTariff = 'import demand tariff'
+    ExportDemandTariff = 'export demand tariff'
+    ThroughputCost = 'throughput cost'
+    PeakPosPower = 'peak positive power'
+    PeakNegPower = 'peak negative power'
+    QuadraticPower = 'quadratic power'
+    ContingencyPositive = 'contingency positive'
+    ContingencyNegative = 'contingency negative'
 
 class Resets:
     """ How often something resets """
-    minute = 0
-    hourly = 1
-    daily = 2
-    weekly = 3
-    yearly = 4
+    minute = 'minute'
+    hourly = 'hourly'
+    daily = 'daily'
+    weekly = 'weekly'
+    yearly = 'annually'
 
 
