@@ -17,9 +17,9 @@ battery_params = BatteryConfig(**{'max_capacity': 15.,
                                   'discharging_power_limit': -1.25,
                                   'charging_efficiency': 1.,
                                   'discharging_efficiency': 1.,
-                                  'initial_state_of_charge': 0})
+                                  'initial_state_of_charge': 0}).dict()
 
-inverter_params = InverterConfig(ac_port='cp', dc_ports=['bess', 'pv'])
+inverter_params = InverterConfig(ac_port='cp', dc_ports=['bess', 'pv']).dict()
 
 # V2G vehicle
 v2g = {'available': 'ev_available',
@@ -35,7 +35,7 @@ v2g = {'available': 'ev_available',
        'interval_duration': interval_duration,
        'tod_charging': False}
 
-ev_params = EVConfig(**v2g)
+ev_params = EVConfig(**v2g).dict()
 
 # initialise a network
 n = Network(name='my network')
@@ -52,15 +52,15 @@ n.add_node_to_components(n_id='emissions', n_type=NodeType.CarbonAggregation, po
 
 n.add_node_to_components(n_id='cp', n_type=NodeType.ElectricalTellegen, ports=['upstream', 'load', 'inv', 'ev'])
 
-n.add_node_to_components(n_id='inverter', n_type=NodeType.Inverter, ports=['cp', 'bess', 'pv'], params=inverter_params.dict())
+n.add_node_to_components(n_id='inverter', n_type=NodeType.Inverter, ports=['cp', 'bess', 'pv'], params=inverter_params)
 
-n.add_node_to_components(n_id='battery', n_type=NodeType.Battery, ports=['bess'], params=battery_params.dict())
+n.add_node_to_components(n_id='battery', n_type=NodeType.Battery, ports=['bess'], params=battery_params)
 
 n.add_node_to_components(n_id='solar', n_type=NodeType.Solar, ports=['pv'], data='solar')
 
 n.add_node_to_components(n_id='load', n_type=NodeType.ElectricalLoad, ports=['load'], data='load')
 
-n.add_node_to_components(n_id='ev', n_type=NodeType.EV, ports=['ev_cp'], params=ev_params.dict())
+n.add_node_to_components(n_id='ev', n_type=NodeType.EV, ports=['ev_cp'], params=ev_params)
 
 # Add all our edges
 n.add_edge_between_ports(node_tuple=('grid', 'cp'), port_tuple=('downstream', 'upstream'), resource=Units.KW)

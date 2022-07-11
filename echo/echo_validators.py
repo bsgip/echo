@@ -1,6 +1,9 @@
+from typing import TypeVar
+
 from pydantic import BaseModel, Field
 import numpy as np
 
+DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
@@ -12,6 +15,8 @@ class ArrayType(np.ndarray):
     #todo actually validate this type
     @classmethod
     def validate(cls, v):
+        if type(v) is str:
+            raise ValueError('Array Type cannot be a string.')
         return v
 
     class Config:

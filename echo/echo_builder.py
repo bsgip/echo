@@ -662,9 +662,8 @@ def extract_objectives(optimiser: EchoOptimiser) -> dict:
     output['total_cost'] = optimiser.get_total_objective_value()
     return output
 
-def append_results(result_dict, network_dict, in_place=False):
+def append_results(result_dict, network_dict, in_place: bool = False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
-    # todo want to give option to directly edit the original network dict, or return an updated copy
     if in_place is True:
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['results'] = results
