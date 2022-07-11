@@ -252,6 +252,12 @@ class OptimisationGraph(Graph):
                           {'id': n_name,
                            'type': type(n_obj)}}
 
+    def get_node(self, node_name: str):
+        return self.node_obj.get(node_name)
+
+    def get_edge(self, edge_name: str):
+        return self.edge_obj.get(edge_name)
+
 class ConfigurationError(Exception):
     pass
 
