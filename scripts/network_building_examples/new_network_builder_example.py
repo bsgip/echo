@@ -14,6 +14,8 @@ battery_params = BatteryConfig(**{'max_capacity': 15., 'depth_of_discharge_limit
                                   'charging_efficiency': 1., 'discharging_efficiency': 1.,
                                   'initial_state_of_charge': 0})
 
+inverter_params = InverterConfig(ac_port='cp', dc_ports=['p2', 'p3'])
+
 
 # initialise a network
 n = Network(name='my network')
@@ -21,7 +23,9 @@ n = Network(name='my network')
 
 n.add_node_to_components(n_id='grid', n_type=NodeType.ElectricalFlex, ports=['downstream'])
 
-n.add_node_to_components(n_id='cp', n_type=NodeType.ElectricalTellegen, ports=['upstream', 'load', 'solar', 'battery'])
+n.add_node_to_components(n_id='cp', n_type=NodeType.ElectricalTellegen, ports=['upstream', 'load', 'inv'])
+
+n.add_node_to_components(n_id='inverter', n_type=NodeType.Inverter, ports=['cp', 'p2', 'p3'], params=inverter_params.dict())
 
 n.add_node_to_components(n_id='battery', n_type=NodeType.Battery, ports=['bess'], params=battery_params.dict())
 
@@ -32,11 +36,13 @@ n.add_node_to_components(n_id='load', n_type=NodeType.ElectricalLoad, ports=['lo
 # Add all our edges
 n.add_edge_between_ports(node_tuple=('grid', 'cp'), port_tuple=('downstream', 'upstream'), resource=Units.KW)
 
-n.add_edge_between_ports(node_tuple=('cp', 'battery'), port_tuple=('battery', 'bess'), resource=Units.KW)
-
 n.add_edge_between_ports(node_tuple=('cp', 'load'), port_tuple=('load', 'load'), resource=Units.KW)
 
-n.add_edge_between_ports(node_tuple=('cp', 'solar'), port_tuple=('solar', 'pv'), resource=Units.KW)
+n.add_edge_between_ports(node_tuple=('cp', 'inverter'), port_tuple=('inv', 'cp'), resource=Units.KW)
+
+n.add_edge_between_ports(node_tuple=('inverter', 'battery'), port_tuple=('p2', 'bess'), resource=Units.KW)
+
+n.add_edge_between_ports(node_tuple=('inverter', 'solar'), port_tuple=('p3', 'pv'), resource=Units.KW)
 
 # pprint(n.components)
 # pprint(n.to_dict())

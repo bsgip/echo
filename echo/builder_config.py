@@ -1,8 +1,9 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class InverterConfig(BaseModel):
-    max_import: float
-    max_export: float
+    max_import: Optional[float]
+    max_export: Optional[float]
     ac_dc_efficiency = 1
     dc_ac_efficiency = 1
     ac_port: str

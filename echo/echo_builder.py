@@ -448,7 +448,8 @@ def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> Node:
 def create_inverter_node(node_dict: dict) -> Node:
     """ Creates an inverter node, which has one AC port, and at least one DC port. """
     inv_params = InverterConfig(**node_dict['parameters'])
-    inverter = Inverter(max_import=inv_params.max_import,
+    inverter = Inverter(node_name=node_dict['id'],
+                        max_import=inv_params.max_import,
                         max_export=inv_params.max_export,
                         dc_ac_efficiency=inv_params.dc_ac_efficiency,
                         ac_dc_efficiency=inv_params.ac_dc_efficiency)
