@@ -170,12 +170,13 @@ class NetworkSet:
     def __init__(self, description, name='default_name'):
         self.name = name
         self.description = description
-        self.networks = []
+        self.networks = []  # list of networks as dicts
         self.num_networks = 0
         self.interval_duration = None
         self.time_periods = None
         self.results = []  # another way of accessing results
         self.processing_errors = []
+        self.df = None  # dataframe that can hold data for some of our nodes
 
     def add_network(self, network: dict):
         """ Add a single network to the network set."""
@@ -197,7 +198,7 @@ class NetworkSet:
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
             # Append results to network dict
             self.results.append(
-                process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose))
+                process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose, df=self.df))
             # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
         if log_file is not None:
@@ -228,22 +229,18 @@ class NetworkSet:
         df = pd.DataFrame.from_dict(data)
         return df
 
-    def get_echo_model(self, network_name: str):
+    def get_echo_model(self, network_name: str, df: pd.DataFrame=None):
         """ Returns an echo model of a network in the network set"""
         network_dict = self.networks[network_name]
-        x = convert_dict_to_nx(network_dict)
-        em, node_name_dict = convert_nx_to_echo(x, None)
-        return em, node_name_dict
+        em, obj, node_name_dict = convert_dict_to_echo(network_dict, df)
+        return em, obj, node_name_dict
 
     def get_echo_optimiser(self, network_name: str):
         """ Returns the echo optimiser for a network in the network set"""
-        em, node_name_dict = self.get_echo_model(network_name)
-        network_dict = self.networks[network_name]
-        objective_dict = network_dict.get('objective')
-        objective_set = convert_objective_to_echo_objective(em, node_name_dict, objective_dict)
+        em, obj, node_name_dict = self.get_echo_model(network_name)
 
         opt = run_echo_optimiser(em,
-                                 objective_set,
+                                 obj,
                                  interval_duration=self.interval_duration,
                                  time_periods=self.time_periods,
                                  expansion_periods=1,
@@ -257,16 +254,13 @@ class NetworkSet:
         pass
 
 
-def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, verbose: bool = True):
+def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, df: pd.DataFrame, verbose: bool = True):
     """ Ingests a single network in a networkset, converts it to an echo model,
     runs the optimiser, appends results to the original network, and returns results."""
 
     if verbose:
         print(f"Processing network {network_dict['name']}")
-    x = convert_dict_to_nx(network_dict, verbose=verbose)
-    em, node_name_dict = convert_nx_to_echo(x, None, verbose=verbose)
-    objective_dict = network_dict.get('objective')
-    obj = convert_objective_to_echo_objective(em, node_name_dict, objective_dict, verbose=verbose)
+    em, obj, node_name_dict = convert_dict_to_echo(network_dict, df=df, verbose=verbose)
 
     # Run optimiser on echo model and echo objective
     opt = run_echo_optimiser(em,
@@ -286,24 +280,26 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     results['infeasible'] = network_dict['infeasible']
     return results
 
+def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
+    # Converts a network class to a dict, then turns it into an echo model
+    netw_dict = netw.dict()
+    return convert_dict_to_echo(netw=netw_dict, df=df, verbose=verbose)
 
-def convert_dict_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
+def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
     """ Converts dict directly to echo optimisation graph."""
-    netw.validate_network()
-
     if verbose:
         start_time = time.time()
         print('Converting dict to echo...')
 
     node_name_dict = {}
     system = OptimisationGraph()
-    for node_name, node_dict in netw.components.items():
+    for node_name, node_dict in netw['components'].items():
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
-    for edge_name, edge_dict in netw.edges.items():
+    for edge_name, edge_dict in netw['edges'].items():
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
 
-    obj_set = construct_echo_objective(system=system, objective_dict=netw.objectives, node_name_dict=node_name_dict)
+    obj_set = construct_echo_objective(system=system, objective_dict=netw['objectives'], node_name_dict=node_name_dict)
 
     if verbose:
         end_time = time.time()

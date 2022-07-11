@@ -109,7 +109,9 @@ n.add_objective(obj_name='import_demand_tariff',
 
 n.validate_network()
 
-em, obj, node_uid_dict = convert_dict_to_echo(n, df)
+##### Doing things manually with just the network dict
+
+em, obj, node_uid_dict = convert_network_to_echo(n, df)  # convert directly to echo from network class.
 
 opt = run_echo_optimiser(echo_graph=em,
                          objective_set=obj,
@@ -125,3 +127,18 @@ results = extract_results(opt, node_uid_dict)
 ha = extract_objectives(opt)
 print(ha)
 
+### Doing things using netsets
+netset = NetworkSet(name='default_name', description='this is a bad description')
+netset.add_network(n.dict())  # netset is expecting a dict
+netset.interval_duration = interval_duration
+netset.time_periods = time_periods
+num_sites = 1
+netset.df = df
+
+t1 = time.time()
+processing_errors = netset.optimise_network_set()
+t2 = time.time()
+print('\n')
+print('Time to optimise all sites for {} intervals of {} minutes was {} minutes'.format(time_periods, interval_duration,
+                                                                                        np.round((t2 - t1) / 60), 1))
+print('Number of sites failed to be processed was ', np.array(processing_errors).sum(), '/', num_sites)
