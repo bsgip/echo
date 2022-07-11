@@ -29,9 +29,9 @@ class SolarConfig(BaseModel):
 
 
 class EVChargeMode:
-    V0G = 0
-    V1G = 1
-    V2G = 2
+    V0G = 'v0g'
+    V1G = 'v1g'
+    V2G = 'v2g'
 
 class EVConfig(BaseModel):
     available: Any
@@ -40,7 +40,7 @@ class EVConfig(BaseModel):
     depth_of_discharge_limit: float
     charging_power_limit: float
     discharging_power_limit: float
-    charge_mode: int
+    charge_mode: str
     interval_duration: int
 
     # Defaults
