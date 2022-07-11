@@ -1240,7 +1240,7 @@ class Inverter(ElectricalNode):
     dc_ac_efficiency: confloat(ge=0, le=1)
     ac_dc_efficiency: confloat(ge=0, le=1)
     dc_ports: Optional[dict] = {}
-    ac_port_name: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
+    ac_port: Optional[str] = None  # There should generally only be one ac port, so we can just keep its name
     node_rule = NodeRule.Custom
 
     def add_dc_port(self, port_name):
@@ -1249,21 +1249,21 @@ class Inverter(ElectricalNode):
         self.ports[port_name] = p
 
     def add_ac_port(self, port_name):
-        if self.ac_port_name is not None:
+        if self.ac_port is not None:
             raise ConfigurationError('AC port already specified for this inverter.')
         else:
             p = ElectricalPort()
             p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
-            self.ac_port_name = port_name
+            self.ac_port = port_name
             self.ports[port_name] = p
 
     def verify_node(self):
         # Check that we have at least one ac and one dc port
-        assert self.ac_port_name is not None, 'Define at least one ac port on inverter.'
+        assert self.ac_port is not None, 'Define at least one ac port on inverter.'
         assert self.dc_ports is not None, 'Define at least one dc port on inverter.'
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
-        named_ports = [self.ac_port_name]
+        named_ports = [self.ac_port]
         named_ports.extend([x for x in self.dc_ports.keys()])
         assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
 
@@ -1284,7 +1284,7 @@ class Inverter(ElectricalNode):
             return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
                    getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == - (dc_pos + dc_neg)
 
-        ac_port = self.ports[self.ac_port_name]
+        ac_port = self.ports[self.ac_port]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
 
@@ -1458,20 +1458,19 @@ class CarbonAggregation(Node):
 
     def apply_node_constraints(self, model):
 
-        def sum_rule(model):
+        def sum_rule(model, p, t):
             a = 0
             for _, port in self.ports.items():
-                a += (getattr(model, port.port_name)[p, t] for p in model.Expansion for t in model.Time)
-            return getattr(model, self.total) == a
+                a += getattr(model, port.port_name)[p, t]
+            return getattr(model, self.total)[p, t] == a
 
-        setattr(model, 'co2_sum_con_'+self.node_name, en.Constraint(rule=sum_rule))
+        setattr(model, 'co2_sum_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
 """
 
 New nodes
 
 """
-
 
 class Battery(Node):
     port_name: str
@@ -1484,16 +1483,56 @@ class Battery(Node):
 
 class Solar(Node):
     port_name: str
-    curtailable: Optional[bool]
-    profile: dict
+    params: dict = {}
+    profile: Union[ArrayType, dict]
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
-        self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[self.port_name] = ElectricalGeneration(**self.params)
+        if type(self.profile) is dict:
+            self.ports[self.port_name].add_initial_value(self.profile)
+        else:
+            self.ports[self.port_name].add_initial_value_from_array(self.profile)
 
 
+class Load(Node):
+    port_name: str
+    port_unit: int
+    profile: Union[dict, ArrayType]
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports[self.port_name] = Demand(units=self.port_unit)
+        if type(self.profile) is dict:
+            self.ports[self.port_name].add_initial_value(self.profile)
+        else:
+            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+
+
+class FlexNodeWithEmissions(Node):
+    emitting_port: str
+    emitting_port_units: int
+    carbon_port: str
+    emissions_factor: Union[float, ArrayType]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.ports[self.emitting_port] = FlexPort(units=self.emitting_port_units)
+        self.ports[self.carbon_port] = CarbonSource()
+        self.add_emission_transformation(emitting_port=self.ports[self.emitting_port],
+                                         carbon_port=self.ports[self.carbon_port],
+                                         emission_factor=self.emissions_factor)
+
+
+class NewInverter(Inverter):
+    ac_port_name: str
+    dc_port_names: List[str]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.add_ac_port(self.ac_port_name)
+        for i in self.dc_port_names:
+            self.add_dc_port(i)
 
 
 

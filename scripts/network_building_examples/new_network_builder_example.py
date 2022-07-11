@@ -19,7 +19,8 @@ battery_params = BatteryConfig(**{'max_capacity': 15.,
                                   'discharging_efficiency': 1.,
                                   'initial_state_of_charge': 0}).dict()
 
-inverter_params = InverterConfig(ac_port='cp', dc_ports=['bess', 'pv']).dict()
+inverter_params = InverterConfig(**{'ac_port_name': 'cp',
+                   'dc_port_names': ['bess', 'pv']}).dict()
 
 # V2G vehicle
 v2g = {'available': 'ev_available',
@@ -120,7 +121,7 @@ opt = run_echo_optimiser(echo_graph=em,
                          expansion_periods=1,
                          discount_rate=0,
                          optimiser_engine='cplex',
-                         opt_display=True)
+                         opt_display=False)
 
 results = extract_results(opt, node_uid_dict)
 

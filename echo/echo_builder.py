@@ -410,7 +410,7 @@ def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, n
         new_node = create_solar_node(node_dict, df)
 
     elif node_dict['type'] == NodeType.CarbonAggregation:
-        new_node = create_flex_node(node_dict, units=Units.CO2)
+        new_node = create_carbon_aggregation_node(node_dict)
 
     elif node_dict['type'] == NodeType.FlexWithEmissions:
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
@@ -463,10 +463,7 @@ def run_echo_optimiser(echo_graph,
 def create_battery_node(node_dict: dict):
     """ Creates an echo battery node from the provided node dict."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = Node(node_name=node_dict['id'])
-    battery_params = BatteryConfig(**node_dict['parameters'])
-    b = ElectricalStorage(**battery_params.dict())
-    node.ports[port_name] = b
+    node = Battery(node_name=node_dict['id'], port_name=port_name, params=node_dict['parameters'])
     return node
 
 def create_tellegen_node(node_dict: dict, port_unit):
@@ -487,45 +484,30 @@ def create_flex_node(node_dict: dict, units: Units) -> Node:
 def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> Node:
     """ Creates a node with a demand (import only) port."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = Node(node_name=node_dict['id'])
-    p = Demand(units=unit)
     load_profile = process_field(node_dict['data'], df)
-    p.add_initial_value_from_array(load_profile)
-    node.ports[port_name] = p
+    node = Load(node_name=node_dict['id'], port_name=port_name, port_unit=unit, profile=load_profile)
     return node
 
 def create_inverter_node(node_dict: dict) -> Node:
     """ Creates an inverter node, which has one AC port, and at least one DC port. """
     inv_params = InverterConfig(**node_dict['parameters'])
     ports_defined_on_node = node_dict['ports']
-    ports_defined_in_params = [node_dict['parameters']['ac_port']] + node_dict['parameters']['dc_ports']
+    ports_defined_in_params = [node_dict['parameters']['ac_port_name']] + node_dict['parameters']['dc_port_names']
     assert set(ports_defined_on_node) == set(ports_defined_in_params), \
         'Node "{}" has ports {} defined on node, and ports {} defined in parameters.'.format(node_dict['id'],
                                                                                              ports_defined_on_node,
                                                                                              ports_defined_in_params)
-    inverter = Inverter(node_name=node_dict['id'],
-                        max_import=inv_params.max_import,
-                        max_export=inv_params.max_export,
-                        dc_ac_efficiency=inv_params.dc_ac_efficiency,
-                        ac_dc_efficiency=inv_params.ac_dc_efficiency)
-    for i in inv_params.dc_ports:
-        inverter.add_dc_port(i)
-    inverter.add_ac_port(inv_params.ac_port)
+    inverter = NewInverter(node_name=node_dict['id'], **node_dict['parameters'])
     return inverter
 
 def create_solar_node(node_dict: dict, df: pd.DataFrame) -> Node:
     """ Creates a node with one electrical generation port. """
     port_name = check_node_has_only_one_port(node_dict)
-    node = Node(node_name=node_dict['id'])
-    if node_dict.get('parameters'):
-        solar_params = SolarConfig(**node_dict['parameters'])
-        p = ElectricalGeneration(units=Units.KW,
-                                 curtailable=solar_params.curtailable)
-    else:
-        p = ElectricalGeneration(units=Units.KW)
     pv_profile = process_field(node_dict['data'], df)
-    p.add_initial_value_from_array(pv_profile)
-    node.ports[port_name] = p
+    if node_dict.get('parameters'):
+        node = Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile, params=node_dict.get('parameters'))
+    else:
+        node = Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile)
     return node
 
 def create_ev(node_dict: dict, df: pd.DataFrame) -> Node:
@@ -537,13 +519,7 @@ def create_ev(node_dict: dict, df: pd.DataFrame) -> Node:
     return node
 
 def create_flex_node_with_emissions(node_dict: dict, units: Units):
-    node = Node(node_name=node_dict['id'])
-    node_params = EmittingNodeConfig(**node_dict['parameters'])
-    node.ports[node_params.emitting_port] = FlexPort(units=units)
-    node.ports[node_params.carbon_port] = CarbonSource()
-    node.add_emission_transformation(emitting_port=node.ports[node_params.emitting_port],
-                                     carbon_port=node.ports[node_params.carbon_port],
-                                     emission_factor=node_params.emissions_factor)
+    node = FlexNodeWithEmissions(node_name=node_dict['id'], emitting_port_units=units, **node_dict['parameters'])
     return node
 
 def create_carbon_aggregation_node(node_dict: dict):

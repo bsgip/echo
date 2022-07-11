@@ -7,8 +7,8 @@ from echo.echo_validators import ArrayType
 class InverterConfig(BaseModel):
     max_import: Optional[float]
     max_export: Optional[float]
-    ac_port: str
-    dc_ports: list
+    ac_port_name: str
+    dc_port_names: list
     # Defaults
     ac_dc_efficiency = 1
     dc_ac_efficiency = 1
@@ -66,3 +66,8 @@ class DemandChargeConfig(BaseModel):
 
 class DemandTariffConfig(BaseModel):
     charges: list
+
+
+class HeatingLoadConfig(BaseModel):
+    name: str
+
