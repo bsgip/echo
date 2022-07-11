@@ -82,6 +82,7 @@ class NodeType(object):
     FixedGas = 'fixed_gas'
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
+    FlexWithEmissions = 'flex_with_emissions'
 
 class Resource:
     """ Resources/commodities """

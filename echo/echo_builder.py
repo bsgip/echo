@@ -358,9 +358,12 @@ def construct_echo_node(system, node_name_dict: dict, node, node_dict: dict, df:
     elif node_dict['type'] == NodeType.CarbonAggregation:
         new_node = create_flex_node(node_dict, units=Units.CO2)
 
+    elif node_dict['type'] == NodeType.FlexWithEmissions:
+        new_node = create_flex_node(node_dict, units=Units.CO2)
+
 
     else:
-        raise ValueError('node type {} is not recognised/does not have a builder function'.format(node_dict['type']))
+        raise ValueError('Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
     # Update our graph
     update()
 
