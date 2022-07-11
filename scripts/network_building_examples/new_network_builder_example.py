@@ -142,3 +142,5 @@ print('\n')
 print('Time to optimise all sites for {} intervals of {} minutes was {} minutes'.format(time_periods, interval_duration,
                                                                                         np.round((t2 - t1) / 60), 1))
 print('Number of sites failed to be processed was ', np.array(processing_errors).sum(), '/', num_sites)
+
+netset.to_df('cp', 'upstream')

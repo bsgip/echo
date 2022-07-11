@@ -306,8 +306,6 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
         print('Finished converting dict to echo. Time taken (seconds): ', end_time - start_time)
     return system, obj_set, node_name_dict
 
-
-
 def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, objective_dict: dict, verbose: bool = True):
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
@@ -351,7 +349,6 @@ def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, ob
     obj_set = ObjectiveSet(objective_list=objective_list)
     return obj_set
 
-
 def construct_echo_edge(system: OptimisationGraph, edge_name: str, edge_dict: dict, node_name_dict: dict):
     node1_name, node2_name = edge_dict['nodes']
     port1, port2 = edge_dict['ports']
@@ -371,7 +368,6 @@ def construct_echo_edge(system: OptimisationGraph, edge_name: str, edge_dict: di
     assert p1.units == edge_unit, 'In edge "{}", port and edge units are inconsistent.'.format(edge_name)
     assert p2.units == edge_unit, 'In edge "{}", Port and edge units are inconsistent.'.format(edge_name)
     system.connect_ports_and_create_edge(p1, p2)
-
 
 def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
     """
@@ -424,7 +420,6 @@ def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, n
         raise ValueError('Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
     # Update our graph
     update()
-
 
 def run_echo_optimiser(echo_graph,
                        objective_set,
@@ -583,7 +578,6 @@ def create_demand_tariff(tariff_dict: dict, component_obj: Port):
                                           import_demand=import_demand)
     return demand_tariff
 
-
 def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, em: OptimisationGraph):
     """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
     target_node = tariff_dict['component']['node']
@@ -593,7 +587,6 @@ def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: 
     node_obj = em.node_obj[node_name_dict[target_node]]
     component_obj = node_obj.ports[target_port]
     return component_obj
-
 
 ### Util functions
 
@@ -610,7 +603,6 @@ def array_length_check(array, length: int, message, scalar_ok=False):
         if hasattr(array, '__len__') or (not scalar_ok):
             assert len(array) == length, message + str(len(array))
 
-
 ### Result extraction functions
 
 def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
@@ -625,7 +617,7 @@ def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key:
             battery_node = system.node_obj[node_uid]
             battery_port = battery_node.ports[list(battery_node.ports.keys())[0]]  # todo less hacky
             output[node_name]['soc'] = optimiser.values(battery_port.soc_value, 0)
-            output[node_name]['p'] = optimiser.values(battery_port.port_name, 0)
+            output[node_name]['port_val'] = optimiser.values(battery_port.port_name, 0)
             output[node_name]['opt_capacity'] = optimiser.values(battery_port.optimised_capacity, 0)
         elif 'ev' in node_name:
             ev_node = system.node_obj[node_uid]
@@ -641,7 +633,7 @@ def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key:
             node_obj = system.node_obj[node_uid]
             for port_name, port_obj in node_obj.ports.items():
                 output[node_name][port_name] = {}
-                output[node_name][port_name]['p'] = optimiser.values(port_obj.port_name, 0)
+                output[node_name][port_name]['port_val'] = optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.import_slack):
                     output[node_name][port_name]['import_violation'] = optimiser.values(port_obj.import_slack, 0)
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
@@ -682,7 +674,6 @@ def append_results(result_dict, network_dict, in_place=False):
             network_dict['components'][node_name]['results'] = results
         return network_dict
 
-
 def check_node_has_only_one_port(node_dict: dict):
     """ Checks that a node has only one port defined """
     ports = node_dict['ports']
@@ -697,23 +688,6 @@ def check_node_has_only_one_port(node_dict: dict):
     elif type(ports) is str:
         port_name = ports
     return port_name
-
-
-def retrieve_value(d, key):
-    out = None
-    if key in d.keys():
-        out = d[key]
-        if hasattr(out, '__len__'):
-            if len(out) == 0:
-                out = None
-    return out
-
-
-def retrieve_key(d, val):
-    for k, v in d.items():
-        if v == val:
-            return k
-    return None
 
 
 def process_field(field, df):
