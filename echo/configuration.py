@@ -93,11 +93,16 @@ class Resource:
 
 class TariffType:
     """ Tariff types"""
-    import_tariff = 0
-    export_tariff = 1
-    import_demand_tariff = 2
-    export_demand_tariff = 3
-    time = 4  # a tariff that applies per time period (eg daily supply charge)
+    ImportTariff = 0
+    ExportTariff = 1
+    ImportDemandTariff = 2
+    ExportDemandTariff = 3
+    ThroughputCost = 4
+    PeakPosPower = 5
+    PeakNegPower = 6
+    QuadraticPower = 7
+    ContingencyPositive = 8
+    ContingencyNegative = 9
 
 class Resets:
     """ How often something resets """

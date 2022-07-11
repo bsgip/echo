@@ -493,7 +493,7 @@ class DemandCharge(BaseModel):
     """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: Optional[str] = None
-    rate: PositiveFloat
+    rate: NonNegativeFloat
     min_demand: float = 0.0
     window_array: Optional[Union[ArrayType, List]]
     window_object: Optional[Window] = None
