@@ -115,15 +115,6 @@ class Network(BaseModel):
 
     def validate_network(self):
         print('Validating network "{}"'.format(self.name))
-        # Checks for any nodes without edges
-        nodes_in_components = set(self.components.keys())
-        nodes_with_edges = set()
-        for _, edge in self.edges.items():
-            nodes_with_edges.add(edge['nodes'][0])
-            nodes_with_edges.add(edge['nodes'][1])
-
-        nodes_without_edges = nodes_in_components - nodes_with_edges
-        assert len(nodes_without_edges) == 0, 'Node {} has no edge.'.format(nodes_without_edges)
 
         # check consistency of port names as defined in self.components and self.edges
         err = []

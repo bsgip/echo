@@ -54,11 +54,13 @@ class EchoOptimiser(object):
         """
         Validates that a pyomo model can be built from the provided network graph. Checks for:
         - name consistency between objects (eg node.node_name) and graph nodes
-        - others...
+        - floating nodes that have no edge connecting them to another node
         """
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
                 'Node {} name has been updated after being added to the network graph.'.format(node_name)
+
+        self.ES.verify_graph()
 
     def build_model(self):
         # Set up the Pyomo model

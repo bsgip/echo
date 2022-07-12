@@ -25,7 +25,8 @@ DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class BaseModel(PydanticBaseModel):
     class Config:
-        validate_assignment = True  # set to true so that we re-validate when we update a model field
+        validate_assignment = True  # Set to true so that we re-validate when we update a model field
+        extra = 'allow'  # Set to allow so that we can create new fields on the fly
 
 
 class OptimisationGraph(Graph):
@@ -73,6 +74,7 @@ class OptimisationGraph(Graph):
         e = Edge(vertices=(port1, port2), edge_name=edge_name)
         self.add_edge_obj(e)
 
+    #todo delete method below
     def connect_two_nodes_create_edges_create_ports(self, node1, node2):
         """ """
         p1 = ElectricalPort()
@@ -83,6 +85,7 @@ class OptimisationGraph(Graph):
         self.add_node_obj(node2)  # updates
         self.connect_ports_and_create_edge(p1, p2)
 
+    # todo delete method below
     def connect_port_to_node_create_edges_create_port(self, port, node):
         """ """
         p = ElectricalPort()
@@ -204,7 +207,8 @@ class OptimisationGraph(Graph):
             # get the node obj
             current_node_obj = self.node_obj[current_node_name]
             for path_vertices, path_obj in self.paths.items():  # Iterate through all paths
-                if current_node_name is path_vertices[0]:  # If we find a path where the current node is the first node on that path
+                if current_node_name is path_vertices[
+                    0]:  # If we find a path where the current node is the first node on that path
                     current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
                 elif current_node_name is path_vertices[
                     -1]:  # If we find a path where the current node is the last node on that path
@@ -216,7 +220,7 @@ class OptimisationGraph(Graph):
             # Create an indicator var for when there are flows into a node
             current_node_obj.inflow = f"inflow_{current_node_name}"
             setattr(model, current_node_obj.inflow, en.Var(model.Expansion, model.Time, initialize=0,
-                                                                domain=en.Binary))
+                                                           domain=en.Binary))
 
             setattr(model, f"path_flow_con2_{current_node_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_one))
@@ -225,23 +229,28 @@ class OptimisationGraph(Graph):
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_two))
 
     def draw_echo_graph(self, with_labels=False, labels=None):
-        """
-        Draws the network with or without node labels
-        """
+        """ Draws the network with or without node labels """
         nx.draw_networkx(self, with_labels=with_labels, labels=labels)
         plt.show()
 
+    def get_node(self, node_name: str):
+        """ Returns node object given node name"""
+        return self.node_obj.get(node_name)
+
+    def get_edge(self, edge_name: str):
+        """ Returns edge object given edge name"""
+        return self.edge_obj.get(edge_name)
 
     def print_port_names(self):
+        """ Prints port name-uid pairs, useful for debugging infeasible optimisation"""
         for n in self.node_obj.values():
             for pn, p in n.ports.items():
                 print(pn, ', ', p.port_name)
 
-    def get_node(self, node_name: str):
-        return self.node_obj.get(node_name)
-
-    def get_edge(self, edge_name: str):
-        return self.edge_obj.get(edge_name)
+    def verify_graph(self):
+        # Check for any floating nodes - use nx method for this
+        isolated_nodes = set(i for i in nx.isolates(self))  # nx.isolates returns nodes with no neighbours
+        assert len(isolated_nodes) == 0,  'Node {} has no edge.'.format(isolated_nodes)
 
 class ConfigurationError(Exception):
     pass
@@ -264,7 +273,6 @@ class Port(BaseModel):
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
-    optional: bool = False
 
     # All our optional fields/fields that are created when building pyomo model, and used to define variable names
     import_con_val: Optional[str]
@@ -367,7 +375,8 @@ class Port(BaseModel):
                 en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()  # Fix the variable we just created - equivalent to setting it as an 'en.Param'
+            getattr(model,
+                    self.port_name).fix()  # Fix the variable we just created - equivalent to setting it as an 'en.Param'
 
         # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
@@ -389,7 +398,8 @@ class Port(BaseModel):
             # Generate an array of constraints (ie indexed by time and expansion period)
             import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
             setattr(model, self.import_con_val,
-                    en.Param(model.Expansion, model.Time, initialize=import_constraint_dict, domain=en.NonNegativeReals))
+                    en.Param(model.Expansion, model.Time, initialize=import_constraint_dict,
+                             domain=en.NonNegativeReals))
 
             if self.slack is True:
                 setattr(model, self.import_slack,
@@ -406,7 +416,8 @@ class Port(BaseModel):
             con_name = 'export_con_' + self.port_name
             export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
             setattr(model, self.export_con_val,
-                    en.Param(model.Expansion, model.Time, initialize=export_constraint_dict, domain=en.NonPositiveReals))
+                    en.Param(model.Expansion, model.Time, initialize=export_constraint_dict,
+                             domain=en.NonPositiveReals))
 
             if self.slack is True:
                 setattr(model, self.export_slack,
@@ -524,7 +535,6 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
-    named_ports: list = []
 
     inflow: Optional[str]
 
@@ -617,12 +627,14 @@ class Node(BaseModel):
                 expr = 0
                 for term in x:
                     transform_rule = term['rule']
-                    #todo make this less hacky, this is a fix for marginal emission factors
+                    # todo make this less hacky, this is a fix for marginal emission factors
                     if hasattr(term['weight'], '__iter__'):
                         if len(model.Time) == len(term['weight']):
                             weight = term['weight'][t]
                         else:
-                            raise ValueError('Weight/factor in transformation {} has inconsistent length with model time intervals.'.format(current_transform))
+                            raise ValueError(
+                                'Weight/factor in transformation {} has inconsistent length with model time intervals.'.format(
+                                    current_transform))
                     else:
                         weight = term['weight']
                     var = term['var']
@@ -824,13 +836,16 @@ class FlexPort(Port):
     export_constraint = FlowConstraint.NoConstraint
     opt_type = OptimisationType.Variable
 
+
 class FlexPortImport(FlexPort):
     """ Flexible port, imports only"""
     flows = Flows.Import
 
+
 class FlexPortExport(FlexPort):
     """ Flexible ports, exports only"""
     flows = Flows.Export
+
 
 class Source(Port):
     """ A source of a commodity. """
@@ -841,19 +856,22 @@ class Source(Port):
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
+
 class Sink(Port):
     """ The sink for a commodity. """
     flows = Flows.Import
     opt_type = OptimisationType.Parameter
     import_constraint = FlowConstraint.NoConstraint
 
-    non_neg_check = validator("initial_value", allow_reuse=True)(nonnegative_load) # Sink should have non negative initial values
+    non_neg_check = validator("initial_value", allow_reuse=True)(
+        nonnegative_load)  # Sink should have non negative initial values
 
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
     def add_sink_profile_from_array(self, array, expansion_periods=1):
         self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+
 
 class Storage(Port):
     """ Storage for a commodity. """
@@ -883,7 +901,7 @@ class Storage(Port):
     # All our optional fields/fields created when building pyomo model
     soc_value: Optional[str]
     optimised_capacity: Optional[str]
-    trip_slack: Optional[Union[ArrayType, list]] #todo fix this?
+    trip_slack: Optional[Union[ArrayType, list]]  # todo fix this?
     cons_slack: Optional[str]
     trip_slack: Optional[str]
 
@@ -1015,12 +1033,14 @@ class Storage(Port):
                              model.Time) * self.soc_conserv_cost
 
         if self.storage_capacity_cost is not None:
-            objective += getattr(model, self.optimised_capacity)*self.storage_capacity_cost
+            objective += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
         return objective
 
+
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
+
 
 class ControlledLoadOrGen(FlexPort):
     """
@@ -1064,15 +1084,18 @@ class ControlledLoadOrGen(FlexPort):
         vals = dict(zip(keys, array))
         self.add_initial_value(vals)
 
+
 class ControlledLoad(ControlledLoadOrGen):
     max_power: confloat(ge=0)
     min_power: confloat(ge=0)
     flows = Flows.Import
 
+
 class ControlledGen(ControlledLoadOrGen):
     max_power: confloat(le=0)
     min_power: confloat(le=0)
     flows = Flows.Export
+
 
 class OffOrConstrainedPort(FlexPort):
     """ A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
@@ -1094,8 +1117,9 @@ class OffOrConstrainedPort(FlexPort):
         def on_off_constraint2(model, p, t):
             return getattr(model, self.port_name)[p, t] <= getattr(model, self.active)[p, t] * self.upper_bound
 
-        setattr(model, 'on_off1_'+self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint1))
+        setattr(model, 'on_off1_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint1))
         setattr(model, 'on_off2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=on_off_constraint2))
+
 
 class BoundedPort(FlexPort):
     """ A flex port with an upper and lower bound"""
@@ -1111,6 +1135,7 @@ class BoundedPort(FlexPort):
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
         set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
 
+
 class BoundedLoad(BoundedPort):
     """ A port where the load has to be within a max and min value which is specified at each timestep."""
     import_constraint = FlowConstraint.NoConstraint
@@ -1121,6 +1146,7 @@ class BoundedLoad(BoundedPort):
 
     def initialise_port(self, model):
         super(BoundedLoad, self).initialise_port(model)
+
 
 class FixedPort(Port):
     opt_type = OptimisationType.Parameter
@@ -1135,17 +1161,20 @@ class FixedPort(Port):
 
 """
 
+
 class ElectricalNode(Node):
     units = Units.KW
+
 
 class ElectricalDemand(Sink):
     """ Fixed electrical demand"""
     units = Units.KW
     import_constraint = FlowConstraint.NoConstraint
     # Load shedding attributes
-    can_be_shed: Optional[bool] = False # Attribute for determining whether a load can be shed (ie set to 0 for some period)
-    shed_cost: Optional[ArrayType] = None # cost for load shedding, cost per time unit that shedding occurs
-    #todo should make this the analogue of curtailable generation? or not
+    can_be_shed: Optional[
+        bool] = False  # Attribute for determining whether a load can be shed (ie set to 0 for some period)
+    shed_cost: Optional[ArrayType] = None  # cost for load shedding, cost per time unit that shedding occurs
+    # todo should make this the analogue of curtailable generation? or not
 
     # Pyomo vars/params
     is_off: Optional[str]
@@ -1177,16 +1206,18 @@ class ElectricalDemand(Sink):
 
             # Additional constraint that sets load = 0 when load shedding is occurring
             def shed_rule(model, p, t):
-                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * (1 - getattr(model, self.is_off)[p, t])
+                return getattr(model, self.port_name)[p, t] == self.initial_value[p, t] * (
+                            1 - getattr(model, self.is_off)[p, t])
 
             setattr(model, f"shedding_con_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=shed_rule))
-
 
     def add_objective(self, model):
         objective = 0
         if self.can_be_shed is True:
-            objective += sum(getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
+            objective += sum(
+                getattr(model, self.is_off)[p, t] * self.shed_cost[t] for p in model.Expansion for t in model.Time)
         return objective
+
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
@@ -1205,23 +1236,28 @@ class ElectricalGeneration(Source):
         self.add_initial_value_from_array(array, expansion_periods)
 
     def initialise_port(self, model):
-        setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=en.NonPositiveReals))
+        setattr(model, self.port_name,
+                en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=en.NonPositiveReals))
         if self.curtailable is False:
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
             # Constrain solar gen to be within initial value (max value)
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
 
+
 class ElectricalStorage(Storage):
     units = Units.KW
+
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
     units = Units.KW
 
+
 class FixedElectricalPort(ElectricalPort):
     """ An electrical port with fixed values (parameters)."""
     opt_type = OptimisationType.Parameter
+
 
 class Inverter(ElectricalNode):
     """ An inverter is a node with one AC port and at least one DC port.
@@ -1278,6 +1314,7 @@ class Inverter(ElectricalNode):
         ac_port = self.ports[self.ac_port]
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
+
 
 class EV(ElectricalNode):
     charge_mode: str = None
@@ -1408,8 +1445,10 @@ class EV(ElectricalNode):
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
+
 class BoundedElectricalLoad(BoundedLoad):
     units = Units.KW
+
 
 """
 
@@ -1417,21 +1456,23 @@ class BoundedElectricalLoad(BoundedLoad):
 
 """
 
+
 class CarbonPort(FlexPort):
     """ A flexible carbon port"""
     units = Units.CO2
+
 
 class CarbonSource(CarbonPort):
     """ A variable source of CO2 """
     flows = Flows.Export
 
+
 class CarbonSink(CarbonPort):
     """ A variable sink of CO2 """
     flows = Flows.Import
 
+
 class CarbonAggregation(Node):
-
-
     # Pyomo vars
     total: Optional[str]
 
@@ -1448,20 +1489,21 @@ class CarbonAggregation(Node):
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
     def apply_node_constraints(self, model):
-
         def sum_rule(model, p, t):
             a = 0
             for _, port in self.ports.items():
                 a += getattr(model, port.port_name)[p, t]
             return getattr(model, self.total)[p, t] == a
 
-        setattr(model, 'co2_sum_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+        setattr(model, 'co2_sum_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+
 
 """
 
 New nodes
 
 """
+
 
 class Battery(Node):
     port_name: str
@@ -1524,6 +1566,3 @@ class NewInverter(Inverter):
         self.add_ac_port(self.ac_port_name)
         for i in self.dc_port_names:
             self.add_dc_port(i)
-
-
-
