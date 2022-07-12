@@ -31,7 +31,7 @@ np.set_printoptions(suppress=True)
 ## Set up hyper params
 time_periods = 12 # number of time periods to run the optimisation for
 interval_duration = 60  # each time period is 15 mins long
-expansion_periods = 2  # not yet implemented leave as 1
+expansion_periods = 2
 discount_rate = 0  # not yet implemented leave as 0
 
 # Create graph in echo
@@ -79,7 +79,7 @@ b_future = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kw
                       discharging_efficiency=1,  # discharging efficiency in range [0,1]
                       initial_state_of_charge=0.0)  # initial state of charge in kWh
 b_future.planning = True
-b_future.install_cost = 5
+b_future.install_cost = 50000  # $/unit capacity
 # connect the electrical storage to a port on the battery node
 battery_future.ports['bess'] = b_future
 inverter.add_dc_port('bess_future')
