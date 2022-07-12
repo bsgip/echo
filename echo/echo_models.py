@@ -734,24 +734,33 @@ class Node(BaseModel):
             if p == 0:
                 return getattr(model, self.lifetime_remaining)[p] == self.initial_life_left
             else:
+                new_lifetime = getattr(model, self.replace)[p] * self.nominal_lifetime
+                retired = getattr(model, self.retire)[p]
                 return getattr(model, self.lifetime_remaining)[p] == \
-                       getattr(model, self.lifetime_remaining)[p - 1] + \
-                       getattr(model, self.replace)[p-1] * (self.nominal_lifetime+1) + \
-                       (getattr(model, self.retire)[p-1] - 1)
+                       getattr(model, self.lifetime_remaining)[p-1] + new_lifetime + retired - 1
 
         setattr(model, 'life_left_' + self.node_name, en.Constraint(model.Expansion, rule=remaining_life_rule))
 
-        # Big M Constraint: force either retirement or replacement at end of lifetime
-        def eol_rule1(model, p):
-            replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
-            return getattr(model, self.lifetime_remaining)[p] <= (1 - replace_or_retire) * model.bigM
+        def permanent_retirement_rule(model, p):
+            # Forces retirement var to be increasing (ie can only change from 0 to 1, not vice versa)
+            if p == 0:
+                return en.Constraint.Skip
+            else:
+                return getattr(model, self.retire)[p] >= getattr(model, self.retire)[p-1]
 
-        def eol_rule2(model, p):
-            replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
-            return getattr(model, self.lifetime_remaining)[p] * model.bigM >= (1 - replace_or_retire)
+        setattr(model, 'retirement_con_'+self.node_name, en.Constraint(model.Expansion, rule=permanent_retirement_rule))
 
-        setattr(model, 'eol_1_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule1))
-        setattr(model, 'eol_2_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule2))
+        # # Big M Constraint: force either retirement or replacement at end of lifetime
+        # def eol_rule1(model, p):
+        #     replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+        #     return getattr(model, self.lifetime_remaining)[p] <= (1 - replace_or_retire) * model.bigM
+        #
+        # def eol_rule2(model, p):
+        #     replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+        #     return getattr(model, self.lifetime_remaining)[p] * model.bigM >= (1 - replace_or_retire)
+        #
+        # setattr(model, 'eol_1_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule1))
+        # setattr(model, 'eol_2_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule2))
 
         # Force node ports == 0 if retired using a pair of big M constraints
         for port_name, port_obj in self.ports.items():

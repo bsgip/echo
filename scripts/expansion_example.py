@@ -47,7 +47,8 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
 keys = generate_pyomo_indices(time_periods, expansion_periods)
-l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods, keys=keys)
+l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods,
+                                 keys=keys)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 inverter = Inverter()
@@ -63,14 +64,14 @@ battery = Battery(port_name='bess',
                   charging_efficiency=1,  # charging efficiency in range [0,1]
                   discharging_efficiency=1,  # discharging efficiency in range [0,1]
                   initial_state_of_charge=0.0,
-                  initial_life_left = 2,
-                  nominal_lifetime = 3,
+                  initial_life_left=2,
+                  nominal_lifetime=3,
                   retirement_planning=True,
                   replace_cost=100000.)  # initial state of charge in kWh
 
 battery_future = Battery(port_name='bess',
                          expansion_planning=True,
-                         install_cost=5,  # $ /unit capacity
+                         install_cost=5000,  # $ /unit capacity
                          max_capacity=10000.0,  # max capacity of battery in kwh
                          depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
                          charging_power_limit=2,  # max charging rate in kW
@@ -122,7 +123,6 @@ print('Planning period installed: ', opt.values(battery_future.installed_when))
 print('Battery1 life remaining: ', opt.values(battery.lifetime_remaining, 0))
 print('Battery1 retired: ', opt.values(battery.retire, 0))
 print('Battery1 replaced: ', opt.values(battery.replace, 0))
-
 
 ############################ Analyse the Optimisation ########################################
 
