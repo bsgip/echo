@@ -113,3 +113,8 @@ class Resets:
     yearly = 'annually'
 
 
+class EVChargeMode:
+    V0G = 'V0G'
+    V1G = 'V1G'
+    V2G = 'V2G'
+

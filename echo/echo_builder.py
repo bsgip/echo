@@ -3,23 +3,21 @@ The echo builder module contains functions and classes used for building an echo
 """
 
 from typing import Optional, Union, Any
-
-import networkx as nx
-import numpy as np
 import pandas as pd
+import numpy as np
+import networkx as nx
 from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
-from echo.echo_models import *
+import echo.echo_models as em
 from echo.configuration import *
-from echo.builder_config import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
-from echo.echo_validators import ArrayType
+import echo.echo_optimiser as eo
+import echo.objectives as eobj
+
 import time as time
 
 
-class Network(BaseModel):
+class Network(em.BaseModel):
     """ A class for holding our network dict and making it easier to add nodes/edges in the correct format."""
     name: Optional[str] = 'default_name'  # name for our network
     components = {}  # network components (nodes)
@@ -82,7 +80,8 @@ class Network(BaseModel):
         else:
             self.components[n_id]['ports'].update(port_dict)
 
-    def add_objective(self, obj_name: str, obj_type: TariffType, component: dict = None, prices: Any = None, charges: list=None):
+    def add_objective(self, obj_name: str, obj_type: TariffType, component: dict = None, prices: Any = None,
+                      charges: list = None):
         o = {'type': obj_type, 'name': obj_name}
         if component:
             o['component'] = component
@@ -142,9 +141,12 @@ class Network(BaseModel):
                         flag = 1
                         assert component_port in node['ports'], \
                             'Objective "{}" refers to node "{}", port "{}", but no such port ' \
-                            'exists on node {}, which has ports {}'.format(obj_name, component_node, component_port, component_node, node['ports'])
+                            'exists on node {}, which has ports {}'.format(obj_name, component_node, component_port,
+                                                                           component_node, node['ports'])
                 if flag == 0:
-                    raise ValueError('Objective "{}" refers to node "{}" but no node by that name is defined.'.format(obj_name, component_node))
+                    raise ValueError(
+                        'Objective "{}" refers to node "{}" but no node by that name is defined.'.format(obj_name,
+                                                                                                         component_node))
         else:
             print('No objectives defined for network "{}"'.format(self.name))
 
@@ -189,7 +191,8 @@ class NetworkSet:
         for i in tqdm(range(self.num_networks), desc='Optimising sites', file=prog_file):
             # Append results to network dict
             self.results.append(
-                process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose, df=self.df))
+                process_single_network(self.networks[i], self.interval_duration, self.time_periods, verbose=verbose,
+                                       df=self.df))
             # Check if there were errors
             self.processing_errors.append(True if self.results[i]['infeasible'] is True else False)
         if log_file is not None:
@@ -220,7 +223,7 @@ class NetworkSet:
         df = pd.DataFrame.from_dict(data)
         return df
 
-    def get_echo_model(self, network_name: str, df: pd.DataFrame=None):
+    def get_echo_model(self, network_name: str, df: pd.DataFrame = None):
         """ Returns an echo model of a network in the network set"""
         network_dict = self.networks[network_name]
         em, obj, node_name_dict = convert_dict_to_echo(network_dict, df)
@@ -245,7 +248,8 @@ class NetworkSet:
         pass
 
 
-def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, df: pd.DataFrame, verbose: bool = True):
+def process_single_network(network_dict: dict, interval_duration: int, time_periods: int, df: pd.DataFrame,
+                           verbose: bool = True):
     """ Ingests a single network in a networkset, converts it to an echo model,
     runs the optimiser, appends results to the original network, and returns results."""
 
@@ -271,10 +275,12 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     results['infeasible'] = network_dict['infeasible']
     return results
 
+
 def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
     # Converts a network class to a dict, then turns it into an echo model
     netw_dict = netw.dict()
     return convert_dict_to_echo(netw=netw_dict, df=df, verbose=verbose)
+
 
 def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
     """ Converts dict directly to echo optimisation graph."""
@@ -283,7 +289,7 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
         print('Converting dict to echo...')
 
     node_name_dict = {}
-    system = OptimisationGraph()
+    system = em.OptimisationGraph()
     for node_name, node_dict in netw['components'].items():
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
@@ -297,7 +303,9 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
         print('Finished converting dict to echo. Time taken (seconds): ', end_time - start_time)
     return system, obj_set, node_name_dict
 
-def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, objective_dict: dict, verbose: bool = True):
+
+def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict, objective_dict: dict,
+                             verbose: bool = True):
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
     if verbose:
@@ -309,10 +317,10 @@ def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, ob
         component_obj = get_tariff_component_from_node_port_name(obj_dict, node_name_dict, system)
 
         if obj_dict['type'] == TariffType.ImportTariff:
-            new_obj = ImportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict['prices'])
+            new_obj = eobj.ImportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict['prices'])
 
         elif obj_dict['type'] == TariffType.ExportTariff:
-            new_obj = ExportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict['prices'])
+            new_obj = eobj.ExportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict['prices'])
 
         elif obj_dict['type'] == TariffType.ImportDemandTariff:
             new_obj = create_demand_tariff(obj_dict, component_obj)
@@ -321,26 +329,27 @@ def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, ob
             new_obj = create_demand_tariff(obj_dict, component_obj)
 
         elif obj_dict['type'] == TariffType.ThroughputCost:
-            new_obj = ThroughputCost(name=obj_name, component=component_obj, rate=obj_dict['rate'])
+            new_obj = eobj.ThroughputCost(name=obj_name, component=component_obj, rate=obj_dict['rate'])
 
         elif obj_dict['type'] == TariffType.PeakPosPower:
-            new_obj = PeakPositivePower(name=obj_name, component=component_obj)
+            new_obj = eobj.PeakPositivePower(name=obj_name, component=component_obj)
 
         elif obj_dict['type'] == TariffType.PeakNegPower:
-            new_obj = PeakNegativePower(name=obj_name, component=component_obj)
+            new_obj = eobj.PeakNegativePower(name=obj_name, component=component_obj)
 
         elif obj_dict['type'] == TariffType.QuadraticPower:
-            new_obj = QuadraticPower(name=obj_name, component=component_obj)
+            new_obj = eobj.QuadraticPower(name=obj_name, component=component_obj)
         else:
             raise ValueError(
                 'Objective type "{}" is not recognised and does not have a builder function'.format(
                     obj_dict['type']))
         objective_list.append(new_obj)
 
-    obj_set = ObjectiveSet(objective_list=objective_list)
+    obj_set = eobj.ObjectiveSet(objective_list=objective_list)
     return obj_set
 
-def construct_echo_edge(system: OptimisationGraph, edge_name: str, edge_dict: dict, node_name_dict: dict):
+
+def construct_echo_edge(system: em.OptimisationGraph, edge_name: str, edge_dict: dict, node_name_dict: dict):
     node1_name, node2_name = edge_dict['nodes']
     port1, port2 = edge_dict['ports']
     edge_unit = edge_dict['resource']
@@ -360,7 +369,8 @@ def construct_echo_edge(system: OptimisationGraph, edge_name: str, edge_dict: di
     assert p2.units == edge_unit, 'In edge "{}", Port and edge units are inconsistent.'.format(edge_name)
     system.connect_ports_and_create_edge(p1, p2)
 
-def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
+
+def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
     """
     Works out which type of echo node to build. Builds it, adds it to the graph, and updates the node_name dict.
     Args:
@@ -408,9 +418,11 @@ def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, n
 
 
     else:
-        raise ValueError('Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
+        raise ValueError(
+            'Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
     # Update our graph
     update()
+
 
 def run_echo_optimiser(echo_graph,
                        objective_set,
@@ -434,14 +446,13 @@ def run_echo_optimiser(echo_graph,
                                                                                                           time_periods),
                                scalar_ok=True)
 
-
-    optimiser = EchoOptimiser(interval_duration=interval_duration,
-                              number_of_intervals=time_periods,
-                              number_of_expansion_intervals=1,
-                              discount_rate=0,
-                              ES=echo_graph,
-                              objective_set=objective_set,
-                              optimiser_engine=optimiser_engine)
+    optimiser = eo.EchoOptimiser(interval_duration=interval_duration,
+                                 number_of_intervals=time_periods,
+                                 number_of_expansion_intervals=1,
+                                 discount_rate=0,
+                                 ES=echo_graph,
+                                 objective_set=objective_set,
+                                 optimiser_engine=optimiser_engine)
 
     optimiser.optimise(tee=opt_display)
     log_infeasible_constraints(optimiser.model)
@@ -454,74 +465,91 @@ def run_echo_optimiser(echo_graph,
 def create_battery_node(node_dict: dict):
     """ Creates an echo battery node from the provided node dict."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = Battery(node_name=node_dict['id'], port_name=port_name, params=node_dict['parameters'])
+    node = em.Battery(node_name=node_dict['id'], port_name=port_name, **node_dict['parameters'])
     return node
+
 
 def create_tellegen_node(node_dict: dict, port_unit):
     """ Creates an echo tellegen node from the provided node dict."""
-    node = TellegenNode(node_name=node_dict['id'])
+    node = em.TellegenNode(node_name=node_dict['id'])
     port_list = node_dict['ports']
     create_flex_ports(node, port_list, [port_unit] * len(port_list))
     return node
 
-def create_flex_node(node_dict: dict, units: Units) -> Node:
+
+def create_flex_node(node_dict: dict, units: Units) -> em.Node:
     """ Creates an echo flexible node from the provided node dict.
     A flexible node is a node with a single flexible port with a specified unit."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = Node(node_name=node_dict['id'])
-    node.ports[port_name] = FlexPort(units=units)
+    node = em.Node(node_name=node_dict['id'])
+    node.ports[port_name] = em.FlexPort(units=units)
     return node
 
-def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> Node:
+
+def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> em.Node:
     """ Creates a node with a demand (import only) port."""
     port_name = check_node_has_only_one_port(node_dict)
     load_profile = process_field(node_dict['data'], df)
-    node = Load(node_name=node_dict['id'], port_name=port_name, port_unit=unit, profile=load_profile)
+    node = em.Load(node_name=node_dict['id'], port_name=port_name, port_unit=unit, profile=load_profile)
     return node
 
-def create_inverter_node(node_dict: dict) -> Node:
+
+def create_inverter_node(node_dict: dict) -> em.Node:
     """ Creates an inverter node, which has one AC port, and at least one DC port. """
-    inv_params = InverterConfig(**node_dict['parameters'])
+
     ports_defined_on_node = node_dict['ports']
     ports_defined_in_params = [node_dict['parameters']['ac_port_name']] + node_dict['parameters']['dc_port_names']
     assert set(ports_defined_on_node) == set(ports_defined_in_params), \
         'Node "{}" has ports {} defined on node, and ports {} defined in parameters.'.format(node_dict['id'],
                                                                                              ports_defined_on_node,
                                                                                              ports_defined_in_params)
-    inverter = NewInverter(node_name=node_dict['id'], **node_dict['parameters'])
+    inv_params = node_dict['parameters']
+    ac_port = inv_params.pop('ac_port_name')
+    dc_ports = inv_params.pop('dc_port_names')
+    inverter = em.Inverter(node_name=node_dict['id'], **inv_params)
+    inverter.add_ac_port(ac_port)
+    for i in dc_ports:
+        inverter.add_dc_port(i)
+
     return inverter
 
-def create_solar_node(node_dict: dict, df: pd.DataFrame) -> Node:
+
+def create_solar_node(node_dict: dict, df: pd.DataFrame) -> em.Node:
     """ Creates a node with one electrical generation port. """
     port_name = check_node_has_only_one_port(node_dict)
     pv_profile = process_field(node_dict['data'], df)
     if node_dict.get('parameters'):
-        node = Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile, params=node_dict.get('parameters'))
+        node = em.Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile,
+                     params=node_dict.get('parameters'))
     else:
-        node = Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile)
+        node = em.Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile)
     return node
 
-def create_ev(node_dict: dict, df: pd.DataFrame) -> Node:
+
+def create_ev(node_dict: dict, df: pd.DataFrame) -> em.Node:
     cp_port_name = check_node_has_only_one_port(node_dict)
-    ev_dict = EVConfig(**node_dict['parameters'])
-    ev_dict.available = process_field(ev_dict.available, df)
-    ev_dict.usage = process_field(ev_dict.usage, df)
-    node = EV(node_name=node_dict['id'], cp_name=cp_port_name, **ev_dict.dict())  # pass all our params as kwargs
+    ev_dict = node_dict['parameters']
+    ev_dict['available'] = process_field(ev_dict['available'], df)
+    ev_dict['usage'] = process_field(ev_dict['usage'], df)
+    node = em.EV(node_name=node_dict['id'], cp_name=cp_port_name, **ev_dict)  # pass all our params as kwargs
     return node
+
 
 def create_flex_node_with_emissions(node_dict: dict, units: Units):
-    node = FlexNodeWithEmissions(node_name=node_dict['id'], emitting_port_units=units, **node_dict['parameters'])
+    node = em.FlexNodeWithEmissions(node_name=node_dict['id'], emitting_port_units=units, **node_dict['parameters'])
     return node
 
+
 def create_carbon_aggregation_node(node_dict: dict):
-    node = CarbonAggregation(node_name=node_dict['id'])
+    node = em.CarbonAggregation(node_name=node_dict['id'])
     ports = node_dict['ports']
-    create_flex_ports(node_obj=node, port_list=ports, port_units=[Units.CO2]*len(ports))
+    create_flex_ports(node_obj=node, port_list=ports, port_units=[Units.CO2] * len(ports))
     return node
+
 
 #### Create objectives functions
 
-def create_demand_tariff(tariff_dict: dict, component_obj: Port):
+def create_demand_tariff(tariff_dict: dict, component_obj: em.Port):
     """ Creates an echo demand tariff from a tariff dictionary"""
     echo_charge_list = []
     charges = tariff_dict['charges']  # list of charge dicts
@@ -533,34 +561,37 @@ def create_demand_tariff(tariff_dict: dict, component_obj: Port):
         else:
             min_demand = 0
         # todo allow demand tariffs to be specific with start/end times
-        c = DemandCharge(rate=rate, min_demand=min_demand, window_array=window)  # Create demand charge
+        c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)  # Create demand charge
         echo_charge_list.append(c)
 
     import_demand = True if tariff_dict['type'] == TariffType.ImportDemandTariff else False
     export_demand = False if tariff_dict['type'] == TariffType.ImportDemandTariff else True
-    demand_tariff = DemandTariffObjective(name=tariff_dict['name'],
+    demand_tariff = eobj.DemandTariffObjective(name=tariff_dict['name'],
                                           component=component_obj,
                                           demand_charges=echo_charge_list,
                                           export_demand=export_demand,
                                           import_demand=import_demand)
     return demand_tariff
 
-def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, em: OptimisationGraph):
+
+def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, system: em.OptimisationGraph):
     """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
     target_node = tariff_dict['component']['node']
     target_port = tariff_dict['component']['port']
     assert target_node in node_name_dict.keys(), 'Tariff component "{}" does not correspond to a defined node/port.'.format(
         tariff_dict['component'])
-    node_obj = em.node_obj[node_name_dict[target_node]]
+    node_obj = system.node_obj[node_name_dict[target_node]]
     component_obj = node_obj.ports[target_port]
     return component_obj
 
+
 ### Util functions
 
-def create_flex_ports(node_obj: Node, port_list: list, port_units: list):
+def create_flex_ports(node_obj: em.Node, port_list: list, port_units: list):
     for i in range(len(port_list)):
-        new_port = FlexPort(units=port_units[i])
+        new_port = em.FlexPort(units=port_units[i])
         node_obj.ports[port_list[i]] = new_port
+
 
 #### Check functions
 
@@ -570,9 +601,10 @@ def array_length_check(array, length: int, message, scalar_ok=False):
         if hasattr(array, '__len__') or (not scalar_ok):
             assert len(array) == length, message + str(len(array))
 
+
 ### Result extraction functions
 
-def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
+def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
     """ Extracts results from an echo model and returns them in a dict.
     Results key arg allows user to specify which results they want returned."""
 
@@ -621,13 +653,14 @@ def extract_results(optimiser: EchoOptimiser, node_name_dict: dict, results_key:
     return output
 
 
-def extract_objectives(optimiser: EchoOptimiser) -> dict:
+def extract_objectives(optimiser: eo.EchoOptimiser) -> dict:
     output = {}
     for obj in optimiser.objective_set.objective_list:
         # get objective from optimiser
         output[obj.name] = optimiser.get_single_objective_total_value(obj)
     output['total_cost'] = optimiser.get_total_objective_value()
     return output
+
 
 def append_results(result_dict, network_dict, in_place: bool = False):
     """ Takes dict of results from an echo model, and appends them to the correct places in a network dict. """
@@ -639,6 +672,7 @@ def append_results(result_dict, network_dict, in_place: bool = False):
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['results'] = results
         return network_dict
+
 
 def check_node_has_only_one_port(node_dict: dict):
     """ Checks that a node has only one port defined """
@@ -712,7 +746,7 @@ def convert_nx_to_echo(g: nx.Graph, df: pd.DataFrame, verbose: bool = True):
 
     node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
 
-    system = OptimisationGraph()
+    system = em.OptimisationGraph()
 
     # Create nodes
     for node_name in g.nodes:
@@ -792,6 +826,7 @@ def check_nx_for_floating_nodes(g: nx.Graph):
     nodes_without_edges = nodes - nodes_with_edges
     assert len(nodes_without_edges) == 0, 'Node {} has no edge'.format(nodes_without_edges)
 
+
 # Pydantic tinkering
 #
 # #from our_validators import *
@@ -865,7 +900,7 @@ def check_nx_for_floating_nodes(g: nx.Graph):
 #
 # b = BatteryParams(**b_dict
 
-def port_connectivity_check(port_obj: Port, graph: OptimisationGraph):
+def port_connectivity_check(port_obj: em.Port, graph: em.OptimisationGraph):
     # todo this should be an optimisation graph method
     """ Checks if two ports are connected by an edge."""
     for _, edge_obj in graph.edge_obj.items():

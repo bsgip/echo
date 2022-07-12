@@ -1,6 +1,5 @@
 # Uses network class instead of directly building dictionary
 from echo.echo_builder import *
-from echo.builder_config import *
 
 time_periods = 48
 interval_duration = 60
@@ -11,38 +10,35 @@ df = pd.DataFrame({
     'ev_available': [1] * 12 + [0] * 12 + [1] * 12 + [0] * 12,
     'ev_usage': [0.0] * 12 + [0.5] * 12 + [0.0] * 12 + [1.0] * 12
 })
-battery_params = BatteryConfig(**{'max_capacity': 15.,
-                                  'depth_of_discharge_limit': 0,
-                                  'charging_power_limit': 1.25,
-                                  'discharging_power_limit': -1.25,
-                                  'charging_efficiency': 1.,
-                                  'discharging_efficiency': 1.,
-                                  'initial_state_of_charge': 0}).dict()
-
-inverter_params = InverterConfig(**{'ac_port_name': 'cp',
-                   'dc_port_names': ['bess', 'pv']}).dict()
+battery_params = {'max_capacity': 15.,
+                  'depth_of_discharge_limit': 0,
+                  'charging_power_limit': 1.25,
+                  'discharging_power_limit': -1.25,
+                  'charging_efficiency': 1.,
+                  'discharging_efficiency': 1.,
+                  'initial_state_of_charge': 0}
+inverter_params = {'ac_port_name': 'cp',
+                   'dc_port_names': ['bess', 'pv']}
 
 # V2G vehicle
-v2g = {'available': 'ev_available',
-       'usage': [0.0] * 12 + [0.5] * 12 + [0.0] * 12 + [1.0] * 12,
-       'max_capacity': 40.,
-       'depth_of_discharge_limit': 0,
-       'charging_power_limit': 10.,
-       'discharging_power_limit': -10,
-       'charging_efficiency': 1,
-       'discharging_efficiency': 1,
-       'initial_state_of_charge': 0.0,
-       'charge_mode': EVChargeMode.V2G,
-       'interval_duration': interval_duration,
-       'tod_charging': False}
-
-ev_params = EVConfig(**v2g).dict()
+ev_params = {'available': 'ev_available',
+             'usage': [0.0] * 12 + [0.5] * 12 + [0.0] * 12 + [1.0] * 12,
+             'max_capacity': 40.,
+             'depth_of_discharge_limit': 0,
+             'charging_power_limit': 10.,
+             'discharging_power_limit': -10,
+             'charging_efficiency': 1,
+             'discharging_efficiency': 1,
+             'initial_state_of_charge': 0.0,
+             'charge_mode': EVChargeMode.V2G,
+             'interval_duration': interval_duration,
+             'tod_charging': False}
 
 # initialise a network
 n = Network(name='my network')
 # add all our components (nodes)
 
-#n.add_node_to_components(n_id='grid', n_type=NodeType.ElectricalFlex, ports=['downstream'])
+# n.add_node_to_components(n_id='grid', n_type=NodeType.ElectricalFlex, ports=['downstream'])
 
 n.add_node_to_components(n_id='grid', n_type=NodeType.FlexWithEmissions, ports=['downstream', 'co2'],
                          params={'emitting_port': 'downstream',
@@ -83,30 +79,30 @@ n.add_edge_between_ports(node_tuple=('grid', 'emissions'), port_tuple=('co2', 'g
 n.add_objective(obj_name='import_cost',
                 component={'node': 'cp', 'port': 'upstream'},
                 obj_type=TariffType.ImportTariff,
-                prices=[1] * (time_periods//2) + [2] * (time_periods//2))
+                prices=[1] * (time_periods // 2) + [2] * (time_periods // 2))
 
 n.add_objective(obj_name='carbon_cost',
                 component={'node': 'emissions', 'port': 'grid'},
                 obj_type=TariffType.ImportTariff,
-                prices=[0.0]*time_periods)
+                prices=[0.0] * time_periods)
 
 n.add_objective(obj_name='export_cost',
                 component={'node': 'cp', 'port': 'upstream'},
                 obj_type=TariffType.ExportTariff,
-                prices=[0.1] * (time_periods//2) + [3] * (time_periods//2))
+                prices=[0.1] * (time_periods // 2) + [3] * (time_periods // 2))
 
 dc1_param = {'name': 'shoulder',
-            'rate': 0.,
-            'window': [0]*24 + [1]*24}
+             'rate': 0.,
+             'window': [0] * 24 + [1] * 24}
 
 dc2_param = {'name': 'peak',
              'rate': 0.,
-             'window': [1]*24 + [0]*24}
+             'window': [1] * 24 + [0] * 24}
 
 n.add_objective(obj_name='import_demand_tariff',
                 component={'node': 'cp', 'port': 'upstream'},
                 obj_type=TariffType.ImportDemandTariff,
-                charges = [dc1_param, dc2_param])
+                charges=[dc1_param, dc2_param])
 
 n.validate_network()
 
