@@ -750,6 +750,8 @@ class Node(BaseModel):
 
         setattr(model, 'retirement_con_'+self.node_name, en.Constraint(model.Expansion, rule=permanent_retirement_rule))
 
+        #todo alternative constraint below, forces retirement or replacement at end of lifetime
+
         # # Big M Constraint: force either retirement or replacement at end of lifetime
         # def eol_rule1(model, p):
         #     replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
