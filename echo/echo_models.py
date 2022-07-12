@@ -734,7 +734,7 @@ class Node(BaseModel):
             if p == 0:
                 return getattr(model, self.lifetime_remaining)[p] == self.initial_life_left
             else:
-                new_lifetime = getattr(model, self.replace)[p] * self.nominal_lifetime
+                new_lifetime = getattr(model, self.replace)[p] * (self.nominal_lifetime + 1)  # Need +1 because we -1 each time period automatically
                 retired = getattr(model, self.retire)[p]
                 return getattr(model, self.lifetime_remaining)[p] == \
                        getattr(model, self.lifetime_remaining)[p-1] + new_lifetime + retired - 1

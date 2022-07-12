@@ -67,12 +67,12 @@ battery = Battery(port_name='bess',
                   initial_life_left=2,
                   nominal_lifetime=3,
                   retirement_planning=True,
-                  replace_cost=100000.)  # initial state of charge in kWh
+                  replace_cost=0.)  # initial state of charge in kWh
 
 battery_future = Battery(port_name='bess',
                          expansion_planning=True,
-                         install_cost=5000,  # $ /unit capacity
-                         max_capacity=10000.0,  # max capacity of battery in kwh
+                         install_cost=50,  # $ /unit capacity
+                         max_capacity=100.0,  # max capacity of battery in kwh
                          depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
                          charging_power_limit=2,  # max charging rate in kW
                          discharging_power_limit=-2,  # max discharging rate in kW
