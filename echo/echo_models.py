@@ -538,19 +538,24 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
-    planning: Optional[bool] = False  # Attribute for indicating whether a port is part of an expansion planning problem
+    expansion_planning: Optional[bool] = False  # Attribute for whether we are considering installing this node
+    retirement_planning: Optional[bool] = False  # Attribute for whether we are considering retiring this node
     install_cost: Optional[float]
-    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
-
-    inflow: Optional[str]
+    replace_cost: Optional[float]
+    objective: Optional[Any] = 0  # this is used for any objective terms defined on the node
+    nominal_lifetime: int = None  # node nominal lifetime in number of expansion_planning period units
+    initial_life_left: int = None  # node life left at start of optimisation
 
     def __init__(self, **data):
         super().__init__(**data)
         if self.node_name is None:
             self.node_name = 'node_' + str(self.uid)
-            self.is_installed = f"is_installed_{self.node_name}"
-            self.installed_when = f"installed_when_{self.node_name}"
-            self.max_install = f"is_installed_total_{self.node_name}"
+        self.is_installed = f"is_installed_{self.node_name}"
+        self.installed_when = f"installed_when_{self.node_name}"
+        self.max_install = f"is_installed_total_{self.node_name}"
+        self.replace = f"is_replaced_{self.node_name}"
+        self.retire = f"is_retired_{self.node_name}"
+        self.lifetime_remaining = f"lifetime_remaining_{self.node_name}"
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
@@ -669,54 +674,102 @@ class Node(BaseModel):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
-        if self.planning is True:
-            # Create an indexed binary variable for which time period if any the port is installed
-            setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-            # Create an integer variable for which period the asset is installed in, if installed
-            setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
-            # Create a non-indexed var to track whether we ever install the port
-            setattr(model, self.max_install, en.Var(initialize=0, domain=en.Binary))
+        if self.expansion_planning is True:
+            self._apply_expansion_constraints(model)
 
-            # Set constraints on integer variable so that it correctly tracks the planning period in which we install
-            def integer_var_con1(model, p):
-                return getattr(model, self.installed_when) >= p - model.bigM * getattr(model, self.is_installed)[p] + 1
+        if self.retirement_planning is True:
+            self._apply_retirement_constraints(model)
 
-            def integer_var_con2(model, p):
-                return getattr(model, self.installed_when) <= p + model.bigM * (
-                            1 - getattr(model, self.is_installed)[p])
+    def _apply_expansion_constraints(self, model):
+        # Create an indexed binary variable for which time period if any the port is installed
+        setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        # Create an integer variable for which period the asset is installed in, if installed
+        setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
+        # Create a non-indexed var to track whether we ever install the port
+        setattr(model, self.max_install, en.Var(initialize=0, domain=en.Binary))
 
-            setattr(model, 'install_int_con1_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con1))
-            setattr(model, 'install_int_con2_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con2))
+        # Set constraints on integer variable so that it correctly tracks the expansion_planning period in which we install
+        def integer_var_con1(model, p):
+            return getattr(model, self.installed_when) >= p - model.bigM * getattr(model, self.is_installed)[p] + 1
 
-            # Constraints for max_is_installed
-            def rule3(model, p):
-                return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
+        def integer_var_con2(model, p):
+            return getattr(model, self.installed_when) <= p + model.bigM * (1 - getattr(model, self.is_installed)[p])
 
-            setattr(model, 'max_is_installed_con_' + self.node_name, en.Constraint(model.Expansion, rule=rule3))
+        setattr(model, 'install_int_con1_' + self.node_name, en.Constraint(model.Expansion, rule=integer_var_con1))
+        setattr(model, 'install_int_con2_' + self.node_name, en.Constraint(model.Expansion, rule=integer_var_con2))
 
-            # Constraints to force all ports on node to be = 0 before the node is installed
-            def install_before_active1(model, p, t):
-                prev = 0
-                for i in range(p + 1):
-                    prev += getattr(model, self.is_installed)[i]
-                return getattr(model, port_obj.port_name)[p, t] <= model.bigM * prev
+        # Constraints for max_is_installed
+        def rule3(model, p):
+            return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
 
-            def install_before_active2(model, p, t):
-                prev = 0
-                for i in range(p + 1):
-                    prev += getattr(model, self.is_installed)[i]
-                return getattr(model, port_obj.port_name)[p, t] >= - model.bigM * prev
+        setattr(model, 'max_is_installed_con_' + self.node_name, en.Constraint(model.Expansion, rule=rule3))
 
-            for port_name, port_obj in self.ports.items():
-                setattr(model, 'install_b4_run1_' + port_name,
-                        en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
-                setattr(model, 'install_b4_run2_' + port_name,
-                        en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+        # Constraints to force all ports on node to be = 0 before the node is installed
+        def install_before_active1(model, p, t):
+            prev = 0
+            for i in range(p + 1):
+                prev += getattr(model, self.is_installed)[i]
+            return getattr(model, port_obj.port_name)[p, t] <= model.bigM * prev
+
+        def install_before_active2(model, p, t):
+            prev = 0
+            for i in range(p + 1):
+                prev += getattr(model, self.is_installed)[i]
+            return getattr(model, port_obj.port_name)[p, t] >= - model.bigM * prev
+
+        for port_name, port_obj in self.ports.items():
+            setattr(model, 'install_b4_run1_' + port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
+            setattr(model, 'install_b4_run2_' + port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
+    def _apply_retirement_constraints(self, model):
+        # Create retirement planning variables
+        setattr(model, self.retire, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        setattr(model, self.replace, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        setattr(model, self.lifetime_remaining, en.Var(model.Expansion, initialize=self.initial_life_left,
+                                                       bounds=(0, self.nominal_lifetime), domain=en.NonNegativeReals))
+
+        def remaining_life_rule(model, p):
+            if p == 0:
+                return getattr(model, self.lifetime_remaining)[p] == self.initial_life_left
+            else:
+                return getattr(model, self.lifetime_remaining)[p] == \
+                       getattr(model, self.lifetime_remaining)[p - 1] + \
+                       getattr(model, self.replace)[p-1] * (self.nominal_lifetime+1) + \
+                       (getattr(model, self.retire)[p-1] - 1)
+
+        setattr(model, 'life_left_' + self.node_name, en.Constraint(model.Expansion, rule=remaining_life_rule))
+
+        # Big M Constraint: force either retirement or replacement at end of lifetime
+        def eol_rule1(model, p):
+            replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+            return getattr(model, self.lifetime_remaining)[p] <= (1 - replace_or_retire) * model.bigM
+
+        def eol_rule2(model, p):
+            replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+            return getattr(model, self.lifetime_remaining)[p] * model.bigM >= (1 - replace_or_retire)
+
+        setattr(model, 'eol_1_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule1))
+        setattr(model, 'eol_2_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule2))
+
+        # Force node ports == 0 if retired using a pair of big M constraints
+        for port_name, port_obj in self.ports.items():
+            def retire_rule1(model, p, t):
+                return getattr(model, port_obj.port_name)[p, t] <= (1 - getattr(model, self.retire)[p]) * model.bigM
+
+            def retire_rule2(model, p, t):
+                return getattr(model, port_obj.port_name)[p, t] >= -(1 - getattr(model, self.retire)[p]) * model.bigM
+
+            setattr(model, 'retire_1_'+port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule1))
+            setattr(model, 'retire_2_' + port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule2))
 
     def add_objective(self, model):
         total = 0
-        if self.planning is True:
+        if self.expansion_planning is True:
             total += self.install_cost * getattr(model, self.max_install)
+        if self.retirement_planning is True:
+            total += self.replace_cost * sum(getattr(model, self.replace)[p] for p in model.Expansion)
         self.objective += total
 
     def num_ports(self):
@@ -1038,7 +1091,7 @@ class Storage(Port):
                     return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
                            getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
                 else:
-                    # Need to get the last value from the previous planning period
+                    # Need to get the last value from the previous expansion_planning period
                     return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[
                         p - 1, len(model.Time) - 1] + \
                            getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
@@ -1497,63 +1550,74 @@ New nodes
 
 
 class Battery(Node):
-    port_name: str
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name,
+                 max_capacity: float,
+                 initial_state_of_charge: float,
+                 charging_power_limit: float,
+                 discharging_power_limit: float,
+                 storage_capacity_cost: Optional[PositiveFloat] = None,
+                 charging_efficiency: float = 1,
+                 discharging_efficiency: float = 1,
+                 depth_of_discharge_limit: float = 0,
+                 fixed_storage_capacity: bool = True,
+                 regularise: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalStorage(**data)
+        self.ports[port_name] = ElectricalStorage(max_capacity=max_capacity,
+                                                  depth_of_discharge_limit=depth_of_discharge_limit,
+                                                  charging_power_limit=charging_power_limit,
+                                                  discharging_power_limit=discharging_power_limit,
+                                                  charging_efficiency=charging_efficiency,
+                                                  discharging_efficiency=discharging_efficiency,
+                                                  initial_state_of_charge=initial_state_of_charge,
+                                                  fixed_storage_capacity=fixed_storage_capacity,
+                                                  storage_capacity_cost=storage_capacity_cost,
+                                                  regularise=regularise)
 
 
 class Solar(Node):
-    port_name: str
-    curtailable: bool = False
-    profile: Union[ArrayType, dict]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 profile: Union[ArrayType, dict],
+                 curtailable: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
 
 
 class Load(Node):
-    port_name: str
-    port_unit: int
-    profile: Union[dict, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 port_unit: str,
+                 profile: Union[dict, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.port_name] = Demand(units=self.port_unit)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = Demand(units=port_unit)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
 
 
 class FlexNodeWithEmissions(Node):
-    emitting_port: str
-    emitting_port_units: int
-    carbon_port: str
-    emissions_factor: Union[float, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self, emitting_port: str,
+                 emitting_port_units: int,
+                 carbon_port: str,
+                 emissions_factor:
+                 Union[float, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.emitting_port] = FlexPort(units=self.emitting_port_units)
-        self.ports[self.carbon_port] = CarbonSource()
-        self.add_emission_transformation(emitting_port=self.ports[self.emitting_port],
-                                         carbon_port=self.ports[self.carbon_port],
-                                         emission_factor=self.emissions_factor)
+        self.ports[emitting_port] = FlexPort(units=emitting_port_units)
+        self.ports[carbon_port] = CarbonSource()
+        self.add_emission_transformation(emitting_port=self.ports[emitting_port],
+                                         carbon_port=self.ports[carbon_port],
+                                         emission_factor=emissions_factor)

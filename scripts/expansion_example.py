@@ -31,7 +31,7 @@ np.set_printoptions(suppress=True)
 ## Set up hyper params
 time_periods = 12  # number of time periods to run the optimisation for
 interval_duration = 60  # each time period is 15 mins long
-expansion_periods = 2
+expansion_periods = 4
 discount_rate = 0  # not yet implemented leave as 0
 
 # Create graph in echo
@@ -47,28 +47,29 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
 keys = generate_pyomo_indices(time_periods, expansion_periods)
-l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods, keys=keys)
+l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods, keys=keys)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
-inverter = Inverter(max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
+inverter = Inverter()
 inverter.add_ac_port('inv')  # add a port that is used to connect back to the connection_point
 inverter.add_dc_port('bess')  # add a port to connect to the battery
 
 # create a node for the battery
-battery = Node()
-# create an electrical storage object
-b = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
-                      depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-                      charging_power_limit=2,  # max charging rate in kW
-                      discharging_power_limit=-2,  # max discharging rate in kW
-                      charging_efficiency=1,  # charging efficiency in range [0,1]
-                      discharging_efficiency=1,  # discharging efficiency in range [0,1]
-                      initial_state_of_charge=0.0)  # initial state of charge in kWh
-# connect the electrical storage to a port on the battery node
-battery.ports['bess'] = b
+battery = Battery(port_name='bess',
+                  max_capacity=10.0,  # max capacity of battery in kwh
+                  depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
+                  charging_power_limit=2,  # max charging rate in kW
+                  discharging_power_limit=-2,  # max discharging rate in kW
+                  charging_efficiency=1,  # charging efficiency in range [0,1]
+                  discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                  initial_state_of_charge=0.0,
+                  initial_life_left = 2,
+                  nominal_lifetime = 3,
+                  retirement_planning=True,
+                  replace_cost=100000.)  # initial state of charge in kWh
 
 battery_future = Battery(port_name='bess',
-                         planning=True,
+                         expansion_planning=True,
                          install_cost=5,  # $ /unit capacity
                          max_capacity=10000.0,  # max capacity of battery in kwh
                          depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
@@ -102,27 +103,30 @@ objective_set = ObjectiveSet(objective_list=[import_cost])
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(interval_duration=interval_duration,
-                          number_of_intervals=time_periods,
-                          number_of_expansion_intervals=expansion_periods,
-                          discount_rate=discount_rate,
-                          ES=system,
-                          objective_set=objective_set,
-                          optimiser_engine='cplex')
+opt = EchoOptimiser(interval_duration=interval_duration,
+                    number_of_intervals=time_periods,
+                    number_of_expansion_intervals=expansion_periods,
+                    discount_rate=discount_rate,
+                    ES=system,
+                    objective_set=objective_set,
+                    optimiser_engine='cplex')
 
-optimiser.optimise(tee=False)
+opt.optimise(tee=True)
 
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(opt.model)
 
-print('total cost:', optimiser.get_total_objective_value())
-print(optimiser.values(battery_future.is_installed, 0))
-print(optimiser.values(battery_future.installed_when))
+print('total cost:', opt.get_total_objective_value())
+print('Battery2 installed: ', opt.values(battery_future.is_installed, 0))
+print('Planning period installed: ', opt.values(battery_future.installed_when))
+
+print('Battery1 life remaining: ', opt.values(battery.lifetime_remaining, 0))
+print('Battery1 retired: ', opt.values(battery.retire, 0))
+print('Battery1 replaced: ', opt.values(battery.replace, 0))
+
+
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
-#
+print()
 # colors = sns.color_palette()
 # hrs = np.arange(0, len(test_load)) / 4
 # fig = plt.figure(figsize=(14, 7))

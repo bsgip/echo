@@ -31,8 +31,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     Node with an input and output port. The relationship between input and output is defined at each time
     interval by an array of input-->output point pairs, which are used to construct a piecewise constraint.
     """
-    input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
-    output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
+    input_pts: Optional[dict]  # dict where the keys are expansion_planning-time period tuple, and value is input pt array
+    output_pts: Optional[dict]  # dict where the keys are expansion_planning-time period tuple, and value is output pt array
 
     # These values are automatically calculated by the 'set_bounds_from_piecewise_pts' validator
     input_ub: float = None
@@ -130,7 +130,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
 
     def get_cop(self, optimiser):
         """ Returns the coefficient of performance (output/input)"""
-        # todo not set up for expansion planning
+        # todo not set up for expansion expansion_planning
         _input = optimiser.values(self.ports['input'].port_name)
         _output = optimiser.values(self.ports['output'].port_name)
         cop = np.zeros(len(_input))
