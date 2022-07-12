@@ -224,33 +224,18 @@ class OptimisationGraph(Graph):
             setattr(model, f"path_flow_con3_{current_node_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_two))
 
-    def draw(self, with_labels=False, labels=None):
+    def draw_echo_graph(self, with_labels=False, labels=None):
         """
         Draws the network with or without node labels
         """
         nx.draw_networkx(self, with_labels=with_labels, labels=labels)
         plt.show()
 
-    def print_network_hierarchy(self):
-        """
-        Prints the model hierarchy as node names --> port names
-        """
-        for n_name, n_object in self.node_obj.items():
-            print(n_name)
-            for p_name, p_object in n_object.ports.items():
-                print('  port_name: ', p_name)
 
     def print_port_names(self):
         for n in self.node_obj.values():
             for pn, p in n.ports.items():
                 print(pn, ', ', p.port_name)
-
-    def export_as_network_dict(self):
-        d = {}
-        for n_name, n_obj in self.node_obj.items():
-            n_dict = {n_name:
-                          {'id': n_name,
-                           'type': type(n_obj)}}
 
     def get_node(self, node_name: str):
         return self.node_obj.get(node_name)
