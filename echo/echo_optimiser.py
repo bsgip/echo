@@ -45,20 +45,22 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
-        self._validate_network_graph()
+        self.validate_network_graph()
         self.build_model()
         self.apply_constraints()
         self.build_objective()
 
-    def _validate_network_graph(self):
+    def validate_network_graph(self):
         """
         Validates that a pyomo model can be built from the provided network graph. Checks for:
         - name consistency between objects (eg node.node_name) and graph nodes
-        - others...
+        - floating nodes that have no edge connecting them to another node
         """
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
                 'Node {} name has been updated after being added to the network graph.'.format(node_name)
+
+        self.ES.verify_graph()
 
         # Give a warning for any ports that are not connected to anything - sometimes this is ok, eg if the port has a well defined transformation,
         # but sometimes it will cause the optimisation to give an incorrect result
@@ -178,6 +180,31 @@ class EchoOptimiser(object):
         df = pd.DataFrame(dct)
 
         return df
+
+    def df_by_node(self):
+        """ Returns a df of results by node, using the port names given in each nodes 'ports' dict"""
+        dct = {}
+        for nname, node in self.ES.node_obj.items():
+            for pname, p in node.ports.items():
+                dct[nname + '-' + pname] = getattr(self.model, p.port_name).extract_values()
+
+        df = pd.DataFrame(dct)
+        return df
+
+    def df_by_port(self):
+        """ Returns a df of results by port, using port names given in each nodes 'ports' dict"""
+        dct = {}
+        for nname, node in self.ES.node_obj.items():
+            for pname, p in node.ports.items():
+                if dct.get(pname) is not None:
+                    # We have an existing key - make a new name using the node name
+                    dct[pname + '_node_' + nname] = getattr(self.model, p.port_name).extract_values()
+                else:
+                    dct[pname] = getattr(self.model, p.port_name).extract_values()
+
+        df = pd.DataFrame(dct)
+        return df
+
 
     def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""

@@ -63,11 +63,10 @@ discount_rate = 0               # not yet implemented leave as 0
 system = OptimisationGraph()
 
 # Create assets
-grid = Node()                                   # create node representing upstream grid
-grid.add_electrical_ports_from_list(
-    ['grid'])  # create a port which will be used to connect this with the connection_point
+grid = Node(node_name='grid')                                   # create node representing upstream grid
+grid.add_electrical_ports_from_list(['grid'])  # create a port which will be used to connect this with the connection_point
 
-connection_point = TellegenNode()     # create the connection point
+connection_point = TellegenNode(node_name='cp')     # create the connection point
 connection_point.add_electrical_ports_from_list(
     ['load', 'inv', 'grid'])  # create ports to connect to the grid, the load, and the inverter
 # set flow constraints for the port that connects to the grid,
@@ -76,7 +75,7 @@ connection_point.add_electrical_ports_from_list(
 connection_point.ports['grid'].set_flow_constraints(max_import=15,max_export=-15, slack=True)
 # todo: value of slack
 
-load = Node()                       # create a node to represent the load
+load = Node(node_name='load')                     # create a node to represent the load
 l1 = ElectricalDemand()             # create an electrical demand to attach to this node
 l1.add_demand_profile_from_array(test_load, expansion_periods)
 load.ports['load'] = l1             # add the electrical demand to a port of the load node
@@ -84,13 +83,13 @@ load.ports['load'] = l1             # add the electrical demand to a port of the
 # create an inverter node with some properties,
 # if the constraints are not none then they should be max_export <= 0 <= max_import
 # can also set efficiency on the dc and the ac side in the range 0-1
-inverter = Inverter(max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
+inverter = Inverter(node_name='inv', max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
 inverter.add_ac_port('inv')     # add a port that is used to connect back to the connection_point
 inverter.add_dc_port('bess')    # add a port to connect to the battery
 inverter.add_dc_port('pv')      # add a port to connect to the pv
 
 # create a node for the battery
-battery = Node()
+battery = Node(node_name='battery')
 # create an electrical storage object
 b = ElectricalStorage(max_capacity=15.0,                # max capacity of battery in kwh
                        depth_of_discharge_limit=0,      # allowable depth of discharge in range [0,100] (i.e. percent)
@@ -103,7 +102,7 @@ b = ElectricalStorage(max_capacity=15.0,                # max capacity of batter
 battery.ports['bess'] = b
 
 # create a node for the solar
-solar = Node()
+solar = Node(node_name='solar')
 pv = ElectricalGeneration()     # create an electrical generation object
 pv.curtailable = False          # set whether this can be curtailed or not
 pv.add_generation_profile_from_array(test_pv, expansion_periods)
@@ -188,3 +187,9 @@ plt.show()
 # system.draw(with_labels=True)
 # system.print_network_hierarchy()
 # df = optimiser.df()
+# df1 = optimiser.df_by_node()
+# df1.plot()
+# plt.show()
+# df2 = optimiser.df_by_port()
+# df2.plot()
+# plt.show()

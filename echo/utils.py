@@ -191,8 +191,19 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
     return x, y
 
 
-def add_time_and_expansion_index_to_values(values, time_periods, expansion_periods):
-    """ Takes some input (values) - could be array, or int. Adds a time_period and expansion period key."""
+def populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods):
+    """ Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
+    Eg for inputs:
+        values = 10
+        time_periods = 4
+        expansion_periods = 2
+    the output dict would be:
+    Output = {(0,0): 10,
+              (0,1): 10,
+              ...
+              (2,2): 10
+              (2,3): 10}
+    """
     output = {}
     for p in range(expansion_periods):
         for t in range(time_periods):

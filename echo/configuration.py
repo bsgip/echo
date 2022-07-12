@@ -1,3 +1,10 @@
+"""
+
+Configuration classes
+
+"""
+
+
 class Units(object):
     """ The units in which the optimisation is undertaken. """
 
@@ -55,21 +62,27 @@ class ExpansionType(object):
     Edge = 3
 
 class NodeType(object):
-    Flex = 'flex'
-    Tellegen = 'tellegen'
+    ElectricalFlex = 'electrical_flex'
+    ElectricalTellegen = 'elec_tellegen'
+    MultiCommodityTellegen = 'multi_commodity_tellegen'
     Battery = 'battery'
-    Load = 'load'
-    Generation = 'gen'
+    ElectricalLoad = 'load'
+    ElectricalGeneration = 'elec_gen'
     Solar = 'solar'
     EV = 'ev'
+    V0GEV = 'v0g_ev'
+    V1GEV = 'v1g_ev'
+    V2GEV = 'v2g_ev'
     Inverter = 'inverter'
     Chiller = 'chiller'
-    Boiler = 'boiler'
-    ControlledLoad = 'cload'
-    ControlledGen = 'cgen'
-    FixedPort = 'fixed_port'
+    GasBoiler = 'gas_boiler'
+    ControlledElectricalLoad = 'cload_elec'
+    ControlledElectricalGen = 'cgen_elec'
+    FixedElectrical = 'fixed_elec'
+    FixedGas = 'fixed_gas'
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
+    FlexWithEmissions = 'flex_with_emissions'
 
 class Resource:
     """ Resources/commodities """
@@ -80,18 +93,28 @@ class Resource:
 
 class TariffType:
     """ Tariff types"""
-    import_tariff = 0
-    export_tariff = 1
-    import_demand_tariff = 2
-    export_demand_tariff = 3
-    time = 4  # a tariff that applies per time period (eg daily supply charge)
+    ImportTariff = 'import tariff'
+    ExportTariff = 'export tariff'
+    ImportDemandTariff = 'import demand tariff'
+    ExportDemandTariff = 'export demand tariff'
+    ThroughputCost = 'throughput cost'
+    PeakPosPower = 'peak positive power'
+    PeakNegPower = 'peak negative power'
+    QuadraticPower = 'quadratic power'
+    ContingencyPositive = 'contingency positive'
+    ContingencyNegative = 'contingency negative'
 
 class Resets:
     """ How often something resets """
-    minute = 0
-    hourly = 1
-    daily = 2
-    weekly = 3
-    yearly = 4
+    minute = 'minute'
+    hourly = 'hourly'
+    daily = 'daily'
+    weekly = 'weekly'
+    yearly = 'annually'
 
+
+class EVChargeMode:
+    V0G = 'V0G'
+    V1G = 'V1G'
+    V2G = 'V2G'
 

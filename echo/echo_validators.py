@@ -1,6 +1,9 @@
+from typing import TypeVar
+
 from pydantic import BaseModel, Field
 import numpy as np
 
+DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
@@ -12,6 +15,8 @@ class ArrayType(np.ndarray):
     #todo actually validate this type
     @classmethod
     def validate(cls, v):
+        if type(v) is str:
+            raise ValueError('Array Type cannot be a string.')
         return v
 
     class Config:
@@ -100,3 +105,78 @@ def dod_checks(cls, values):
     return values
 
 
+def check_bound_order(cls, values):
+    """ Checks that lower bound is smaller than upper bound."""
+    lb = values.get('lower_bound')
+    ub = values.get('upper_bound')
+    if (lb is not None) and (ub is not None):
+        if hasattr(lb, '__iter__'):
+            assert len(lb) == len(ub), 'Lower bound and upper bound are mismatched lengths.'
+            for i in range(len(lb)):
+                if lb[i] >= ub[i]:
+                    raise ValueError('Lower bound should be less than upper bound.')
+        else:
+            if lb >= ub:
+                raise ValueError('Lower bound should be less than upper bound.')
+    return values
+
+
+def node_unit_validator(cls, values):
+    """ Checks that a tellegen node's ports all have the same units."""
+    ports = values.get('ports')
+    u = None
+    if ports is not None:
+        for p in ports.values():
+            if u is not None:
+                assert p.units == u, 'Tellegen node ports must have the same units.'
+            else:
+                u = p.units
+
+    return values
+
+def validate_piecewise_arrays(cls, values):
+    input_pts = values.get('input_pts')
+    output_pts = values.get('output_pts')
+    if input_pts is not None and output_pts is not None:
+        assert len(input_pts) == len(output_pts), 'Mismatched indices for input and output dictionaries.'
+        for k, _ in input_pts.items():
+            assert len(input_pts[k]) == len(output_pts[k]), 'Input and output arrays are not equal lengths for index {}'.format(k)
+
+    return values
+
+
+def set_bounds_from_piecewise_pts(cls, values):
+    input_pts = values.get('input_pts')
+    output_pts = values.get('output_pts')
+    if input_pts is not None and output_pts is not None:
+        values['input_ub'] = max(max(input_pts.values()))
+        values['input_lb'] = min(min(input_pts.values()))
+        values['output_ub'] = max(max(output_pts.values()))
+        values['output_lb'] = min(min(output_pts.values()))
+    return values
+
+
+def set_output_bounds_from_input_bounds_and_cop_and_startup_eta(cls, values):
+    cop = values.get('cop')
+    eta = values.get('startup_eta')
+    max_in = values.get('max_input')
+    min_in = values.get('min_input')
+    values['max_output'] = max_in * cop * -1
+    if eta is not None:
+        values['min_output'] = min_in * eta * -1
+    else:
+        values['min_output'] = min_in * cop * -1
+    return values
+
+
+def validate_startup_efficiency(cls, values):
+    cop = values.get('cop')
+    eta = values.get('startup_eta')
+    if eta is not None:
+        assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
+    return values
+
+
+def check_temp_bounds(cls, values):
+    ub = values.get('temp_ub')
+    lb = values.get('temp_lb')

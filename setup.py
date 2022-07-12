@@ -13,7 +13,8 @@ install_requires = [
     'typing-extensions>=4.1',
     'pydantic>=1.9',
     'tqdm>=4.63',
-    'pyarrow>=7.0'
+    'pyarrow>=7.0',
+    'scikit-learn>=1.1'
 ]
 tests_require = [
     "pytest",
@@ -26,7 +27,7 @@ if sys.version_info < (3, 7):
 
 setuptools.setup(
     name="echo",
-    version="1.1.0",
+    version="1.1.1",
     description="For ",
     long_description=long_description,
     long_description_content_type="text/markdown",
