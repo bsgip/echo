@@ -53,7 +53,7 @@ n.add_node_to_components(n_id='inverter', n_type=NodeType.Inverter, ports=['cp',
 
 n.add_node_to_components(n_id='battery', n_type=NodeType.Battery, ports=['bess'], params=battery_params)
 
-n.add_node_to_components(n_id='solar', n_type=NodeType.Solar, ports=['pv'], data='solar')
+n.add_node_to_components(n_id='solar', n_type=NodeType.Solar, ports=['pv'], data='solar', params={'curtailable': True})
 
 n.add_node_to_components(n_id='load', n_type=NodeType.ElectricalLoad, ports=['load'], data='load')
 

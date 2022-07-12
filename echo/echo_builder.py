@@ -519,8 +519,7 @@ def create_solar_node(node_dict: dict, df: pd.DataFrame) -> em.Node:
     port_name = check_node_has_only_one_port(node_dict)
     pv_profile = process_field(node_dict['data'], df)
     if node_dict.get('parameters'):
-        node = em.Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile,
-                     params=node_dict.get('parameters'))
+        node = em.Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile, **node_dict['parameters'])
     else:
         node = em.Solar(node_name=node_dict['id'], port_name=port_name, profile=pv_profile)
     return node

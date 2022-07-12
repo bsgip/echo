@@ -1418,24 +1418,19 @@ class Battery(Node):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports[self.port_name] = ElectricalStorage(max_capacity=self.max_capacity,
-                                                       depth_of_discharge_limit=self.depth_of_discharge_limit,
-                                                       charging_power_limit=self.charging_power_limit,
-                                                       discharging_power_limit=self.discharging_power_limit,
-                                                       charging_efficiency=self.charging_efficiency,
-                                                       discharging_efficiency=self.discharging_efficiency,
-                                                       initial_state_of_charge=self.initial_state_of_charge)
-        #self.ports[self.port_name] = ElectricalStorage(**data)
+        data.pop('port_name')
+        self.ports[self.port_name] = ElectricalStorage(**data)
 
 
 class Solar(Node):
     port_name: str
-    params: dict = {}
+    curtailable: bool = False
     profile: Union[ArrayType, dict]
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports[self.port_name] = ElectricalGeneration(**self.params)
+        data.pop('port_name')
+        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
         if type(self.profile) is dict:
             self.ports[self.port_name].add_initial_value(self.profile)
         else:
