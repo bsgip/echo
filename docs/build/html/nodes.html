@@ -255,7 +255,7 @@ Only EV specific additional parameters/variables are defined below.</p>
 <p>The modified battery state of charge equations accounting for the trip slack variable (if <code class="docutils literal notranslate"><span class="pre">trip_slack=True</span></code>):</p>
 <p><span class="math notranslate nohighlight">\(E_{x, t} = E_{x,t-1} + \eta^\text{charge} p^{battery,+}_{x,t} d^{interval} + p^{battery, -}_{x,t} \frac{d^\text{interval}}{\eta^\text{discharge}} + S^\text{trip}_{x,t}\)</span></p>
 <p>Conservative state of charge lower limit (if <code class="docutils literal notranslate"><span class="pre">SOC_conserv</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>):</p>
-<p><span class="math notranslate nohighlight">\(\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - C^\text{conserv} &gt;=0\)</span></p>
+<p><span class="math notranslate nohighlight">\(\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} &gt;=0\)</span></p>
 </section>
 <section id="inverter">
 <h3>Inverter<a class="headerlink" href="#inverter" title="Permalink to this heading"></a></h3>

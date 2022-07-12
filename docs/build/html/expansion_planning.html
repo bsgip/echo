@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -93,6 +94,26 @@
 </section>
 <section id="asset-expansions">
 <h2>Asset Expansions<a class="headerlink" href="#asset-expansions" title="Permalink to this heading"></a></h2>
+<section id="variables">
+<h3>Variables<a class="headerlink" href="#variables" title="Permalink to this heading"></a></h3>
+<p>The asset expansion variables belong to the node. They include:</p>
+<p><span class="math notranslate nohighlight">\(installed\)</span>, binary variable indexed by planning periods, for indicating when the asset is installed</p>
+<p><span class="math notranslate nohighlight">\(installed^{int}\)</span>, non negative integer variable indicating which period the asset is installed, if installed.</p>
+<p><span class="math notranslate nohighlight">\(installed^{max}\)</span>, binary variable, indicating whether the asset got installed in any time period.</p>
+</section>
+<section id="constraints">
+<h3>Constraints<a class="headerlink" href="#constraints" title="Permalink to this heading"></a></h3>
+<p>Constraints include a pair of big M constraints to set the integer variable <span class="math notranslate nohighlight">\(installed^{int}\)</span> correctly:</p>
+<p><span class="math notranslate nohighlight">\(installed^{int}_p \geq p - M\cdot installed_p + 1\)</span> for p in planning periods.</p>
+<p><span class="math notranslate nohighlight">\(installed^{int}_p \leq p + M\cdot (1- installed_p)\)</span> for p in planning periods.</p>
+<p>If the asset is installed in time period p, then the first constraint enforces that <span class="math notranslate nohighlight">\(installed^{int}\)</span> is greater than or equal to p. The second constraint enforces that <span class="math notranslate nohighlight">\(installed^{int}\)</span> is less than or equal to p. If the asset is never installed, the first constraint will set <span class="math notranslate nohighlight">\(installed^{int}\)</span> equal to the last planning period + 1.</p>
+<p>A constraint for setting <span class="math notranslate nohighlight">\(installed^{max}\)</span>:</p>
+<p><span class="math notranslate nohighlight">\(installed \leq  installed^{max}\)</span></p>
+<p>And a pair of big M constraints to force all ports on the node to be zero before the node is installed. For each port value <span class="math notranslate nohighlight">\(port\)</span>:</p>
+<p><span class="math notranslate nohighlight">\(port_{p, t} \leq M\cdot \sum_{i=0}^{p+1}installed_{i}\)</span></p>
+<p><span class="math notranslate nohighlight">\(port_{p, t} \geq - M\cdot \sum_{i=0}^{p+1}installed_{i}\)</span></p>
+<p>The above constraints enforces that once <span class="math notranslate nohighlight">\(installed\)</span> is 1, each <span class="math notranslate nohighlight">\(port\)</span> is effectively unconstrained, but before <span class="math notranslate nohighlight">\(installed\)</span> is 1, <span class="math notranslate nohighlight">\(port\)</span> is forced to be zero.</p>
+</section>
 </section>
 <section id="capacity-expansion">
 <h2>Capacity Expansion<a class="headerlink" href="#capacity-expansion" title="Permalink to this heading"></a></h2>
@@ -100,6 +121,24 @@
 <section id="asset-retirement">
 <h2>Asset Retirement<a class="headerlink" href="#asset-retirement" title="Permalink to this heading"></a></h2>
 <p>Assets have a lifetime that is defined in planning period intervals (e.g., years). At the end of their lifetime, assets must either be replaced or retired. Replacement resets the lifetime of the asset to its nominal lifetime, allowing the asset to continue to be operated. Retirement means that the asset ceases to operate for all subsequent expansion periods. Appropriate costs can be applied to retirement/replacement decisions.</p>
+<section id="id1">
+<h3>Variables<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<p>The asset retirement variables belong to the node. They include:</p>
+<p><span class="math notranslate nohighlight">\(retire\)</span>, binary variable indexed by planning periods, for indicating when we retire the asset</p>
+<p><span class="math notranslate nohighlight">\(replace\)</span>, binary variable indexed by planning periods, indicating in which time period we replace the asset</p>
+<p><span class="math notranslate nohighlight">\(life\)</span>, non negative variable, indicating how much remaining lifetime the asset has (in number of planning intervals)</p>
+</section>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h3>
+<p><span class="math notranslate nohighlight">\(life^{nominal}\)</span>, the asset’s nominal lifetime</p>
+</section>
+<section id="id2">
+<h3>Constraints<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<p>Remaining lifetime rule:</p>
+<p><span class="math notranslate nohighlight">\(life_{p} = life_{p-1} + replace_{p} \cdot (life^{nominal} + 1) + retire_{p} - 1\)</span></p>
+<p>Permanent retirement rule:</p>
+<p><span class="math notranslate nohighlight">\(retire_p &gt;= retire_{p-1}\)</span></p>
+</section>
 </section>
 </section>
 

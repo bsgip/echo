@@ -157,7 +157,7 @@ The modified battery state of charge equations accounting for the trip slack var
 
 Conservative state of charge lower limit (if ``SOC_conserv is not None``):
 
-:math:`\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - C^\text{conserv} >=0`
+:math:`\text{if} \quad t^{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} >=0`
 
 
 

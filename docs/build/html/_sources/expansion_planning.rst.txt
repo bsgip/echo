@@ -19,6 +19,41 @@ The user add must any potential future assets and installation costs to the netw
 
 Asset Expansions
 ------------------
+Variables
+^^^^^^^^^^
+The asset expansion variables belong to the node. They include:
+
+:math:`installed`, binary variable indexed by planning periods, for indicating when the asset is installed
+
+:math:`installed^{int}`, non negative integer variable indicating which period the asset is installed, if installed.
+
+:math:`installed^{max}`, binary variable, indicating whether the asset got installed in any time period.
+
+
+Constraints
+^^^^^^^^^^^^
+Constraints include a pair of big M constraints to set the integer variable :math:`installed^{int}` correctly:
+
+:math:`installed^{int}_p \geq p - M\cdot installed_p + 1` for p in planning periods.
+
+:math:`installed^{int}_p \leq p + M\cdot (1- installed_p)` for p in planning periods.
+
+
+If the asset is installed in time period p, then the first constraint enforces that :math:`installed^{int}` is greater than or equal to p. The second constraint enforces that :math:`installed^{int}` is less than or equal to p. If the asset is never installed, the first constraint will set :math:`installed^{int}` equal to the last planning period + 1.
+
+
+A constraint for setting :math:`installed^{max}`:
+
+:math:`installed \leq  installed^{max}`
+
+
+And a pair of big M constraints to force all ports on the node to be zero before the node is installed. For each port value :math:`port`:
+
+:math:`port_{p, t} \leq M\cdot \sum_{i=0}^{p+1}installed_{i}`
+
+:math:`port_{p, t} \geq - M\cdot \sum_{i=0}^{p+1}installed_{i}`
+
+The above constraints enforces that once :math:`installed` is 1, each :math:`port` is effectively unconstrained, but before :math:`installed` is 1, :math:`port` is forced to be zero.
 
 
 Capacity Expansion
@@ -28,6 +63,36 @@ Capacity Expansion
 Asset Retirement
 -----------------
 Assets have a lifetime that is defined in planning period intervals (e.g., years). At the end of their lifetime, assets must either be replaced or retired. Replacement resets the lifetime of the asset to its nominal lifetime, allowing the asset to continue to be operated. Retirement means that the asset ceases to operate for all subsequent expansion periods. Appropriate costs can be applied to retirement/replacement decisions.
+
+
+Variables
+^^^^^^^^^^
+The asset retirement variables belong to the node. They include:
+
+:math:`retire`, binary variable indexed by planning periods, for indicating when we retire the asset
+
+:math:`replace`, binary variable indexed by planning periods, indicating in which time period we replace the asset
+
+:math:`life`, non negative variable, indicating how much remaining lifetime the asset has (in number of planning intervals)
+
+
+Parameters
+^^^^^^^^^^^^
+:math:`life^{nominal}`, the asset's nominal lifetime
+
+Constraints
+^^^^^^^^^^^^
+
+Remaining lifetime rule:
+
+:math:`life_{p} = life_{p-1} + replace_{p} \cdot (life^{nominal} + 1) + retire_{p} - 1`
+
+
+Permanent retirement rule:
+
+:math:`retire_p >= retire_{p-1}`
+
+
 
 
 
