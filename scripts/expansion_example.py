@@ -29,7 +29,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 np.set_printoptions(suppress=True)
 
 ## Set up hyper params
-time_periods = 12 # number of time periods to run the optimisation for
+time_periods = 12  # number of time periods to run the optimisation for
 interval_duration = 60  # each time period is 15 mins long
 expansion_periods = 2
 discount_rate = 0  # not yet implemented leave as 0
@@ -44,13 +44,11 @@ grid.add_electrical_ports_from_list(['grid'])
 connection_point = TellegenNode()  # create the connection point
 connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
-
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
 keys = generate_pyomo_indices(time_periods, expansion_periods)
-l1.add_demand_profile_from_array([0]*time_periods + [30]*time_periods, keys=keys)
+l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods, keys=keys)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
-
 
 inverter = Inverter(max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
 inverter.add_ac_port('inv')  # add a port that is used to connect back to the connection_point
@@ -69,19 +67,18 @@ b = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
 # connect the electrical storage to a port on the battery node
 battery.ports['bess'] = b
 
-battery_future = Node()
-# create an electrical storage object
-b_future = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
-                      depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-                      charging_power_limit=2,  # max charging rate in kW
-                      discharging_power_limit=-2,  # max discharging rate in kW
-                      charging_efficiency=1,  # charging efficiency in range [0,1]
-                      discharging_efficiency=1,  # discharging efficiency in range [0,1]
-                      initial_state_of_charge=0.0)  # initial state of charge in kWh
-b_future.planning = True
-b_future.install_cost = 50000  # $/unit capacity
-# connect the electrical storage to a port on the battery node
-battery_future.ports['bess'] = b_future
+battery_future = Battery(port_name='bess',
+                         planning=True,
+                         install_cost=5,  # $ /unit capacity
+                         max_capacity=10000.0,  # max capacity of battery in kwh
+                         depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
+                         charging_power_limit=2,  # max charging rate in kW
+                         discharging_power_limit=-2,  # max discharging rate in kW
+                         charging_efficiency=1,  # charging efficiency in range [0,1]
+                         discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                         initial_state_of_charge=0.0,
+                         fixed_storage_capacity=False)  # initial state of charge in kWh
+
 inverter.add_dc_port('bess_future')
 
 # Populate graph with assets (nodes)
@@ -96,7 +93,7 @@ system.connect_ports_and_create_edge(inverter.ports['bess_future'], battery_futu
 
 # Create objectives/tariffs
 import_cost = ImportTariff(component=connection_point.ports['grid'],
-                           tariff_array=[2]*6 + [1]*6,
+                           tariff_array=[2] * 6 + [1] * 6,
                            expansion_periods=expansion_periods)  # create the import objective cost
 import_cost.name = 'import_cost'
 
@@ -118,8 +115,8 @@ optimiser.optimise(tee=False)
 log_infeasible_constraints(optimiser.model)
 
 print('total cost:', optimiser.get_total_objective_value())
-print(optimiser.values(b_future.is_installed, 0))
-print(optimiser.values(b_future.installed_when))
+print(optimiser.values(battery_future.is_installed, 0))
+print(optimiser.values(battery_future.installed_when))
 ############################ Analyse the Optimisation ########################################
 
 storage_energy_delta = optimiser.values(b.port_name, 0)

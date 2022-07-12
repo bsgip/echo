@@ -140,6 +140,8 @@ class EchoOptimiser(object):
 
         # Add any other costs that are defined on graph nodes/ports/paths
         for _, node_obj in self.ES.node_obj.items():
+            node_obj.add_objective(self.model)
+            self.objective += node_obj.objective
             for _, port_obj in node_obj.ports.items():
                 port_obj.add_objective(self.model)  # populate the .objective attribute for each port
                 self.objective += port_obj.objective  # add the newly populated attribute to our total

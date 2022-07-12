@@ -292,10 +292,7 @@ class Port(BaseModel):
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
-    planning: Optional[bool] = False  # Attribute for indicating whether a port is part of an expansion planning problem
-    install_cost: Optional[float]
     objective: Optional[Any] = 0  # this will eventually be a pyomo expression
-
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -315,9 +312,6 @@ class Port(BaseModel):
         self.pos = positive_variable_component + self.port_name
         self.neg = negative_variable_component + self.port_name
         self.is_pos = f"is_pos_{self.port_name}"
-        self.is_installed = f"is_installed_{self.port_name}"
-        self.installed_when = f"installed_when_{self.port_name}"
-        self.max_install = f"is_installed_total_{self.port_name}"
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """ Sets the values of port flow constraints.
@@ -448,48 +442,6 @@ class Port(BaseModel):
             setattr(model, f"active_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
 
-        if self.planning is True:
-            # Create an indexed binary variable for which time period if any the port is installed
-            setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
-            # Create an integer variable for which period the asset is installed in, if installed
-            setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
-            # Create a non-indexed var to track whether we ever install the port
-            setattr(model, self.max_install, en.Var(initialize=0, domain=en.Reals))
-
-
-            # Set constraints on integer variables
-            def integer_var_con1(model, p):
-                return getattr(model, self.installed_when) >= p - model.bigM*getattr(model, self.is_installed)[p] + 1
-
-            def integer_var_con2(model, p):
-                return getattr(model, self.installed_when) <= p + model.bigM * (1 - getattr(model, self.is_installed)[p])
-
-            setattr(model, 'int_con1_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con1))
-            setattr(model, 'int_con2_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con2))
-
-            # Constraints to force port = 0 before being installed
-            def install_before_active1(model, p, t):
-                prev = 0
-                for i in range(p+1):
-                    prev += getattr(model, self.is_installed)[i]
-                return getattr(model, self.port_name)[p, t] <= model.bigM * prev
-
-            def install_before_active2(model, p, t):
-                prev = 0
-                for i in range(p+1):
-                    prev += getattr(model, self.is_installed)[i]
-                return getattr(model, self.port_name)[p, t] >= - model.bigM * prev
-
-            setattr(model, 'install_b4_run1_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
-            setattr(model, 'install_b4_run2_' + self.port_name, en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
-
-            # Constraints for max_is_installed
-            def rule3(model, p):
-                return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
-
-            setattr(model, 'con3_' + self.port_name, en.Constraint(model.Expansion, rule=rule3))
-
-
     def constrain_pos_neg(self, model):
         """ Applies a mixed integer constraint that splits a port var into positive and negative components """
 
@@ -529,9 +481,10 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods=1, keys=None):
+    def add_initial_value_from_array(self, array, expansion_periods=1, keys: list = None):
         """ Adds initial port value which is used to initialise the pyomo var/param
         Args:
+            keys: optional list of tuple keys
             array: array, list of initial values
             expansion_periods: number of expansion periods (int)
         """
@@ -539,7 +492,8 @@ class Port(BaseModel):
             assert len(keys) == len(array), 'Dimensions are mismatched.'
             vals = dict(zip(keys, array))
         else:
-            print(f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
+            print(
+                f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
             keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
             tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
             vals = dict(zip(keys, tiled_array))
@@ -571,9 +525,6 @@ class Port(BaseModel):
                 total += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
                              model.Time) * model.bigM * 0.1
 
-        if self.planning is True:
-            total += self.install_cost * getattr(model, self.max_install)
-
         self.objective += total
 
 
@@ -587,6 +538,9 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
+    planning: Optional[bool] = False  # Attribute for indicating whether a port is part of an expansion planning problem
+    install_cost: Optional[float]
+    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     inflow: Optional[str]
 
@@ -594,6 +548,9 @@ class Node(BaseModel):
         super().__init__(**data)
         if self.node_name is None:
             self.node_name = 'node_' + str(self.uid)
+            self.is_installed = f"is_installed_{self.node_name}"
+            self.installed_when = f"installed_when_{self.node_name}"
+            self.max_install = f"is_installed_total_{self.node_name}"
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
@@ -711,6 +668,56 @@ class Node(BaseModel):
             node_ports = self.ports
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+
+        if self.planning is True:
+            # Create an indexed binary variable for which time period if any the port is installed
+            setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+            # Create an integer variable for which period the asset is installed in, if installed
+            setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
+            # Create a non-indexed var to track whether we ever install the port
+            setattr(model, self.max_install, en.Var(initialize=0, domain=en.Binary))
+
+            # Set constraints on integer variable so that it correctly tracks the planning period in which we install
+            def integer_var_con1(model, p):
+                return getattr(model, self.installed_when) >= p - model.bigM * getattr(model, self.is_installed)[p] + 1
+
+            def integer_var_con2(model, p):
+                return getattr(model, self.installed_when) <= p + model.bigM * (
+                            1 - getattr(model, self.is_installed)[p])
+
+            setattr(model, 'install_int_con1_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con1))
+            setattr(model, 'install_int_con2_' + self.port_name, en.Constraint(model.Expansion, rule=integer_var_con2))
+
+            # Constraints for max_is_installed
+            def rule3(model, p):
+                return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
+
+            setattr(model, 'max_is_installed_con_' + self.node_name, en.Constraint(model.Expansion, rule=rule3))
+
+            # Constraints to force all ports on node to be = 0 before the node is installed
+            def install_before_active1(model, p, t):
+                prev = 0
+                for i in range(p + 1):
+                    prev += getattr(model, self.is_installed)[i]
+                return getattr(model, port_obj.port_name)[p, t] <= model.bigM * prev
+
+            def install_before_active2(model, p, t):
+                prev = 0
+                for i in range(p + 1):
+                    prev += getattr(model, self.is_installed)[i]
+                return getattr(model, port_obj.port_name)[p, t] >= - model.bigM * prev
+
+            for port_name, port_obj in self.ports.items():
+                setattr(model, 'install_b4_run1_' + port_name,
+                        en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
+                setattr(model, 'install_b4_run2_' + port_name,
+                        en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
+    def add_objective(self, model):
+        total = 0
+        if self.planning is True:
+            total += self.install_cost * getattr(model, self.max_install)
+        self.objective += total
 
     def num_ports(self):
         return len(self.ports)
@@ -856,9 +863,10 @@ class Path(BaseModel):
 
         if self.regularise is True:
             total += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
-                             for p in model.Expansion for t in model.Time) * 0.0000001
+                         for p in model.Expansion for t in model.Time) * 0.0000001
 
         self.objective += total
+
 
 """
 
@@ -914,8 +922,8 @@ class Sink(Port):
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
-    def add_sink_profile_from_array(self, array, expansion_periods=1):
-        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+    def add_sink_profile_from_array(self, array, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods, keys=keys)
 
 
 class Storage(Port):
@@ -1031,8 +1039,9 @@ class Storage(Port):
                            getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
                 else:
                     # Need to get the last value from the previous planning period
-                    return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p-1, len(model.Time)-1] + \
-                    getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
+                    return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[
+                        p - 1, len(model.Time) - 1] + \
+                           getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
 
             else:
                 return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
@@ -1087,8 +1096,8 @@ class Demand(Sink):
     def add_demand_profile(self, profile: dict):
         self.add_initial_value(profile)
 
-    def add_demand_profile_from_array(self, array: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+    def add_demand_profile_from_array(self, array: ArrayType, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods, keys=keys)
 
 
 class ControlledLoadOrGen(FlexPort):
@@ -1223,8 +1232,8 @@ class ElectricalGeneration(Source):
     def add_generation_profile(self, generation: dict):
         self.add_initial_value(generation)
 
-    def add_generation_profile_from_array(self, array: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(array, expansion_periods)
+    def add_generation_profile_from_array(self, array: ArrayType, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array, expansion_periods, keys)
 
     def initialise_port(self, model):
         setattr(model, self.port_name,
@@ -1235,12 +1244,15 @@ class ElectricalGeneration(Source):
             # Constrain solar gen to be within initial value (max value)
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
 
+
 class ElectricalStorage(Storage):
     units = Units.KW
+
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
     units = Units.KW
+
 
 class FixedElectricalPort(ElectricalPort):
     """ An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
@@ -1278,7 +1290,7 @@ class Inverter(ElectricalNode):
         assert self.dc_port_names is not None, 'Define at least one dc port on inverter.'
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
-        named_ports = [self.ac_port_name] +  self.dc_port_names
+        named_ports = [self.ac_port_name] + self.dc_port_names
         assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
 
     def initialise_node(self, model):
@@ -1484,7 +1496,6 @@ New nodes
 """
 
 
-
 class Battery(Node):
     port_name: str
     max_capacity: float
@@ -1532,6 +1543,7 @@ class Load(Node):
         else:
             self.ports[self.port_name].add_initial_value_from_array(self.profile)
 
+
 class FlexNodeWithEmissions(Node):
     emitting_port: str
     emitting_port_units: int
@@ -1545,4 +1557,3 @@ class FlexNodeWithEmissions(Node):
         self.add_emission_transformation(emitting_port=self.ports[self.emitting_port],
                                          carbon_port=self.ports[self.carbon_port],
                                          emission_factor=self.emissions_factor)
-
