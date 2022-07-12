@@ -228,9 +228,9 @@ class OptimisationGraph(Graph):
             setattr(model, f"path_flow_con3_{current_node_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_two))
 
-    def draw_echo_graph(self, with_labels=False, labels=None):
+    def draw_echo_graph(self, with_labels=False, labels=None, node_size=1, font_size=5, width=0.5):
         """ Draws the network with or without node labels """
-        nx.draw_networkx(self, with_labels=with_labels, labels=labels)
+        nx.draw_networkx(self, with_labels=with_labels, labels=labels, node_size=node_size, font_size=font_size, width=width)
         plt.show()
 
     def get_node(self, node_name: str):

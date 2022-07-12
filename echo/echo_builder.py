@@ -24,12 +24,12 @@ class Network(em.BaseModel):
     edges = {}  # network edges, representing connectivity
     objectives = {}  # any objectives we want to define
 
-    def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Any = None, params: dict = None,
+    def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Union[list, dict], params: dict = None,
                                data: Any = None):
         """
         Adds an asset (node) to the component dictionary.
         Args:
-            ports: dict of info on ports (names, units, parameters)
+            ports: string, list, or dict of info on ports (names, units, parameters)
             n_id: unique node id
             n_type: node type from NodeType class, so we know what to build in echo
             params: any params that belong to the node (asset) rather than a particular port
@@ -60,23 +60,26 @@ class Network(em.BaseModel):
         self.validate_new_edge(edge_name, node_tuple)
         self.edges[edge_name] = e
 
-    def add_edge_between_nodes(self, node_tuple: tuple, resource: Units, edge_name: str = None):
-        # Adds an edge between two nodes with no specified ports
-        # First create a port on each node, with units matching the res, and port name = node name at other end of edge
-        port1_dict = {node_tuple[1]: {'units': resource}}
-        port2_dict = {node_tuple[0]: {'units': resource}}
-        self.add_port_to_existing_node(n_id=node_tuple[0], port_dict=port1_dict)
-        self.add_port_to_existing_node(n_id=node_tuple[1], port_dict=port2_dict)
-        self.add_edge_between_ports(node_tuple=node_tuple, port_tuple=node_tuple, edge_name=edge_name,
-                                    resource=resource)
+    def update_port_list_on_node(self, n_id: str, port: str):
+        """ Updates the port list of the node to include new port name (str)"""
+        assert self.components[n_id]['ports'] is not None, 'Initialise port list before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is list, \
+            'Cannot use this method on node {} because this node does not use a port list.'.format(n_id)
+        if port in self.components[n_id]['ports']:
+            'Port with name {} is already defined on node.'.format(port)
+        else:
+            self.components[n_id]['ports'].append(port)
 
-    def add_port_to_existing_node(self, n_id: str, port_dict: dict):
-        """ Updates the port dict of the node to include the new port"""
+    def update_port_dict_on_node(self, n_id: str, port_dict: dict):
+        self.validate_new_port(port_dict)
+        assert self.components[n_id]['ports'] is not None, 'Initialise port dict before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is dict, \
+            'Cannot use this method on node {} this node does not use a port dict.'.format(n_id)
         (new_port_name, new_port_values), = port_dict.items()
         if self.components[n_id]['ports'].get(new_port_name) is not None:
             print('Port {} is already defined on node {}'.format(new_port_name, n_id))
             if new_port_values != self.components[n_id]['ports'].get(new_port_name):
-                raise ValueError('Port dicts conflict, and node could not be updated.')
+                raise ValueError('Port dicts conflict, the node could not be updated.')
         else:
             self.components[n_id]['ports'].update(port_dict)
 
@@ -91,26 +94,29 @@ class Network(em.BaseModel):
             o['charges'] = charges
         self.objectives[obj_name] = o
 
-    def validate_new_edge(self, edge_name: str, node_tuple: tuple) -> None:
+    def validate_new_edge(self, edge_name: str, node_tuple: tuple):
         """ Checks that edge has unique name and unique node tuple."""
         assert self.edges.get(edge_name) is None, 'Edge with name "{}" is already defined.'.format(edge_name)
         for existing_edge_name, existing_edge_dict in self.edges.items():
-            assert existing_edge_dict['nodes'] != node_tuple, \
-                'Nodes {} are already connected with existing edge named "{}".'.format(node_tuple, existing_edge_name)
+            if existing_edge_dict['nodes'] == node_tuple:
+                print('Nodes {} are already connected with existing edge named "{}". Ignoring current edge.'.format(node_tuple, existing_edge_name))
+                return None
         # Checks that nodes are different
         assert node_tuple[0] != node_tuple[1], 'A node cannot be connected to itself.'
+        return edge_name
 
     @staticmethod
     def validate_new_port(ports: Union[dict, list]) -> None:
-        """ Checks that each port has at least a unit key """
+        """ If ports are a list of names, checks for duplicates. If ports are a dict, checks each port has a unit. """
         if type(ports) is dict:
             for port_name, port_attr in ports.items():
                 assert port_attr.get('units') is not None, 'Port {} has no units defined.'.format(port_name)
         elif type(ports) is list:
+            if len(set(ports)) != len(ports):
+                print()
             assert len(set(ports)) == len(ports), 'Port names must be unique.'
         else:
-            raise ValueError(
-                'Ports should be defined as a list of port names, or as a dictionary with the port name as key.')
+            raise ValueError('Ports should be either a list of string(s), or a dict with the port name as key.')
 
     def validate_network(self):
         print('Validating network "{}"'.format(self.name))
@@ -395,8 +401,14 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     elif node_dict['type'] == NodeType.ElectricalTellegen:
         new_node = create_tellegen_node(node_dict, Units.KW)
 
+    elif node_dict['type'] == NodeType.GasTellegen:
+        new_node = create_tellegen_node(node_dict, Units.JPS)
+
     elif node_dict['type'] == NodeType.ElectricalFlex:
         new_node = create_flex_node(node_dict, Units.KW)
+
+    elif node_dict['type'] == NodeType.GasFlex:
+        new_node = create_flex_node(node_dict, Units.JPS)
 
     elif node_dict['type'] == NodeType.ElectricalLoad:
         new_node = create_load_node(node_dict, Units.KW, df)
@@ -416,6 +428,8 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     elif node_dict['type'] == NodeType.FlexWithEmissions:
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
+    elif node_dict['type'] == NodeType.MultiCommodityTellegen:
+        new_node = create_multi_commodity_tellegen_node(node_dict)
 
     else:
         raise ValueError(
@@ -543,6 +557,17 @@ def create_carbon_aggregation_node(node_dict: dict):
     node = em.CarbonAggregation(node_name=node_dict['id'])
     ports = node_dict['ports']
     create_flex_ports(node_obj=node, port_list=ports, port_units=[Units.CO2] * len(ports))
+    return node
+
+def create_multi_commodity_tellegen_node(node_dict: dict):
+    """ Creates an echo multi commodity tellegen node from the provided node dict."""
+    node = em.TellegenNode(node_name=node_dict['id'])
+    port_dict = node_dict['ports']
+    assert type(port_dict) is dict, 'Multi tellegen node requires ports defined using a dict'
+    port_units = []
+    for p_name, p_dict in port_dict.items():
+        port_units.append(p_dict['units'])
+    create_flex_ports(node, port_list=list(port_dict.keys()), port_units=port_units)
     return node
 
 

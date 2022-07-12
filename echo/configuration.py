@@ -63,6 +63,8 @@ class ExpansionType(object):
 
 class NodeType(object):
     ElectricalFlex = 'electrical_flex'
+    GasFlex = 'gas_flex'
+    GasTellegen = 'gas_tellegen'
     ElectricalTellegen = 'elec_tellegen'
     MultiCommodityTellegen = 'multi_commodity_tellegen'
     Battery = 'battery'
@@ -80,8 +82,7 @@ class NodeType(object):
     CarbonAggregation = 'carbon_agg'
     HeatPump = 'heatpump'
     FlexWithEmissions = 'flex_with_emissions'
-    MultiCommodityTellegen = 'mctellegen'
-    SinglePort = 'single_port'
+
 
 class PortType:
     Storage = 0
