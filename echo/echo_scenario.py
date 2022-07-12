@@ -143,9 +143,16 @@ class EchoScenario:
                     assert usage is not None, 'site {} ev {} with name {} must have usage'.format(i, j, name)
                     assert len(usage)==time_periods, 'site {}, ev {} with name {} usage should have length {}'.format(i, j, name, time_periods)
                     available = retrieve_value(ev, 'available')
-                    assert available is not None, 'site {} ev {} with name {} must have available'.format(i, name, j)
+                    assert available is not None, 'site {} ev {} with name {} must have available'.format(i, j, name)
                     assert len(available)==time_periods, 'site {}, ev {} with name {} available should have length {}'.format(i, j, name, time_periods)
                     array_length_check(retrieve_value(ev, 'tod_charging'), time_periods, 'site {}, ev {} with name {} tod_charging should have length {}'.format(i, j, name, time_periods))
+                    depth_discharge = retrieve_value(ev, 'depth_of_discharge_limit')
+                    assert depth_discharge is not None, 'site {} ev {} with name {} must have depth_of_discharge_limit'.format(i, j, name)
+                    assert retrieve_value(ev, 'max_capacity') is not None, 'site {} ev {} with name {} must have max_capacity'.format(i, j, name)
+                    assert retrieve_value(ev, 'charging_power_limit') is not None, 'site {} ev {} with name {} must have charging_power_limit'.format(i, j, name)
+                    assert retrieve_value(ev, 'charging_efficiency') is not None, 'site {} ev {} with name {} must have charging_efficiency'.format(i, j, name)
+                    assert retrieve_value(ev, 'initial_state_of_charge') is not None, 'site {} ev {} with name {} must have initial_state_of_charge'.format(i, j, name)
+                    assert retrieve_value(ev, 'discharging_power_limit') is not None, 'site {} ev {} with name {} must have discharging_power_limit'.format(i, j, name)
 
         self.sites = sites
         # print('Finished adding site data')
@@ -196,7 +203,9 @@ class EchoScenario:
                 self.sites[i]['processed'] = True
                 processing_errors.append(False)
                 aggregate_loads.append(self.sites[i]['aggregate_load'])
-            except:
+            except Exception as e:
+                print("Exception processing site number {}. Exception was: ".format(i))
+                print(e)
                 self.sites[i]['processed'] = False
                 processing_errors.append(True)
                 aggregate_loads.append(np.array([]))
