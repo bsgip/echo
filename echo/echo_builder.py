@@ -39,13 +39,12 @@ class Network(em.BaseModel):
         """
         self.validate_new_port(ports)
         if self.components.get(n_id) is not None:
-            print('Node {} is already defined in components. Updating node with any additional ports'.format(n_id))
-            self.components[n_id]['ports'].update(ports)
+            print('Node {} is already defined in components. Ignoring duplicate.'.format(n_id))
         else:
             d = {'id': n_id, 'type': n_type, 'ports': ports}
-            if params:
+            if params is not None:
                 d['parameters'] = params
-            if data:
+            if data is not None:
                 d['data'] = data
             self.components[n_id] = d
 
@@ -96,7 +95,9 @@ class Network(em.BaseModel):
 
     def validate_new_edge(self, edge_name: str, node_tuple: tuple):
         """ Checks that edge has unique name and unique node tuple."""
-        assert self.edges.get(edge_name) is None, 'Edge with name "{}" is already defined.'.format(edge_name)
+        if self.edges.get(edge_name) is not None:
+            print('Edge with name "{}" is already defined. Ignoring current edge'.format(edge_name))
+            return None
         for existing_edge_name, existing_edge_dict in self.edges.items():
             if existing_edge_dict['nodes'] == node_tuple:
                 print('Nodes {} are already connected with existing edge named "{}". Ignoring current edge.'.format(node_tuple, existing_edge_name))
@@ -284,6 +285,7 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
 
 def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
     # Converts a network class to a dict, then turns it into an echo model
+    netw.validate_network()
     netw_dict = netw.dict()
     return convert_dict_to_echo(netw=netw_dict, df=df, verbose=verbose)
 
@@ -296,10 +298,11 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
 
     node_name_dict = {}
     system = em.OptimisationGraph()
-    for node_name, node_dict in netw['components'].items():
+
+    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes'):
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
-    for edge_name, edge_dict in netw['edges'].items():
+    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges'):
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
 
     obj_set = construct_echo_objective(system=system, objective_dict=netw['objectives'], node_name_dict=node_name_dict)
@@ -371,9 +374,7 @@ def construct_echo_edge(system: em.OptimisationGraph, edge_name: str, edge_dict:
     else:
         p1 = node1.ports[port2]
         p2 = node2.ports[port1]
-    assert p1.units == edge_unit, 'In edge "{}", port and edge units are inconsistent.'.format(edge_name)
-    assert p2.units == edge_unit, 'In edge "{}", Port and edge units are inconsistent.'.format(edge_name)
-    system.connect_ports_and_create_edge(p1, p2)
+    system.connect_ports_and_create_edge(port1=p1, port2=p2, nodes=(node1.node_name, node2.node_name))
 
 
 def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
@@ -448,10 +449,9 @@ def run_echo_optimiser(echo_graph,
                        opt_display=False,
                        verbose=True):
     """ Runs the echo optimiser on an echo graph with an echo objective set. Returns the optimiser object."""
-    if verbose:
-        print('Performing whole model checks...')
+
     # Check we have consistent array lengths for ports
-    for node_name, node_obj in echo_graph.node_obj.items():
+    for node_name, node_obj in tqdm(echo_graph.node_obj.items(), desc='performing whole model checks'):
         for port_name, port_obj in node_obj.ports.items():
             # Check we have the correct array lengths - todo may not be sufficient to just check initial value, what about other arrays
             array_length_check(port_obj.initial_value, time_periods,
@@ -466,7 +466,8 @@ def run_echo_optimiser(echo_graph,
                                  discount_rate=0,
                                  ES=echo_graph,
                                  objective_set=objective_set,
-                                 optimiser_engine=optimiser_engine)
+                                 optimiser_engine=optimiser_engine,
+                                 verbose=verbose)
 
     optimiser.optimise(tee=opt_display)
     log_infeasible_constraints(optimiser.model)

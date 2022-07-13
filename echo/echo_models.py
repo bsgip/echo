@@ -56,13 +56,18 @@ class OptimisationGraph(Graph):
             port1 = edge_obj.vertices[0]
             port2 = edge_obj.vertices[1]
             assert port1.units == port2.units, 'Ports on edge must have matching units.'
-            node1 = self.lookup_node_from_port(port1)
-            node2 = self.lookup_node_from_port(port2)
+            if edge.nodes is None:
+                # Want to avoid doing this lookup - very slow
+                node1_name = self.lookup_node_from_port(port1).node_name
+                node2_name = self.lookup_node_from_port(port2).node_name
+            else:
+                node1_name = edge.nodes[0]
+                node2_name = edge.nodes[1]
             # Need to check whether an edge already exists between these two nodes
-            if self.edge_obj.get((node1.node_name, node2.node_name)) is not None:
+            if self.edge_obj.get((node1_name, node2_name)) is not None:
                 raise ValueError('An edge between these nodes already exists')
-            self.add_edge(node1.node_name, node2.node_name)
-            self.edge_obj[(node1.node_name, node2.node_name)] = edge_obj
+            self.add_edge(node1_name, node2_name)
+            self.edge_obj[(node1_name, node2_name)] = edge_obj
 
         if type(edge) is list:
             for e in edge:
@@ -70,8 +75,8 @@ class OptimisationGraph(Graph):
         else:
             add_single_edge(edge)
 
-    def connect_ports_and_create_edge(self, port1, port2, edge_name=None):
-        e = Edge(vertices=(port1, port2), edge_name=edge_name)
+    def connect_ports_and_create_edge(self, port1, port2, edge_name=None, nodes=None):
+        e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge_obj(e)
 
     # todo delete method below
@@ -342,20 +347,18 @@ class Port(BaseModel):
     def initialise_port(self, model):
         """ Creates pyomo vars, params, and constraints for the port. """
 
-        time_periods = len(model.Time)
-        exp_periods = len(model.Expansion)
-
         domain = en.Reals
         if self.flows is Flows.Export:
             domain = en.NonPositiveReals
         elif self.flows is Flows.Import:
             domain = en.NonNegativeReals
 
-        setattr(model, self.port_name,
-                en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
-
         if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
+            setattr(model, self.port_name,
+                    en.Param(model.Expansion, model.Time, initialize=self.initial_value))
+        else:
+            setattr(model, self.port_name,
+                    en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
@@ -375,6 +378,8 @@ class Port(BaseModel):
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
             con_name = 'import_con_' + self.port_name
             # Generate an array of constraints (ie indexed by time and expansion period)
+            time_periods = len(model.Time)
+            exp_periods = len(model.Expansion)
             import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
             setattr(model, self.import_con_val,
                     en.Param(model.Expansion, model.Time, initialize=import_constraint_dict,
@@ -394,6 +399,8 @@ class Port(BaseModel):
 
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             con_name = 'export_con_' + self.port_name
+            time_periods = len(model.Time)
+            exp_periods = len(model.Expansion)
             export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
             setattr(model, self.export_con_val,
                     en.Param(model.Expansion, model.Time, initialize=export_constraint_dict,
@@ -657,7 +664,8 @@ class Edge(BaseModel):
     """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     edge_name: Optional[str] = None
-    vertices: tuple
+    vertices: tuple  # tuple of port objects
+    nodes: Optional[tuple] # tuple of node names - todo make this required
     tariff: Optional[Union[list, None]]
 
     def __int__(self, **data):
@@ -691,17 +699,11 @@ class Edge(BaseModel):
         port1 = self.vertices[0]
         port2 = self.vertices[1]
 
-        con_rule1 = self.factory_constraint_edge_builder(port1.port_name, port2.port_name)
+        def edge_con(model, p, t):
+            return getattr(model, port1.port_name)[p, t] + getattr(model, port2.port_name)[p, t] == 0
+
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule1))
-
-    @staticmethod
-    def factory_constraint_edge_builder(obj1, obj2):
-        def constraint(model, expansion_interval, time_interval):
-            return getattr(model, obj1)[expansion_interval, time_interval] + \
-                   getattr(model, obj2)[expansion_interval, time_interval] == 0
-
-        return constraint
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=edge_con))
 
 
 class Transform(BaseModel):

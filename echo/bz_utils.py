@@ -158,9 +158,11 @@ def match_network_building_name_to_time_series(netw_name: str, df: pd.DataFrame)
         if len(x) == 2:
             return get_energy_col(x)
         elif len(x) < 2:
-            return 'No matching column found.'
+            print('No matching column found for {}'.format(netw_name))
+            return None
         elif len(x) > 2:
-            return 'Multiple values found.'
+            print('Multiple values found for {}'.format(netw_name))
+            return None
 
 
 def building_name_match_wrapper(building_names: list, df: pd.DataFrame):
