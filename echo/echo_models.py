@@ -1449,7 +1449,7 @@ class Load(Node):
 
     def __init__(self,
                  port_name: str,
-                 port_unit: str,
+                 port_unit: int,
                  profile: Union[dict, ArrayType],
                  **data):
         super().__init__(**data)
@@ -1459,6 +1459,25 @@ class Load(Node):
         else:
             self.ports[port_name].add_initial_value_from_array(profile)
 
+class FlexNode(Node):
+
+    def __init__(self,
+                 port_name: str,
+                 port_unit: int,
+                 **data):
+        super().__init__(**data)
+        self.ports[port_name] = FlexPort(units=port_unit)
+
+class NewInverter(Inverter):
+
+    def __init__(self,
+                 ac_port_name: str,
+                 dc_port_names: list,
+                 **data):
+        super().__init__(**data)
+        self.add_ac_port(ac_port_name)
+        for i in dc_port_names:
+            self.add_dc_port(i)
 
 class FlexNodeWithEmissions(Node):
 

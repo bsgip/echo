@@ -278,8 +278,8 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
 
 def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
     # Converts a network class to a dict, then turns it into an echo model
-    netw_dict = netw.dict()
-    return convert_dict_to_echo(netw=netw_dict, df=df, verbose=verbose)
+    netw.validate_network()
+    return convert_dict_to_echo(netw=netw.dict(), df=df, verbose=verbose)
 
 
 def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
@@ -290,10 +290,10 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
 
     node_name_dict = {}
     system = em.OptimisationGraph()
-    for node_name, node_dict in netw['components'].items():
+    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not(verbose)):
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
-    for edge_name, edge_dict in netw['edges'].items():
+    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not(verbose)):
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
 
     obj_set = construct_echo_objective(system=system, objective_dict=netw['objectives'], node_name_dict=node_name_dict)
@@ -416,12 +416,10 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     elif node_dict['type'] == NodeType.FlexWithEmissions:
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
-
     else:
         raise ValueError(
             'Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
-    # Update our graph
-    update()
+    update()     # Update our graph
 
 
 def run_echo_optimiser(echo_graph,
@@ -477,16 +475,15 @@ def create_tellegen_node(node_dict: dict, port_unit):
     return node
 
 
-def create_flex_node(node_dict: dict, units: Units) -> em.Node:
+def create_flex_node(node_dict: dict, units: int) -> em.Node:
     """ Creates an echo flexible node from the provided node dict.
     A flexible node is a node with a single flexible port with a specified unit."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = em.Node(node_name=node_dict['id'])
-    node.ports[port_name] = em.FlexPort(units=units)
+    node = em.FlexNode(node_name=node_dict['id'], port_name=port_name, units=units)
     return node
 
 
-def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> em.Node:
+def create_load_node(node_dict: dict, unit: int, df: pd.DataFrame) -> em.Node:
     """ Creates a node with a demand (import only) port."""
     port_name = check_node_has_only_one_port(node_dict)
     load_profile = process_field(node_dict['data'], df)
@@ -506,11 +503,7 @@ def create_inverter_node(node_dict: dict) -> em.Node:
     inv_params = node_dict['parameters']
     ac_port = inv_params.pop('ac_port_name')
     dc_ports = inv_params.pop('dc_port_names')
-    inverter = em.Inverter(node_name=node_dict['id'], **inv_params)
-    inverter.add_ac_port(ac_port)
-    for i in dc_ports:
-        inverter.add_dc_port(i)
-
+    inverter = em.NewInverter(node_name=node_dict['id'], ac_port_name=ac_port, dc_port_names=dc_ports)
     return inverter
 
 
@@ -534,7 +527,7 @@ def create_ev(node_dict: dict, df: pd.DataFrame) -> em.Node:
     return node
 
 
-def create_flex_node_with_emissions(node_dict: dict, units: Units):
+def create_flex_node_with_emissions(node_dict: dict, units: int):
     node = em.FlexNodeWithEmissions(node_name=node_dict['id'], emitting_port_units=units, **node_dict['parameters'])
     return node
 
