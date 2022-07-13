@@ -56,13 +56,18 @@ class OptimisationGraph(Graph):
             port1 = edge_obj.vertices[0]
             port2 = edge_obj.vertices[1]
             assert port1.units == port2.units, 'Ports on edge must have matching units.'
-            node1 = self.lookup_node_from_port(port1)
-            node2 = self.lookup_node_from_port(port2)
+            if edge.nodes is None:
+                # Want to avoid doing this lookup - very slow
+                node1_name = self.lookup_node_from_port(port1).node_name
+                node2_name = self.lookup_node_from_port(port2).node_name
+            else:
+                node1_name = edge.nodes[0]
+                node2_name = edge.nodes[1]
             # Need to check whether an edge already exists between these two nodes
-            if self.edge_obj.get((node1.node_name, node2.node_name)) is not None:
+            if self.edge_obj.get((node1_name, node2_name)) is not None:
                 raise ValueError('An edge between these nodes already exists')
-            self.add_edge(node1.node_name, node2.node_name)
-            self.edge_obj[(node1.node_name, node2.node_name)] = edge_obj
+            self.add_edge(node1_name, node2_name)
+            self.edge_obj[(node1_name, node2_name)] = edge_obj
 
         if type(edge) is list:
             for e in edge:
@@ -70,8 +75,8 @@ class OptimisationGraph(Graph):
         else:
             add_single_edge(edge)
 
-    def connect_ports_and_create_edge(self, port1, port2, edge_name=None):
-        e = Edge(vertices=(port1, port2), edge_name=edge_name)
+    def connect_ports_and_create_edge(self, port1, port2, edge_name=None, nodes=None):
+        e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge_obj(e)
 
     # todo delete method below
@@ -647,6 +652,7 @@ class Edge(BaseModel):
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     edge_name: Optional[str] = None
     vertices: tuple
+    nodes: Optional[tuple]  # tuple of node names - todo make this required
     tariff: Optional[Union[list, None]]
 
     def __int__(self, **data):
