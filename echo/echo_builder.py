@@ -695,27 +695,3 @@ def append_results(result_dict, network_dict, in_place: bool = False):
         for node_name, results in result_dict.items():
             network_dict['components'][node_name]['results'] = results
         return network_dict
-
-
-### Functions for splitting echo models
-
-def split_graph_between_nodes(system: em.OptimisationGraph, node1: str, node2: str, options=None):
-    # Copy the graph so we don't modify the original
-    system = system.copy()
-    # Find the edge that connects these nodes
-    if system.has_edge(node1, node2):
-        system.remove_edge(node1, node2)
-    elif system.has_edge(node2, node1):
-        system.remove_edge(node2, node1)
-    else:
-        raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
-
-    subgraph_list = []
-    for _, node_set in enumerate(nx.connected_components(system)):
-        g = system.subgraph(node_set)
-        subgraph_list.append(g)
-
-    return subgraph_list
-
-
-
