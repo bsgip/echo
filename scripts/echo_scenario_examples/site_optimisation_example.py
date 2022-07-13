@@ -5,6 +5,7 @@ behind the meter site and optimising the charging/discharging
  of controllable elements. These can include, battery, pv, load, and evs.
 
 """
+from echo.configuration import Units, NodeType, TariffType
 
 """
 Define the time intervals
@@ -35,16 +36,19 @@ import numpy as np
 
 objective = {
     'import_tariff': {
-        'type': 'import_tariff',
+        'type': TariffType.ImportTariff,
+        'name': 'import tariff',
         'prices': np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12)),
         'component': {'node': 'cp', 'port': 'cp'}
     },
     'export_tariff': {
-        'type': 'export_tariff',
+        'type': TariffType.ExportTariff,
+        'name': 'export_tariff',
         'prices': np.array(([0.1] * 96)),
         'component': {'node': 'cp', 'port': 'cp'}
     },
-    'demand_tariff': {'type': 'import_demand_tariff',
+    'demand_tariff': {'type': TariffType.ImportDemandTariff,
+                      'name': 'demand_tariff',
                       'component': {'node': 'cp',
                                     'port': 'cp'},
                       'charges': [
@@ -131,7 +135,7 @@ EVs at a site are given by a list of dictionaries. Each dictionary defines a sin
 Define a V2G EV
 """
 available1 = np.array([1] * 24 + [0] * 24 + [1] * 24 + [0] * 24)        # binary for when its available to charge
-usage1 = np.array([0.0] * 24 + [0.5] * 24 + [0.0] * 24 + [1.0] * 24)    # energy usage on trip at each time period
+usage1 = np.array([0.0] * 24 + [0.5] * 24 + [0.0] * 24 + [1.0] * 24)    # kw average use on trip at each time period
 # first vehicle is V2G
 ev1 = {'name':'ev1','available': available1, 'usage': usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
        'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
@@ -147,14 +151,15 @@ usage2 = np.array([0.0] * 10 + [0.4] * 10 + [0.0] * 28 + [0.5] * 48)
 
 # second vehicle is V1G
 ev2 = {'name':'ev2','available': available2, 'usage': usage2, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-       'charging_power_limit':10., 'discharging_power_limit':-0., 'charging_efficiency':1,
+       'charging_power_limit':10., 'discharging_power_limit':-10., 'charging_efficiency':1,
        'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode':'V1G', 'interval_duration': interval_duration}
 
 """
 Define a V0G convenienced charged EV
 """
+
 ev3 = {'name':'ev3','available': available1, 'usage': 20*usage1, 'max_capacity': 40., 'depth_of_discharge_limit':0,
-       'charging_power_limit':10., 'discharging_power_limit':-10, 'charging_efficiency':1,
+       'charging_power_limit':20., 'discharging_power_limit':-20, 'charging_efficiency':1,
        'discharging_efficiency':1, 'initial_state_of_charge':0.0, 'charge_mode': 'V0G', 'interval_duration': interval_duration}
 
 """
@@ -187,50 +192,49 @@ components = {}
 edges = {}
 
 # First add a component representing conection to upstream grid
-components['grid'] = {'id': 'grid', 'type': 'flex', 'units': 'kW', 'ports': ['downstream']}
+components['grid'] = {'id': 'grid', 'type': NodeType.ElectricalFlex, 'ports': ['downstream']}
 
 # create connection point to which all assets attach
-components['cp'] = {'id': 'cp', 'type': 'tellegen', 'units': 'kW', 'ports': ['cp','battery', 'solar', 'load'],
+components['cp'] = {'id': 'cp', 'type': NodeType.ElectricalTellegen, 'ports': ['cp','battery', 'solar', 'load'],
                     'parameters': {'cp': {'max_import': site_max_import_array, 'max_export': None, 'slack': True}}}
 
-edges['grid_cp'] = {'nodes': ('grid', 'cp'), 'ports': ('downstream', 'cp'), 'res': 'elec'}
+edges['grid_cp'] = {'nodes': ('grid', 'cp'), 'ports': ('downstream', 'cp'), 'resource': Units.KW}
 
 # add battery component
-components['battery'] = {'id': 'battery', 'type': 'battery', 'ports': ['battery'], 'parameters': battery}
+components['battery'] = {'id': 'battery', 'type': NodeType.Battery, 'ports': ['battery'], 'parameters': battery}
 
-edges['bess_cp'] = {'nodes': ('battery', 'cp'), 'ports': ('battery', 'battery'), 'res': 'elec'}
+edges['bess_cp'] = {'nodes': ('battery', 'cp'), 'ports': ('battery', 'battery'), 'resource': Units.KW}
 
 # add solar pv
-components['solar'] = {'id': 'solar', 'type': 'solar', 'ports': ['solar'], 'data': pv_profile,
+components['solar'] = {'id': 'solar', 'type': NodeType.Solar, 'ports': ['solar'], 'data': pv_profile,
                        'parameters': {'curtailable': False}}
 
-edges['solar_cp'] = {'nodes': ('solar', 'cp'), 'ports': ('solar', 'solar'), 'res': 'elec'}
+edges['solar_cp'] = {'nodes': ('solar', 'cp'), 'ports': ('solar', 'solar'), 'resource': Units.KW}
 
 # add load profile
-components['load'] = {'id': 'load', 'type': 'load', 'units': 'kW', 'ports': ['load'], 'data': load_profile}
+components['load'] = {'id': 'load', 'type': NodeType.ElectricalLoad, 'ports': ['load'], 'data': load_profile}
 
 # define the edge
-edges['load_cp'] = {'nodes': ('load', 'cp'), 'ports': ('load', 'load'), 'res': 'elec'}
+edges['load_cp'] = {'nodes': ('load', 'cp'), 'ports': ('load', 'load'), 'resource': Units.KW}
 
 # add evs
 
 for ev in evs:
-    components[ev['name']] = {'id': ev['name'], 'type': 'ev', 'ports': ['ev_cp'], 'parameters': ev}
+    components[ev['name']] = {'id': ev['name'], 'type': NodeType.EV, 'ports': ['ev_cp'], 'parameters': ev}
     components['cp']['ports'].append(ev['name'])
-    edges[ev['name'] + '_cp'] = {'nodes': (ev['name'], 'cp'), 'ports': ('ev_cp', ev['name']), 'res': 'elec'}
+    edges[ev['name'] + '_cp'] = {'nodes': (ev['name'], 'cp'), 'ports': ('ev_cp', ev['name']), 'resource': Units.KW}
 
 
 site = {'name':'btm_site',
         'components':components,
         'edges':edges,
-        'objective':objective
+        'objectives':objective
         }
 
 """
 Add site to netset
 """
 netset.add_networks_from_list([site])
-
 netset.interval_duration = interval_duration
 netset.time_periods = time_periods
 

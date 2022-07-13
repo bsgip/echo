@@ -1301,6 +1301,11 @@ class EV(ElectricalNode):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
+        # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
+        for i in self.usage:
+            if i > self.discharging_power_limit*-1:
+                raise ValueError('Usage requirement of {} exceeds battery discharge limit of {}.'.format(i, self.discharging_power_limit))
+
         self.ports['vehicle'] = ElectricalStorage(**data)  # EV always has a storage port
         self.ports['vehicle'].enable_trip_slack = self.trip_slack  # Apply trip slack
         # Process any constraints on the storage port
@@ -1314,7 +1319,10 @@ class EV(ElectricalNode):
         self.ports['usage'].add_demand_profile_from_array(self.usage, expansion_periods=1)
         # Customise connection point port type based on the charge mode
         if self.charge_mode == EVChargeMode.V0G:
-            assert self.trip_slack is True, 'Trip slack must be enabled for V0G charge mode.'
+            if self.trip_slack is False:
+                print('Trip slack must be enabled for V0G charge mode. Enabling trip slack.')
+                self.trip_slack = True
+                self.ports['vehicle'].enable_trip_slack = self.trip_slack
             self.ports[self.cp_name] = ElectricalDemand()
             self.process_V0G_charging(self.interval_duration)
             self.ports[self.cp_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)

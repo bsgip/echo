@@ -476,11 +476,11 @@ def create_tellegen_node(node_dict: dict, port_unit):
     return node
 
 
-def create_flex_node(node_dict: dict, units: int) -> em.Node:
+def create_flex_node(node_dict: dict, unit: int) -> em.Node:
     """ Creates an echo flexible node from the provided node dict.
     A flexible node is a node with a single flexible port with a specified unit."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = em.FlexNode(node_name=node_dict['id'], port_name=port_name, units=units)
+    node = em.FlexNode(node_name=node_dict['id'], port_name=port_name, port_unit=unit)
     return node
 
 
@@ -524,7 +524,9 @@ def create_ev(node_dict: dict, df: pd.DataFrame) -> em.Node:
     ev_dict = node_dict['parameters']
     ev_dict['available'] = process_field(ev_dict['available'], df)
     ev_dict['usage'] = process_field(ev_dict['usage'], df)
-    node = em.EV(node_name=node_dict['id'], cp_name=cp_port_name, **ev_dict)  # pass all our params as kwargs
+    node = em.EV(node_name=node_dict['id'],
+                 cp_name=cp_port_name,
+                 **ev_dict)  # pass all our params as kwargs
     return node
 
 
