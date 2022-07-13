@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import Optional, Union, List, TypeVar
+from typing import Optional, Union, List, TypeVar, Any
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -310,6 +310,7 @@ class Port(BaseModel):
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
+    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -528,22 +529,22 @@ class Port(BaseModel):
         self.active_periods = vals
 
     def add_objective(self, model):
-        """ Adds port-specific objective terms to pyomo model
+        """ Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
         """
-        objective = 0
+        total = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
-                objective += -1 * getattr(model, self.import_slack_max) * model.bigM
-                objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
-                                      model.Time) * model.bigM * 0.1
+                total += -1 * getattr(model, self.import_slack_max) * model.bigM
+                total += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
+                                  model.Time) * model.bigM * 0.1
             if hasattr(model, self.export_slack) is True:
-                objective += getattr(model, self.export_slack_max) * model.bigM
-                objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
-                                 model.Time) * model.bigM * 0.1
-        return objective
+                total += getattr(model, self.export_slack_max) * model.bigM
+                total += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
+                             model.Time) * model.bigM * 0.1
 
+        self.objective += total
 
 class Node(BaseModel):
     """
@@ -555,6 +556,7 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
+    objective: Optional[Any] = 0  # For adding any node objectives
 
     inflow: Optional[str]
 
@@ -680,6 +682,11 @@ class Node(BaseModel):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
+    def add_objective(self, model):
+        total = 0
+
+        self.objective += total
+
     def num_ports(self):
         return len(self.ports)
 
@@ -797,6 +804,7 @@ class Path(BaseModel):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
+    objective: Optional[Any] = 0
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -819,14 +827,14 @@ class Path(BaseModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
-        objective = 0
+        super(Path, self).add_objective(model)
+        total = 0
 
         if self.regularise is True:
-            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
-                             for p in model.Expansion for t in model.Time) * 0.0000001
+            total += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                         for p in model.Expansion for t in model.Time) * 0.0000001
 
-        return objective
-
+        self.objective += total
 
 """
 
@@ -1020,28 +1028,27 @@ class Storage(Port):
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
-        objective = 0
+        total = 0
 
         # To get unique solution
         if self.regularise is True:
-            objective += sum(
+            total += sum(
                 getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
                 getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
                 for p in model.Expansion for t in model.Time) * 0.0000001
 
         if self.enable_trip_slack:
-            objective += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
+            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
 
         if self.soc_conserv is not None:
-            objective += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * self.soc_conserv_cost
+            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * self.soc_conserv_cost
 
         if self.storage_capacity_cost is not None:
-            objective += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
+            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
-        return objective
-
+        self.objective += total
 
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
