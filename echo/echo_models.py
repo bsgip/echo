@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import Optional, Union, List, TypeVar
+from typing import Optional, Union, List, TypeVar, Any
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -288,23 +288,6 @@ class OptimisationGraph(Graph):
 
         return G1, G2
 
-    def get_port_set_on_edges(self):
-        """ Returns a set of all ports that are part of an edge."""
-        port_set = set()
-        for e in self.edge_obj.values():
-            port_set.add(e.vertices[0].port_name)
-            port_set.add(e.vertices[1].port_name)
-        return port_set
-
-    def get_port_set_on_nodes(self):
-        """ Returns a set of all ports that are part of a port."""
-        port_set = set()
-        for n in self.node_obj.values():
-            for p in n.ports.values():
-                port_set.add(p.port_name)
-                port_set.add(p.port_name)
-        return port_set
-
 
 class ConfigurationError(Exception):
     pass
@@ -327,6 +310,7 @@ class Port(BaseModel):
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
+    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -545,21 +529,22 @@ class Port(BaseModel):
         self.active_periods = vals
 
     def add_objective(self, model):
-        """ Adds port-specific objective terms to pyomo model
+        """ Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
         """
-        objective = 0
+        total = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
-                objective += -1 * getattr(model, self.import_slack_max) * model.bigM
-                objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
-                                      model.Time) * model.bigM * 0.1
+                total += -1 * getattr(model, self.import_slack_max) * model.bigM
+                total += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
+                                  model.Time) * model.bigM * 0.1
             if hasattr(model, self.export_slack) is True:
-                objective += getattr(model, self.export_slack_max) * model.bigM
-                objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
-                                 model.Time) * model.bigM * 0.1
-        return objective
+                total += getattr(model, self.export_slack_max) * model.bigM
+                total += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
+                             model.Time) * model.bigM * 0.1
+
+        self.objective += total
 
 
 class Node(BaseModel):
@@ -572,13 +557,24 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
-
-    inflow: Optional[str]
+    expansion_planning: Optional[bool] = False  # Attribute for whether we are considering installing this node
+    retirement_planning: Optional[bool] = False  # Attribute for whether we are considering retiring this node
+    install_cost: Optional[float]
+    replace_cost: Optional[float]
+    objective: Optional[Any] = 0  # this is used for any objective terms defined on the node
+    nominal_lifetime: int = None  # node nominal lifetime in number of expansion_planning period units
+    initial_life_left: int = None  # node life left at start of optimisation
 
     def __init__(self, **data):
         super().__init__(**data)
         if self.node_name is None:
             self.node_name = 'node_' + str(self.uid)
+        self.is_installed = f"is_installed_{self.node_name}"
+        self.installed_when = f"installed_when_{self.node_name}"
+        self.max_install = f"is_installed_total_{self.node_name}"
+        self.replace = f"is_replaced_{self.node_name}"
+        self.retire = f"is_retired_{self.node_name}"
+        self.lifetime_remaining = f"lifetime_remaining_{self.node_name}"
 
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
@@ -697,6 +693,115 @@ class Node(BaseModel):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
+        if self.expansion_planning is True:
+            self._apply_expansion_constraints(model)
+
+        if self.retirement_planning is True:
+            self._apply_retirement_constraints(model)
+
+    def _apply_expansion_constraints(self, model):
+        # Create an indexed binary variable for which time period if any the port is installed
+        setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        # Create an integer variable for which period the asset is installed in, if installed
+        setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
+        # Create a non-indexed var to track whether we ever install the port
+        setattr(model, self.max_install, en.Var(initialize=0, domain=en.Binary))
+
+        # Set constraints on integer variable so that it correctly tracks the expansion_planning period in which we install
+        def integer_var_con1(model, p):
+            return getattr(model, self.installed_when) >= p - model.bigM * getattr(model, self.is_installed)[p] + 1
+
+        def integer_var_con2(model, p):
+            return getattr(model, self.installed_when) <= p + model.bigM * (1 - getattr(model, self.is_installed)[p])
+
+        setattr(model, 'install_int_con1_' + self.node_name, en.Constraint(model.Expansion, rule=integer_var_con1))
+        setattr(model, 'install_int_con2_' + self.node_name, en.Constraint(model.Expansion, rule=integer_var_con2))
+
+        # Constraints for max_is_installed
+        def rule3(model, p):
+            return getattr(model, self.is_installed)[p] <= getattr(model, self.max_install)
+
+        setattr(model, 'max_is_installed_con_' + self.node_name, en.Constraint(model.Expansion, rule=rule3))
+
+        # Constraints to force all ports on node to be = 0 before the node is installed
+        def install_before_active1(model, p, t):
+            prev = 0
+            for i in range(p + 1):
+                prev += getattr(model, self.is_installed)[i]
+            return getattr(model, port_obj.port_name)[p, t] <= model.bigM * prev
+
+        def install_before_active2(model, p, t):
+            prev = 0
+            for i in range(p + 1):
+                prev += getattr(model, self.is_installed)[i]
+            return getattr(model, port_obj.port_name)[p, t] >= - model.bigM * prev
+
+        for port_name, port_obj in self.ports.items():
+            setattr(model, 'install_b4_run1_' + port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
+            setattr(model, 'install_b4_run2_' + port_name,
+                    en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
+    def _apply_retirement_constraints(self, model):
+        # Create retirement planning variables
+        setattr(model, self.retire, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        setattr(model, self.replace, en.Var(model.Expansion, initialize=0, domain=en.Binary))
+        setattr(model, self.lifetime_remaining, en.Var(model.Expansion, initialize=self.initial_life_left,
+                                                       bounds=(0, self.nominal_lifetime), domain=en.NonNegativeReals))
+
+        def remaining_life_rule(model, p):
+            if p == 0:
+                return getattr(model, self.lifetime_remaining)[p] == self.initial_life_left
+            else:
+                new_lifetime = getattr(model, self.replace)[p] * (self.nominal_lifetime + 1)  # Need +1 because we -1 each time period automatically
+                retired = getattr(model, self.retire)[p]
+                return getattr(model, self.lifetime_remaining)[p] == \
+                       getattr(model, self.lifetime_remaining)[p-1] + new_lifetime + retired - 1
+
+        setattr(model, 'life_left_' + self.node_name, en.Constraint(model.Expansion, rule=remaining_life_rule))
+
+        def permanent_retirement_rule(model, p):
+            # Forces retirement var to be increasing (ie can only change from 0 to 1, not vice versa)
+            if p == 0:
+                return en.Constraint.Skip
+            else:
+                return getattr(model, self.retire)[p] >= getattr(model, self.retire)[p-1]
+
+        setattr(model, 'retirement_con_'+self.node_name, en.Constraint(model.Expansion, rule=permanent_retirement_rule))
+
+        #todo alternative constraint below, forces retirement or replacement at end of lifetime
+
+        # # Big M Constraint: force either retirement or replacement at end of lifetime
+        # def eol_rule1(model, p):
+        #     replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+        #     return getattr(model, self.lifetime_remaining)[p] <= (1 - replace_or_retire) * model.bigM
+        #
+        # def eol_rule2(model, p):
+        #     replace_or_retire = getattr(model, self.replace)[p] + getattr(model, self.retire)[p]
+        #     return getattr(model, self.lifetime_remaining)[p] * model.bigM >= (1 - replace_or_retire)
+        #
+        # setattr(model, 'eol_1_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule1))
+        # setattr(model, 'eol_2_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule2))
+
+        # Force node ports == 0 if retired using a pair of big M constraints
+        for port_name, port_obj in self.ports.items():
+            def retire_rule1(model, p, t):
+                return getattr(model, port_obj.port_name)[p, t] <= (1 - getattr(model, self.retire)[p]) * model.bigM
+
+            def retire_rule2(model, p, t):
+                return getattr(model, port_obj.port_name)[p, t] >= -(1 - getattr(model, self.retire)[p]) * model.bigM
+
+            setattr(model, 'retire_1_'+port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule1))
+            setattr(model, 'retire_2_' + port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule2))
+
+    def add_objective(self, model):
+        total = 0
+        if self.expansion_planning is True:
+            total += self.install_cost * getattr(model, self.max_install)
+        if self.retirement_planning is True:
+            total += self.replace_cost * sum(getattr(model, self.replace)[p] for p in model.Expansion)
+        self.objective += total
+
     def num_ports(self):
         return len(self.ports)
 
@@ -814,6 +919,7 @@ class Path(BaseModel):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
+    objective: Optional[Any] = 0
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -836,13 +942,14 @@ class Path(BaseModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
-        objective = 0
+        super(Path, self).add_objective(model)
+        total = 0
 
         if self.regularise is True:
-            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
-                             for p in model.Expansion for t in model.Time) * 0.0000001
+            total += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                         for p in model.Expansion for t in model.Time) * 0.0000001
 
-        return objective
+        self.objective += total
 
 
 """
@@ -899,8 +1006,8 @@ class Sink(Port):
     def add_sink_profile(self, electrical_demand):
         self.add_initial_value(electrical_demand)
 
-    def add_sink_profile_from_array(self, array, expansion_periods=1):
-        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+    def add_sink_profile_from_array(self, array, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods, keys=keys)
 
 
 class Storage(Port):
@@ -1037,27 +1144,27 @@ class Storage(Port):
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
-        objective = 0
+        total = 0
 
         # To get unique solution
         if self.regularise is True:
-            objective += sum(
+            total += sum(
                 getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
                 getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
                 for p in model.Expansion for t in model.Time) * 0.0000001
 
         if self.enable_trip_slack:
-            objective += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
+            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
 
         if self.soc_conserv is not None:
-            objective += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * self.soc_conserv_cost
+            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * self.soc_conserv_cost
 
         if self.storage_capacity_cost is not None:
-            objective += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
+            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
-        return objective
+        self.objective += total
 
 
 class Demand(Sink):
@@ -1066,8 +1173,8 @@ class Demand(Sink):
     def add_demand_profile(self, profile: dict):
         self.add_initial_value(profile)
 
-    def add_demand_profile_from_array(self, array: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods)
+    def add_demand_profile_from_array(self, array: ArrayType, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array=array, expansion_periods=expansion_periods, keys=keys)
 
 
 class ControlledLoadOrGen(FlexPort):
@@ -1202,8 +1309,8 @@ class ElectricalGeneration(Source):
     def add_generation_profile(self, generation: dict):
         self.add_initial_value(generation)
 
-    def add_generation_profile_from_array(self, array: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(array, expansion_periods)
+    def add_generation_profile_from_array(self, array: ArrayType, expansion_periods=1, keys: list = None):
+        self.add_initial_value_from_array(array, expansion_periods, keys)
 
     def initialise_port(self, model):
         setattr(model, self.port_name,
@@ -1260,7 +1367,7 @@ class Inverter(ElectricalNode):
         assert self.dc_port_names is not None, 'Define at least one dc port on inverter.'
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
-        named_ports = [self.ac_port_name] +  self.dc_port_names
+        named_ports = [self.ac_port_name] + self.dc_port_names
         assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
 
     def initialise_node(self, model):

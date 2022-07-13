@@ -47,7 +47,7 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
 keys = generate_pyomo_indices(time_periods, expansion_periods)
-l1.add_demand_profile_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods,
+l1.add_initial_value_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods,
                                  keys=keys)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
