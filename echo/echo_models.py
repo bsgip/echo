@@ -253,9 +253,40 @@ class OptimisationGraph(Graph):
                 print(pn, ', ', p.port_name)
 
     def verify_graph(self):
-        # Check for any floating nodes - use nx method for this
-        isolated_nodes = set(i for i in nx.isolates(self))  # nx.isolates returns nodes with no neighbours
-        assert len(isolated_nodes) == 0, 'Node {} has no edge.'.format(isolated_nodes)
+        assert nx.is_connected(self) is True, 'Graph is not connected.'
+
+    def split_graph_on_edge(self, node1, node2):
+        system = self.copy()
+        # Find the edge that connects these nodes
+        if system.has_edge(node1, node2):
+            system.remove_edge(node1, node2)
+        else:
+            raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
+
+        # Get a list of the two sets of nodes
+        y = nx.connected_components(system)
+        g1_nodes = next(y)
+        g2_nodes = next(y)
+
+        g1_subgraph = self.subgraph(g1_nodes)
+        g2_subgraph = self.subgraph(g2_nodes)
+
+        def create_new_graph(nodes, edges):
+            new_graph = OptimisationGraph()
+            for n in nodes:
+                new_graph.add_node_obj(self.node_obj[n])
+            for ed in edges:
+                if self.edge_obj.get(ed) is not None:
+                    new_graph.add_edge_obj(self.edge_obj[ed])
+                else:
+                    new_graph.add_edge_obj(self.edge_obj[(ed[1], ed[0])])
+
+            return new_graph
+
+        G1 = create_new_graph(g1_subgraph.nodes, g1_subgraph.edges)
+        G2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
+
+        return G1, G2
 
 
 class ConfigurationError(Exception):
