@@ -141,3 +141,6 @@ print('Time to optimise all sites for {} intervals of {} minutes was {} minutes'
 print('Number of sites failed to be processed was ', np.array(processing_errors).sum(), '/', num_sites)
 
 netset.to_df('cp', 'upstream')
+
+
+a, b = em.split_graph_on_edge('cp', 'inverter')
