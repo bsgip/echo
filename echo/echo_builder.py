@@ -472,7 +472,7 @@ def create_tellegen_node(node_dict: dict, port_unit):
     """ Creates an echo tellegen node from the provided node dict."""
     node = em.TellegenNode(node_name=node_dict['id'])
     port_list = node_dict['ports']
-    create_flex_ports(node, port_list, [port_unit] * len(port_list))
+    add_flex_ports_to_node(node, port_list, [port_unit] * len(port_list))
     return node
 
 
@@ -536,7 +536,7 @@ def create_flex_node_with_emissions(node_dict: dict, units: int):
 def create_carbon_aggregation_node(node_dict: dict):
     node = em.CarbonAggregation(node_name=node_dict['id'])
     ports = node_dict['ports']
-    create_flex_ports(node_obj=node, port_list=ports, port_units=[Units.CO2] * len(ports))
+    add_flex_ports_to_node(node_obj=node, port_list=ports, port_units=[Units.CO2] * len(ports))
     return node
 
 
@@ -566,7 +566,6 @@ def create_demand_tariff(tariff_dict: dict, component_obj: em.Port):
                                           import_demand=import_demand)
     return demand_tariff
 
-
 def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, system: em.OptimisationGraph):
     """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
     target_node = tariff_dict['component']['node']
@@ -580,10 +579,41 @@ def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: 
 
 ### Util functions
 
-def create_flex_ports(node_obj: em.Node, port_list: list, port_units: list):
+def add_flex_ports_to_node(node_obj: em.Node, port_list: list, port_units: list):
     for i in range(len(port_list)):
         new_port = em.FlexPort(units=port_units[i])
         node_obj.ports[port_list[i]] = new_port
+
+
+def check_node_has_only_one_port(node_dict: dict):
+    """ Checks that a node has only one port defined """
+    ports = node_dict['ports']
+    if type(ports) is dict or type(ports) is list:
+        assert len(
+            ports) == 1, 'Node {} is of type "{}" and can only have one port, but multiple are defined: {}.'.format(
+            node_dict['id'], node_dict['type'], ports)
+        if type(ports) is list:
+            port_name = ports[0]
+        else:
+            (port_name, _), = ports.items()
+    elif type(ports) is str:
+        port_name = ports
+    else:
+        raise ValueError('Node dict has no ports.')
+    return port_name
+
+
+def process_field(field, df):
+    """ Checks if a field points to data in a df or if it contains the data directly."""
+    if type(field) is str:
+        try:
+            x = df[field]
+            vals = x.values
+        except IndexError:
+            'No column with name {} in df'.format(field)
+    else:
+        vals = field
+    return vals
 
 
 #### Check functions
@@ -667,236 +697,25 @@ def append_results(result_dict, network_dict, in_place: bool = False):
         return network_dict
 
 
-def check_node_has_only_one_port(node_dict: dict):
-    """ Checks that a node has only one port defined """
-    ports = node_dict['ports']
-    if type(ports) is dict or type(ports) is list:
-        assert len(
-            ports) == 1, 'Node {} is of type "{}" and can only have one port, but multiple are defined: {}.'.format(
-            node_dict['id'], node_dict['type'], ports)
-        if type(ports) is list:
-            port_name = ports[0]
-        else:
-            (port_name, _), = ports.items()
-    elif type(ports) is str:
-        port_name = ports
-    return port_name
+### Functions for splitting echo models
 
-
-def process_field(field, df):
-    """ Checks if a field points to data in a df or if it contains the data directly."""
-    if type(field) is str:
-        try:
-            x = df[field]
-            vals = x.values
-        except IndexError:
-            'No column with name {} in df'.format(field)
+def split_graph_between_nodes(system: em.OptimisationGraph, node1: str, node2: str, options=None):
+    # Copy the graph so we don't modify the original
+    system = system.copy()
+    # Find the edge that connects these nodes
+    if system.has_edge(node1, node2):
+        system.remove_edge(node1, node2)
+    elif system.has_edge(node2, node1):
+        system.remove_edge(node2, node1)
     else:
-        vals = field
-    return vals
+        raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
+
+    subgraph_list = []
+    for _, node_set in enumerate(nx.connected_components(system)):
+        g = system.subgraph(node_set)
+        subgraph_list.append(g)
+
+    return subgraph_list
 
 
-######################## Superseded functions - todo delete? ######################
 
-
-def convert_dict_to_nx(netw_jsn: Network, verbose: bool = True):
-    """ Creates nx graph from network dictionary"""
-    if verbose:
-        start_time = time.time()
-        print('Converting dict to networkx...')
-
-    n = nx.Graph()
-    for node_name, node_dict in netw_jsn.components.items():
-        n.add_node(node_name, name=node_name, attr=node_dict)
-
-    for edge_name, edge_dict in netw_jsn.edges.items():
-        edge_nodes = edge_dict['nodes']
-        edge_ports = edge_dict['ports']
-        edge_unit = edge_dict['resource']
-        # Check that both edge nodes exist in the component dict
-        assert edge_nodes[0] in n.nodes, \
-            'Node {} is part of edge {} but is not defined in components dict'.format(edge_nodes[0], edge_name)
-        assert edge_nodes[1] in n.nodes, \
-            'Node {} is part of edge {} but is not defined in components dict'.format(edge_nodes[1], edge_name)
-
-        n.add_edge(edge_nodes[0], edge_nodes[1], name=edge_name, ports=edge_ports, unit=edge_unit)
-        # NB: networkx may add the edges in a different order to the way we specify
-
-    check_nx_for_floating_nodes(n)  # Check that the graph is connected
-    check_port_names_are_consistent(n)  # Check there are no naming issues
-
-    if verbose:
-        end_time = time.time()
-        print('Finished converting dict to nx. Time taken (seconds): ', end_time - start_time)
-    return n
-
-
-def convert_nx_to_echo(g: nx.Graph, df: pd.DataFrame, verbose: bool = True):
-    """ Creates echo model from nx graph"""
-    if verbose:
-        start_time = time.time()
-        print('Converting networkx model to echo...')
-
-    node_name_dict = {}  # Initialise a dict for storing the mapping between node names and node UIDs
-
-    system = em.OptimisationGraph()
-
-    # Create nodes
-    for node_name in g.nodes:
-        node_dict = g.nodes[node_name]['attr']
-        construct_echo_node(system, node_name_dict, node_name, node_dict, df)
-
-    # Create edges
-    for edge in g.edges:
-        # Get node names from edge object
-        node1_name = edge[0]
-        node2_name = edge[1]
-        # Retrieve the echo node objects using the node names
-        node1 = system.node_obj[node_name_dict[node1_name]]
-        node2 = system.node_obj[node_name_dict[node2_name]]
-
-        # Get port info
-        edge_dict = g.edges[edge]
-        port1 = edge_dict['ports'][0]
-        port2 = edge_dict['ports'][1]
-
-        # need to check we have these round the right way
-        if port1 in list(node1.ports.keys()):
-            p1 = node1.ports[port1]
-            p2 = node2.ports[port2]
-        else:
-            p1 = node1.ports[port2]
-            p2 = node2.ports[port1]
-        system.connect_ports_and_create_edge(p1, p2)
-
-    if verbose:
-        end_time = time.time()
-        print('Finished converting nx to echo. Time taken (seconds): ', end_time - start_time)
-    return system, node_name_dict
-
-
-def get_pyomo_var_map(optimiser):
-    comp_names = [str(i) for i in optimiser.model.component_objects()]
-    comp_objs = [i for i in optimiser.model.component_objects()]
-    output = dict(zip(comp_names, comp_objs))
-    return output
-
-
-def get_pyomo_vars_from_port_name(port_name, var_map):
-    var_names = []
-    ignore_vars = ['index', 'edge', 'con']
-    for var_name, var_obj in var_map.items():
-        if port_name in var_name:
-            flag = [x for x in ignore_vars if x in var_name]
-            if not flag:
-                var_names.append(var_name)
-    return var_names
-
-
-def check_port_names_are_consistent(g: nx.Graph):
-    """ Checks consistency of port names as defined in nodes and port names as defined in edges."""
-    inconsistencies = []
-    for edge in g.edges:
-        # check that there is a 1-1 correspondence between ports and nodes
-        for i in range(0, 2):
-            port = g.edges[edge]['ports'][i]
-            node1_ports = g.nodes[edge[0]]['attr']['ports']
-            node2_ports = g.nodes[edge[1]]['attr']['ports']
-
-            if port not in node1_ports and port not in node2_ports:
-                err = 'Port {} may be misnamed in edge {}. It does not belong to either node. ' \
-                      'One node has ports {} and the other has ports {}'.format(port, edge, list(node1_ports.keys()),
-                                                                                list(node2_ports.keys()))
-                inconsistencies.append(err)
-
-    assert len(inconsistencies) == 0, inconsistencies
-
-
-def check_nx_for_floating_nodes(g: nx.Graph):
-    """ Checks if we have nodes without any edge"""
-    nodes = set(g.nodes)
-    nodes_with_edges = set([i for edge in g.edges for i in edge])
-    nodes_without_edges = nodes - nodes_with_edges
-    assert len(nodes_without_edges) == 0, 'Node {} has no edge'.format(nodes_without_edges)
-
-
-# Pydantic tinkering
-#
-# #from our_validators import *
-#
-# class BatteryParams(BaseModel):
-#     max_capacity: float
-#     depth_of_discharge_limit: float = 0
-#     charging_power_limit: float
-#     discharging_power_limit: float
-#     charging_efficiency: float = 1
-#     discharging_efficiency: float = 1
-#     initial_state_of_charge: float
-#     test_var: str = str(max_capacity)
-#
-#     #max_cap_sign = validator("thing to be validated", allow_reuse=True)(my_validator_name)  #needs to be assigned to variable name,
-#
-#     @validator('max_capacity', allow_reuse=True)
-#     def max_cap_sign(cls, v):
-#         if v < 0:
-#             raise ValueError(f"Max battery capacity should be a positive number")
-#         return v
-#
-#     @root_validator()
-#     def dod_check(cls, values):
-#         dod_lim = values.get('depth_of_discharge_limit')
-#         max_cap = values.get('max_capacity')
-#         if dod_lim < 0 or dod_lim > max_cap:
-#             raise ValueError('DoD must be between 0 and max capacity')
-#         return values
-#
-#     @root_validator()
-#     def init_soc_check(cls, values):
-#         init_soc = values.get('initial_state_of_charge')
-#         dod_lim = values.get('depth_of_discharge_limit')
-#         max_cap = values.get('max_capacity')
-#         lb = max(0., dod_lim)
-#         if init_soc < lb or init_soc > max_cap:
-#             raise ValueError('Initial state of charge must be between min DoD and max capacity')
-#         return values
-#
-#     @validator('charging_power_limit')
-#     def charging_sign(cls, v):
-#         if v < 0:
-#             raise ValueError(f"Charging power limit should be a positive number")
-#         return v
-#
-#     @validator('discharging_power_limit')
-#     def discharging_sign(cls, v):
-#         if v > 0:
-#             raise ValueError('Enter charging power limit using positive load convention (lim<0).')
-#         return v
-#
-#     @validator('charging_efficiency')
-#     def ch_efficiency_rule(cls, v):
-#         if v > 1 or v < 0:
-#             raise ValueError(f"Charging efficiency should be a number between 0 and 1.")
-#
-#     @validator('discharging_efficiency')
-#     def dch_efficiency_rule(cls, v):
-#         if v > 1 or v < 0:
-#             raise ValueError(f"Discharging efficiency should be a number between 0 and 1.")
-#
-#
-# b_dict = {'max_capacity': 15.,
-#           'depth_of_discharge_limit': 5,
-#           'charging_power_limit': 1.25,
-#           'discharging_power_limit': -1.25,
-#           'charging_efficiency': 1.,
-#           'discharging_efficiency': 1.,
-#           'initial_state_of_charge': 5}
-#
-# b = BatteryParams(**b_dict
-
-def port_connectivity_check(port_obj: em.Port, graph: em.OptimisationGraph):
-    # todo this should be an optimisation graph method
-    """ Checks if two ports are connected by an edge."""
-    for _, edge_obj in graph.edge_obj.items():
-        if port_obj in edge_obj.vertices:
-            return True
-    return False
