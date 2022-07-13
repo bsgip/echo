@@ -26,7 +26,7 @@ DataFrame = TypeVar('pandas.core.frame.DataFrame')
 class BaseModel(PydanticBaseModel):
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
-        extra = 'allow'  # Set to allow so that we can create new fields on the fly
+        extra = 'allow'  # To control whether we can create new attributes after instantiation.
 
 
 class OptimisationGraph(Graph):
@@ -1398,69 +1398,79 @@ class CarbonAggregation(Node):
 
 """
 
-New nodes
+Prebuilt nodes
 
 """
 
-
 class Battery(Node):
-    port_name: str
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name,
+                 max_capacity: float,
+                 initial_state_of_charge: float,
+                 charging_power_limit: float,
+                 discharging_power_limit: float,
+                 storage_capacity_cost: Optional[PositiveFloat] = None,
+                 charging_efficiency: float = 1,
+                 discharging_efficiency: float = 1,
+                 depth_of_discharge_limit: float = 0,
+                 fixed_storage_capacity: bool = True,
+                 regularise: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalStorage(**data)
+        self.ports[port_name] = ElectricalStorage(max_capacity=max_capacity,
+                                                  depth_of_discharge_limit=depth_of_discharge_limit,
+                                                  charging_power_limit=charging_power_limit,
+                                                  discharging_power_limit=discharging_power_limit,
+                                                  charging_efficiency=charging_efficiency,
+                                                  discharging_efficiency=discharging_efficiency,
+                                                  initial_state_of_charge=initial_state_of_charge,
+                                                  fixed_storage_capacity=fixed_storage_capacity,
+                                                  storage_capacity_cost=storage_capacity_cost,
+                                                  regularise=regularise)
 
 
 class Solar(Node):
-    port_name: str
-    curtailable: bool = False
-    profile: Union[ArrayType, dict]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 profile: Union[ArrayType, dict],
+                 curtailable: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
 
 
 class Load(Node):
-    port_name: str
-    port_unit: int
-    profile: Union[dict, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 port_unit: str,
+                 profile: Union[dict, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.port_name] = Demand(units=self.port_unit)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = Demand(units=port_unit)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
+
 
 class FlexNodeWithEmissions(Node):
-    emitting_port: str
-    emitting_port_units: int
-    carbon_port: str
-    emissions_factor: Union[float, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self, emitting_port: str,
+                 emitting_port_units: int,
+                 carbon_port: str,
+                 emissions_factor:
+                 Union[float, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.emitting_port] = FlexPort(units=self.emitting_port_units)
-        self.ports[self.carbon_port] = CarbonSource()
-        self.add_emission_transformation(emitting_port=self.ports[self.emitting_port],
-                                         carbon_port=self.ports[self.carbon_port],
-                                         emission_factor=self.emissions_factor)
-
+        self.ports[emitting_port] = FlexPort(units=emitting_port_units)
+        self.ports[carbon_port] = CarbonSource()
+        self.add_emission_transformation(emitting_port=self.ports[emitting_port],
+                                         carbon_port=self.ports[carbon_port],
+                                         emission_factor=emissions_factor)
