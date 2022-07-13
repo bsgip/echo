@@ -114,9 +114,15 @@
 <p><span class="math notranslate nohighlight">\(port_{p, t} \geq - M\cdot \sum_{i=0}^{p+1}installed_{i}\)</span></p>
 <p>The above constraints enforces that once <span class="math notranslate nohighlight">\(installed\)</span> is 1, each <span class="math notranslate nohighlight">\(port\)</span> is effectively unconstrained, but before <span class="math notranslate nohighlight">\(installed\)</span> is 1, <span class="math notranslate nohighlight">\(port\)</span> is forced to be zero.</p>
 </section>
+<section id="costs">
+<h3>Costs<a class="headerlink" href="#costs" title="Permalink to this heading"></a></h3>
+<p>The user can specify an install cost in $, which is a fixed cost that is applied if the asset is installed.</p>
+</section>
 </section>
 <section id="capacity-expansion">
 <h2>Capacity Expansion<a class="headerlink" href="#capacity-expansion" title="Permalink to this heading"></a></h2>
+<p>Some assets have a capacity which can be optimised. Currently only storage capacity is supported.</p>
+<p>The user can specify a capacity cost in $/unit capacity, which is added to the optimisation objective.</p>
 </section>
 <section id="asset-retirement">
 <h2>Asset Retirement<a class="headerlink" href="#asset-retirement" title="Permalink to this heading"></a></h2>
@@ -130,7 +136,7 @@
 </section>
 <section id="parameters">
 <h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h3>
-<p><span class="math notranslate nohighlight">\(life^{nominal}\)</span>, the asset’s nominal lifetime</p>
+<p><span class="math notranslate nohighlight">\(life^{nominal}\)</span>, the asset’s nominal lifetime, which is also the lifetime of any replacement</p>
 </section>
 <section id="id2">
 <h3>Constraints<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
@@ -138,6 +144,13 @@
 <p><span class="math notranslate nohighlight">\(life_{p} = life_{p-1} + replace_{p} \cdot (life^{nominal} + 1) + retire_{p} - 1\)</span></p>
 <p>Permanent retirement rule:</p>
 <p><span class="math notranslate nohighlight">\(retire_p &gt;= retire_{p-1}\)</span></p>
+<p>Force all ports on node to be zero after retirement using a pair of big M constraints: For each port value <span class="math notranslate nohighlight">\(port\)</span>:</p>
+<p><span class="math notranslate nohighlight">\(port_{p, t} \leq M\cdot (1 - retire_p)\)</span></p>
+<p><span class="math notranslate nohighlight">\(port_{p, t} \geq - M\cdot (1 - retire_p)\)</span></p>
+</section>
+<section id="id3">
+<h3>Costs<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<p>The user can specify a replacement cost in $,  which is applied every time an asset is replaced.</p>
 </section>
 </section>
 </section>
