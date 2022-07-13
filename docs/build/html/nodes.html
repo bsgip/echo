@@ -51,7 +51,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#fixed-sink">Fixed Sink</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#tellegen">Tellegen</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#multi-commodity-tellegen">Multi Commodity Tellegen</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#input-output-node">Input Output Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linear-input-output-node">Linear Input Output Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#single-piecewise-input-output-node">Single Piecewise Input Output Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#controlled-load">Controlled Load</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#controlled-generation">Controlled Generation</a></li>
@@ -78,6 +78,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#other-nodes">Other Nodes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#emitting-node">Emitting Node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#carbon-aggregation">Carbon Aggregation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#time-delay-node">Time Delay Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#input-output-arx-node">Input Output ARX Node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#template-node">Template Node</a></li>
@@ -121,12 +122,17 @@
              
   <section id="echo-nodes">
 <h1><em>echo</em> Nodes<a class="headerlink" href="#echo-nodes" title="Permalink to this heading"></a></h1>
-<p>Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports, with a well-defined relationship between ports. Ports represent flows into and out of nodes. In general, the relationship between ports will be defined by a system of constraints, which we call the <em>node transformation</em>. Nodes may also include other variables and parameters and constraints necessary to model:</p>
+<p>Nodes represent physical or logical connection between edges of the network. Nodes are composed of a collection of ports, with a well-defined relationship between ports. Ports represent flows into and out of nodes. In general, the relationship between ports will be defined by a system of constraints, which define the <em>node transformation</em>. Nodes may also include other variables and parameters and constraints necessary to model:</p>
 <ul class="simple">
 <li><p><em>Assets</em>: A node can represent a physical asset that is a source, sink, storage or generic transformation between commodities.</p></li>
 <li><p><em>Interconnection / Hub</em>: A node can represent a physical or logical interconnection between edges in the network: such as busbar, electrical connection point, gas junction.</p></li>
 </ul>
 <p>Some of the nodes described below come with pre-built ports of a certain type. In these cases, please refer to <a class="reference internal" href="ports.html#echo-port-object"><span class="std std-ref">echo Port object</span></a> which contains descriptions of port models.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Under the heading for each node, <strong>parameters</strong>, <strong>variables</strong>, and <strong>constraints</strong> may be defined. <strong>Parameters</strong> are typically defined when the node is created, and can be controlled by the user. <strong>Variables</strong> are pyomo variables, and <strong>constraints</strong> are also pyomo constraints, and these are created when optimising a model.</p>
+<p>Some variables and constraints are always created, while others are conditionally created depending on user specified parameters. Please check whether variables and constraints of interest apply always or need to be turned on via a node parameter.</p>
+</div>
 <section id="commodity-agnostic-nodes">
 <h2>Commodity Agnostic Nodes<a class="headerlink" href="#commodity-agnostic-nodes" title="Permalink to this heading"></a></h2>
 <p>Commodity agnostic nodes refer to nodes without a specific commodity. To use these nodes, they must be instantiated with a unit that indicates the commodity type.</p>
@@ -148,15 +154,26 @@
 </section>
 <section id="tellegen">
 <h3>Tellegen<a class="headerlink" href="#tellegen" title="Permalink to this heading"></a></h3>
-<p>A tellegen node is an energy conserving node. The sum of all flows through the node must equal 0. It is used to represent interconnections, either physical or logical, between different flows in a network.</p>
+<p>A tellegen node is an energy conserving node that must have at least two ports. The sum of all flows through the node must equal 0. It is used to represent interconnections, either physical or logical, between different flows in a network.</p>
+<p><strong>Constraints</strong></p>
+<p>If the node has N ports, each with a value of <span class="math notranslate nohighlight">\(p_i\)</span> for <span class="math notranslate nohighlight">\(i \in N\)</span>, then:</p>
+<p><span class="math notranslate nohighlight">\(\sum_{i=0}^N p_i = 0\)</span></p>
 </section>
 <section id="multi-commodity-tellegen">
 <h3>Multi Commodity Tellegen<a class="headerlink" href="#multi-commodity-tellegen" title="Permalink to this heading"></a></h3>
 <p>A multi commodity tellegen node is an energy conserving node. The sum of all flows of the same commodity through the node must equal 0. This node does not necessarily represent a physical interconnection, but it is useful for representing logical connections (e.g., a building that has both gas and electricity supply).</p>
+<p>Like the Tellegen node, the Multi Commodity Tellegen node requires at least two ports per commodity.</p>
+<p>The node constraint is the same as <a class="reference internal" href="#tellegen"><span class="std std-ref">Tellegen</span></a>, but is applied separately per commodity type.</p>
 </section>
-<section id="input-output-node">
-<h3>Input Output Node<a class="headerlink" href="#input-output-node" title="Permalink to this heading"></a></h3>
-<p>An input output node has one input port, and one output port. The input port always imports a commodity, but the output port can either import or export a commodity.</p>
+<section id="linear-input-output-node">
+<h3>Linear Input Output Node<a class="headerlink" href="#linear-input-output-node" title="Permalink to this heading"></a></h3>
+<p>An input output node has one input port <span class="math notranslate nohighlight">\(p^\text{in}\)</span>, and one output port, <span class="math notranslate nohighlight">\(p^\text{out}\)</span>. The input port always imports a commodity, but the output port can either import or export a commodity. The transformation between input and output is linear.</p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">weight</span></code> (<span class="math notranslate nohighlight">\(w\)</span>): a weight used to transform the input into the output. The weight can be a single value, or an array of factors.</p></li>
+</ul>
+<p><strong>Constraints</strong></p>
+<p><span class="math notranslate nohighlight">\(p^\text{out} = p^\text{in} \cdot w\)</span></p>
 </section>
 <section id="single-piecewise-input-output-node">
 <h3>Single Piecewise Input Output Node<a class="headerlink" href="#single-piecewise-input-output-node" title="Permalink to this heading"></a></h3>
@@ -178,7 +195,7 @@
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">input_pts</span></code> and <code class="docutils literal notranslate"><span class="pre">output_pts</span></code> must be the same length, and should be defined over the range of values that the input and output ports can take, because the bounds on each port will be calculated based on <code class="docutils literal notranslate"><span class="pre">input_pts</span></code> and <code class="docutils literal notranslate"><span class="pre">output_pts</span></code>.</p>
 <p><strong>Constraints</strong></p>
-<p>If the piecewise function is denote <span class="math notranslate nohighlight">\(f\)</span>, and the input port is <span class="math notranslate nohighlight">\(p^\text{in}\)</span> and the output port is <span class="math notranslate nohighlight">\(p^\text{out}\)</span>, then:</p>
+<p>If the piecewise function is denoted <span class="math notranslate nohighlight">\(f\)</span>, and the input port is <span class="math notranslate nohighlight">\(p^\text{in}\)</span> and the output port is <span class="math notranslate nohighlight">\(p^\text{out}\)</span>, then:</p>
 <p><span class="math notranslate nohighlight">\(p^\text{out} = f(p^\text{in})\)</span></p>
 </section>
 <section id="controlled-load">
@@ -186,15 +203,18 @@
 <p>A controlled load must be operated within a minimum and maximum utilisation, and between a minimum and maximum power/flow rate.</p>
 <p>Min utilisation is the ratio between the minimum energy consumed, and the maxinimum energy that would be consumed if the load operated at max power.</p>
 <p>Max utilisation is the ratio between the maximum energy consumed, and the maximum energy that would be consumed if the load operated at max power.</p>
+<p>An example of initialising a controlled load is</p>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p\)</span>, the power consumed by the load, indexed by planning and time interval</p>
-<p><span class="math notranslate nohighlight">\(p^\text{max}\)</span>, the maximum power consumed by the load</p>
-<p><span class="math notranslate nohighlight">\(p^\text{min}\)</span>, the minimum power consumed by the load</p>
-<p><span class="math notranslate nohighlight">\(util^\text{min}\)</span>, the minimum utilisation</p>
-<p><span class="math notranslate nohighlight">\(util^\text{max}\)</span>, the maximum utilisation</p>
 <p><strong>Parameters</strong></p>
-<p><span class="math notranslate nohighlight">\(d^\text{interval}\)</span>, the time interval in minutes</p>
-<p><span class="math notranslate nohighlight">\(d^\text{total}\)</span>, the total number of time intervals</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(p^\text{max}\)</span>, the maximum power consumed by the load</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{min}\)</span>, the minimum power consumed by the load</p></li>
+<li><p><span class="math notranslate nohighlight">\(util^\text{min}\)</span>, the minimum utilisation</p></li>
+<li><p><span class="math notranslate nohighlight">\(util^\text{max}\)</span>, the maximum utilisation</p></li>
+<li><p><span class="math notranslate nohighlight">\(d^\text{interval}\)</span>, the time interval in minutes</p></li>
+<li><p><span class="math notranslate nohighlight">\(d^\text{total}\)</span>, the total number of time intervals</p></li>
+</ul>
 <p><strong>Constraints</strong></p>
 <p>If there is a minimum utilisation specified:</p>
 <p><span class="math notranslate nohighlight">\(\sum_{i=0}^x \sum_{j=0}^t p_{i, j} \cdot \frac{d^\text{interval}}{60} \geq util^\text{min} \cdot p^\text{max} \cdot \frac{d^\text{interval}}{60} \cdot d^\text{total}\)</span></p>
@@ -207,7 +227,7 @@
 <p>Min utilisation is the ratio between the minimum energy generated, and the maxinimum energy that would be generated if the generation was operated at max power.</p>
 <p>Max utilisation is the ratio between the maximum energy generated, and the maximum energy that would be generated if the generation was operated at max power.</p>
 <p><strong>Constraints</strong></p>
-<p>The constraints are the same as defined for <a class="reference internal" href="#controlled-load"><span class="std std-ref">Controlled Load</span></a></p>
+<p>The constraints are the same as for <a class="reference internal" href="#controlled-load"><span class="std std-ref">Controlled Load</span></a></p>
 </section>
 </section>
 <section id="electrical-nodes">
@@ -217,16 +237,6 @@
 <p>The battery node can be used to model electrical storage. A battery holds some energy, or charge. The battery node can import energy and increase its state of charge, or export energy, which decreases its state of charge.
 This node can only ever import, or export, it cannot simultaneously import and export.</p>
 <p>An example of initialising a battery node is</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">battery</span> <span class="o">=</span> <span class="n">Battery</span><span class="p">(</span><span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;battery&#39;</span><span class="p">,</span>
-                  <span class="n">max_capacity</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
-                  <span class="n">depth_of_discharge_limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                  <span class="n">charging_power_limit</span><span class="o">=</span><span class="mf">1.25</span><span class="p">,</span>
-                  <span class="n">discharging_power_limit</span><span class="o">=-</span><span class="mf">1.25</span><span class="p">,</span>
-                  <span class="n">charging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                  <span class="n">discharging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                  <span class="n">initial_state_of_charge</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-</pre></div>
-</div>
 <p><strong>Parameters</strong></p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">port_name</span></code>: The name of the port on the battery node</p></li>
@@ -238,11 +248,17 @@ This node can only ever import, or export, it cannot simultaneously import and e
 <li><p><code class="docutils literal notranslate"><span class="pre">discharging_efficiency</span></code> (<span class="math notranslate nohighlight">\(\eta^\text{discharge}\)</span>): Efficiency that applies when converting energy exported to a change in stored energy.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">initial_state_of_charge</span></code>: Initial state of charge of the battery in kWh</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fixed_storage_capacity</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code> storage capacity is optimised between 0 and <code class="docutils literal notranslate"><span class="pre">max</span> <span class="pre">capacity</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">storage_capacity_cost</span></code>: Cost on storage capacity in $ per kWh. Needs to be set to some value if <code class="docutils literal notranslate"><span class="pre">fixed_storage_capacity</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">storage_capacity_cost</span></code>: Cost on storage capacity in $ per kWh.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">storage_capacity_cost</span></code> must be set to some value if <code class="docutils literal notranslate"><span class="pre">fixed_storage_capacity</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</div>
+<ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">regularise</span></code>: Optional regularisation term on the battery. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
 </ul>
 <p><strong>Variables</strong></p>
-<p><span class="math notranslate nohighlight">\(p\)</span>, power at battery</p>
+<p><span class="math notranslate nohighlight">\(p\)</span>, battery power</p>
 <p><span class="math notranslate nohighlight">\(p^+\)</span>, power imported by the battery</p>
 <p><span class="math notranslate nohighlight">\(p^-\)</span>, power exported by the battery</p>
 <p><span class="math notranslate nohighlight">\(E\)</span>, energy stored in the battery</p>
@@ -263,15 +279,17 @@ This node can only ever import, or export, it cannot simultaneously import and e
 
 <span class="n">battery</span> <span class="o">=</span> <span class="n">Solar</span><span class="p">(</span><span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;pv&#39;</span><span class="p">,</span>
                 <span class="n">curtailable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                <span class="n">profile</span> <span class="o">=</span><span class="n">solar_profile</span><span class="p">)</span>
+                <span class="n">profile</span><span class="o">=</span><span class="n">solar_profile</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Parameters</strong></p>
-<p><a href="#id1"><span class="problematic" id="id2">*</span></a><code class="docutils literal notranslate"><span class="pre">port_name</span></code>: The name of the port on the solar node.
-* <code class="docutils literal notranslate"><span class="pre">profile</span></code>: The generation profile for the solar node, given in kW average per time interval. This can be specified using a numpy array, a list of values, or a dictionary, where the dictionary keys are <code class="docutils literal notranslate"><span class="pre">(planning_period,</span> <span class="pre">time_period)</span></code>.
-* <code class="docutils literal notranslate"><span class="pre">curtailable</span></code>: Set to <code class="docutils literal notranslate"><span class="pre">True</span></code> if solar generation can be curtailed (i.e., reduced for some number of time periods). Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">port_name</span></code>: The name of the port on the solar node.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">profile</span></code>: The generation profile for the solar node, given in kW average per time interval. This can be specified using a numpy array, a list of values, or a dictionary, where the dictionary keys are <code class="docutils literal notranslate"><span class="pre">(planning_period,</span> <span class="pre">time_period)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">curtailable</span></code>: Set to <code class="docutils literal notranslate"><span class="pre">True</span></code> if solar generation can be curtailed (i.e., reduced for some number of time intervals). Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
 <p><strong>Constraints</strong></p>
-<p>If <code class="docutils literal notranslate"><span class="pre">curtailable</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, and our profile is given by the parameter <span class="math notranslate nohighlight">\(p^\text{max}\)</span>, and actual solar generation is given by <span class="math notranslate nohighlight">\(p\)</span>:</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">curtailable</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, and the profile is given by the parameter <span class="math notranslate nohighlight">\(p^\text{max}\)</span>, and actual solar generation is given by <span class="math notranslate nohighlight">\(p\)</span>:</p>
 <p><span class="math notranslate nohighlight">\(p \leq p^\text{max}\)</span></p>
 </section>
 <section id="ev">
@@ -280,14 +298,14 @@ This node can only ever import, or export, it cannot simultaneously import and e
 enough available charge to meet its trip requirements. The EV node requires the following data:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">available</span></code> (<span class="math notranslate nohighlight">\(t^\text{available}\)</span>): An array representing the periods which the EV is plugged in and available for charging. 1=available to charge, 0=not available.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">usage</span></code> (<span class="math notranslate nohighlight">\(p^\text{usage}\)</span>): An array representing the average power (kW) consumption from driving of the EV during a time period.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">usage</span></code> (<span class="math notranslate nohighlight">\(p^\text{usage}\)</span>): An array representing the average power (kW) consumption from driving of the EV during a time interval.</p></li>
 </ul>
 <p>Both usage and available should have the same length and importantly available should be zero whenever usage has a value
 greater than zero (i.e. if the car is in use driving it is not available to charge).</p>
 <p>The EV can be specified to charge in 3 different modes. This is controlled by setting <code class="docutils literal notranslate"><span class="pre">charge_mode</span></code> to one of ‘V0G’, ‘V1G’ or ‘V2G’
 which are defined as:</p>
 <ul class="simple">
-<li><p>V0G: non-optimised convenience or time of day charging. Whenever the car is available it will charge at its maximum charging power until full. Alternative, a time-of-day array can be supplied specifying certain time periods during which charging is allowed.</p></li>
+<li><p>V0G: non-optimised convenience or time of day charging. Whenever the car is available it will charge at its maximum charging power until full. Alternative, a time-of-day array can be supplied specifying certain time intervals during which charging is allowed.</p></li>
 <li><p>V1G: optimised uni-directional charging (grid to vehicle only). The car is charged from the upstream grid in a way that optimises the model objectives.</p></li>
 <li><p>V2G: optimised bi-directional charging (grid to vehicle and vehicle to grid). The car charges and discharges from and to the upstream grid in a way that optimises the model objectives.</p></li>
 </ul>
@@ -319,25 +337,31 @@ and a trip usage port (i.e., a load port). Each of these ports has the associate
 Only EV specific additional parameters/variables are defined below.</p>
 <p><strong>Parameters</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv</span></code> (<span class="math notranslate nohighlight">\(L^\text{\text{conserv}}\)</span>): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while p^text{available}=1).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv_cost</span> <span class="pre">(</span></code><span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>): The cost placed on going below the conservative state of charge limit ($/kWh). That is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining) more money than this cost. Warning, this cost will be incorrectly over represented in the objective cost as it will be applied whenever the car was plugged back in below <span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">trip_slack</span></code>: A boolean enabling or disabling slack trips (recommended=True). If enabled, then any trips that require more than the available energy will be assumed to have charged at a public charger and the optimisation will still succeed and be considered feasible. The cost on this public charging is by default very high and so will be treated as a last resort by the optimisation solver. It is recommended that this is True in case the data contains any infeasible trips.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv</span></code> (<span class="math notranslate nohighlight">\(L^\text{conserv}\)</span>): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while p^text{available}=1).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOC_conserv_cost</span></code> (<span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>): The cost placed on going below the conservative state of charge limit ($/kWh). That is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining) more money than this cost.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">SOC_conserv_cost</span></code> will be incorrectly over represented in the objective cost as it will be applied whenever the car was plugged back in below <span class="math notranslate nohighlight">\(C^\text{conserv}\)</span>.</p>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">trip_slack</span></code>: A boolean enabling or disabling slack trips (recommended=True). If enabled, then any trips that require more than the available energy will be assumed to have charged at a public charger and the optimisation will still succeed and be considered feasible. The cost on this public charging is by default very high and so will be treated as a last resort by the optimisation solver. It is recommended that <code class="docutils literal notranslate"><span class="pre">trip_slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> in case the data contains any infeasible trips.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tod_charging</span></code>: Time of day charging. An array or list if enabled, otherwise false. Time of day charging allows the EV to charge only during certain time windows (1=allowed, 0=not allowed). This is because customers might not want to charge during peak windows and would most commonly be used with V0G charging.</p></li>
 </ul>
 <p><strong>Variables</strong></p>
 <ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(p^\text{cp}\)</span>: connection point port power (kW).</p></li>
-<li><p><span class="math notranslate nohighlight">\(p^\text{battery}\)</span>: battery port power (kW).</p></li>
-<li><p><span class="math notranslate nohighlight">\(p^\text{trip}\)</span>: trip usage port power (kW).</p></li>
-<li><p><span class="math notranslate nohighlight">\(S^\text{trip}\)</span>: value of the trip slack variable (kWh). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.</p></li>
-<li><p><span class="math notranslate nohighlight">\(S^\text{conserv}\)</span>: Value of a slack variable required for the implementation of the conservative lower limit.</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{cp}\)</span>, connection point port power (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{battery}\)</span>, battery port power (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{trip}\)</span>, trip usage port power (kW).</p></li>
+<li><p><span class="math notranslate nohighlight">\(S^\text{trip}\)</span>, value of the trip slack variable (kWh). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.</p></li>
+<li><p><span class="math notranslate nohighlight">\(S^\text{conserv}\)</span>, value of a slack variable required for the implementation of the conservative lower limit.</p></li>
 </ul>
 <p><strong>Constraints</strong></p>
 <p>Balance of power across ports:</p>
 <p><span class="math notranslate nohighlight">\(p^\text{battery}_{x, t} = p^\text{cp}_{x, t} - p^\text{trip}_{x, t}\)</span></p>
-<p>The modified battery state of charge equations accounting for the trip slack variable (if <code class="docutils literal notranslate"><span class="pre">trip_slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>):</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">trip_slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the modified battery state of charge equation accounting for the trip slack variable is:</p>
 <p><span class="math notranslate nohighlight">\(E_{x, t} = E_{x,t-1} + \eta^\text{charge} p^\text{battery,+}_{x,t} d^\text{interval} + p^\text{battery, -}_{x,t} \frac{d^\text{interval}}{\eta^\text{discharge}} + S^\text{trip}_{x,t}\)</span></p>
-<p>Conservative state of charge lower limit (if <code class="docutils literal notranslate"><span class="pre">SOC_conserv</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>):</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">SOC_conserv</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>, conservative state of charge lower limit:</p>
 <p><span class="math notranslate nohighlight">\(\text{if} \quad t^\text{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} &gt;=0\)</span></p>
 </section>
 <section id="inverter">
@@ -398,7 +422,7 @@ Only EV specific additional parameters/variables are defined below.</p>
 <p><span class="math notranslate nohighlight">\(p^\text{in} \leq p^\text{on} \cdot p^\text{max}\)</span></p>
 <p>We use a weighted sum of past inputs approach to applying the COP. This constraint enforces that when the boiler turns on, in the first period it will operate at <code class="docutils literal notranslate"><span class="pre">startup_cop</span></code> and for subsequent periods it will operate at <code class="docutils literal notranslate"><span class="pre">cop</span></code>. When the boiler turns off, it will operate at a lower efficiency, and then reach zero in the next time step.</p>
 <p><span class="math notranslate nohighlight">\(p^\text{out}_{x, t} = p^\text{in}_{x, t} \cdot C^\text{init} + p^\text{in}_{x, t-1} \cdot (C - C^\text{init})\)</span></p>
-<p>For example, if a 10 kW boiler has a <code class="docutils literal notranslate"><span class="pre">cop</span> <span class="pre">=</span> <span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">startup_cop</span> <span class="pre">=</span> <span class="pre">0.7</span></code>, in the time period when the boiler turns on, its output is <span class="math notranslate nohighlight">\(p^\text{out} = (0.7)(10) + (0.3)(0) = 7\)</span>, and in the next time step, its output is <span class="math notranslate nohighlight">\(p^\text{out} = (0.7)(10) + (0.3)(10)= 10\)</span>. Assume it operates at <span class="math notranslate nohighlight">\(p^\text{out}=10\)</span> for some time, before turning off. In the time period it turns off, <span class="math notranslate nohighlight">\(p^\text{out}=(0.7)(0) + (0.3)(10) = 3\)</span>. In the next period <span class="math notranslate nohighlight">\(p^\text{out}=(0.7)(0) + (0.3)(0) = 0\)</span>.</p>
+<p>For example, if a 10 kW boiler has a <code class="docutils literal notranslate"><span class="pre">cop</span> <span class="pre">=</span> <span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">startup_cop</span> <span class="pre">=</span> <span class="pre">0.7</span></code>, in the time interval when the boiler turns on, its output is <span class="math notranslate nohighlight">\(p^\text{out} = (0.7)(10) + (0.3)(0) = 7\)</span>, and in the next time step, its output is <span class="math notranslate nohighlight">\(p^\text{out} = (0.7)(10) + (0.3)(10)= 10\)</span>. Assume it operates at <span class="math notranslate nohighlight">\(p^\text{out}=10\)</span> for some time, before turning off. In the time interval it turns off, <span class="math notranslate nohighlight">\(p^\text{out}=(0.7)(0) + (0.3)(10) = 3\)</span>. In the next period <span class="math notranslate nohighlight">\(p^\text{out}=(0.7)(0) + (0.3)(0) = 0\)</span>.</p>
 </section>
 <section id="temperature-controlled-gas-boiler">
 <h3>Temperature Controlled Gas Boiler<a class="headerlink" href="#temperature-controlled-gas-boiler" title="Permalink to this heading"></a></h3>
@@ -417,7 +441,7 @@ These temperature can be optimised within a range.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">max_input</span></code>: see <a class="reference internal" href="#gas-boiler-fixed-cop"><span class="std std-ref">Gas Boiler Fixed COP</span></a></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">min_input</span></code>: see <a class="reference internal" href="#gas-boiler-fixed-cop"><span class="std std-ref">Gas Boiler Fixed COP</span></a></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">deg_to_kW</span></code> (<span class="math notranslate nohighlight">\(\alpha\)</span>: conversion factor between a temperature difference <span class="math notranslate nohighlight">\(\Delta T\)</span> and kW of heating/cooling. Has units of kW/deg C.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">deg_to_kW</span></code> (<span class="math notranslate nohighlight">\(\alpha\)</span>):  a factor that equals <span class="math notranslate nohighlight">\(\frac{\Delta T}{kW}\)</span>, used for converting a temperature difference to kW heating or cooling.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cop</span></code> (<span class="math notranslate nohighlight">\(C\)</span>): see <a class="reference internal" href="#gas-boiler-fixed-cop"><span class="std std-ref">Gas Boiler Fixed COP</span></a></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">startup_cop</span></code> (<span class="math notranslate nohighlight">\(C^\text{init}\)</span>): see <a class="reference internal" href="#gas-boiler-fixed-cop"><span class="std std-ref">Gas Boiler Fixed COP</span></a></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">exit_temp_bounds</span></code> (<span class="math notranslate nohighlight">\(ET^\text{min}\)</span>, <span class="math notranslate nohighlight">\(ET^\text{max}\)</span>): tuple of lower and upper bounds on the exit temperature</p></li>
@@ -436,7 +460,7 @@ These temperature can be optimised within a range.</p>
 <p><span class="math notranslate nohighlight">\(p^\text{out} = (RT - ET)\cdot \alpha \cdot C\)</span></p>
 <p>Exit temp constraint:</p>
 <p><span class="math notranslate nohighlight">\(p^\text{in} = (ET - RT)\cdot \alpha\)</span></p>
-<p>TODO - add startup cop</p>
+<p>TBC - add startup cop</p>
 </section>
 </section>
 <section id="thermal-nodes">
@@ -476,8 +500,8 @@ Cooling is denoted by negative values (indicating that heat is exported, i.e. re
                            <span class="n">gain_factor</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
                            <span class="n">initial_internal_temp</span><span class="o">=</span><span class="mi">0</span>
                            <span class="p">)</span>
-<span class="n">thermal_load</span><span class="o">.</span><span class="n">add_thermal_port</span><span class="p">(</span><span class="s1">&#39;heating_load&#39;</span><span class="p">)</span>
-<span class="n">thermal_load</span><span class="o">.</span><span class="n">add_thermal_port</span><span class="p">(</span><span class="s1">&#39;cooling_load&#39;</span><span class="p">)</span>
+<span class="n">thermal_load</span><span class="o">.</span><span class="n">add_heating_port</span><span class="p">(</span><span class="s1">&#39;heating_load&#39;</span><span class="p">)</span>
+<span class="n">thermal_load</span><span class="o">.</span><span class="n">add_cooling_port</span><span class="p">(</span><span class="s1">&#39;cooling_load&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Parameters</strong>:</p>
@@ -485,10 +509,10 @@ Cooling is denoted by negative values (indicating that heat is exported, i.e. re
 <li><p><code class="docutils literal notranslate"><span class="pre">temp_ub</span></code> (<span class="math notranslate nohighlight">\(T^\text{ub}\)</span>): temperature upper bound entered as a dictionary of values</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">temp_lb</span></code> (<span class="math notranslate nohighlight">\(T^\text{lb}\)</span>): temperature lower bound entered as a dictionary of values</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">external_temp</span></code> (<span class="math notranslate nohighlight">\(T^\text{ambient}\)</span>): ambient temperature entered as a dictionary of values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temp_to_energy_coef</span></code> (<span class="math notranslate nohighlight">\(\alpha\)</span>): a factor that equals <span class="math notranslate nohighlight">\(\frac{\Delta T}{kW}\)</span>, used for converting a temperature difference to kW heating or cooling.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loss_factor</span></code> (<span class="math notranslate nohighlight">\(\eta^\text{loss}\)</span>): a loss factor/efficiency</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gain_factor</span></code> (<span class="math notranslate nohighlight">\(\eta^\text{gain}\)</span>): a gain factor/efficiency</p></li>
 </ul>
-<p><span class="math notranslate nohighlight">\(\alpha\)</span>, a factor that equals :math:<a href="#id3"><span class="problematic" id="id4">`</span></a>frac{Delta T}{kW}, used for converting a temperature difference to kW heating or cooling.</p>
-<p><span class="math notranslate nohighlight">\(\eta^\text{loss}\)</span>, a loss factor/efficiency</p>
-<p><span class="math notranslate nohighlight">\(\eta^\text{gain}\)</span>, a gain factor/efficiency</p>
 <p><strong>Variables</strong>:</p>
 <p><span class="math notranslate nohighlight">\(P\)</span>, total heating and cooling kW at the node</p>
 <p><span class="math notranslate nohighlight">\(T^\text{internal}\)</span>, the internal temperature of the thermal load</p>
@@ -498,7 +522,7 @@ Cooling is denoted by negative values (indicating that heat is exported, i.e. re
 <p><strong>Constraints</strong>:</p>
 <p>Loss and gain sum constraint:</p>
 <p><span class="math notranslate nohighlight">\(E^\text{loss} + E^\text{gain} = (T^\text{ambient} - T^\text{internal}) \cdot \alpha\)</span></p>
-<p>Loss and gain big M constraints, so we split the variables correctly:</p>
+<p>Loss and gain big M constraints, to make sure that the variables are split correctly:</p>
 <p><span class="math notranslate nohighlight">\(E^\text{loss} \geq (E^* - 1) \cdot M\)</span></p>
 <p><span class="math notranslate nohighlight">\(E^\text{gain} \leq E^* \cdot M\)</span></p>
 <p>Constraint relating the heating/cooling delivered to the node to the internal temperature and the losses/gains.</p>
@@ -519,13 +543,13 @@ An example of initialising a single output heat pump is</p>
                                  <span class="n">cooling_cop_time_series</span><span class="o">=</span><span class="n">cool_cop_dict</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The coefficients of performance are provided as parameters because in theory they can be calculated prior to optimisation, based on ambient temperature data.</p>
+<p>The coefficients of performance are provided as parameters because they can be calculated prior to optimisation, based on ambient temperature data.</p>
 <p><strong>Parameters</strong></p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">heating_cop_time_series</span></code> (<span class="math notranslate nohighlight">\(COP^\text{heat}\)</span>): a dict of time series coefficients of performance for heating.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cool_cop_time_series</span></code> (<span class="math notranslate nohighlight">\(COP^\text{cool}\)</span>): a dict time series of coefficients of performance for cooling.</p></li>
 </ul>
-<p>Both dicts should be entered as a dict where the keys are <code class="docutils literal notranslate"><span class="pre">(planning_period,</span> <span class="pre">time_period)</span></code>.</p>
+<p>Both dicts should have keys <code class="docutils literal notranslate"><span class="pre">(planning_period,</span> <span class="pre">time_period)</span></code>.</p>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(H^\text{in}\)</span>, electrical input used for heating</p>
 <p><span class="math notranslate nohighlight">\(C^\text{in}\)</span>, electrical input used for cooling</p>
@@ -534,9 +558,9 @@ An example of initialising a single output heat pump is</p>
 <p><span class="math notranslate nohighlight">\(p^\text{out-}\)</span>, heating out</p>
 <p><span class="math notranslate nohighlight">\(p^\text{out+}\)</span>, cooling out</p>
 <p><strong>Constraints</strong></p>
-<p>Summing constraint on the division of electrical input for heating and cooling purposes:</p>
+<p>Summing constraint, enforcing that the electrical input used for heating and the electrical input used for cooling equals the total electrical input:</p>
 <p><span class="math notranslate nohighlight">\(H^\text{in} + C^\text{in} = p^\text{in}\)</span></p>
-<p>Big M constraints for enforcing that when the cooling indicator variable, <span class="math notranslate nohighlight">\(b^*\)</span>, is 1, <span class="math notranslate nohighlight">\(H^\text{in}=0\)</span>, and vice versa.</p>
+<p>Big M constraint pair for enforcing that when the cooling indicator variable, <span class="math notranslate nohighlight">\(b^*\)</span>, is 1, <span class="math notranslate nohighlight">\(H^\text{in}=0\)</span>, and vice versa.</p>
 <p><span class="math notranslate nohighlight">\(H^\text{in} \leq (1 - b^*) \cdot M\)</span></p>
 <p><span class="math notranslate nohighlight">\(C^\text{in} \leq b^* \cdot M\)</span></p>
 <p>Heating output constraint:</p>
@@ -560,7 +584,7 @@ It has one input electrical port <span class="math notranslate nohighlight">\(p^
 </pre></div>
 </div>
 <p>The parameters, constraints, and variables are otherwise the same as <a class="reference internal" href="#heat-pump-single-output"><span class="std std-ref">Heat Pump Single Output</span></a>.
-The only difference is that instead of splitting port <span class="math notranslate nohighlight">\(p^\text{out}\)</span> into negative component <span class="math notranslate nohighlight">\(p^\text{out-}\)</span> representing the heating output, and positive component <span class="math notranslate nohighlight">\(p^\text{out+}\)</span> representing the cooling output, we have separate ports <span class="math notranslate nohighlight">\(p^\text{heat out}\)</span> and <span class="math notranslate nohighlight">\(p^\text{cool out}\)</span>. Therefore, the final pair of constraints are:</p>
+The only difference is that instead of splitting port <span class="math notranslate nohighlight">\(p^\text{out}\)</span> into negative component <span class="math notranslate nohighlight">\(p^\text{out-}\)</span> representing the heating output, and positive component <span class="math notranslate nohighlight">\(p^\text{out+}\)</span> representing the cooling output, separate ports <span class="math notranslate nohighlight">\(p^\text{heat out}\)</span> and <span class="math notranslate nohighlight">\(p^\text{cool out}\)</span> are used. Therefore, the final pair of constraints are:</p>
 <p>Heating output constraint:</p>
 <p><span class="math notranslate nohighlight">\(p^\text{heat out}_{x, t} = H^\text{in}_{x, t} \cdot COP^\text{heat}_{x, t}\)</span></p>
 <p>Cooling output constraint:</p>
@@ -568,7 +592,18 @@ The only difference is that instead of splitting port <span class="math notransl
 </section>
 <section id="chiller">
 <h3>Chiller<a class="headerlink" href="#chiller" title="Permalink to this heading"></a></h3>
-<p>This node has two ports, an input electrical port, and an output cooling port.</p>
+<p>A chiller has two ports, an input electrical port <span class="math notranslate nohighlight">\(p^\text{in}\)</span>, and an output cooling port <span class="math notranslate nohighlight">\(p^\text{out}\)</span>. It converts electrical input to cooling according to a coefficient of performance (COP), which depends on ambient temperature, as well as loading (current input/nominal rating).</p>
+<p><strong>Parameters</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">input_pts</span></code>, an array of input pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.</p>
+<p><code class="docutils literal notranslate"><span class="pre">output_pts</span></code>, an array of corresponding output pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">input_pts</span></code> and <code class="docutils literal notranslate"><span class="pre">output_pts</span></code> should cover the operational range of the chiller. Max input and output will be calculated based on these arrays.</p>
+</div>
+<p><strong>Constraints</strong></p>
+<p>If the piecewise function is denoted <span class="math notranslate nohighlight">\(f\)</span>, and the input port is <span class="math notranslate nohighlight">\(p^\text{in}\)</span> and the output port is <span class="math notranslate nohighlight">\(p^\text{out}\)</span>, then:</p>
+<p><span class="math notranslate nohighlight">\(p^\text{out} = f(p^\text{in})\)</span></p>
+<p>TBC do this better</p>
 </section>
 </section>
 <section id="other-nodes">
@@ -576,13 +611,35 @@ The only difference is that instead of splitting port <span class="math notransl
 <section id="emitting-node">
 <h3>Emitting Node<a class="headerlink" href="#emitting-node" title="Permalink to this heading"></a></h3>
 <p>An emitting node has a port <span class="math notranslate nohighlight">\(p^\text{emit}\)</span> that generates emissions when it exports, and another port that generates carbon <span class="math notranslate nohighlight">\(p^\text{carbon}\)</span>.</p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(EF\)</span>, emissions factor in units of kgCO2 per flow unit of the emitting port. For example, if the emitting commodity is electricity, the emissions factor would have units kgCO2 per kW. This can be a single factor or an array of factors.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Emission factors are usually specified in units of kgCO2 per energy unit (e.g., kgCO2/kWh). The factors should be converted using the appropriate time interval so that they are in the units as described above.</p>
+</div>
+<p><strong>Constraints</strong></p>
+<p>Note that the constraint below uses the negative (exporting) component of <span class="math notranslate nohighlight">\(p^\text{emit}\)</span>:</p>
+<p><span class="math notranslate nohighlight">\(p^\text{carbon} = p^\text{emit-} \cdot EF\)</span></p>
+</section>
+<section id="carbon-aggregation">
+<h3>Carbon Aggregation<a class="headerlink" href="#carbon-aggregation" title="Permalink to this heading"></a></h3>
+<p>A carbon aggregation node can have an arbitrary number of carbon ports. These ports will usually be a sink of carbon (importing). It has an additional variable called <span class="math notranslate nohighlight">\(total\)</span> which tracks the total carbon at the node. This can be useful for aggregation all the carbon emissions in a model in one place.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(total\)</span>, the sum of all port variables on the node</p>
+<p><strong>Constraints</strong></p>
+<p>If the node has N ports, each with a value of <span class="math notranslate nohighlight">\(p_i\)</span> for <span class="math notranslate nohighlight">\(i \in N\)</span>, then:</p>
+<p><span class="math notranslate nohighlight">\(total = \sum_{i=0}^N p_i\)</span></p>
 </section>
 <section id="time-delay-node">
 <h3>Time Delay Node<a class="headerlink" href="#time-delay-node" title="Permalink to this heading"></a></h3>
 <p>A time delay node has two ports, one input <span class="math notranslate nohighlight">\(p^\text{in}\)</span>, and one output <span class="math notranslate nohighlight">\(p^\text{out}\)</span>. The input port always imports, and the output port always exports. The throughput from input to output is delayed by some number of time intervals.</p>
 <p>This node can be used to represent delays in a system, and is particularly appropriate for discrete/process based systems. The time delay can also be set to 0 to model feedback loops.</p>
 <p><strong>Parameters</strong></p>
-<p><span class="math notranslate nohighlight">\(d\)</span>, time delay in number of time intervals</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(d\)</span>, time delay in number of time intervals</p></li>
+</ul>
 <p><strong>Constraints</strong></p>
 <p><span class="math notranslate nohighlight">\(p^\text{out}_{x, t} = -p^\text{in}_{x, t-d}\)</span></p>
 </section>
@@ -594,7 +651,6 @@ The only difference is that instead of splitting port <span class="math notransl
 </section>
 <section id="template-node">
 <h3>Template Node<a class="headerlink" href="#template-node" title="Permalink to this heading"></a></h3>
-<p><strong>Description</strong></p>
 <p><strong>Variables</strong></p>
 <p><strong>Parameters</strong></p>
 <p><strong>Constraints</strong></p>
