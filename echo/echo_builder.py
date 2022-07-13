@@ -309,7 +309,7 @@ def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict,
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
     if verbose:
-        print('..constructing objective...')
+        print('Constructing objective...')
 
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
@@ -430,6 +430,7 @@ def run_echo_optimiser(echo_graph,
                        discount_rate=0,
                        optimiser_engine='cplex',
                        opt_display=False,
+                       logfile=None,
                        verbose=True):
     """ Runs the echo optimiser on an echo graph with an echo objective set. Returns the optimiser object."""
     if verbose:
@@ -446,13 +447,13 @@ def run_echo_optimiser(echo_graph,
 
     optimiser = eo.EchoOptimiser(interval_duration=interval_duration,
                                  number_of_intervals=time_periods,
-                                 number_of_expansion_intervals=1,
-                                 discount_rate=0,
+                                 number_of_expansion_intervals=expansion_periods,
+                                 discount_rate=discount_rate,
                                  ES=echo_graph,
                                  objective_set=objective_set,
                                  optimiser_engine=optimiser_engine)
 
-    optimiser.optimise(tee=opt_display)
+    optimiser.optimise(tee=opt_display, logfile=logfile)
     log_infeasible_constraints(optimiser.model)
 
     return optimiser

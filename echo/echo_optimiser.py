@@ -136,7 +136,7 @@ class EchoOptimiser(object):
         for _, path_obj in self.ES.paths.items():
             self.objective += path_obj.add_objective(self.model)
 
-    def optimise(self, tee=False):
+    def optimise(self, tee=False, logfile=None):
         def objective_function(model):
             return self.objective
 
@@ -149,7 +149,7 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
+        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 
     def df(self):
