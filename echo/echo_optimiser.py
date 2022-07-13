@@ -147,7 +147,8 @@ class EchoOptimiser(object):
                 self.objective += port_obj.objective  # add the newly populated attribute to our total
 
         for _, path_obj in self.ES.paths.items():
-            self.objective += path_obj.add_objective(self.model)
+            path_obj.add_objective(self.model)
+            self.objective += path_obj.objective
 
     def optimise(self, tee=False, logfile=None):
         def objective_function(model):

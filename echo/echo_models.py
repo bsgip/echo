@@ -546,6 +546,7 @@ class Port(BaseModel):
 
         self.objective += total
 
+        self.objective += total
 
 class Node(BaseModel):
     """
@@ -557,11 +558,13 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
+    objective: Optional[Any] = 0  # For adding any node objectives
+
+    inflow: Optional[str]
     expansion_planning: Optional[bool] = False  # Attribute for whether we are considering installing this node
     retirement_planning: Optional[bool] = False  # Attribute for whether we are considering retiring this node
     install_cost: Optional[float]
     replace_cost: Optional[float]
-    objective: Optional[Any] = 0  # this is used for any objective terms defined on the node
     nominal_lifetime: int = None  # node nominal lifetime in number of expansion_planning period units
     initial_life_left: int = None  # node life left at start of optimisation
 
@@ -951,7 +954,6 @@ class Path(BaseModel):
 
         self.objective += total
 
-
 """
 
     Commodity agnostic ports and nodes
@@ -1165,7 +1167,6 @@ class Storage(Port):
             total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
         self.objective += total
-
 
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
