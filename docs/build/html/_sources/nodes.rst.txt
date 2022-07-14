@@ -51,7 +51,7 @@ A multi commodity tellegen node is an energy conserving node. The sum of all flo
 
 Like the Tellegen node, the Multi Commodity Tellegen node requires at least two ports per commodity.
 
-The node constraint is the same as :ref:`Tellegen`, but is applied separately per commodity type.
+The node constraint is the same as :ref:`Tellegen`, but a separate constraint is applied per commodity type.
 
 Linear Input Output Node
 ^^^^^^^^^^^^^^^^^^^^^^^^^

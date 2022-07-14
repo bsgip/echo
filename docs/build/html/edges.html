@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -45,8 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Port object</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Edge object</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#edge-capacity">Edge capacity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#edge-validation">Edge validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#edge-constraint">Edge constraint</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
@@ -83,13 +83,14 @@
              
   <section id="echo-edge-object">
 <h1><em>echo</em> Edge object<a class="headerlink" href="#echo-edge-object" title="Permalink to this heading"></a></h1>
-<p>Edges represent a physical flow of a single commodity.
+<p>Edges represent a physical, lossless flow of a single commodity.
 An edge is terminated on each end by connection to a port. Edges must begin and end on ports that have the same commodity type.</p>
-<section id="edge-capacity">
-<h2>Edge capacity<a class="headerlink" href="#edge-capacity" title="Permalink to this heading"></a></h2>
-</section>
-<section id="edge-validation">
-<h2>Edge validation<a class="headerlink" href="#edge-validation" title="Permalink to this heading"></a></h2>
+<section id="edge-constraint">
+<h2>Edge constraint<a class="headerlink" href="#edge-constraint" title="Permalink to this heading"></a></h2>
+<p>Edges are used to apply a flow constraint. They do not strictly have a variable associated with them.
+If an edge connects ports <span class="math notranslate nohighlight">\(x\)</span> and <span class="math notranslate nohighlight">\(y\)</span>, which have variables <span class="math notranslate nohighlight">\(p^x\)</span> and <span class="math notranslate nohighlight">\(p^y\)</span>, then we can write the following edge constraint:</p>
+<p><span class="math notranslate nohighlight">\(p^x + p^y = 0\)</span>.</p>
+<p>This constraint enforces that whatever flow is imported at <span class="math notranslate nohighlight">\(x\)</span> must be exported by <span class="math notranslate nohighlight">\(y\)</span>, and vice versa.</p>
 </section>
 </section>
 
