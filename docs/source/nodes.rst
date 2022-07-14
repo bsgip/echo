@@ -40,9 +40,9 @@ A tellegen node is an energy conserving node that must have at least two ports. 
 
 **Constraints**
 
-If the node has N ports, each with a value of :math:`p_i` for :math:`i \in N`, then:
+If the node has N ports, each with a value of :math:`p^i_{x, t}` for :math:`i \in N`, then:
 
-:math:`\sum_{i=0}^N p_i = 0`
+:math:`\sum_{i=0}^N p^i_{x, t} = 0`
 
 
 Multi Commodity Tellegen
@@ -95,7 +95,7 @@ An example of defining a piecewise input output node is
 
 **Constraints**
 
-If the piecewise function is denoted :math:`f`, and the input port is :math:`p^\text{in}` and the output port is :math:`p^\text{out}`, then:
+If the piecewise function is denoted :math:`f`, and the input port is :math:`p^\text{in}_{x, t}` and the output port is :math:`p^\text{out}_{x, t}`, then:
 
 :math:`p^\text{out} = f(p^\text{in})`
 
@@ -118,7 +118,7 @@ An example of initialising a controlled load is
 
 **Variables**
 
-:math:`p`, the power consumed by the load, indexed by planning and time interval
+:math:`p_{x, t}`, the power consumed by the load, indexed by planning and time interval
 
 **Parameters**
 
@@ -163,12 +163,12 @@ Electrical Nodes
 
 Battery
 ^^^^^^^^^^^^^^^^^
-The battery node can be used to model electrical storage. A battery holds some energy, or charge. The battery node can import energy and increase its state of charge, or export energy, which decreases its state of charge.
-This node can only ever import, or export, it cannot simultaneously import and export.
+The battery node can be used to model electrical storage. This node can only ever import, or export, it cannot simultaneously import and export. It has one storage port, which holds most of the parameters.
 
 An example of initialising a battery node is
 
 .. code-block::
+
     battery = Battery(port_name='battery',
                       max_capacity=15.0,
                       depth_of_discharge_limit=0,
@@ -181,61 +181,17 @@ An example of initialising a battery node is
 
 **Parameters**
 
-
 * ``port_name``: The name of the port on the battery node
 
-* ``max_capacity`` (:math:`E^\text{max}`): Maximum battery capacity in kWh
-
-* ``depth_of_discharge_limit`` (:math:`dod`): Percentage to which the battery can discharge to, written as a decimal.
-
-* ``charging_power_limit`` (:math:`lim^\text{charge}`): Limit on charging power in kW
-
-* ``discharging_power_limit`` (:math:`lim^\text{discharge}`): Limit on discharging power in kW
-
-* ``charging_efficiency`` (:math:`\eta^\text{charge}`): Efficiency that applies when converting energy imported to a change in stored energy.
-
-* ``discharging_efficiency`` (:math:`\eta^\text{discharge}`): Efficiency that applies when converting energy exported to a change in stored energy.
-
-* ``initial_state_of_charge``: Initial state of charge of the battery in kWh
-
-
-
-* ``fixed_storage_capacity``: If ``True`` storage capacity is optimised between 0 and ``max capacity``. Default is ``False``
-
-* ``storage_capacity_cost``: Cost on storage capacity in $ per kWh.
-
-.. note::
-    ``storage_capacity_cost`` must be set to some value if ``fixed_storage_capacity`` is ``True``. Default is ``None``.
-
-* ``regularise``: Optional regularisation term on the battery. Default is ``False``.
+* For the remaining parameters, see :ref:`Storage` in :ref:`*echo* Ports`.
 
 **Variables**
 
-:math:`p`, battery power
-
-:math:`p^+`, power imported by the battery
-
-:math:`p^-`, power exported by the battery
-
-:math:`E`, energy stored in the battery
-
+See :ref:`Storage` in :ref:`*echo* Ports`.
 
 **Constraints**
 
-Charging/discharging constraint:
-
-:math:`lim^\text{discharge} \leq p \leq lim^\text{charge}`
-
-State of charge constraint:
-
-:math:`E_{x, t} = E_{x, t-1} + p^+_{x, t} \cdot \eta^\text{charge} + p^-_{x, t} \cdot \eta^\text{discharge}`
-
-
-Depth of discharge constraint:
-
-:math:`E^\text{max} \cdot dod \leq E \leq E^\text{max}`
-
-
+See :ref:`Storage` in :ref:`*echo* Ports`.
 
 Solar
 ^^^^^^^^^^^^^^^^^
@@ -314,7 +270,7 @@ An example of initialising an EV node is
 
 The EV node operates similar to a battery with a built in load (usage) and only certain times during which it can charge (the available).
 Hence, the EV node has three ports: one to connect to the grid, one representing the battery (i.e., a storage port),
-and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined (see :ref:`*echo* Port object`).
+and a trip usage port (i.e., a load port). Each of these ports has the associated set of parameters/variables previously defined (see :ref:`*echo* Ports`).
 Only EV specific additional parameters/variables are defined below.
 
 **Parameters**
@@ -330,10 +286,10 @@ Only EV specific additional parameters/variables are defined below.
 
 **Variables**
 
-* :math:`p^\text{cp}`, connection point port power (kW).
-* :math:`p^\text{battery}`, battery port power (kW).
-* :math:`p^\text{trip}`, trip usage port power (kW).
-* :math:`S^\text{trip}`, value of the trip slack variable (kWh). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.
+* :math:`p^\text{cp}_{x, t}`, connection point port power (kW).
+* :math:`p^\text{battery}_{x, t}`, battery port power (kW).
+* :math:`p^\text{trip}_{x, t}`, trip usage port power (kW).
+* :math:`S^\text{trip}_{x, t}`, value of the trip slack variable (kWh). That is, the amount of energy that was required to be charged at a public charger in order to make a trip feasible.
 * :math:`S^\text{conserv}`, value of a slack variable required for the implementation of the conservative lower limit.
 
 **Constraints**
@@ -348,7 +304,7 @@ If ``trip_slack`` is ``True``, the modified battery state of charge equation acc
 
 If ``SOC_conserv is not None``, conservative state of charge lower limit:
 
-:math:`\text{if} \quad t^\text{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} >=0`
+:math:`\text{if} \quad t^\text{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} \geq 0`
 
 
 
@@ -424,11 +380,11 @@ An example of initialising a fixed COP gas boiler is
 
 **Variables**
 
-:math:`p^\text{in}`, input (J/s)
+:math:`p^\text{in}_{x, t}`, input (J/s)
 
-:math:`p^\text{out}`, output (kW thermal)
+:math:`p^\text{out}_{x, t}`, output (kW thermal)
 
-:math:`p^\text{on}`, binary variable for when the boiler is on
+:math:`p^\text{on}_{x, t}`, binary variable for when the boiler is on
 
 
 **Constraints**:
@@ -444,7 +400,7 @@ We use a weighted sum of past inputs approach to applying the COP. This constrai
 
 :math:`p^\text{out}_{x, t} = p^\text{in}_{x, t} \cdot C^\text{init} + p^\text{in}_{x, t-1} \cdot (C - C^\text{init})`
 
-For example, if a 10 kW boiler has a ``cop = 1``, and ``startup_cop = 0.7``, in the time interval when the boiler turns on, its output is :math:`p^\text{out} = (0.7)(10) + (0.3)(0) = 7`, and in the next time step, its output is :math:`p^\text{out} = (0.7)(10) + (0.3)(10)= 10`. Assume it operates at :math:`p^\text{out}=10` for some time, before turning off. In the time interval it turns off, :math:`p^\text{out}=(0.7)(0) + (0.3)(10) = 3`. In the next period :math:`p^\text{out}=(0.7)(0) + (0.3)(0) = 0`.
+For example, if a 10 kW boiler has a ``cop = 1``, and ``startup_cop = 0.7``, in the time interval when the boiler turns on, its output is :math:`p^\text{out} = 7`, and in the next time step, :math:`p^\text{out} = 10`. Assume it operates at :math:`p^\text{out}=10` for some time, before turning off. In the time interval it turns off, :math:`p^\text{out}= 3`. In the next period :math:`p^\text{out}= 0`.
 
 
 Temperature Controlled Gas Boiler
@@ -482,9 +438,9 @@ An example of initialising a temperature controlled gas boiler is
 
 **Variables**
 
-:math:`p^\text{in}`, gas in
+:math:`p^\text{in}_{x, t}`, gas in
 
-:math:`p^\text{out}`, power out
+:math:`p^\text{out}_{x, t}`, power out
 
 :math:`ET`, exit water temperature
 
@@ -576,15 +532,15 @@ An example of initialising a controllable thermal load that is supplied by separ
 
 **Variables**:
 
-:math:`P`, total heating and cooling kW at the node
+:math:`P_{x, t}`, total heating and cooling kW at the node
 
-:math:`T^\text{internal}`, the internal temperature of the thermal load
+:math:`T^\text{internal}_{x, t}`, the internal temperature of the thermal load
 
-:math:`E^\text{loss}`, energy loss due to internal temperature being > ambient temperature
+:math:`E^\text{loss}_{x, t}`, energy loss due to internal temperature being > ambient temperature
 
-:math:`E^\text{gain}`, energy gain due to internal temperature being < ambient temperature
+:math:`E^\text{gain}_{x, t}`, energy gain due to internal temperature being < ambient temperature
 
-:math:`E^*`, binary variable for splitting losses and gains
+:math:`E^*_{x, t}`, binary variable for splitting losses and gains
 
 
 **Constraints**:
@@ -608,7 +564,7 @@ Constraint relating the heating/cooling delivered to the node to the internal te
 Heat Pump Single Output
 ^^^^^^^^^^^^^
 A heat pump converts electrical input to either heating output, or cooling output.
-A single output heat pump has one input electrical port :math:`p^\text{in}`, and one output thermal port :math:`p^\text{out}` that can either be positive (behaving as a heat sink, or cooling source), or negative (behaving as a heat source).
+A single output heat pump has one input electrical port :math:`p^\text{in}_{x, t}`, and one output thermal port :math:`p^\text{out}_{x, t}` that can either be positive (behaving as a heat sink, or cooling source), or negative (behaving as a heat source).
 An example of initialising a single output heat pump is
 
 .. code-block::
@@ -635,17 +591,17 @@ Both dicts should have keys ``(planning_period, time_period)``.
 
 **Variables**
 
-:math:`H^\text{in}`, electrical input used for heating
+:math:`H^\text{in}_{x, t}`, electrical input used for heating
 
-:math:`C^\text{in}`, electrical input used for cooling
+:math:`C^\text{in}_{x, t}`, electrical input used for cooling
 
-:math:`b^*`, binary variable that indicates whether the output port is cooling (:math:`b^*=1`) or heating (:math:`b^*=0`)
+:math:`b^*_{x, t}`, binary variable that indicates whether the output port is cooling (:math:`b^*=1`) or heating (:math:`b^*=0`)
 
-:math:`p^\text{in}`, electrical power in
+:math:`p^\text{in}_{x, t}`, electrical power in
 
-:math:`p^\text{out-}`, heating out
+:math:`p^\text{out-}_{x, t}`, heating out
 
-:math:`p^\text{out+}`, cooling out
+:math:`p^\text{out+}_{x, t}`, cooling out
 
 
 **Constraints**
@@ -673,7 +629,7 @@ Cooling output constraint:
 Heat Pump Dual Output
 ^^^^^^^^^^^^^^^
 A heat pump with dual outputs has separate ports for heating and cooling, and can be used to serve separate heating and cooling loads.
-It has one input electrical port :math:`p^\text{in}`, one output thermal port for heating (export only) :math:`p^\text{heat out}`, and one output port for cooling (import only) :math:`p^\text{cool out}`.
+It has one input electrical port :math:`p^\text{in}_{x, t}`, one output thermal port for heating (export only) :math:`p^\text{heat out}_{x, t}`, and one output port for cooling (import only) :math:`p^\text{cool out}_{x, t}`.
 
 An example of initialising a dual output heat pump is
 
@@ -704,15 +660,15 @@ Cooling output constraint:
 
 Chiller
 ^^^^^^^^^^^^^
-A chiller has two ports, an input electrical port :math:`p^\text{in}`, and an output cooling port :math:`p^\text{out}`. It converts electrical input to cooling according to a coefficient of performance (COP), which depends on ambient temperature, as well as loading (current input/nominal rating).
+A chiller has two ports, an input electrical port :math:`p^\text{in}_{x, t}`, and an output cooling port :math:`p^\text{out}_{x, t}`. It converts electrical input to cooling according to a coefficient of performance (COP), which depends on ambient temperature, as well as loading (current input/nominal rating).
 
 
 
 **Parameters**
 
-``input_pts``, an array of input pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.
+* ``input_pts``, an array of input pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.
 
-``output_pts``, an array of corresponding output pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.
+* ``output_pts``, an array of corresponding output pts. Can either provide the same input points for every time interval, or provide one per time interval, in order to accommodate any temperature effects.
 
 .. note::
     ``input_pts`` and ``output_pts`` should cover the operational range of the chiller. Max input and output will be calculated based on these arrays.
@@ -735,15 +691,15 @@ Other Nodes
 
 Emitting Node
 ^^^^^^^^^^^^^^^^^
-An emitting node has a port :math:`p^\text{emit}` that generates emissions when it exports, and another port that generates carbon :math:`p^\text{carbon}`.
+An emitting node has a port :math:`p^\text{emit}_{x, t}` that generates emissions when it exports, and another port that generates carbon :math:`p^\text{carbon}_{x, t}`.
 
 
 **Parameters**
 
-* :math:`EF`, emissions factor in units of kgCO2 per flow unit of the emitting port. For example, if the emitting commodity is electricity, the emissions factor would have units kgCO2 per kW. This can be a single factor or an array of factors.
+* :math:`EF_{x, t}`, emissions factor in units of kgCO2 per flow unit of the emitting port. For example, if the emitting commodity is electricity, the emissions factor would have units kgCO2 per kW. This can be a single factor or an array of factors.
 
 .. note::
-    Emission factors are usually specified in units of kgCO2 per energy unit (e.g., kgCO2/kWh). The factors should be converted using the appropriate time interval so that they are in the units as described above.
+    Emission factors are usually specified in units of kgCO2 per energy unit (e.g., kgCO2/kWh). The factors should be converted using the appropriate time interval so that they are in the units described above.
 
 **Constraints**
 
@@ -754,11 +710,11 @@ Note that the constraint below uses the negative (exporting) component of :math:
 
 Carbon Aggregation
 ^^^^^^^^^^^^^^^^^^^
-A carbon aggregation node can have an arbitrary number of carbon ports. These ports will usually be a sink of carbon (importing). It has an additional variable called :math:`total` which tracks the total carbon at the node. This can be useful for aggregation all the carbon emissions in a model in one place.
+A carbon aggregation node can have an arbitrary number of carbon ports. These ports will usually be a sink of carbon (importing). It has an additional variable called :math:`total_{x, t}` which tracks the total carbon at the node. This can be useful for aggregation all the carbon emissions in a model in one place.
 
 **Variables**
 
-:math:`total`, the sum of all port variables on the node
+:math:`total_{x, t}`, the sum of all port variables on the node
 
 **Constraints**
 
@@ -769,7 +725,7 @@ If the node has N ports, each with a value of :math:`p_i` for :math:`i \in N`, t
 
 Time Delay Node
 ^^^^^^^^^^^^^^^^
-A time delay node has two ports, one input :math:`p^\text{in}`, and one output :math:`p^\text{out}`. The input port always imports, and the output port always exports. The throughput from input to output is delayed by some number of time intervals.
+A time delay node has two ports, one input :math:`p^\text{in}_{x, t}`, and one output :math:`p^\text{out}_{x, t}`. The input port always imports, and the output port always exports. The throughput from input to output is delayed by some number of time intervals.
 
 This node can be used to represent delays in a system, and is particularly appropriate for discrete/process based systems. The time delay can also be set to 0 to model feedback loops.
 
@@ -784,7 +740,7 @@ This node can be used to represent delays in a system, and is particularly appro
 
 Input Output ARX Node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This node has one input port :math:`p^\text{in}` and one output port :math:`p^\text{out}`. The output at each interval depends on current inputs, previous inputs, and previous outputs. The dependence of the current output on on previous outputs is defined by coefficient array :math:`a`, and the dependence on current and previous inputs is defined by coefficient array :math:`b`
+This node has one input port :math:`p^\text{in}_{x, t}` and one output port :math:`p^\text{out}_{x, t}`. The output at each interval depends on current inputs, previous inputs, and previous outputs. The dependence of the current output on on previous outputs is defined by coefficient array :math:`a`, and the dependence on current and previous inputs is defined by coefficient array :math:`b`
 
 
 **Constraints**
@@ -801,3 +757,8 @@ Template Node
 **Parameters**
 
 **Constraints**
+
+
+Custom Nodes
+^^^^^^^^^^^^^^^^
+Write something here about how to built generic linear transformations for nodes

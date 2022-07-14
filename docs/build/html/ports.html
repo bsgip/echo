@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>echo Port object &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
+  <title>echo Ports &mdash; echo (Energy and Commodity Holistic Optimiser) 0.1.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -20,7 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="echo Edge object" href="edges.html" />
+    <link rel="next" title="echo Edges" href="edges.html" />
     <link rel="prev" title="echo Nodes" href="nodes.html" /> 
 </head>
 
@@ -44,12 +44,19 @@
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nodes.html"><em>echo</em> Nodes</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Port object</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#port-variables">Port variables</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#port-validation">Port validation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><em>echo</em> Ports</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#base-port-models">Base Port Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#port">Port</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#storage">Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mobile-storage">Mobile Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bounded">Bounded</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#off-or-constrained">Off or Constrained</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#controlled-load-or-generation">Controlled Load or Generation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edge object</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edges</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
@@ -72,7 +79,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li><em>echo</em> Port object</li>
+      <li><em>echo</em> Ports</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/ports.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -82,25 +89,151 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="echo-port-object">
-<h1><em>echo</em> Port object<a class="headerlink" href="#echo-port-object" title="Permalink to this heading"></a></h1>
+  <section id="echo-ports">
+<h1><em>echo</em> Ports<a class="headerlink" href="#echo-ports" title="Permalink to this heading"></a></h1>
 <p>Ports terminate a network edge and represent the connection of an edge to a node.
 Ports are associated with an individual commodity and represent the flow of the that commodity into or out of a node.</p>
-<section id="port-variables">
-<h2>Port variables<a class="headerlink" href="#port-variables" title="Permalink to this heading"></a></h2>
-<p>All ports have at least one variable, <span class="math notranslate nohighlight">\(p_{x, t}\)</span> the port flow value.</p>
-<p>If the port needs to be split into a positive and negative component, we introduce the additional variables:</p>
-<p><span class="math notranslate nohighlight">\(p_{x, t}^+\)</span>,  the positive component of the port flow</p>
-<p><span class="math notranslate nohighlight">\(p_{x, t}^-\)</span>,  the negative component of the port flow</p>
-<p><span class="math notranslate nohighlight">\(p_{x, t}^{*}\)</span>, a binary variable for indicating whether <span class="math notranslate nohighlight">\(p^+\)</span> is non-zero.</p>
-<p>The following three constraints are used to split the variable.</p>
-<p><span class="math notranslate nohighlight">\(p_{x, t} &amp;= p^+_{x, t} + p^-_{x, t}\)</span></p>
-<p><span class="math notranslate nohighlight">\(p^+_{x, t} &amp;\leq p^*_{x, t} \cdot M\)</span></p>
-<p><span class="math notranslate nohighlight">\(p^-_{x, t} &amp;\geq (p^*_{x, t} - 1) \cdot M\)</span></p>
+<section id="base-port-models">
+<h2>Base Port Models<a class="headerlink" href="#base-port-models" title="Permalink to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Where variables are indexed by <span class="math notranslate nohighlight">\({x, t}\)</span> <span class="math notranslate nohighlight">\(x\)</span> refers to the planning interval, and <span class="math notranslate nohighlight">\(t\)</span> refers to the time interval. Sometimes these indices are left out of the constraint equations, and in this case, please refer to the variable definition to see whether it is an indexed variable or not.</p>
+</div>
+<section id="port">
+<h3>Port<a class="headerlink" href="#port" title="Permalink to this heading"></a></h3>
+<p>This is the base port class. The main port variable is <span class="math notranslate nohighlight">\(p_{x, t}\)</span>, which represents the port flow value.</p>
+<p>If <span class="math notranslate nohighlight">\(p\)</span> needs to be split into a positive and negative component, the following variables are introduced:</p>
+<p><span class="math notranslate nohighlight">\(p^+_{x, t}\)</span>,  the positive component of the port flow</p>
+<p><span class="math notranslate nohighlight">\(p^-_{x, t}\)</span>,  the negative component of the port flow</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t}^\text{*}\)</span>, a binary variable for indicating whether <span class="math notranslate nohighlight">\(p^+\)</span> is non-zero.</p>
+<p>The following constraints are used to split the variable.</p>
+<p><span class="math notranslate nohighlight">\(p = p^+ + p^-\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^+ \leq p^* \cdot M\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^- \geq (p^* - 1) \cdot M\)</span></p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">flows</span></code>: A parameter for defining what flows are possible. Options are <code class="docutils literal notranslate"><span class="pre">Flows.Both</span></code>, <code class="docutils literal notranslate"><span class="pre">Flows.Import</span></code>, <code class="docutils literal notranslate"><span class="pre">Flows.Export</span></code>. This parameter controls the domain of <span class="math notranslate nohighlight">\(p\)</span>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">import_constraint_value</span></code> (<span class="math notranslate nohighlight">\(p^\text{import constraint}\)</span>): A constraint on imports. Can be None, a non-negative float, or an array of non-negative floats .</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">export_constraint_value</span></code> (<span class="math notranslate nohighlight">\(p^\text{export constraint}\)</span>): A constraint on exports. Can be None, a non-positive float, or an array of non-positive floats.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">active_periods</span></code> (<span class="math notranslate nohighlight">\(p^\text{active}\)</span>): An array of periods when the port is active (on). 1=on, 0=off.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">slack</span></code>: A bool parameter for enabling a slack variable on the port. A slack variable is useful when there are import or export constraints that may not be feasible. They ensure that the solver returns a solution even if the constraints cannot be satisfied, and we can interrogate by how much the import/export constraint was violated.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">slack=True</span></code>, a large cost is automatically added to the objective, so that the optimiser will only use the slack if it has no alternative. The costs are added in such a way that the maximum violation is penalised more heavily than the total violations.</p>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">constraint</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>: <span class="math notranslate nohighlight">\(p \leq p^\text{import constraint}\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">constraint</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>: <span class="math notranslate nohighlight">\(p \geq p^\text{export constraint}\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> and <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">constraint</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>, the following variables and constraints are used instead:</p>
+<p><span class="math notranslate nohighlight">\(p^\text{import slack}\)</span>, the slack at each time interval</p>
+<p><span class="math notranslate nohighlight">\(p^\text{max import slack}\)</span>, the max import slack over all time intervals</p>
+<p><span class="math notranslate nohighlight">\(p + p^\text{import slack} \leq p^\text{import constraint}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max import slack} \geq p^\text{import slack}\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, and if <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">constraint</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>, the following variables and constraints are used instead:</p>
+<p><span class="math notranslate nohighlight">\(p^\text{export slack}\)</span>, the slack at each time interval</p>
+<p><span class="math notranslate nohighlight">\(p^\text{max export slack}\)</span>, the max export slack over all time intervals</p>
+<p><span class="math notranslate nohighlight">\(p + p^\text{export slack} \geq p^\text{export constraint}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max export slack} \geq p^\text{export slack}\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">active_periods</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>, the following constraints are added:</p>
+<p><span class="math notranslate nohighlight">\(p \leq p^\text{active} \cdot M\)</span></p>
+<p><span class="math notranslate nohighlight">\(p \geq - p^\text{active} \cdot M\)</span></p>
 </section>
-<section id="port-validation">
-<h2>Port validation<a class="headerlink" href="#port-validation" title="Permalink to this heading"></a></h2>
-<p>What is intended to go here?</p>
+<section id="storage">
+<h3>Storage<a class="headerlink" href="#storage" title="Permalink to this heading"></a></h3>
+<p>A storage port is a child of the <a class="reference internal" href="#port"><span class="std std-ref">Port</span></a> class. It has the following additional parameters, variables, and constraints:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">max_capacity</span></code> (<span class="math notranslate nohighlight">\(E^\text{max}\)</span>): Maximum battery capacity in kWh</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">depth_of_discharge_limit</span></code> (<span class="math notranslate nohighlight">\(dod\)</span>): Percentage to which the battery can discharge to, written as a decimal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">charging_power_limit</span></code> (<span class="math notranslate nohighlight">\(lim^\text{charge}\)</span>): Limit on charging power in kW</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">discharging_power_limit</span></code> (<span class="math notranslate nohighlight">\(lim^\text{discharge}\)</span>): Limit on discharging power in kW</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">charging_efficiency</span></code> (<span class="math notranslate nohighlight">\(\eta^\text{charge}\)</span>): Efficiency that applies when converting energy imported to a change in stored energy.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">discharging_efficiency</span></code> (<span class="math notranslate nohighlight">\(\eta^\text{discharge}\)</span>): Efficiency that applies when converting energy exported to a change in stored energy.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">initial_state_of_charge</span></code>: Initial state of charge of the battery in kWh</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fixed_storage_capacity</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code> storage capacity is optimised between 0 and <code class="docutils literal notranslate"><span class="pre">max</span> <span class="pre">capacity</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">storage_capacity_cost</span></code>: Cost on storage capacity in $ per kWh.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regularise</span></code>: Optional regularisation term on the battery. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">storage_capacity_cost</span></code> must be set to some value if <code class="docutils literal notranslate"><span class="pre">fixed_storage_capacity</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</div>
+<p><strong>Variables</strong></p>
+<p>These are inherited from the <a class="reference internal" href="#port"><span class="std std-ref">Port</span></a> class, and are repeated here for clarity:</p>
+<p><span class="math notranslate nohighlight">\(p_{x, t}\)</span>, battery power</p>
+<p><span class="math notranslate nohighlight">\(p^+_{x, t}\)</span>, power imported by the battery</p>
+<p><span class="math notranslate nohighlight">\(p^-_{x, t}\)</span>, power exported by the battery</p>
+<p><span class="math notranslate nohighlight">\(E_{x, t}\)</span>, energy stored in the battery</p>
+<p><strong>Constraints</strong></p>
+<p>Charging/discharging constraint:</p>
+<p><span class="math notranslate nohighlight">\(lim^\text{discharge} \leq p \leq lim^\text{charge}\)</span></p>
+<p>State of charge constraint:</p>
+<p><span class="math notranslate nohighlight">\(E_{x, t} = E_{x, t-1} + p^+_{x, t} \cdot \eta^\text{charge} + p^-_{x, t} \cdot \eta^\text{discharge}\)</span></p>
+<p>Depth of discharge constraint:</p>
+<p><span class="math notranslate nohighlight">\(E^\text{max} \cdot dod \leq E \leq E^\text{max}\)</span></p>
+</section>
+<section id="mobile-storage">
+<h3>Mobile Storage<a class="headerlink" href="#mobile-storage" title="Permalink to this heading"></a></h3>
+<p>Could potentially create a new port model, for EV battery. It would be a child of the <a class="reference internal" href="#storage"><span class="std std-ref">Storage</span></a> class.
+It could have the EV-specific parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">trip_slack</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">soc_conserv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">soc_conserv_cost</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">available</span></code></p></li>
+</ul>
+<p>If <code class="docutils literal notranslate"><span class="pre">trip_slack</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the modified battery state of charge equation accounting for the trip slack variable is:</p>
+<p><span class="math notranslate nohighlight">\(E_{x, t} = E_{x,t-1} + \eta^\text{charge} p^\text{battery,+}_{x,t} d^\text{interval} + p^\text{battery, -}_{x,t} \frac{d^\text{interval}}{\eta^\text{discharge}} + S^\text{trip}_{x,t}\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">SOC_conserv</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></code>, conservative state of charge lower limit:</p>
+<p><span class="math notranslate nohighlight">\(\text{if} \quad t^\text{available}_{x,t} \quad \text{then} \quad E_{p,t} + S^\text{conserv}_{x,t} - L^\text{conserv} \geq 0\)</span></p>
+</section>
+<section id="bounded">
+<h3>Bounded<a class="headerlink" href="#bounded" title="Permalink to this heading"></a></h3>
+<p>A bounded port is a child of the <a class="reference internal" href="#port"><span class="std std-ref">Port</span></a> class. It must have a value between a lower and upper bound, which may be specified as time varying values.</p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (<span class="math notranslate nohighlight">\(p^\text{ub}_{x, t}\)</span>): port upper bound</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lower_bound</span></code> (<span class="math notranslate nohighlight">\(p^\text{lb}_{x, t}\)</span>): port lower bound</p></li>
+</ul>
+<p><strong>Constraints</strong></p>
+<p><span class="math notranslate nohighlight">\(p \geq p^\text{lb}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p \leq p^\text{ub}\)</span></p>
+</section>
+<section id="off-or-constrained">
+<h3>Off or Constrained<a class="headerlink" href="#off-or-constrained" title="Permalink to this heading"></a></h3>
+<p>An off or constrained port is a child of the <a class="reference internal" href="#port"><span class="std std-ref">Port</span></a> class. It must have a value between a lower and upper bound, which may be specified as time varying values. If it is off, it has a value of zero.</p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (<span class="math notranslate nohighlight">\(p^\text{ub}_{x, t}\)</span>): port upper bound</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lower_bound</span></code> (<span class="math notranslate nohighlight">\(p^\text{lb}_{x, t}\)</span>): port lower bound</p></li>
+</ul>
+<p><strong>Variables</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">on</span></code> (<span class="math notranslate nohighlight">\(p^\text{on}_{x, t}\)</span>): on/off binary variable</p></li>
+</ul>
+<p><span class="math notranslate nohighlight">\(p \geq p^\text{on} \cdot p^\text{lb}\)</span></p>
+<p><span class="math notranslate nohighlight">\(p \leq p^\text{on} \cdot p^\text{ub}\)</span></p>
+</section>
+<section id="controlled-load-or-generation">
+<h3>Controlled Load or Generation<a class="headerlink" href="#controlled-load-or-generation" title="Permalink to this heading"></a></h3>
+<p>A controlled load or generation port is a child of the <a class="reference internal" href="#port"><span class="std std-ref">Port</span></a> class.
+It can have a min and/or max utilisation.
+Min utilisation is the ratio between the minimum energy consumed, and the maxinimum energy that would be consumed if the load operated at max power.
+Max utilisation is the ratio between the maximum energy consumed, and the maximum energy that would be consumed if the load operated at max power.</p>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(p^\text{max}\)</span>, the maximum port power</p></li>
+<li><p><span class="math notranslate nohighlight">\(p^\text{min}\)</span>, the minimum port power</p></li>
+<li><p><span class="math notranslate nohighlight">\(util^\text{min}\)</span>, the minimum utilisation</p></li>
+<li><p><span class="math notranslate nohighlight">\(util^\text{max}\)</span>, the maximum utilisation</p></li>
+<li><p><span class="math notranslate nohighlight">\(d^\text{interval}\)</span>, the time interval in minutes</p></li>
+<li><p><span class="math notranslate nohighlight">\(d^\text{total}\)</span>, the total number of time intervals</p></li>
+</ul>
+<p><strong>Constraints</strong></p>
+<p>If there is a minimum utilisation specified:</p>
+<p><span class="math notranslate nohighlight">\(\sum_{i=0}^x \sum_{j=0}^t p_{i, j} \cdot \frac{d^\text{interval}}{60} \geq util^\text{min} \cdot p^\text{max} \cdot \frac{d^\text{interval}}{60} \cdot d^\text{total}\)</span></p>
+<p>If there is a maximum utilisation specified:</p>
+<p><span class="math notranslate nohighlight">\(\sum_{i=0}^x \sum_{j=0}^t p_{i, j} \cdot \frac{d^\text{interval}}{60} \leq util^\text{max} \cdot p^\text{max} \cdot \frac{d^\text{interval}}{60} \cdot d^\text{total}\)</span></p>
+</section>
 </section>
 </section>
 
@@ -109,7 +242,7 @@ Ports are associated with an individual commodity and represent the flow of the 
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="nodes.html" class="btn btn-neutral float-left" title="echo Nodes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="edges.html" class="btn btn-neutral float-right" title="echo Edge object" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="edges.html" class="btn btn-neutral float-right" title="echo Edges" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

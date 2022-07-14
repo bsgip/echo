@@ -1,4 +1,4 @@
-*echo* Edge object
+*echo* Edges
 ======================
 Edges represent a physical, lossless flow of a single commodity.
 An edge is terminated on each end by connection to a port. Edges must begin and end on ports that have the same commodity type.

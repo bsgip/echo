@@ -58,7 +58,7 @@ nodes that can be the end of a path (i.e., they can sink a commodity).
 If it is not known whether nodes are sources or sinks, they can be entered as both.
 
 .. note::
-    Any Tellegen nodes, or interconnecting should NOT be included as either a source or sink. This will raise an error
+    Any Tellegen nodes, or interconnecting should NOT be included as either a source or sink. This will raise an error.
     Echo will assume that any node that isn't a source or sink is a tellegen node.
 
     Source/sink nodes should have only one port.
