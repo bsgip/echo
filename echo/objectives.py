@@ -664,20 +664,3 @@ class ImportDemandCharge(DemandCharge):
 class ExportDemandCharge(DemandCharge):
     import_demand = False
     export_demand = True
-
-class ImportDemandTariffObjective(DemandTariffObjective):
-
-    def verify_objective(self, model, df):
-        # Forces all demand charges to have import_demand = True
-        for dc in self.demand_charges:
-            dc.import_demand = True
-            dc.export_demand = False
-
-class ExportDemandTariffObjective(DemandTariffObjective):
-
-    def verify_objective(self, model, df):
-        # Forces all demand charges to have import_demand = True
-        for dc in self.demand_charges:
-            dc.import_demand = False
-            dc.export_demand = True
-

@@ -81,22 +81,22 @@ n.add_edge_between_ports(node_tuple=('inverter', 'solar'), port_tuple=('pv', 'pv
 n.add_edge_between_ports(node_tuple=('cp', 'ev'), port_tuple=('ev', 'ev_cp'), resource=Units.KW)
 n.add_edge_between_ports(node_tuple=('grid', 'emissions'), port_tuple=('co2', 'grid'), resource=Units.CO2)
 
-# Define objectives
+# Add different objectives to the different networks
 
 n.add_objective(name='import_cost',
                 component={'node': 'cp', 'port': 'upstream'},
                 obj_type=TariffType.ImportTariff,
-                prices=[0] * (time_periods // 2) + [0] * (time_periods // 2))
+                prices=[1] * (time_periods // 2) + [1] * (time_periods // 2))
 
 n.add_objective(name='carbon_cost',
                 component={'node': 'emissions', 'port': 'grid'},
                 obj_type=TariffType.ImportTariff,
-                prices=[0] * time_periods)
+                prices=[0.5] * time_periods)
 
 n.add_objective(name='export_cost',
                 component={'node': 'cp', 'port': 'upstream'},
                 obj_type=TariffType.ExportTariff,
-                prices=[0] * (time_periods // 2) + [0] * (time_periods // 2))
+                prices=[0.1] * (time_periods // 2) + [3] * (time_periods // 2))
 
 # Define some demand charges as dicts
 dc1_param = {'name': 'shoulder',
@@ -112,26 +112,61 @@ n.add_objective(name='import_demand_tariff',
                 obj_type=TariffType.ImportDemandTariff,
                 charges=[dc1_param, dc2_param])
 
-# Validate the network to make sure there is consistency between component naming, edge naming, objective naming.
+# Make two other copies of our network
+n1 = n.copy()
+n2 = n.copy()
+
+# Modify the objectives for these two other networks
+n1.objectives = {}
+n1.add_objective(name='import_cost',
+                component={'node': 'cp', 'port': 'upstream'},
+                obj_type=TariffType.ImportTariff,
+                prices=[1] * (time_periods // 2) + [2] * (time_periods // 2))
+
+n1.add_objective(name='export_cost',
+                component={'node': 'cp', 'port': 'upstream'},
+                obj_type=TariffType.ExportTariff,
+                prices=[0.1] * (time_periods // 2) + [3] * (time_periods // 2))
+
+n1.add_objective(name='import_demand_tariff',
+                component={'node': 'cp', 'port': 'upstream'},
+                obj_type=TariffType.ImportDemandTariff,
+                charges=[dc1_param, dc2_param])
+
+
+n2.objectives = {}
+n2.add_objective(name='carbon_cost',
+                component={'node': 'emissions', 'port': 'grid'},
+                obj_type=TariffType.ImportTariff,
+                prices=[0.5] * time_periods)
+
+# Validate the networks to make sure there is consistency between component naming, edge naming, objective naming.
 n.validate_network()
+n1.validate_network()
+n2.validate_network()
 
-# Convert this network to an echo model
-# Returns the echo model, objective set, node_uid_dict (which is useful if nodes do not have custom names)
+# Create a netset and add our three networks
+netset = NetworkSet(name='default_name', description='')
+netset.add_network(n.dict())  # netset expects dict, so convert our network class to dict
+netset.add_network(n1.dict())  # netset expects dict, so convert our network class to dict
+netset.add_network(n2.dict())  # netset expects dict, so convert our network class to dict
 
-em, obj, node_uid_dict = n.convert_to_echo()
+# Set interval duration
+netset.interval_duration = interval_duration
+netset.time_periods = time_periods
+num_sites = len(netset.networks)
+netset.df = df  #todo fix the need to do this
 
-# Run the optimiser on the graph, using the objectives we defined
-opt = run_echo_optimiser(echo_graph=em,
-                         objective_set=obj,
-                         interval_duration=interval_duration,
-                         time_periods=time_periods,
-                         expansion_periods=1,
-                         discount_rate=0,
-                         optimiser_engine='cplex',
-                         opt_display=False)
+t1 = time.time()
+processing_errors = netset.optimise_network_set()
+t2 = time.time()
+print('\n')
+print('Time to optimise all sites for {} intervals of {} minutes was {} minutes'.format(time_periods, interval_duration,
+                                                                                        np.round((t2 - t1) / 60), 1))
+print('Number of sites failed to be processed was ', np.array(processing_errors).sum(), '/', num_sites)
 
-results = extract_results(opt, node_uid_dict)
-
-objectives_summary = extract_objectives(opt)
-print('Objectives summary:\n')
-pprint(objectives_summary)
+# Compare total costs
+print('Cost comparison:\n')
+print(netset.results[0]['cost_summary'])
+print(netset.results[1]['cost_summary'])
+print(netset.results[2]['cost_summary'])

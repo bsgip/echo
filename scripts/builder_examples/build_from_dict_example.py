@@ -1,3 +1,10 @@
+"""
+
+Example of building a network from a dict, and optimising it.
+
+"""
+
+# Define a network
 d = {
     "name": "my network",
     "components": {
@@ -528,7 +535,19 @@ d = {
     }
 }
 
-from echo.echo_builder import Network
+from echo.echo_builder import Network, convert_network_to_echo
+import pandas as pd
+from datetime import datetime
+
+df = pd.DataFrame({
+    'load': [5] * 48,
+    'solar': [-2] * 48,
+    'ev_available': [1] * 12 + [0] * 12 + [1] * 12 + [0] * 12,
+    'ev_usage': [0.0] * 12 + [0.5] * 12 + [0.0] * 12 + [1.0] * 12})
+
+
 
 n = Network(**d)
+em, obj, _ = convert_network_to_echo(n, df)
+
 

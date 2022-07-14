@@ -1529,6 +1529,15 @@ class FlexNode(Node):
         super().__init__(**data)
         self.ports[port_name] = FlexPort(units=port_unit)
 
+
+class FlexElectricalNode(Node):
+
+    def __init__(self,
+                 port_name: str,
+                 **data):
+        super().__init__(**data)
+        self.ports[port_name] = FlexPort(units=Units.KW)
+
 class NewInverter(Inverter):
 
     def __init__(self,

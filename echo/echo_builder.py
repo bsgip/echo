@@ -23,6 +23,7 @@ class Network(em.BaseModel):
     components = {}  # network components (nodes)
     edges = {}  # network edges, representing connectivity
     objectives = {}  # any objectives we want to define
+    profile = {}  # any static time series data
 
     def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Any = None, params: dict = None,
                                data: Any = None):
@@ -39,13 +40,12 @@ class Network(em.BaseModel):
         """
         self.validate_new_port(ports)
         if self.components.get(n_id) is not None:
-            print('Node {} is already defined in components. Updating node with any additional ports'.format(n_id))
-            self.components[n_id]['ports'].update(ports)
+            print('Node {} is already defined in components. Ignoring duplicate.'.format(n_id))
         else:
             d = {'id': n_id, 'type': n_type, 'ports': ports}
-            if params:
+            if params is not None:
                 d['parameters'] = params
-            if data:
+            if data is not None:
                 d['data'] = data
             self.components[n_id] = d
 
@@ -60,45 +60,55 @@ class Network(em.BaseModel):
         self.validate_new_edge(edge_name, node_tuple)
         self.edges[edge_name] = e
 
-    def add_edge_between_nodes(self, node_tuple: tuple, resource: Units, edge_name: str = None):
-        # Adds an edge between two nodes with no specified ports
-        # First create a port on each node, with units matching the res, and port name = node name at other end of edge
-        port1_dict = {node_tuple[1]: {'units': resource}}
-        port2_dict = {node_tuple[0]: {'units': resource}}
-        self.add_port_to_existing_node(n_id=node_tuple[0], port_dict=port1_dict)
-        self.add_port_to_existing_node(n_id=node_tuple[1], port_dict=port2_dict)
-        self.add_edge_between_ports(node_tuple=node_tuple, port_tuple=node_tuple, edge_name=edge_name,
-                                    resource=resource)
-
-    def add_port_to_existing_node(self, n_id: str, port_dict: dict):
-        """ Updates the port dict of the node to include the new port"""
-        (new_port_name, new_port_values), = port_dict.items()
-        if self.components[n_id]['ports'].get(new_port_name) is not None:
-            print('Port {} is already defined on node {}'.format(new_port_name, n_id))
-            if new_port_values != self.components[n_id]['ports'].get(new_port_name):
-                raise ValueError('Port dicts conflict, and node could not be updated.')
-        else:
-            self.components[n_id]['ports'].update(port_dict)
-
-    def add_objective(self, obj_name: str, obj_type: TariffType, component: dict = None, prices: Any = None,
+    def add_objective(self, name: str, obj_type: TariffType, component: dict = None, prices: Any = None,
                       charges: list = None):
-        o = {'type': obj_type, 'name': obj_name}
+        o = {'type': obj_type, 'name': name}
         if component:
             o['component'] = component
         if prices:
             o['prices'] = prices
         if charges:
             o['charges'] = charges
-        self.objectives[obj_name] = o
+        self.objectives[name] = o
 
-    def validate_new_edge(self, edge_name: str, node_tuple: tuple) -> None:
+    def add_profile(self, profile: pd.DataFrame):
+        self.profile = dict(profile)
+
+    def update_port_list_on_node(self, n_id: str, port: str):
+        """ Updates the port list of the node to include new port name (str)"""
+        assert self.components[n_id]['ports'] is not None, 'Initialise port list before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is list, \
+            'Cannot use this method on node {} because this node does not use a port list.'.format(n_id)
+        if port in self.components[n_id]['ports']:
+            'Port with name {} is already defined on node.'.format(port)
+        else:
+            self.components[n_id]['ports'].append(port)
+
+    def update_port_dict_on_node(self, n_id: str, port_dict: dict):
+        self.validate_new_port(port_dict)
+        assert self.components[n_id]['ports'] is not None, 'Initialise port dict before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is dict, \
+            'Cannot use this method on node {} this node does not use a port dict.'.format(n_id)
+        (new_port_name, new_port_values), = port_dict.items()
+        if self.components[n_id]['ports'].get(new_port_name) is not None:
+            print('Port {} is already defined on node {}'.format(new_port_name, n_id))
+            if new_port_values != self.components[n_id]['ports'].get(new_port_name):
+                raise ValueError('Port dicts conflict, the node could not be updated.')
+        else:
+            self.components[n_id]['ports'].update(port_dict)
+
+    def validate_new_edge(self, edge_name: str, node_tuple: tuple):
         """ Checks that edge has unique name and unique node tuple."""
-        assert self.edges.get(edge_name) is None, 'Edge with name "{}" is already defined.'.format(edge_name)
+        if self.edges.get(edge_name) is not None:
+            print('Edge with name "{}" is already defined. Ignoring current edge'.format(edge_name))
+            return None
         for existing_edge_name, existing_edge_dict in self.edges.items():
-            assert existing_edge_dict['nodes'] != node_tuple, \
-                'Nodes {} are already connected with existing edge named "{}".'.format(node_tuple, existing_edge_name)
+            if existing_edge_dict['nodes'] == node_tuple:
+                print('Nodes {} are already connected with existing edge named "{}". Ignoring current edge.'.format(node_tuple, existing_edge_name))
+                return None
         # Checks that nodes are different
         assert node_tuple[0] != node_tuple[1], 'A node cannot be connected to itself.'
+        return edge_name
 
     @staticmethod
     def validate_new_port(ports: Union[dict, list]) -> None:
@@ -149,6 +159,12 @@ class Network(em.BaseModel):
                                                                                                          component_node))
         else:
             print('No objectives defined for network "{}"'.format(self.name))
+
+    def convert_to_echo(self):
+        """ Converts the dict to an echo model"""
+        df = pd.DataFrame(self.profile)
+        return convert_network_to_echo(self, df)
+
 
 
 class NetworkSet:
@@ -273,10 +289,12 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     # append_results(results, network_dict, in_place=True)
     network_dict['infeasible'] = True if 'infeasible' in opt.opt_status['Termination condition'] else False
     results['infeasible'] = network_dict['infeasible']
+    cost_summary = extract_objectives(opt)
+    results['cost_summary'] = cost_summary
     return results
 
 
-def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
+def convert_network_to_echo(netw: Network, df: pd.DataFrame = None, verbose: bool = True):
     # Converts a network class to a dict, then turns it into an echo model
     netw.validate_network()
     return convert_dict_to_echo(netw=netw.dict(), df=df, verbose=verbose)
@@ -560,16 +578,16 @@ def create_demand_tariff(tariff_dict: dict, component_obj: em.Port):
         else:
             min_demand = 0
         # todo allow demand tariffs to be specific with start/end times
-        c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)  # Create demand charge
+        if tariff_dict['type'] == TariffType.ImportDemandTariff:
+            c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window, import_demand=True, export_demand=False)
+        if tariff_dict['type'] == TariffType.ExportDemandTariff:
+            c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window, import_demand=False, export_demand=True)
+
         echo_charge_list.append(c)
 
-    import_demand = True if tariff_dict['type'] == TariffType.ImportDemandTariff else False
-    export_demand = False if tariff_dict['type'] == TariffType.ImportDemandTariff else True
     demand_tariff = eobj.DemandTariffObjective(name=tariff_dict['name'],
                                                component=component_obj,
-                                               demand_charges=echo_charge_list,
-                                               export_demand=export_demand,
-                                               import_demand=import_demand)
+                                               demand_charges=echo_charge_list)
     return demand_tariff
 
 
@@ -612,7 +630,9 @@ def check_node_has_only_one_port(node_dict: dict):
 
 def process_field(field, df):
     """ Checks if a field points to data in a df or if it contains the data directly."""
+
     if type(field) is str:
+        assert df is not None, 'Dataframe must be provided, since field is defined by a dataframe column {}.'.format(field)
         try:
             x = df[field]
             vals = x.values
@@ -634,9 +654,8 @@ def array_length_check(array, length: int, message, scalar_ok=False):
 
 ### Result extraction functions
 
-def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
-    """ Extracts results from an echo model and returns them in a dict.
-    Results key arg allows user to specify which results they want returned."""
+def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict) -> dict:
+    """ Extracts results from an echo model and returns them in a dict. """
 
     system = optimiser.ES
     output = {}  # for storing results
