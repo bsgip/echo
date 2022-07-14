@@ -104,38 +104,31 @@ class ExpansionType(object):
     """Energy throughput (Edge capacity) expansion"""
 
 class NodeType(object):
-    """ Enumeration object defining the types of Assets a Node can represent
-    """
-    Flex = 'flex'
-    """Flexible Node"""
-    Tellegen = 'tellegen'
-    """Tellegen Node"""
+    ElectricalFlex = 'electrical_flex'
+    ElectricalTellegen = 'elec_tellegen'
+    MultiCommodityTellegen = 'multi_commodity_tellegen'
     Battery = 'battery'
-    """Battery Node"""
-    Load = 'load'
-    """Load (Energy consumer) Node"""
-    Generation = 'gen'
-    """Generator (Energy source) Node"""
+    ElectricalLoad = 'load'
+    ElectricalGeneration = 'elec_gen'
     Solar = 'solar'
     """Solar generator (PV) Node"""
     EV = 'ev'
-    """Electric Vehicle Node"""
+    V0GEV = 'v0g_ev'
+    V1GEV = 'v1g_ev'
+    V2GEV = 'v2g_ev'
     Inverter = 'inverter'
     """DC/AC inverter Node"""
     Chiller = 'chiller'
-    """Water Chiller Node"""
-    Boiler = 'boiler'
-    """Water Boiler Node"""
-    ControlledLoad = 'cload'
-    """Controlled Energy consumer Node"""
-    ControlledGen = 'cgen'
-    """Controlled Energy generation Node"""
-    FixedPort = 'fixed_port'
-    """Fixed port Node"""
+    GasBoiler = 'gas_boiler'
+    ControlledElectricalLoad = 'cload_elec'
+    ControlledElectricalGen = 'cgen_elec'
+    FixedElectrical = 'fixed_elec'
+    FixedGas = 'fixed_gas'
     CarbonAggregation = 'carbon_agg'
     """CO2 aggregation Node"""
     HeatPump = 'heatpump'
     """Heat water pump Node"""
+    FlexWithEmissions = 'flex_with_emissions'
 
 class Resource:
     """ Enumeration object defining the types of Energy Resources (Commodities)
@@ -150,31 +143,30 @@ class Resource:
     """CO2 (emissions)"""
 
 class TariffType:
-    """ Enumeration object defining the types of Tariff
-    """
-    import_tariff = 0
-    """Triff applies to import only"""
-    export_tariff = 1
-    """Triff applies to export only"""
-    import_demand_tariff = 2
-    """Triff applies to peak demand import only"""
-    export_demand_tariff = 3
-    """Triff applies to peak export import only"""
-    time = 4
-    """A tariff that applies per time period (e.g. daily supply charge)"""
+    """ Tariff types"""
+    ImportTariff = 'import tariff'
+    ExportTariff = 'export tariff'
+    ImportDemandTariff = 'import demand tariff'
+    ExportDemandTariff = 'export demand tariff'
+    ThroughputCost = 'throughput cost'
+    PeakPosPower = 'peak positive power'
+    PeakNegPower = 'peak negative power'
+    QuadraticPower = 'quadratic power'
+    ContingencyPositive = 'contingency positive'
+    ContingencyNegative = 'contingency negative'
+
 
 class Resets:
-    """ numeration object defining the frequency of resets
-    """
-    minute = 0
-    """Reset every minute"""
-    hourly = 1
-    """Reset every hour"""
-    daily = 2
-    """Reset every day"""
-    weekly = 3
-    """Reset every week"""
-    yearly = 4
-    """Reset every year"""
+    """ How often something resets """
+    minute = 'minute'
+    hourly = 'hourly'
+    daily = 'daily'
+    weekly = 'weekly'
+    yearly = 'annually'
 
+
+class EVChargeMode:
+    V0G = 'V0G'
+    V1G = 'V1G'
+    V2G = 'V2G'
 

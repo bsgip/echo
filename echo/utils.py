@@ -215,3 +215,8 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
 def create_named_constraint_with_rule(model, con_name, rule):
     """ Util function for creating pyomo constraints from a rule."""
     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
+
+def tile_array_over_expansion_periods(array, expansion_periods):
+    """ Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
+    output = np.tile(np.array(array), expansion_periods)
+    return output

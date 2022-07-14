@@ -69,11 +69,13 @@ class EchoOptimiser(object):
         """
         Validates that a pyomo model can be built from the provided network graph. Checks for:
         - name consistency between objects (eg node.node_name) and graph nodes
-        - others...
+        - floating nodes that have no edge connecting them to another node
         """
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
                 'Node {} name has been updated after being added to the network graph.'.format(node_name)
+
+        self.ES.verify_graph()
 
     def build_model(self):
         # Set up the Pyomo model
@@ -143,13 +145,17 @@ class EchoOptimiser(object):
 
         # Add any other costs that are defined on graph nodes/ports/paths
         for _, node_obj in self.ES.node_obj.items():
+            node_obj.add_objective(self.model)
+            self.objective += node_obj.objective
             for _, port_obj in node_obj.ports.items():
-                self.objective += port_obj.add_objective(self.model)
+                port_obj.add_objective(self.model)  # populate the .objective attribute for each port
+                self.objective += port_obj.objective  # add the newly populated attribute to our total
 
         for _, path_obj in self.ES.paths.items():
-            self.objective += path_obj.add_objective(self.model)
+            path_obj.add_objective(self.model)
+            self.objective += path_obj.objective
 
-    def optimise(self, tee=False):
+    def optimise(self, tee=False, logfile=None):
         def objective_function(model):
             return self.objective
 
@@ -162,7 +168,7 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True)
+        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 
     def df(self):
