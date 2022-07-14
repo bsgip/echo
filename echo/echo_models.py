@@ -1511,7 +1511,7 @@ class Load(Node):
     def __init__(self,
                  port_name: str,
                  port_unit: int,
-                 profile: Union[dict, ArrayType],
+                 profile: Union[dict, ArrayType, list],
                  **data):
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)

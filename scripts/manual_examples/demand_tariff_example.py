@@ -8,41 +8,43 @@ from echo.objectives import *
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
 
+########## DEFINE MODEL OPTIONS ##################
+
 expansion_periods = 1
 time_periods = 48
 interval_duration = 30
 
+########## DEFINE MODEL ##################
+
 system = OptimisationGraph()
 
-grid = Node()
-grid.add_electrical_ports_from_list(['grid'])
+grid = FlexNode(node_name='grid', port_name='grid', port_unit=Units.KW)
 
-battery1 = Node()
-b1 = ElectricalStorage(max_capacity=10,
-                       depth_of_discharge_limit=0,
-                       charging_power_limit=2.0,
-                       discharging_power_limit=-2.0,
-                       charging_efficiency=1,
-                       discharging_efficiency=1,
-                       initial_state_of_charge=0.0)
-battery1.ports['battery'] = b1
+battery = Battery(node_name='battery',
+                  port_name='battery',
+                  max_capacity=10,
+                  depth_of_discharge_limit=0,
+                  charging_power_limit=2.0,
+                  discharging_power_limit=-2.0,
+                  charging_efficiency=1,
+                  discharging_efficiency=1,
+                  initial_state_of_charge=0.0)
 
-load1 = Node()
-l1 = ElectricalDemand()
-l1.add_demand_profile_from_array([2] * time_periods, expansion_periods)
-load1.ports['demand'] = l1
+load = Load(node_name='load',
+             port_name='load',
+             port_unit=Units.KW,
+             profile=[2]*time_periods)
 
-site1 = TellegenNode()
-site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
-cp1 = site1.ports['cp']
+site = TellegenNode()
+site.add_electrical_ports_from_list(['cp', 'load', 'battery'])
 
-system.add_node_obj([grid, battery1, load1, site1])
+system.add_node_obj([grid, battery, load, site])
 
-bess_edge1 = Edge(vertices=[site1.ports['bess'], b1])
-load_edge1 = Edge(vertices=[site1.ports['load'], l1])
-grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
+system.connect_ports_and_create_edge(grid.ports['grid'], site.ports['cp'])
+system.connect_ports_and_create_edge(battery.ports['battery'], site.ports['battery'])
+system.connect_ports_and_create_edge(load.ports['load'], site.ports['load'])
 
-system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
+########## DEFINE TARIFFS ##################
 
 # peak usage
 peak_rate = 2.0
@@ -68,12 +70,14 @@ off_peak_charge = DemandCharge(rate=off_peak_rate,
                                window_array=off_peak_window,
                                min_demand=0.0)
 
-demand_tariff = ImportDemandTariffObjective(component=cp1,
+
+
+demand_tariff = ImportDemandTariffObjective(component=site.ports['cp'],
                                             demand_charges=[peak_charge,
                                                             shoulder_charge,
                                                             off_peak_charge])
 
-throughput_cost = ThroughputCost(component=b1, rate=0.0001)
+throughput_cost = ThroughputCost(component=battery.ports['battery'], rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
 
 optimiser = EchoOptimiser(
@@ -85,12 +89,16 @@ optimiser = EchoOptimiser(
     objective_set=objective_set
 )
 
-optimiser.optimise()
+optimiser.optimise(tee=True)
 
-storage_energy_delta = optimiser.values(b1.port_name, 0)
+# Retrieve some useful port objects
+b = battery.ports['battery']
+cp = site.ports['cp']
+
+storage_energy_delta = optimiser.values(b.port_name, 0)
 max_demand_peak = optimiser.values(peak_charge.max_demand_val, 0)
-storage_energy_soc = optimiser.values(b1.soc_value, 0)
-optimised_connection_point_load = optimiser.values(site1.ports['cp'].port_name, 0)
+storage_energy_soc = optimiser.values(b.soc_value, 0)
+optimised_connection_point_load = optimiser.values(cp.port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, 48) / 2
