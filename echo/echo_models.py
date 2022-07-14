@@ -510,8 +510,8 @@ class Port(BaseModel):
             assert len(keys) == len(array), 'Dimensions are mismatched.'
             vals = dict(zip(keys, array))
         else:
-            print(
-                f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
+            # print(
+            #     f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
             keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
             tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
             vals = dict(zip(keys, tiled_array))

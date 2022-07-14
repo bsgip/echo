@@ -290,10 +290,10 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
 
     node_name_dict = {}
     system = em.OptimisationGraph()
-    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not(verbose)):
+    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not (verbose)):
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
-    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not(verbose)):
+    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not (verbose)):
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
 
     obj_set = construct_echo_objective(system=system, objective_dict=netw['objectives'], node_name_dict=node_name_dict)
@@ -304,12 +304,9 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
     return system, obj_set, node_name_dict
 
 
-def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict, objective_dict: dict,
-                             verbose: bool = True):
+def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict, objective_dict: dict):
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
-    if verbose:
-        print('Constructing objective...')
 
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
@@ -419,7 +416,7 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     else:
         raise ValueError(
             'Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
-    update()     # Update our graph
+    update()  # Update our graph
 
 
 def run_echo_optimiser(echo_graph,
@@ -473,6 +470,13 @@ def create_tellegen_node(node_dict: dict, port_unit):
     node = em.TellegenNode(node_name=node_dict['id'])
     port_list = node_dict['ports']
     add_flex_ports_to_node(node, port_list, [port_unit] * len(port_list))
+    # Check for any flow constraints on ports
+    if node_dict.get('parameters') is not None:
+        for port_name, port_params in node_dict['parameters'].items():
+            node.ports[port_name].set_flow_constraints(max_import=port_params.get('max_import'),
+                                                       max_export=port_params.get('max_export'),
+                                                       slack=port_params.get('slack'))
+
     return node
 
 
@@ -562,11 +566,12 @@ def create_demand_tariff(tariff_dict: dict, component_obj: em.Port):
     import_demand = True if tariff_dict['type'] == TariffType.ImportDemandTariff else False
     export_demand = False if tariff_dict['type'] == TariffType.ImportDemandTariff else True
     demand_tariff = eobj.DemandTariffObjective(name=tariff_dict['name'],
-                                          component=component_obj,
-                                          demand_charges=echo_charge_list,
-                                          export_demand=export_demand,
-                                          import_demand=import_demand)
+                                               component=component_obj,
+                                               demand_charges=echo_charge_list,
+                                               export_demand=export_demand,
+                                               import_demand=import_demand)
     return demand_tariff
+
 
 def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, system: em.OptimisationGraph):
     """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
@@ -663,17 +668,16 @@ def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict, results_k
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
                                                                                             0)
                 else:
-                    pass
-                    # output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    # output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max,
                                                                                             0)
                 else:
                     pass
-                    # output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    # output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
 
     return output
 
