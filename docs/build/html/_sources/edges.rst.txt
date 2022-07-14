@@ -5,9 +5,9 @@ An edge is terminated on each end by connection to a port. Edges must begin and 
 
 Edge constraint
 ---------------
-Edges are used to apply a flow constraint. They do not strictly have a variable associated with them.
+Edges are used to apply a flow constraint. They do not have an optimisation variable associated with them.
 If an edge connects ports :math:`x` and :math:`y`, which have variables :math:`p^x` and :math:`p^y`, then we can write the following edge constraint:
 
 :math:`p^x + p^y = 0`.
 
-This constraint enforces that whatever flow is imported at :math:`x` must be exported by :math:`y`, and vice versa.
+This constraint enforces that any flow imported by :math:`x` must be exported by :math:`y`, and vice versa.

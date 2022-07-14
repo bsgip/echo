@@ -87,10 +87,10 @@
 An edge is terminated on each end by connection to a port. Edges must begin and end on ports that have the same commodity type.</p>
 <section id="edge-constraint">
 <h2>Edge constraint<a class="headerlink" href="#edge-constraint" title="Permalink to this heading"></a></h2>
-<p>Edges are used to apply a flow constraint. They do not strictly have a variable associated with them.
+<p>Edges are used to apply a flow constraint. They do not have an optimisation variable associated with them.
 If an edge connects ports <span class="math notranslate nohighlight">\(x\)</span> and <span class="math notranslate nohighlight">\(y\)</span>, which have variables <span class="math notranslate nohighlight">\(p^x\)</span> and <span class="math notranslate nohighlight">\(p^y\)</span>, then we can write the following edge constraint:</p>
 <p><span class="math notranslate nohighlight">\(p^x + p^y = 0\)</span>.</p>
-<p>This constraint enforces that whatever flow is imported at <span class="math notranslate nohighlight">\(x\)</span> must be exported by <span class="math notranslate nohighlight">\(y\)</span>, and vice versa.</p>
+<p>This constraint enforces that any flow imported by <span class="math notranslate nohighlight">\(x\)</span> must be exported by <span class="math notranslate nohighlight">\(y\)</span>, and vice versa.</p>
 </section>
 </section>
 
