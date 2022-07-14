@@ -6,6 +6,7 @@ and then runs powerflows based on the load from each site
 
 First define percentage DER we want
 """
+from echo.configuration import NodeType, Units, TariffType
 
 pv_percent = 0.1  # percentage of sites with PV (0-1)
 bat_percent = 0.01  # percentage of sites with battery (0-1)
@@ -134,7 +135,7 @@ for i in range(num_sites):
     edges = {}
 
     """ If everything was pydantic classes, it might look more like this:
-    components['grid'] = FlexNode(id='grid', 'units'='kW', ports=['downstream']).
+    components['grid'] = FlexNode(id='grid', 'units'=Units.KW, ports=['downstream']).
     and this way we could check at creation that things have valid units/types/numbers of ports/parameter values.
 
     Might also look like this: OurMESModel.add_component = Component(FlexNode(....))
@@ -142,37 +143,37 @@ for i in range(num_sites):
     But let's wait for MES progress first.
     """
 
-    components['grid'] = {'id': 'grid', 'type': 'flex', 'units': 'kW', 'ports': ['downstream']}
+    components['grid'] = {'id': 'grid', 'type': NodeType.ElectricalFlex, 'ports': ['downstream']}
 
-    components['cp'] = {'id': 'cp', 'type': 'tellegen', 'units': 'kW', 'ports': ['cp'],
+    components['cp'] = {'id': 'cp', 'type': NodeType.ElectricalTellegen, 'ports': ['cp'],
                         'parameters': {'cp': {'max_import': None, 'max_export': None, 'slack': False}}}
 
-    edges['grid_cp'] = {'nodes': ('grid', 'cp'), 'ports': ('downstream', 'cp'), 'res': 'elec'}
+    edges['grid_cp'] = {'nodes': ('grid', 'cp'), 'ports': ('downstream', 'cp'), 'resource': Units.KW}
 
     if has_battery[i]:
-        components['battery'] = {'id': 'battery', 'type': 'battery', 'ports': ['battery'],
+        components['battery'] = {'id': 'battery', 'type': NodeType.Battery, 'ports': ['battery'],
                                  'parameters': battery_params.copy()}
 
         # add a port to the cp component to connect battery to
         components['cp']['ports'].append('battery')
         # define the edge
-        edges['bess_cp'] = {'nodes': ('battery', 'cp'), 'ports': ('battery', 'battery'), 'res': 'elec'}
+        edges['bess_cp'] = {'nodes': ('battery', 'cp'), 'ports': ('battery', 'battery'), 'resource': Units.KW}
 
     if has_solar[i]:
         pv = pv_profile * (0.5 + np.random.rand())  # random scale applied to pv load
-        components['solar'] = {'id': 'solar', 'type': 'solar', 'ports': ['solar'], 'data': pv,
+        components['solar'] = {'id': 'solar', 'type': NodeType.Solar, 'ports': ['solar'], 'data': pv,
                                'parameters': {'curtailable': False}}
         # add a port to the cp component to connect solar to
         components['cp']['ports'].append('solar')
         # define the edge
-        edges['solar_cp'] = {'nodes': ('solar', 'cp'), 'ports': ('solar', 'solar'), 'res': 'elec'}
+        edges['solar_cp'] = {'nodes': ('solar', 'cp'), 'ports': ('solar', 'solar'), 'resource': Units.KW}
 
     l = load_profile * (0.5 + np.random.rand())  # random scale between 0.5 and 1.5 applied to load
-    components['load'] = {'id': 'load', 'type': 'load', 'units': 'kW', 'ports': ['load'], 'data': l}
+    components['load'] = {'id': 'load', 'type': NodeType.ElectricalLoad, 'ports': ['load'], 'data': l}
     # add a port to the cp component to connect the load to
     components['cp']['ports'].append('load')
     # define the edge
-    edges['load_cp'] = {'nodes': ('load', 'cp'), 'ports': ('load', 'load'), 'res': 'elec'}
+    edges['load_cp'] = {'nodes': ('load', 'cp'), 'ports': ('load', 'load'), 'resource': Units.KW}
 
     if has_ev[i]:
         evs = []
@@ -193,19 +194,19 @@ for i in range(num_sites):
             # add a port to the cp component to connect the ev to
             components['cp']['ports'].append(ev_name)
             # define the edge
-            edges[ev_name + '_cp'] = {'nodes': (ev_name, 'cp'), 'ports': ('ev_cp', ev_name), 'res': 'elec'}
+            edges[ev_name + '_cp'] = {'nodes': (ev_name, 'cp'), 'ports': ('ev_cp', ev_name), 'resource': Units.KW}
     else:
         evs = None
 
     # define an objective
     objective = {
         'import_tariff': {
-            'type': 'import_tariff',
+            'type': TariffType.ImportTariff,
             'prices': np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12) * days),
             'component': {'node': 'cp', 'port': 'cp'}
         },
         'export_tariff': {
-            'type': 'export_tariff',
+            'type': TariffType.ExportTariff,
             'prices': np.array(([0.1] * 96) * days),
             'component': {'node': 'cp', 'port': 'cp'}
         }
@@ -215,7 +216,7 @@ for i in range(num_sites):
     site = {'name': 'site_' + str(i),
             'components': components,
             'edges': edges,
-            'objective': objective}
+            'objectives': objective}
     # add this site to our list of sites
     sites.append(site)
 
