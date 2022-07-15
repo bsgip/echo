@@ -298,7 +298,7 @@ class HeatPump(Node):
     def __init__(self, **data):
         super().__init__(**data)
         # Create input and output ports
-        self.ports['input'] = FlexPortImport(units=Units.KW)  # Heat pump has electrical input port
+        self.ports['input'] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
 
         # Naming variables
         self.heating_cop = 'heating_cop_' + self.node_name
@@ -405,8 +405,8 @@ class HeatPumpDualOutput(HeatPump):
     def __init__(self, **data):
         super().__init__(**data)
         # Create output port
-        self.ports['heating'] = FlexPortExport(units=Units.KWT)
-        self.ports['cooling'] = FlexPortImport(units=Units.KWT)
+        self.ports['heating'] = FlexSource(units=Units.KWT)
+        self.ports['cooling'] = FlexSink(units=Units.KWT)
 
     def initialise_node(self, model):
         super(HeatPumpDualOutput, self).initialise_node(model)
@@ -561,8 +561,8 @@ class TimeDelayNode(InputOutputNode):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports['input'] = FlexPortImport(units=self.input_port_unit)
-        self.ports['output'] = FlexPortExport(units=self.output_port_unit)
+        self.ports['input'] = FlexSink(units=self.input_port_unit)
+        self.ports['output'] = FlexSource(units=self.output_port_unit)
 
     def apply_node_constraints(self, model):
 
