@@ -152,8 +152,7 @@ class OptimisationGraph(Graph):
 
     def create_path_objects(self, sources, sinks, regularise=False):
         """ Creates path objects according to source/sink lists provided."""
-        warnings.warn('Path tracing is still experimental. If you are generating paths to use path tariffs, '
-                      'please consider whether you can convert these tariffs to point/port tariffs.')
+        warnings.warn('Path tracing is still experimental. If you are generating paths to use path tariffs, please consider whether you can convert these tariffs to point/port tariffs.')
         all_paths = {}
         for source_node in sources:
             for sink_node in sinks:
@@ -827,7 +826,6 @@ class Path(BaseModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
-        super(Path, self).add_objective(model)
         total = 0
 
         if self.regularise is True:

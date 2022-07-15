@@ -1,21 +1,20 @@
 import uuid
-from datetime import datetime, date, time, timedelta
+from datetime import time
 from enum import Enum
-from typing import Literal, Union, List, Optional, Any, Type, TypeVar
-from echo.echo_models import *  #imports our defined basemodel with its config settings
-import pyomo.environ as en
-import pandas as pd
+from typing import Optional, Union, List, TypeVar
 import numpy as np
-from echo.echo_validators import *  # need this to get our array type
-from pydantic import Field, validator, root_validator, NegativeFloat, PositiveFloat, confloat, PositiveInt
+import pandas as pd
+import pyomo.environ as en
+from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Field
+
+from echo.echo_models import Port, Path, Storage
+from echo.echo_models import BaseModel as echoBaseModel
+from echo.echo_validators import ArrayType
+
+RangeSet = TypeVar('pyomo.core.base.set.RangeSet')  # type for rangeset
 
 
-from echo.echo_models import Port, ConfigurationError
-
-RangeSet = TypeVar('pyomo.core.base.set.RangeSet') #type for rangeset
-
-class Objective(BaseModel):
-
+class Objective(echoBaseModel):
     component: Union[Port, Path, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: Optional[str] = None
@@ -38,10 +37,11 @@ class Objective(BaseModel):
         pass
 
     def get_objective_total(self, optimiser):
-        obj_expr = self.objective_expr(optimiser.model) # Retrieve the objective expression
-        return en.value(obj_expr) # Return the value of the summed expression
+        obj_expr = self.objective_expr(optimiser.model)  # Retrieve the objective expression
+        return en.value(obj_expr)  # Return the value of the summed expression
 
-class ObjectiveSet(BaseModel):
+
+class ObjectiveSet(echoBaseModel):
     """ Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
     objective_list: list
 
@@ -55,8 +55,9 @@ class ObjectiveSet(BaseModel):
     def set_objective(self, model, optimiser):
         def objective_rule(model):
             return sum(obj.objective_expr(model) for obj in self.objective_list)
-#        model.objective = en.Objective(rule=objective, sense=en.minimize)
+
         optimiser.objective += objective_rule(model)
+
 
 class PeakPositivePower(Objective):
     """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
@@ -77,10 +78,12 @@ class PeakPositivePower(Objective):
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-        setattr(model, f"max_pos_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
+        setattr(model, f"max_pos_con_{self.component.port_name}",
+                en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
         return getattr(model, self.max_pos)
+
 
 class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
@@ -100,20 +103,24 @@ class PeakNegativePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.max_neg) <= getattr(model, self.component.neg)[p, t]
 
-        setattr(model, f"max_neg_con_{self.component.port_name}", en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
+        setattr(model, f"max_neg_con_{self.component.port_name}",
+                en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
-        return getattr(model, self.max_neg)*-1
+        return getattr(model, self.max_neg) * -1
+
 
 class Tariff(Objective):
-    tariff_array: Union[ArrayType, list]  #tariff array prices should always be positive
+    tariff_array: Union[ArrayType, list]  # tariff array prices should always be positive
     expansion_periods: Optional[PositiveInt] = 1
 
     @staticmethod
     def return_tariff_dict(array, expansion_periods):
+        #todo update this to work for multiple expansion periods
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         return vals
+
 
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
@@ -127,7 +134,6 @@ class ImportTariff(Tariff):
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model, df):
-
         setattr(model, self.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict))
 
     def apply_constraints(self, model):
@@ -136,7 +142,9 @@ class ImportTariff(Tariff):
 
     def objective_expr(self, model):
         return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.import_tariff)[p, t] *
-                   model.interval_duration/60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+                   model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in
+                   model.Time)
+
 
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
@@ -159,7 +167,9 @@ class ExportTariff(Tariff):
 
     def objective_expr(self, model):
         return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.export_tariff)[p, t] *
-                   model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+                   model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in
+                   model.Time)
+
 
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
@@ -182,6 +192,7 @@ class PathTariff(Tariff):
         return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.path_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
+
 class ThroughputCost(Objective):
     """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
     component: Port
@@ -197,10 +208,10 @@ class ThroughputCost(Objective):
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
         return obj
 
-class NotFullyChargedPenalty(Objective):
 
-    """ A penalty objective for penalising the battery for not being fulling charged. """
-    component: Port
+class NotFullyChargedPenalty(Objective):
+    """ A penalty objective for penalising a storage asset for not being fulling charged. """
+    component: Storage
     rate: Optional[PositiveFloat]
     rate_array: list
 
@@ -218,6 +229,7 @@ class NotFullyChargedPenalty(Objective):
         )
         return obj
 
+
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
     component: Port
@@ -231,8 +243,10 @@ class QuadraticPower(Objective):
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
+
 class Contingency(Objective):
     component: Path
+
 
 class ContingencyNegative(Objective):
     """ FCAS Raise """
@@ -244,7 +258,8 @@ class ContingencyNegative(Objective):
         self.contingency_neg = 'cont_neg_' + self.name
 
     def create_vars(self, model):
-        setattr(model, self.contingency_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+        setattr(model, self.contingency_neg,
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
 
@@ -257,7 +272,8 @@ class ContingencyNegative(Objective):
                         c = other_path.vertices.index(node2)
                         if b + 1 == c:
                             a += getattr(model, other_path.flow_value)[p, t]
-                return getattr(model, var)[p, t] >= (flow_constraint - a)*-1
+                return getattr(model, var)[p, t] >= (flow_constraint - a) * -1
+
             return constraint
 
         # Iterate through vertices on path to pick up any port constraints along path
@@ -284,7 +300,7 @@ class ContingencyNegative(Objective):
         if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.contingency_neg)[p, t] * self.duration / 60 >= \
-                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]*-1
+                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t] * -1
 
             setattr(model, f"cont_neg_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -292,6 +308,7 @@ class ContingencyNegative(Objective):
     def objective_expr(self, model):
         return sum(getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p]
                    for p in model.Expansion for t in model.Time)
+
 
 class ContingencyPositive(Objective):
     """ FCAS Lower """
@@ -303,7 +320,8 @@ class ContingencyPositive(Objective):
         self.contingency_pos = 'cont_pos_' + self.name
 
     def create_vars(self, model):
-        setattr(model, self.contingency_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+        setattr(model, self.contingency_pos,
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def apply_constraints(self, model):
 
@@ -317,6 +335,7 @@ class ContingencyPositive(Objective):
                         if b - 1 == c:
                             a += getattr(model, other_path.flow_value)[p, t]
                 return getattr(model, var)[p, t] <= (flow_constraint - a)
+
             return constraint
 
         # Iterate through vertices on path to pick up any port constraints along path
@@ -343,16 +362,19 @@ class ContingencyPositive(Objective):
         if hasattr(self.component.edge_ports[0][0], 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.contingency_pos)[p, t] * self.duration / 60 <= \
-                       self.component.edge_ports[0][0].max_capacity - getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]
+                       self.component.edge_ports[0][0].max_capacity - \
+                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]
 
             setattr(model, f"cont_pos_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
 
     def objective_expr(self, model):
         return sum(getattr(model, self.contingency_pos)[p, t] * getattr(model, model.dr)[p]
-                   for p in model.Expansion for t in model.Time)*-1
+                   for p in model.Expansion for t in model.Time) * -1
+
 
 """ Demand tariffs """
+
 
 class ResetPeriod(Enum):
     # TODO How can we model rolling reset windows in the optimisation?
@@ -362,12 +384,14 @@ class ResetPeriod(Enum):
     quarter = 'quarter'
     year = 'year'
 
+
 class Day(Enum):
     weekday = 'weekday'
     weekend = 'weekend'
     holiday = 'holiday'
 
-class TimePeriod(BaseModel):
+
+class TimePeriod(echoBaseModel):
     start_time: time = None
     end_time: time = None
     day_type: List[Day] = None
@@ -431,7 +455,8 @@ class TimePeriod(BaseModel):
                     return True
         return False
 
-class Window(BaseModel):
+
+class Window(echoBaseModel):
     """ Class for specifying window over which a tariff is calculated"""
     time_periods: List[TimePeriod]
     reset_periods: Optional[ResetPeriod] = ResetPeriod.year
@@ -454,10 +479,11 @@ class Window(BaseModel):
 
     def get_reset_period_array(self, df: pd.DataFrame) -> list:
         """ Returns an array where each entry is the number of time steps within which the demand charge is calculated. """
-        interval_duration = (df.index[1] - df.index[0]).seconds//60  #interval duration in minutes
+        interval_duration = (df.index[1] - df.index[0]).seconds // 60  # interval duration in minutes
 
         def _find_rollover(df, interval_duration):
             """ Finds when there is a rollover for a specified time period (year, month), and calculates the number of intervals in each rollover period"""
+
             def perform_rollover_calc(diff_array):
                 _reset_periods = []
                 total = 1  # initialise a total to count how many intervals per reset period. =1 because the diff array has length n-1
@@ -468,28 +494,30 @@ class Window(BaseModel):
                         total = 1
                     else:
                         total += 1
-                remaining_intervals = len(df) - sum(_reset_periods)  #need to calculate the remaining intervals and add these to the end
+                remaining_intervals = len(df) - sum(
+                    _reset_periods)  # need to calculate the remaining intervals and add these to the end
                 _reset_periods.append(remaining_intervals)
                 return _reset_periods
 
             reset_periods = []
             if self.reset_periods == ResetPeriod.day:
-                assert interval_duration <= 60*24, 'Reset period cannot be a day if interval duration is greater than a day.'
+                assert interval_duration <= 60 * 24, 'Reset period cannot be a day if interval duration is greater than a day.'
                 reset_periods = perform_rollover_calc(np.diff(df.index.day))
             elif self.reset_periods == ResetPeriod.week:
-                assert interval_duration <= 60*24*7, 'Reset period cannot be a week if interval duration is greater than a week.'
+                assert interval_duration <= 60 * 24 * 7, 'Reset period cannot be a week if interval duration is greater than a week.'
                 reset_periods = perform_rollover_calc(np.diff(df.index.week))
             elif self.reset_periods == ResetPeriod.month:
-                assert interval_duration <= 60*8760//12, 'Reset period cannot be a month if interval duration is greater than a month.'
+                assert interval_duration <= 60 * 8760 // 12, 'Reset period cannot be a month if interval duration is greater than a month.'
                 reset_periods = perform_rollover_calc(np.diff(df.index.month))
             elif self.reset_periods == ResetPeriod.year:
-                assert interval_duration <= 60*8760, 'Reset period cannot be a year if interval duration is greater than a year.'
+                assert interval_duration <= 60 * 8760, 'Reset period cannot be a year if interval duration is greater than a year.'
                 reset_periods = perform_rollover_calc(np.diff(df.index.year))
             return reset_periods
 
         return _find_rollover(df, interval_duration)
 
-class DemandCharge(BaseModel):
+
+class DemandCharge(echoBaseModel):
     """ A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: Optional[str] = None
@@ -519,7 +547,7 @@ class DemandCharge(BaseModel):
             raise ValueError('Either window array or window object must be set.')
 
     @staticmethod
-    def _get_active_periods(window_bool, reset_periods):         # todo only works for single expansion period
+    def _get_active_periods(window_bool, reset_periods):  # todo only works for single expansion period
         """
         Creates a dict for initialising the window_active pyomo var
         Args:
@@ -531,14 +559,14 @@ class DemandCharge(BaseModel):
         initial_window_val = {}
         n_intervals = len(window_bool)
         num_resets = len(reset_periods)
-        blank = np.zeros([num_resets, n_intervals]) # Create template blank array that we will populate with 1s
+        blank = np.zeros([num_resets, n_intervals])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
         for i in range(num_resets):
-            blank[i, index:index+reset_periods[i]-1] = 1.0  # put the right number of 1s in
-            index += reset_periods[i]-1
+            blank[i, index:index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in
+            index += reset_periods[i] - 1
             new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(n_intervals):
-                initial_window_val[(0,i,t)] = new_window[t]  # get the array into a dict with the right keys
+                initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
         return initial_window_val
 
     def _process_window_object(self, df):
@@ -586,6 +614,7 @@ class DemandCharge(BaseModel):
         expr = en.value(self.objective_expr(optimiser.model))
         return expr
 
+
 class DemandTariffObjective(Objective):
     """ A demand tariff objective contains a set of one or more demand charges."""
     component: Port
@@ -601,13 +630,13 @@ class DemandTariffObjective(Objective):
             for dc in self.demand_charges:
                 if dc.window_array is not None:
                     if prev_window.size > 0:
-                       comparison = np.array(prev_window)*np.array(dc.window_array)
-                       if sum(comparison) > 0:
-                           raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
-                       prev_window = np.array(prev_window) + np.array(dc.window_array)
+                        comparison = np.array(prev_window) * np.array(dc.window_array)
+                        if sum(comparison) > 0:
+                            raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
+                        prev_window = np.array(prev_window) + np.array(dc.window_array)
                     else:
-                       prev_dc = dc
-                       prev_window = np.array(dc.window_array)
+                        prev_dc = dc
+                        prev_window = np.array(dc.window_array)
 
         def verify_same_length_windows():
             prev_length = None
@@ -639,14 +668,16 @@ class DemandTariffObjective(Objective):
             if dc.import_demand is True:
                 def max_import_demand_rule(model, p, t, r):
                     return getattr(model, dc.max_demand_val)[r] >= \
-                           (getattr(model, self.component.pos)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, r, t]
+                           (getattr(model, self.component.pos)[p, t] - dc.min_demand) * \
+                           getattr(model, dc.window_active)[p, r, t]
 
                 setattr(model, f"cons_{dc.max_demand_val}_max_demand",
                         en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_import_demand_rule))
             elif dc.export_demand is True:
                 def max_export_demand_rule(model, p, t, r):
                     return getattr(model, dc.max_demand_val)[r] <= \
-                           (getattr(model, self.component.neg)[p, t] - dc.min_demand) * getattr(model, dc.window_active)[p, r, t]
+                           (getattr(model, self.component.neg)[p, t] - dc.min_demand) * \
+                           getattr(model, dc.window_active)[p, r, t]
 
                 setattr(model, f"cons_{dc.max_demand_val}_max_export_demand",
                         en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_export_demand_rule))
@@ -657,9 +688,11 @@ class DemandTariffObjective(Objective):
             objective += dc.objective_expr(model)
         return objective
 
+
 class ImportDemandCharge(DemandCharge):
     import_demand = True
     export_demand = False
+
 
 class ExportDemandCharge(DemandCharge):
     import_demand = False
