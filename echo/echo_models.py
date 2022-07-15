@@ -24,6 +24,7 @@ DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 
 class BaseModel(PydanticBaseModel):
+    """ Create a modified basemodel with the config we want."""
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
         extra = 'allow'  # To control whether we can create new attributes after instantiation.
@@ -78,25 +79,6 @@ class OptimisationGraph(Graph):
     def connect_ports_and_create_edge(self, port1, port2, edge_name=None, nodes=None):
         e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge_obj(e)
-
-    # todo delete method below
-    def connect_two_nodes_create_edges_create_ports(self, node1, node2):
-        """ """
-        p1 = ElectricalPort()
-        node1.ports[p1.uid] = p1
-        self.add_node_obj(node1)  # updates
-        p2 = ElectricalPort()
-        node2.ports[p2.uid] = p2
-        self.add_node_obj(node2)  # updates
-        self.connect_ports_and_create_edge(p1, p2)
-
-    # todo delete method below
-    def connect_port_to_node_create_edges_create_port(self, port, node):
-        """ """
-        p = ElectricalPort()
-        node.ports[p.uid] = p
-        self.add_node_obj(node)  # updates
-        self.connect_ports_and_create_edge(port, p)
 
     def lookup_node_from_port(self, port):
         """ Returns node that a specified port belongs to, if the port belongs to a node."""
