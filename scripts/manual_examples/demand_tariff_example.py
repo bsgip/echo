@@ -4,6 +4,7 @@ import seaborn as sns
 
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
+from echo.echo_models import *
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
@@ -31,9 +32,9 @@ battery = Battery(node_name='battery',
                   initial_state_of_charge=0.0)
 
 load = Load(node_name='load',
-             port_name='load',
-             port_unit=Units.KW,
-             profile=[2]*time_periods)
+            port_name='load',
+            port_unit=Units.KW,
+            profile=[2] * time_periods)
 
 site = TellegenNode()
 site.add_electrical_ports_from_list(['cp', 'load', 'battery'])
@@ -50,32 +51,30 @@ system.connect_ports_and_create_edge(load.ports['load'], site.ports['load'])
 peak_rate = 2.0
 peak_window = [0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8
 
-peak_charge = DemandCharge(rate=peak_rate,
-                           window_array=peak_window,
-                           min_demand=0.0)
+peak_charge = ImportDemandCharge(rate=peak_rate,
+                                 window_array=peak_window,
+                                 min_demand=0.0)
 
 # shoulder usage
 shoulder_rate = 1.0
 shoulder_window = [0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4
 
-shoulder_charge = DemandCharge(rate=shoulder_rate,
-                               window_array=shoulder_window,
-                               min_demand=0.0)
+shoulder_charge = ImportDemandCharge(rate=shoulder_rate,
+                                     window_array=shoulder_window,
+                                     min_demand=0.0)
 
 # off peak usage
 off_peak_rate = 0.5
 off_peak_window = np.subtract(1, np.add(shoulder_window, peak_window))
 
-off_peak_charge = DemandCharge(rate=off_peak_rate,
-                               window_array=off_peak_window,
-                               min_demand=0.0)
+off_peak_charge = ImportDemandCharge(rate=off_peak_rate,
+                                     window_array=off_peak_window,
+                                     min_demand=0.0)
 
-
-
-demand_tariff = ImportDemandTariffObjective(component=site.ports['cp'],
-                                            demand_charges=[peak_charge,
-                                                            shoulder_charge,
-                                                            off_peak_charge])
+demand_tariff = DemandTariffObjective(component=site.ports['cp'],
+                                      demand_charges=[peak_charge,
+                                                      shoulder_charge,
+                                                      off_peak_charge])
 
 throughput_cost = ThroughputCost(component=battery.ports['battery'], rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])

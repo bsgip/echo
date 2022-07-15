@@ -649,8 +649,17 @@ class DemandTariffObjective(Objective):
                         prev_length = len(dc.window_array)
                     assert prev_length == model.number_of_intervals, f"Demand charge {dc} windows do not match optimiser time periods."
 
+
+        def verify_demand_charge_settings():
+            for dc in self.demand_charges:
+                assert (dc.import_demand is True) or (dc.export_demand is True), \
+                    'Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,' \
+                    ' set DemandCharge.import_demand or DemandCharge.export_demand as True before adding ' \
+                    'the demand charge to the demand tariff objective.'
+
         verify_non_overlapping()
         verify_same_length_windows()
+        verify_demand_charge_settings()
 
     def create_params(self, model, df):
         for dc in self.demand_charges:
