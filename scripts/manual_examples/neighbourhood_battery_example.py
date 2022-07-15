@@ -5,6 +5,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
+from echo.echo_models import *
 
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
