@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -70,6 +71,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#demand-tariffs">Demand Tariffs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#other-objectives">Other Objectives</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#not-fully-charged-penalty">Not Fully Charged Penalty</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#template-objective">Template Objective</a></li>
 </ul>
 </li>
 </ul>
@@ -113,19 +115,44 @@
 <h3>Peak Positive Power<a class="headerlink" href="#peak-positive-power" title="Permalink to this heading"></a></h3>
 <p>Cost = peak positive power at port.
 The optimiser will try to minimise the peak power imported.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
+<p><span class="math notranslate nohighlight">\(p^\text{max+}\)</span>, maximum port positive component</p>
+<p><strong>Constraints</strong></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max+} &gt;= p^+\)</span></p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = p^\text{max+}\)</span></p>
 </section>
 <section id="peak-negative-power">
 <h3>Peak Negative Power<a class="headerlink" href="#peak-negative-power" title="Permalink to this heading"></a></h3>
 <p>cost = peak negative power at port.
 the optimiser will try to minimise the peak power exported.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
+<p><span class="math notranslate nohighlight">\(p^\text{max-}\)</span>, maximum port negative component</p>
+<p><strong>Constraints</strong></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max-} &lt;= p^-\)</span></p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = p^\text{max-}\)</span></p>
 </section>
 <section id="quadratic-power">
 <h3>Quadratic Power<a class="headerlink" href="#quadratic-power" title="Permalink to this heading"></a></h3>
 <p>The optimiser will try to minimise power squared, which has a regularising effect.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p\)</span>, port value</p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = p^2\)</span></p>
 </section>
 <section id="throughput-cost">
 <h3>Throughput Cost<a class="headerlink" href="#throughput-cost" title="Permalink to this heading"></a></h3>
 <p>The optimiser will try to minimise the total throughput through a port.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
+<p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(r\)</span>, rate in $ per flow unit (e.g., $/kW throughput).</p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = (p^+ - p^-) \cdot r\)</span></p>
 </section>
 <section id="contingency-negative">
 <h3>Contingency Negative<a class="headerlink" href="#contingency-negative" title="Permalink to this heading"></a></h3>
@@ -150,11 +177,25 @@ The optimiser will try to maximise the available capacity for contingency bids.<
 <h3>Import Energy Tariff<a class="headerlink" href="#import-energy-tariff" title="Permalink to this heading"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
 The optimiser will try to minimise the cost of importing energy to the port.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(c_{x, t}\)</span>, prices</p>
+<p><span class="math notranslate nohighlight">\(d^\text{interval}\)</span>, the time interval in minutes</p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="export-energy-tariff">
 <h3>Export Energy Tariff<a class="headerlink" href="#export-energy-tariff" title="Permalink to this heading"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
 <p>The optimiser will try to maximise the returns from exporting energy from the port.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
+<p><strong>Parameters</strong></p>
+<p><span class="math notranslate nohighlight">\(c_{x, t}\)</span>, prices</p>
+<p><span class="math notranslate nohighlight">\(d^\text{interval}\)</span>, the time interval in minutes</p>
+<p><strong>Objective expression</strong></p>
+<p><span class="math notranslate nohighlight">\(o = p^- \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="time-of-use-energy-tariffs">
 <h3>Time of Use Energy Tariffs<a class="headerlink" href="#time-of-use-energy-tariffs" title="Permalink to this heading"></a></h3>
@@ -176,6 +217,13 @@ The optimiser will try to minimise the cost of importing energy to the port.</p>
 <section id="not-fully-charged-penalty">
 <h3>Not Fully Charged Penalty<a class="headerlink" href="#not-fully-charged-penalty" title="Permalink to this heading"></a></h3>
 <p>The optimiser will penalise a storage asset for not being fully charged.</p>
+</section>
+<section id="template-objective">
+<h3>Template Objective<a class="headerlink" href="#template-objective" title="Permalink to this heading"></a></h3>
+<p><strong>Variables</strong></p>
+<p><strong>Parameters</strong></p>
+<p><strong>Constraints</strong></p>
+<p><strong>Objective expression</strong></p>
 </section>
 </section>
 </section>

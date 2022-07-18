@@ -14,19 +14,73 @@ Peak Positive Power
 Cost = peak positive power at port.
 The optimiser will try to minimise the peak power imported.
 
+**Variables**
+
+:math:`p^+`, port positive component
+
+:math:`p^\text{max+}`, maximum port positive component
+
+**Constraints**
+
+:math:`p^\text{max+} >= p^+`
+
+**Objective expression**
+
+:math:`o = p^\text{max+}`
+
+
+
 Peak Negative Power
 ^^^^^^^^^^^^^^^^^^^^
 cost = peak negative power at port.
 the optimiser will try to minimise the peak power exported.
 
+**Variables**
+
+:math:`p^-`, port negative component
+
+:math:`p^\text{max-}`, maximum port negative component
+
+**Constraints**
+
+:math:`p^\text{max-} <= p^-`
+
+**Objective expression**
+
+:math:`o = p^\text{max-}`
+
+
 Quadratic Power
 ^^^^^^^^^^^^^^^^^^^^
 The optimiser will try to minimise power squared, which has a regularising effect.
+
+**Variables**
+
+:math:`p`, port value
+
+**Objective expression**
+
+:math:`o = p^2`
 
 
 Throughput Cost
 ^^^^^^^^^^^^^^^^
 The optimiser will try to minimise the total throughput through a port.
+
+**Variables**
+
+:math:`p^+`, port positive component
+
+:math:`p^-`, port negative component
+
+**Parameters**
+
+:math:`r`, rate in $ per flow unit (e.g., $/kW throughput).
+
+**Objective expression**
+
+:math:`o = (p^+ - p^-) \cdot r`
+
 
 Contingency Negative
 ^^^^^^^^^^^^^^^^^^^^
@@ -53,11 +107,40 @@ Import Energy Tariff
 Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
 The optimiser will try to minimise the cost of importing energy to the port.
 
+**Variables**
+
+:math:`p^+`, port positive component
+
+**Parameters**
+
+:math:`c_{x, t}`, prices
+
+:math:`d^\text{interval}`, the time interval in minutes
+
+**Objective expression**
+
+:math:`o = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}`
+
+
 Export Energy Tariff
 ^^^^^^^^^^^^^
 Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
 
 The optimiser will try to maximise the returns from exporting energy from the port.
+
+**Variables**
+
+:math:`p^-`, port negative component
+
+**Parameters**
+
+:math:`c_{x, t}`, prices
+
+:math:`d^\text{interval}`, the time interval in minutes
+
+**Objective expression**
+
+:math:`o = p^- \cdot c \cdot \frac{d^\text{interval}}{60}`
 
 Time of Use Energy Tariffs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -88,3 +171,12 @@ The optimiser will penalise a storage asset for not being fully charged.
 
 
 
+Template Objective
+^^^^^^^^^^^^^^^^^^^^
+**Variables**
+
+**Parameters**
+
+**Constraints**
+
+**Objective expression**

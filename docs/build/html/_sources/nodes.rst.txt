@@ -757,3 +757,8 @@ Template Node
 **Parameters**
 
 **Constraints**
+
+
+Custom Nodes
+^^^^^^^^^^^^^^^^
+Write something here about how to built generic linear transformations for nodes
