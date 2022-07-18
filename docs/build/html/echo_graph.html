@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -87,7 +86,7 @@
            <div itemprop="articleBody">
              
   <section id="echo-optimisationgraph">
-<h1><em>echo</em> OptimisationGraph<a class="headerlink" href="#echo-optimisationgraph" title="Permalink to this heading"></a></h1>
+<h1><em>echo</em> OptimisationGraph<a class="headerlink" href="#echo-optimisationgraph" title="Permalink to this headline"></a></h1>
 <p>The optimisation graph holds all the nodes and edges in the model.
 It is both a representation of a physical network, as well as an object on which we can perform optimisation and analysis.</p>
 <p>Mathematically, the optimisation graph is a graph <span class="math notranslate nohighlight">\(G=(N,E)\)</span>, where <span class="math notranslate nohighlight">\(N\)</span> is the set of nodes in the graph, and <span class="math notranslate nohighlight">\(E\)</span>
@@ -95,7 +94,7 @@ is the set of edges. Each node contains a list of ports that belong to the node:
 <p><span class="math notranslate nohighlight">\(n=(p_0, p_1, ..., p_m)\)</span> where there are <span class="math notranslate nohighlight">\(m\)</span> ports in a node.</p>
 <p>Each edge is a node pair, and since nodes are a set of ports, edges are also a corresponding pair of ports.</p>
 <section id="creating-and-modifying-the-graph">
-<h2>Creating and Modifying the Graph<a class="headerlink" href="#creating-and-modifying-the-graph" title="Permalink to this heading"></a></h2>
+<h2>Creating and Modifying the Graph<a class="headerlink" href="#creating-and-modifying-the-graph" title="Permalink to this headline"></a></h2>
 <p>The optimisation graph is instantiated as shown below:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">system</span> <span class="o">=</span> <span class="n">OptimisationGraph</span><span class="p">()</span>
 </pre></div>
@@ -121,7 +120,7 @@ is the set of edges. Each node contains a list of ports that belong to the node:
 </div>
 </section>
 <section id="path-tracing">
-<h2>Path tracing<a class="headerlink" href="#path-tracing" title="Permalink to this heading"></a></h2>
+<h2>Path tracing<a class="headerlink" href="#path-tracing" title="Permalink to this headline"></a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Path tracing is an experimental feature. There is often no unique solution to the path tracing problem, although a regularisation term can be added to produce a unique solution. If path tracing is being used in order to use path tariffs, it is recommended to convert the tariffs to port tariffs where possible. This is because echo may alter the path flows to minimise cost in a way that is not physically meaningful or representative of how flows behave in real networks.</p>
@@ -138,7 +137,7 @@ Echo will assume that any node that isn’t a source or sink is a tellegen node.
 <p>Source/sink nodes should have only one port.</p>
 </div>
 <section id="enabling-path-tracing">
-<h3>Enabling Path Tracing<a class="headerlink" href="#enabling-path-tracing" title="Permalink to this heading"></a></h3>
+<h3>Enabling Path Tracing<a class="headerlink" href="#enabling-path-tracing" title="Permalink to this headline"></a></h3>
 <p>To use path tracing, the full network model should be built first. Then, paths can be generated using the <code class="docutils literal notranslate"><span class="pre">.create_path_objects()</span></code> method as shown below.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">system</span><span class="o">.</span><span class="n">create_path_objects</span><span class="p">(</span><span class="n">sources</span><span class="o">=</span><span class="p">[</span><span class="n">grid</span><span class="p">],</span> <span class="n">sinks</span><span class="o">=</span><span class="p">[</span><span class="n">load</span><span class="p">])</span>
 </pre></div>
@@ -152,7 +151,7 @@ You should only access path objects if you want to apply a path tariff.</p>
 </div>
 </section>
 <section id="path-flow-constraints">
-<h3>Path Flow Constraints<a class="headerlink" href="#path-flow-constraints" title="Permalink to this heading"></a></h3>
+<h3>Path Flow Constraints<a class="headerlink" href="#path-flow-constraints" title="Permalink to this headline"></a></h3>
 <p>Each path object has a variable, <span class="math notranslate nohighlight">\(f\)</span>. This is a non-negative variable that represents the flow along the path.</p>
 <p>Let <span class="math notranslate nohighlight">\(f_N^{start}\)</span> and <span class="math notranslate nohighlight">\(f_N^{end}\)</span> represent the sum of path flow variables that start at node N and end at node N respectively.
 Then, for each source or sink node <span class="math notranslate nohighlight">\(N\)</span>, with associated port <span class="math notranslate nohighlight">\(p_N\)</span>, the constraint is:</p>

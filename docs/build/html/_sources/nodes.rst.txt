@@ -1,3 +1,4 @@
+.. _Nodes_ref:
 ============
 *echo* Nodes
 ============
@@ -6,52 +7,52 @@ Nodes represent physical or logical connection between edges of the network. Nod
 * *Assets*: A node can represent a physical asset that is a source, sink, storage or generic transformation between commodities.
 * *Interconnection / Hub*: A node can represent a physical or logical interconnection between edges in the network: such as busbar, electrical connection point, gas junction.
 
-Some of the nodes described below come with pre-built ports of a certain type. In these cases, please refer to :ref:`*echo* Port object` which contains descriptions of port models.
+Some of the nodes described below come with pre-built ports of a certain type. In these cases, please refer to :ref:`echo Port object <Ports_ref>` which contains descriptions of port models.
 
 .. note::
-    Under the heading for each node, **parameters**, **variables**, and **constraints** may be defined. **Parameters** are typically defined when the node is created, and can be controlled by the user. **Variables** are pyomo variables, and **constraints** are also pyomo constraints, and these are created when optimising a model.
+    Under the heading for each node, **parameters**, **variables**, and **constraints** may be defined. **Parameters** are typically defined when the node is created, and can be controlled by the user. **Variables** are pyomo variables, and **constraints** are also pyomo constraints, and these are created when *echo* model is into *pyomo* for optimisation.
 
-    Some variables and constraints are always created, while others are conditionally created depending on user specified parameters. Please check whether variables and constraints of interest apply always or need to be turned on via a node parameter.
+    Some variables and constraints are always created, while others are conditionally created depending on user specified parameters. Please check whether variables and constraints of interest apply always or need to be turned on via a Node parameter.
 
 Commodity Agnostic Nodes
 -------------------------
-Commodity agnostic nodes refer to nodes without a specific commodity. To use these nodes, they must be instantiated with a unit that indicates the commodity type.
+Commodity agnostic nodes refer to the nodes that can be used across different commodities. To use these nodes, they must be instantiated with a unit that indicates the commodity type for the instance.
 
 Flexible Source
 ^^^^^^^^^^^^^^^
 
-A flexible source is a node with one port that exports some commodity.
+A Flexible Source is a Node with one Port that can export a commodity.
 
 Flexible Sink
 ^^^^^^^^^^^^^^^
-A flexible sink is a node with one port that imports some commodity.
+A Flexible Sink is a Node with one Port that that can import a commodity.
 
 Fixed Source
 ^^^^^^^^^^^^^^^
-A fixed source is a node with one port that exports a fixed quantity of a given commodity.
+A Fixed Source is a Node with one Port that exports a fixed quantity of a given commodity.
 
 Fixed Sink
 ^^^^^^^^^^^^^^^
-A fixed sink is a node with one port that imports a fixed quantity of a given commodity.
+A Fixed Sink is a Node with one Port that imports a fixed quantity of a given commodity.
 
-Tellegen
+Tellegen Node
 ^^^^^^^^^^^^^
-A tellegen node is an energy conserving node that must have at least two ports. The sum of all flows through the node must equal 0. It is used to represent interconnections, either physical or logical, between different flows in a network.
+A Tellegen Node is an energy conserving node that must have at least two ports. The sum of all flows through the Node's Ports must equal zero. It is used to represent interconnections, either physical or logical, between different flows in a network.
 
-**Constraints**
+**Tellegen Node Constraints**
 
-If the node has N ports, each with a value of :math:`p^i_{x, t}` for :math:`i \in N`, then:
+If the node has :math:`N` ports, each with a value of :math:`p^i_{x, t}` for :math:`i \in N`, then:
 
 :math:`\sum_{i=0}^N p^i_{x, t} = 0`
 
 
 Multi Commodity Tellegen
 ^^^^^^^^^^^^^
-A multi commodity tellegen node is an energy conserving node. The sum of all flows of the same commodity through the node must equal 0. This node does not necessarily represent a physical interconnection, but it is useful for representing logical connections (e.g., a building that has both gas and electricity supply).
+A multi commodity Tellegen Node is an energy conserving node. The sum of all flows of the same commodity through the node must equal zero. This node does not necessarily represent a physical interconnection, but it is useful for representing logical connections (e.g., a building that has both gas and electricity supply).
 
 Like the Tellegen node, the Multi Commodity Tellegen node requires at least two ports per commodity.
 
-The node constraint is the same as :ref:`Tellegen`, but a separate constraint is applied per commodity type.
+The node constraint is the same as :ref:`Tellegen <Tellegen Node>`, but a separate constraint is applied per commodity type.
 
 Linear Input Output Node
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,16 +64,16 @@ An input output node has one input port :math:`p^\text{in}`, and one output port
 * ``weight`` (:math:`w`): a weight used to transform the input into the output. The weight can be a single value, or an array of factors.
 
 
-**Constraints**
+**Linear Input Output Constraints**
 
 :math:`p^\text{out} = p^\text{in} \cdot w`
 
 
 Single Piecewise Input Output Node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This node has one input port and one output port. The transformation between input and output is defined by a piecewise function that approximates a nonlinear relationship using straight line segments. This node is useful for approximating generic nonlinear transformations where the transformation is known or can be precalculated.
+This node has one input port and one output port. The transformation between input and output is defined by a piecewise linear function that approximates a nonlinear relationship using straight line segments. This node is useful for approximating generic nonlinear transformations where the transformation is known or can be precalculated.
 
-This node should only be used when capturing a nonlinear transformation precisely is important in achieving the overall modelling aim, because it is computationally expensive to use a piecewise approximation compared to a linear input/output transformation.
+This node should only be used when capturing a nonlinear transformation as accurate is possible is important in achieving the overall modelling goal, because it is computationally expensive to use a piecewise approximation compared to a linear input/output transformation.
 
 An example of defining a piecewise input output node is
 
@@ -204,7 +205,7 @@ An example of initialising a solar node is
     solar_profile = np.array([0]*7 + [0.2]*1 +[0.4]*1 + [0.8]*2 +
                              [1]*2 + [0.8]*2 + [0.4]*1 + [0.2]*1 + [0]*7)*100
 
-    battery = Solar(port_name='pv',
+    solar = Solar(port_name='pv',
                     curtailable=True,
                     profile=solar_profile)
 
@@ -275,7 +276,7 @@ Only EV specific additional parameters/variables are defined below.
 
 **Parameters**
 
-* ``SOC_conserv`` (:math:`L^\text{conserv}`): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while p^\text{available}=1).
+* ``SOC_conserv`` (:math:`L^\text{conserv}`): conservative state of charge limit below which the EV should not discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is available impromptu trips. This lower bound only applies while the EV is available to charge (i.e., soc lower bound while :math:`p^\text{available}=1`).
 * ``SOC_conserv_cost`` (:math:`C^\text{conserv}`): The cost placed on going below the conservative state of charge limit ($/kWh). That is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining) more money than this cost.
 
 .. warning::
@@ -310,7 +311,7 @@ If ``SOC_conserv is not None``, conservative state of charge lower limit:
 
 Inverter
 ^^^^^^^^^^^^^
-An inverter node converts alternating current (AC) to direct current (DC). It has one AC port, and at least one DC port.
+An inverter node represents AC/DC inverter, that converts alternating current (AC) to direct current (DC) and visa versa. It has one AC port, and at least one DC port.
 
 An example of initialising an inverter is:
 
@@ -355,7 +356,10 @@ Gas Nodes
 
 Gas Boiler Fixed COP
 ^^^^^^^^^^^^^^^^^^^^
-A boiler converts gas to heat at a fixed coefficient of performance (COP). The COP is a unitless ratio between output energy and input energy. The boiler is either on, and must operate between a min and max input, or off. It has one input port (units of Joules per second) and one output port (units of KW thermal).
+This Node models a boiler that converts gas to heat at a fixed coefficient of performance (COP).
+The COP is a unitless ratio between output energy and input energy.
+The boiler is either on, and must operate between a min and max input, or off.
+It has one gas input port (units of Joules per second) and one thermal output port (units of KW thermal).
 
 An example of initialising a fixed COP gas boiler is
 
@@ -376,7 +380,7 @@ An example of initialising a fixed COP gas boiler is
 
 * ``cop`` (:math:`C`): coefficient of performance, output/input energy.
 
-* ``startup_cop`` (:math:`C^\text{init}`): coefficient of performance, output/input energy.
+* ``startup_cop`` (:math:`C^\text{init}`): coefficient of performance at the startup, output/input energy.
 
 **Variables**
 
@@ -389,24 +393,27 @@ An example of initialising a fixed COP gas boiler is
 
 **Constraints**:
 
-Off or constrained constraints:
+When boiler is on (:math:`p^\text{on}_{x, t} = 1`) the following constraints apply:
 
 :math:`p^\text{in} \geq p^\text{on} \cdot p^\text{min}`
 
 :math:`p^\text{in} \leq p^\text{on} \cdot p^\text{max}`
 
-We use a weighted sum of past inputs approach to applying the COP. This constraint enforces that when the boiler turns on, in the first period it will operate at ``startup_cop`` and for subsequent periods it will operate at ``cop``. When the boiler turns off, it will operate at a lower efficiency, and then reach zero in the next time step.
+We use a weighted sum of past inputs approach to calculate the COP at a given time interval.
+This constraint enforces that when the boiler turns on, in the first optimisation period after the boiler goes from *Off* to *On* state it will operate at ``startup_cop`` and for subsequent periods it will operate at ``cop``. When the boiler turns off, it will operate at a lower efficiency, and then reach zero in the next time step.
 
 
 :math:`p^\text{out}_{x, t} = p^\text{in}_{x, t} \cdot C^\text{init} + p^\text{in}_{x, t-1} \cdot (C - C^\text{init})`
 
-For example, if a 10 kW boiler has a ``cop = 1``, and ``startup_cop = 0.7``, in the time interval when the boiler turns on, its output is :math:`p^\text{out} = 7`, and in the next time step, :math:`p^\text{out} = 10`. Assume it operates at :math:`p^\text{out}=10` for some time, before turning off. In the time interval it turns off, :math:`p^\text{out}= 3`. In the next period :math:`p^\text{out}= 0`.
+For example, if a 10 kW boiler has a ``cop = 1`` and ``startup_cop = 0.7``. In the time interval when the boiler turns on, its output is :math:`p^\text{out} = 7`,
+and in the next time step, :math:`p^\text{out} = 10`. Assume it operates at :math:`p^\text{out}=10` for some time, before turning off. In the time interval it turns off, :math:`p^\text{out}= 3`. In the next period :math:`p^\text{out}= 0`.
 
 
 Temperature Controlled Gas Boiler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This node has a gas input port and a heating output port. It has additional variables representing its exit and return temperatures of its working fluid.
-These temperature can be optimised within a range.
+This Node has a gas input port and a thermal output port.
+This Node models a boiler that converts gas to heat at a fixed coefficient of performance (COP),in addition it has variables representing the exit and return temperatures of its working fluid.
+These temperature variables can be optimised within a range.
 
 An example of initialising a temperature controlled gas boiler is
 
@@ -471,7 +478,7 @@ Thermal Nodes
 
 Controllable Thermal Load
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A controllable thermal load represents a heating and/or cooling load. For example, this node can be used to represent a building's overall thermal load, or specific loads for things like space heating, hot water heating, or other industrial processes. This node supports an arbitrary number of ports, so that the node can be connected to various heating/cooling sources.
+A Controllable Thermal Load node represents a heating and/or cooling load. For example, this node can be used to represent a building's overall thermal load, or specific loads for things like space heating, hot water heating, or other industrial processes. This node supports an arbitrary number of ports, so that the node can be connected to various heating/cooling sources.
 
 Heating is denoted by positive values (indicating that heat is imported).
 Cooling is denoted by negative values (indicating that heat is exported, i.e. removed).
@@ -563,7 +570,7 @@ Constraint relating the heating/cooling delivered to the node to the internal te
 
 Heat Pump Single Output
 ^^^^^^^^^^^^^
-A heat pump converts electrical input to either heating output, or cooling output.
+This Node models a heat pump that converts electrical energy into either heating or cooling output.
 A single output heat pump has one input electrical port :math:`p^\text{in}_{x, t}`, and one output thermal port :math:`p^\text{out}_{x, t}` that can either be positive (behaving as a heat sink, or cooling source), or negative (behaving as a heat source).
 An example of initialising a single output heat pump is
 
@@ -579,7 +586,7 @@ An example of initialising a single output heat pump is
                                      cooling_cop_time_series=cool_cop_dict)
 
 
-The coefficients of performance are provided as parameters because they can be calculated prior to optimisation, based on ambient temperature data.
+The coefficients of performance are provided as parameters because they can be calculated prior to optimisation, based on the forecasted or historical ambient temperature data.
 
 **Parameters**
 
@@ -757,3 +764,8 @@ Template Node
 **Parameters**
 
 **Constraints**
+
+
+Custom Nodes
+^^^^^^^^^^^^^^^^
+Write something here about how to built generic linear transformations for nodes
