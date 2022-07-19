@@ -1,3 +1,4 @@
+.. _Edges_ref:
 *echo* Edges
 ======================
 Edges represent a physical, lossless flow of a single commodity.

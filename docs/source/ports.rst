@@ -1,3 +1,4 @@
+.. _Ports_ref:
 *echo* Ports
 =======================
 Ports terminate a network edge and represent the connection of an edge to a node.

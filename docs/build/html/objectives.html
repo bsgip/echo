@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -105,14 +104,14 @@
            <div itemprop="articleBody">
              
   <section id="optimisation-objectives">
-<h1>Optimisation objectives<a class="headerlink" href="#optimisation-objectives" title="Permalink to this heading"></a></h1>
+<h1>Optimisation objectives<a class="headerlink" href="#optimisation-objectives" title="Permalink to this headline"></a></h1>
 <section id="objective-set">
-<h2>Objective Set<a class="headerlink" href="#objective-set" title="Permalink to this heading"></a></h2>
+<h2>Objective Set<a class="headerlink" href="#objective-set" title="Permalink to this headline"></a></h2>
 </section>
 <section id="power-flow-objectives">
-<h2>Power/Flow Objectives<a class="headerlink" href="#power-flow-objectives" title="Permalink to this heading"></a></h2>
+<h2>Power/Flow Objectives<a class="headerlink" href="#power-flow-objectives" title="Permalink to this headline"></a></h2>
 <section id="peak-positive-power">
-<h3>Peak Positive Power<a class="headerlink" href="#peak-positive-power" title="Permalink to this heading"></a></h3>
+<h3>Peak Positive Power<a class="headerlink" href="#peak-positive-power" title="Permalink to this headline"></a></h3>
 <p>Cost = peak positive power at port.
 The optimiser will try to minimise the peak power imported.</p>
 <p><strong>Variables</strong></p>
@@ -124,7 +123,7 @@ The optimiser will try to minimise the peak power imported.</p>
 <p><span class="math notranslate nohighlight">\(o = p^\text{max+}\)</span></p>
 </section>
 <section id="peak-negative-power">
-<h3>Peak Negative Power<a class="headerlink" href="#peak-negative-power" title="Permalink to this heading"></a></h3>
+<h3>Peak Negative Power<a class="headerlink" href="#peak-negative-power" title="Permalink to this headline"></a></h3>
 <p>cost = peak negative power at port.
 the optimiser will try to minimise the peak power exported.</p>
 <p><strong>Variables</strong></p>
@@ -136,7 +135,7 @@ the optimiser will try to minimise the peak power exported.</p>
 <p><span class="math notranslate nohighlight">\(o = p^\text{max-}\)</span></p>
 </section>
 <section id="quadratic-power">
-<h3>Quadratic Power<a class="headerlink" href="#quadratic-power" title="Permalink to this heading"></a></h3>
+<h3>Quadratic Power<a class="headerlink" href="#quadratic-power" title="Permalink to this headline"></a></h3>
 <p>The optimiser will try to minimise power squared, which has a regularising effect.</p>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p\)</span>, port value</p>
@@ -144,7 +143,7 @@ the optimiser will try to minimise the peak power exported.</p>
 <p><span class="math notranslate nohighlight">\(o = p^2\)</span></p>
 </section>
 <section id="throughput-cost">
-<h3>Throughput Cost<a class="headerlink" href="#throughput-cost" title="Permalink to this heading"></a></h3>
+<h3>Throughput Cost<a class="headerlink" href="#throughput-cost" title="Permalink to this headline"></a></h3>
 <p>The optimiser will try to minimise the total throughput through a port.</p>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
@@ -155,26 +154,26 @@ the optimiser will try to minimise the peak power exported.</p>
 <p><span class="math notranslate nohighlight">\(o = (p^+ - p^-) \cdot r\)</span></p>
 </section>
 <section id="contingency-negative">
-<h3>Contingency Negative<a class="headerlink" href="#contingency-negative" title="Permalink to this heading"></a></h3>
+<h3>Contingency Negative<a class="headerlink" href="#contingency-negative" title="Permalink to this headline"></a></h3>
 <p>FCAS Raise
 How much energy could your asset export (generate) to the upstream grid?
 The optimiser will try to maximise the available capacity for contingency bids.</p>
 </section>
 <section id="contingency-positive">
-<h3>Contingency Positive<a class="headerlink" href="#contingency-positive" title="Permalink to this heading"></a></h3>
+<h3>Contingency Positive<a class="headerlink" href="#contingency-positive" title="Permalink to this headline"></a></h3>
 <p>FCAS Lower
 How much energy could your asset import (consume) from the upstream grid?
 The optimiser will try to maximise the available capacity for contingency bids.</p>
 </section>
 </section>
 <section id="economic-objectives">
-<h2>Economic Objectives<a class="headerlink" href="#economic-objectives" title="Permalink to this heading"></a></h2>
+<h2>Economic Objectives<a class="headerlink" href="#economic-objectives" title="Permalink to this headline"></a></h2>
 </section>
 <section id="energy-tariffs">
-<h2>Energy Tariffs<a class="headerlink" href="#energy-tariffs" title="Permalink to this heading"></a></h2>
+<h2>Energy Tariffs<a class="headerlink" href="#energy-tariffs" title="Permalink to this headline"></a></h2>
 <p>Tariffs apply an array of prices to the energy imported or exported at a given port.</p>
 <section id="import-energy-tariff">
-<h3>Import Energy Tariff<a class="headerlink" href="#import-energy-tariff" title="Permalink to this heading"></a></h3>
+<h3>Import Energy Tariff<a class="headerlink" href="#import-energy-tariff" title="Permalink to this headline"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
 The optimiser will try to minimise the cost of importing energy to the port.</p>
 <p><strong>Variables</strong></p>
@@ -186,7 +185,7 @@ The optimiser will try to minimise the cost of importing energy to the port.</p>
 <p><span class="math notranslate nohighlight">\(o = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="export-energy-tariff">
-<h3>Export Energy Tariff<a class="headerlink" href="#export-energy-tariff" title="Permalink to this heading"></a></h3>
+<h3>Export Energy Tariff<a class="headerlink" href="#export-energy-tariff" title="Permalink to this headline"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
 <p>The optimiser will try to maximise the returns from exporting energy from the port.</p>
 <p><strong>Variables</strong></p>
@@ -198,24 +197,24 @@ The optimiser will try to minimise the cost of importing energy to the port.</p>
 <p><span class="math notranslate nohighlight">\(o = p^- \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="time-of-use-energy-tariffs">
-<h3>Time of Use Energy Tariffs<a class="headerlink" href="#time-of-use-energy-tariffs" title="Permalink to this heading"></a></h3>
+<h3>Time of Use Energy Tariffs<a class="headerlink" href="#time-of-use-energy-tariffs" title="Permalink to this headline"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
 </section>
 <section id="path-tariff">
-<h3>Path Tariff<a class="headerlink" href="#path-tariff" title="Permalink to this heading"></a></h3>
+<h3>Path Tariff<a class="headerlink" href="#path-tariff" title="Permalink to this headline"></a></h3>
 <p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
 </section>
 </section>
 <section id="demand-tariffs">
-<h2>Demand Tariffs<a class="headerlink" href="#demand-tariffs" title="Permalink to this heading"></a></h2>
+<h2>Demand Tariffs<a class="headerlink" href="#demand-tariffs" title="Permalink to this headline"></a></h2>
 <p>Demand tariffs are composed of a set of demand charges. They are typically used on loads/energy consuming ports. Each demand charge specifies a time window over which it applies, a rate (in $/kW or equivalent for a different commodity), and a reset period.</p>
 <p>For example, a demand tariff could include a charge that applies at evening peak time (5pm - 8pm), at a rate of $0.5/kW, and resets every month. Using this tariff, the demand would be calculated every day between 5pm and 8pm, and the maximum value over that period would be multiplied by the rate of $0.5/kW.</p>
 <p>The optimiser will try to minimise the maximum demand in the appropriate time window during each reset period.</p>
 </section>
 <section id="other-objectives">
-<h2>Other Objectives<a class="headerlink" href="#other-objectives" title="Permalink to this heading"></a></h2>
+<h2>Other Objectives<a class="headerlink" href="#other-objectives" title="Permalink to this headline"></a></h2>
 <section id="not-fully-charged-penalty">
-<h3>Not Fully Charged Penalty<a class="headerlink" href="#not-fully-charged-penalty" title="Permalink to this heading"></a></h3>
+<h3>Not Fully Charged Penalty<a class="headerlink" href="#not-fully-charged-penalty" title="Permalink to this headline"></a></h3>
 <p>The optimiser will penalise a storage asset for not being fully charged.</p>
 </section>
 <section id="template-objective">
