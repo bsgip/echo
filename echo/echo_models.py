@@ -743,6 +743,24 @@ class Edge(BaseModel):
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=edge_constraint_rule))
 
 
+    def get_max_flow_along_edge(self, forwards: bool = True):
+        max_flow = None
+        if forwards is True:
+            port1 = self.vertices[0]
+            port2 = self.vertices[1]
+        else:
+            port1 = self.vertices[1]
+            port2 = self.vertices[0]
+        if port1.export_constraint_value is not None:
+            max_flow = port1.export_constraint_value
+        if port2.import_constraint_value is not None:
+            if max_flow is not None:
+                max_flow = min(max_flow, port2.import_constraint_value)
+            else:
+                max_flow = port2.import_constraint_value
+        return max_flow
+
+
 class Transform(BaseModel):
     """ An object for carrying a generic linear node transformation. """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID

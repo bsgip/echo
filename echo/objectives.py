@@ -62,11 +62,10 @@ class ObjectiveSet(echoBaseModel):
 class PeakPositivePower(Objective):
     """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
     component: Port
-    max_pos: Optional[str]
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.max_pos = 'max_pos_' + self.name
+    @property
+    def max_pos(self):
+        return 'max_pos_' + self.name
 
     def create_vars(self, model):
         setattr(model, self.max_pos, en.Var(initialize=0, domain=en.NonNegativeReals))
@@ -87,11 +86,11 @@ class PeakPositivePower(Objective):
 
 class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
-    max_neg: Optional[str]
+    component: Port
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.max_neg = 'max_neg_' + self.name
+    @property
+    def max_neg(self):
+        return 'max_neg_' + self.name
 
     def create_vars(self, model):
         setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
@@ -125,12 +124,14 @@ class Tariff(Objective):
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
     component: Port
-    import_tariff: Optional[str]
     import_tariff_dict: Optional[dict]
+
+    @property
+    def import_tariff(self):
+        return 'import_tariff_' + self.name
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.import_tariff = 'import_tariff_' + self.name
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model, df):
@@ -150,12 +151,14 @@ class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
      to the negative (exporting) component of the specified port."""
     component: Port
-    export_tariff: Optional[str]
     export_tariff_dict: Optional[dict]
+
+    @property
+    def export_tariff(self):
+        return 'export_tariff_' + self.name
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.export_tariff = 'export_tariff_' + self.name
         self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model, df):
@@ -174,12 +177,14 @@ class ExportTariff(Tariff):
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
     component: Path
-    path_tariff: Optional[str]
     path_tariff_dict: Optional[dict]
+
+    @property
+    def path_tariff(self):
+        return 'path_tariff_' + self.name
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.path_tariff = 'path_tariff_' + self.name
         self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model, df):
@@ -248,59 +253,42 @@ class Contingency(Objective):
     component: Path
 
 
-class ContingencyNegative(Objective):
-    """ FCAS Raise """
-    duration: PositiveFloat
-    contingency_neg: Optional[str]
+class ContingencyNegative(Contingency):
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.contingency_neg = 'cont_neg_' + self.name
+    """ FCAS Raise """
+    duration: PositiveFloat  # todo this should just be the interval duration ?
+
+    @property
+    def contingency_neg(self):
+        return 'cont_neg_' + self.name
 
     def create_vars(self, model):
-        setattr(model, self.contingency_neg,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+        setattr(model, self.contingency_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
 
-        def contingency_power_limited_by_flow_constraints(model, node1, node2, var, flow_constraint):
-            def constraint(model, p, t):
-                a = 0
-                for _, other_path in model.paths.items():  # Check if the path includes [...node1, node2...]
-                    if (node1 in other_path.vertices) and (node2 in other_path.vertices):
-                        b = other_path.vertices.index(node1)
-                        c = other_path.vertices.index(node2)
-                        if b + 1 == c:
-                            a += getattr(model, other_path.flow_value)[p, t]
-                return getattr(model, var)[p, t] >= (flow_constraint - a) * -1
+        def export_flow_con(model, p, t):
+            return getattr(model, self.contingency_neg)[p, t] >= (port.export_constraint_value - getattr(model, port.port_name)[p, t])
 
-            return constraint
+        def import_flow_con(model, p, t):
+            return getattr(model, self.contingency_neg)[p, t] >= (port.import_constraint_value - getattr(model, port.port_name)[p, t]) * -1
 
         # Iterate through vertices on path to pick up any port constraints along path
         for i in range(0, len(self.component.vertices) - 1):
-            node1 = self.component.vertices[i]
-            node2 = self.component.vertices[i + 1]
-            exporting_port = self.component.edge_ports[i][0]
-            importing_port = self.component.edge_ports[i][1]
+            port = self.component.edge_ports[i][0]  # exporting port
+            if port.export_constraint_value is not None:
+                setattr(model, f"cont_neg_con_{port.port_name}", en.Constraint(model.Expansion, model.Time, rule=export_flow_con))
 
-            if exporting_port.export_constraint_value is not None:
-                con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
-                                                                         self.contingency_neg,
-                                                                         exporting_port.export_constraint_value * -1)
-                setattr(model, f"cont_neg_con_one_{exporting_port.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=con_rule))
-            if importing_port.import_constraint_value is not None:
-                con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
-                                                                         self.contingency_neg,
-                                                                         importing_port.import_constraint_value)
-                setattr(model, f"cont_neg_con_two_{importing_port.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=con_rule))
+            port = self.component.edge_ports[i][1]  # importing port
+            if port.import_constraint_value is not None:
+                setattr(model, f"cont_neg_con_{port.port_name}", en.Constraint(model.Expansion, model.Time, rule=import_flow_con))
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
+        initial_port = self.component.edge_ports[0][0]
+        if hasattr(initial_port, 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.contingency_neg)[p, t] * self.duration / 60 >= \
-                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t] * -1
+                       getattr(model, initial_port.soc_value)[p, t] * -1
 
             setattr(model, f"cont_neg_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -310,14 +298,14 @@ class ContingencyNegative(Objective):
                    for p in model.Expansion for t in model.Time)
 
 
-class ContingencyPositive(Objective):
+class ContingencyPositive(Contingency):
+
     """ FCAS Lower """
     duration: PositiveFloat
-    contingency_pos: Optional[str]
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.contingency_pos = 'cont_pos_' + self.name
+    @property
+    def contingency_pos(self):
+        return 'cont_pos_' + self.name
 
     def create_vars(self, model):
         setattr(model, self.contingency_pos,
@@ -325,45 +313,29 @@ class ContingencyPositive(Objective):
 
     def apply_constraints(self, model):
 
-        def contingency_power_limited_by_flow_constraints(model, node1, node2, var, flow_constraint):
-            def constraint(model, p, t):
-                a = 0
-                for _, other_path in model.paths.items():  # Check if the path includes [...node1, node2...]
-                    if (node1 in other_path.vertices) and (node2 in other_path.vertices):
-                        b = other_path.vertices.index(node1)
-                        c = other_path.vertices.index(node2)
-                        if b - 1 == c:
-                            a += getattr(model, other_path.flow_value)[p, t]
-                return getattr(model, var)[p, t] <= (flow_constraint - a)
+        def export_flow_con(model, p, t):
+            return getattr(model, self.contingency_pos)[p, t] <= (port.export_constraint_value - getattr(model, port.port_name)[p, t])*-1
 
-            return constraint
+        def import_flow_con(model, p, t):
+            return getattr(model, self.contingency_pos)[p, t] <= (port.import_constraint_value - getattr(model, port.port_name)[p, t])
 
         # Iterate through vertices on path to pick up any port constraints along path
         for i in range(0, len(self.component.vertices) - 1):
-            node1 = self.component.vertices[i]
-            node2 = self.component.vertices[i + 1]
-            exporting_port = self.component.edge_ports[i][0]
-            importing_port = self.component.edge_ports[i][1]
+            port = self.component.edge_ports[i][1]  # exporting port
+            if port.export_constraint_value is not None:
+                setattr(model, f"cont_pos_con_{port.port_name}", en.Constraint(model.Expansion, model.Time, rule=export_flow_con))
 
-            if exporting_port.export_constraint_value is not None:
-                con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
-                                                                         self.contingency_pos,
-                                                                         exporting_port.export_constraint_value * -1)
-                setattr(model, f"cont_pos_con_one_{exporting_port.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=con_rule))
-            if importing_port.import_constraint_value is not None:
-                con_rule = contingency_power_limited_by_flow_constraints(model, node1, node2,
-                                                                         self.contingency_pos,
-                                                                         importing_port.import_constraint_value)
-                setattr(model, f"cont_pos_con_two_{importing_port.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=con_rule))
+            port = self.component.edge_ports[i][0]  # importing port
+            if port.import_constraint_value is not None:
+                setattr(model, f"cont_pos_con_{port.port_name}", en.Constraint(model.Expansion, model.Time, rule=import_flow_con))
+
 
         # Meet SOC constraint on contingency providing asset, if applicable
-        if hasattr(self.component.edge_ports[0][0], 'soc_value'):
+        initial_port = self.component.edge_ports[0][0]
+        if hasattr(initial_port, 'soc_value'):
             def contingency_energy_limited_soc(model, p, t):
                 return getattr(model, self.contingency_pos)[p, t] * self.duration / 60 <= \
-                       self.component.edge_ports[0][0].max_capacity - \
-                       getattr(model, self.component.edge_ports[0][0].soc_value)[p, t]
+                      initial_port.max_capacity - getattr(model, initial_port.soc_value)[p, t]
 
             setattr(model, f"cont_pos_soc_lim_{self.component.path_name}",
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
@@ -535,11 +507,14 @@ class DemandCharge(echoBaseModel):
     reset_index: Optional[RangeSet]  # index for separating different reset periods
     max_demand_val: Optional[str]
 
+    @property
+    def max_demand_val(self):
+        return 'max_demand_' + self.name
+
     def __init__(self, **data):
         super().__init__(**data)
         if self.name is None:
             self.name = 'dc_' + str(self.uid)
-        self.max_demand_val = 'max_demand_' + self.name
         self.window_active = 'window_active_' + self.name
         if self.window_object is not None and self.window_array is not None:
             raise ValueError('Only window array or window object should be set, not both.')
@@ -706,3 +681,5 @@ class ImportDemandCharge(DemandCharge):
 class ExportDemandCharge(DemandCharge):
     import_demand = False
     export_demand = True
+
+
