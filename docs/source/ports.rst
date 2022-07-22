@@ -8,7 +8,7 @@ Base Port Models
 -----------------------------------------------
 
 .. note::
-    Where variables are indexed by :math:`{x, t}` :math:`x` refers to the planning interval, and :math:`t` refers to the time interval. Sometimes these indices are left out of the constraint equations, and in this case, please refer to the variable definition to see whether it is an indexed variable or not.
+    Where variables are indexed by :math:`(x, t)`,  :math:`x` refers to the planning interval, and :math:`t` refers to the time interval. Sometimes these indices are left out of the constraint equations, and in this case, please refer to the variable definition to see whether it is an indexed variable or not.
 
 Port
 ^^^^^^
