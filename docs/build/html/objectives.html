@@ -14,6 +14,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -54,12 +55,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#peak-positive-power">Peak Positive Power</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#peak-negative-power">Peak Negative Power</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#quadratic-power">Quadratic Power</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#throughput-cost">Throughput Cost</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#contingency-negative">Contingency Negative</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#contingency-positive">Contingency Positive</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#throughput-cost">Throughput Cost</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#economic-objectives">Economic Objectives</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#energy-tariffs">Energy Tariffs</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#import-energy-tariff">Import Energy Tariff</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#export-energy-tariff">Export Energy Tariff</a></li>
@@ -67,7 +67,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#path-tariff">Path Tariff</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#demand-tariffs">Demand Tariffs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#power-tariffs">Power Tariffs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#demand-tariff">Demand Tariff</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#other-objectives">Other Objectives</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#not-fully-charged-penalty">Not Fully Charged Penalty</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#template-objective">Template Objective</a></li>
@@ -104,47 +107,75 @@
            <div itemprop="articleBody">
              
   <section id="optimisation-objectives">
-<h1>Optimisation objectives<a class="headerlink" href="#optimisation-objectives" title="Permalink to this headline"></a></h1>
+<h1>Optimisation objectives<a class="headerlink" href="#optimisation-objectives" title="Permalink to this heading"></a></h1>
+<p>Objectives can be applied to an echo model in order to optimise the behaviour of controllable variables (decision variables) to achieve a certain outcome.</p>
 <section id="objective-set">
-<h2>Objective Set<a class="headerlink" href="#objective-set" title="Permalink to this headline"></a></h2>
+<h2>Objective Set<a class="headerlink" href="#objective-set" title="Permalink to this heading"></a></h2>
+<p>The objective set contains a list of objectives as defined in the sections below. Each objective in the list will be added to a total objective term. Multi-objective optimisation problems are not supported.</p>
 </section>
 <section id="power-flow-objectives">
-<h2>Power/Flow Objectives<a class="headerlink" href="#power-flow-objectives" title="Permalink to this headline"></a></h2>
+<h2>Power/Flow Objectives<a class="headerlink" href="#power-flow-objectives" title="Permalink to this heading"></a></h2>
+<p>Power/flow objectives are applied to a port value directly.</p>
 <section id="peak-positive-power">
-<h3>Peak Positive Power<a class="headerlink" href="#peak-positive-power" title="Permalink to this headline"></a></h3>
-<p>Cost = peak positive power at port.
-The optimiser will try to minimise the peak power imported.</p>
+<h3>Peak Positive Power<a class="headerlink" href="#peak-positive-power" title="Permalink to this heading"></a></h3>
+<p>This objective penalises the peak positive (imported) power at a port.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining this objective is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ppp</span> <span class="o">=</span> <span class="n">PeakPositivePower</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
 <p><span class="math notranslate nohighlight">\(p^\text{max+}\)</span>, maximum port positive component</p>
 <p><strong>Constraints</strong></p>
-<p><span class="math notranslate nohighlight">\(p^\text{max+} &gt;= p^+\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max+} \geq p^+\)</span></p>
 <p><strong>Objective expression</strong></p>
 <p><span class="math notranslate nohighlight">\(o = p^\text{max+}\)</span></p>
 </section>
 <section id="peak-negative-power">
-<h3>Peak Negative Power<a class="headerlink" href="#peak-negative-power" title="Permalink to this headline"></a></h3>
-<p>cost = peak negative power at port.
-the optimiser will try to minimise the peak power exported.</p>
+<h3>Peak Negative Power<a class="headerlink" href="#peak-negative-power" title="Permalink to this heading"></a></h3>
+<p>This objective penalises the peak negative (exported) power at a port.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining this objective is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pnp</span> <span class="o">=</span> <span class="n">PeakNegativePower</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
 <p><span class="math notranslate nohighlight">\(p^\text{max-}\)</span>, maximum port negative component</p>
 <p><strong>Constraints</strong></p>
-<p><span class="math notranslate nohighlight">\(p^\text{max-} &lt;= p^-\)</span></p>
+<p><span class="math notranslate nohighlight">\(p^\text{max-} \leq p^-\)</span></p>
 <p><strong>Objective expression</strong></p>
-<p><span class="math notranslate nohighlight">\(o = p^\text{max-}\)</span></p>
+<p><span class="math notranslate nohighlight">\(o = p^\text{max-} \cdot -1\)</span></p>
 </section>
 <section id="quadratic-power">
-<h3>Quadratic Power<a class="headerlink" href="#quadratic-power" title="Permalink to this headline"></a></h3>
-<p>The optimiser will try to minimise power squared, which has a regularising effect.</p>
+<h3>Quadratic Power<a class="headerlink" href="#quadratic-power" title="Permalink to this heading"></a></h3>
+<p>This objective penalises the port power squared. This objective acts as a regularization term. This makes the optimal solution, if there is one, unique.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining a quadratic power cost is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">quad_cost</span> <span class="o">=</span> <span class="n">QuadraticPower</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p\)</span>, port value</p>
 <p><strong>Objective expression</strong></p>
 <p><span class="math notranslate nohighlight">\(o = p^2\)</span></p>
 </section>
+<section id="contingency-negative">
+<h3>Contingency Negative<a class="headerlink" href="#contingency-negative" title="Permalink to this heading"></a></h3>
+<p>This objective maximises the available capacity for an FCAS raise bid. An FCAS raise bid is a quantity of energy that an asset could export (generate) and deliver upstream.</p>
+<p>FCAS Raise
+How much energy could your asset export (generate) to the upstream grid?
+The optimiser will try to maximise the available capacity for contingency bids.</p>
+</section>
+<section id="contingency-positive">
+<h3>Contingency Positive<a class="headerlink" href="#contingency-positive" title="Permalink to this heading"></a></h3>
+<p>This objective maximises the available capacity an FCAS lower bid. An FCAS lower bid is a quantity of energy that an asset could import from upstream.</p>
+</section>
 <section id="throughput-cost">
-<h3>Throughput Cost<a class="headerlink" href="#throughput-cost" title="Permalink to this headline"></a></h3>
-<p>The optimiser will try to minimise the total throughput through a port.</p>
+<h3>Throughput Cost<a class="headerlink" href="#throughput-cost" title="Permalink to this heading"></a></h3>
+<p>This objective applies a given rate to the total throughput (import plus export) at a port. If the rate is positive, then throughput will be penalised, and if the rate is negative, throughput will be rewarded.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining a throughput cost is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">throughput_cost</span> <span class="o">=</span> <span class="n">ThroughputCost</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">0.000001</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
 <p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
@@ -153,29 +184,20 @@ the optimiser will try to minimise the peak power exported.</p>
 <p><strong>Objective expression</strong></p>
 <p><span class="math notranslate nohighlight">\(o = (p^+ - p^-) \cdot r\)</span></p>
 </section>
-<section id="contingency-negative">
-<h3>Contingency Negative<a class="headerlink" href="#contingency-negative" title="Permalink to this headline"></a></h3>
-<p>FCAS Raise
-How much energy could your asset export (generate) to the upstream grid?
-The optimiser will try to maximise the available capacity for contingency bids.</p>
-</section>
-<section id="contingency-positive">
-<h3>Contingency Positive<a class="headerlink" href="#contingency-positive" title="Permalink to this headline"></a></h3>
-<p>FCAS Lower
-How much energy could your asset import (consume) from the upstream grid?
-The optimiser will try to maximise the available capacity for contingency bids.</p>
-</section>
-</section>
-<section id="economic-objectives">
-<h2>Economic Objectives<a class="headerlink" href="#economic-objectives" title="Permalink to this headline"></a></h2>
 </section>
 <section id="energy-tariffs">
-<h2>Energy Tariffs<a class="headerlink" href="#energy-tariffs" title="Permalink to this headline"></a></h2>
-<p>Tariffs apply an array of prices to the energy imported or exported at a given port.</p>
+<h2>Energy Tariffs<a class="headerlink" href="#energy-tariffs" title="Permalink to this heading"></a></h2>
+<p>Tariffs apply an array of prices to the energy imported or exported at a given port.
+Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
 <section id="import-energy-tariff">
-<h3>Import Energy Tariff<a class="headerlink" href="#import-energy-tariff" title="Permalink to this headline"></a></h3>
-<p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
-The optimiser will try to minimise the cost of importing energy to the port.</p>
+<h3>Import Energy Tariff<a class="headerlink" href="#import-energy-tariff" title="Permalink to this heading"></a></h3>
+<p>This objective applies positive prices to energy imported at a port. Therefore, this objective penalises energy imported at a port.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining an import tariff is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">import_tariff_array</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">28</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">32</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">16</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">12</span>
+<span class="n">import_cost</span> <span class="o">=</span> <span class="n">ImportTariff</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">,</span>
+                           <span class="n">tariff_array</span><span class="o">=</span><span class="n">import_tariff_array</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^+\)</span>, port positive component</p>
 <p><strong>Parameters</strong></p>
@@ -185,9 +207,14 @@ The optimiser will try to minimise the cost of importing energy to the port.</p>
 <p><span class="math notranslate nohighlight">\(o = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="export-energy-tariff">
-<h3>Export Energy Tariff<a class="headerlink" href="#export-energy-tariff" title="Permalink to this headline"></a></h3>
-<p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
-<p>The optimiser will try to maximise the returns from exporting energy from the port.</p>
+<h3>Export Energy Tariff<a class="headerlink" href="#export-energy-tariff" title="Permalink to this heading"></a></h3>
+<p>This objective applies positive prices to energy exported from a port. This objective maximises the returns (negative costs) from exporting energy from the port.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining an export tariff is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">export_tariff_array</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">28</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">32</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">]</span> <span class="o">*</span> <span class="mi">16</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">12</span>
+<span class="n">export_cost</span> <span class="o">=</span> <span class="n">ExportTariff</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">,</span>
+                           <span class="n">tariff_array</span><span class="o">=</span><span class="n">export_tariff_array</span><span class="p">)</span>
+</pre></div>
+</div>
 <p><strong>Variables</strong></p>
 <p><span class="math notranslate nohighlight">\(p^-\)</span>, port negative component</p>
 <p><strong>Parameters</strong></p>
@@ -197,24 +224,69 @@ The optimiser will try to minimise the cost of importing energy to the port.</p>
 <p><span class="math notranslate nohighlight">\(o = p^- \cdot c \cdot \frac{d^\text{interval}}{60}\)</span></p>
 </section>
 <section id="time-of-use-energy-tariffs">
-<h3>Time of Use Energy Tariffs<a class="headerlink" href="#time-of-use-energy-tariffs" title="Permalink to this headline"></a></h3>
-<p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
+<h3>Time of Use Energy Tariffs<a class="headerlink" href="#time-of-use-energy-tariffs" title="Permalink to this heading"></a></h3>
+<p>Time of use energy tariffs can be formulated as import/export tariffs, by setting the price to zero during the times when the tariff is inactive.</p>
 </section>
 <section id="path-tariff">
-<h3>Path Tariff<a class="headerlink" href="#path-tariff" title="Permalink to this headline"></a></h3>
-<p>Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.</p>
+<h3>Path Tariff<a class="headerlink" href="#path-tariff" title="Permalink to this heading"></a></h3>
+<p>TBC</p>
 </section>
 </section>
-<section id="demand-tariffs">
-<h2>Demand Tariffs<a class="headerlink" href="#demand-tariffs" title="Permalink to this headline"></a></h2>
-<p>Demand tariffs are composed of a set of demand charges. They are typically used on loads/energy consuming ports. Each demand charge specifies a time window over which it applies, a rate (in $/kW or equivalent for a different commodity), and a reset period.</p>
-<p>For example, a demand tariff could include a charge that applies at evening peak time (5pm - 8pm), at a rate of $0.5/kW, and resets every month. Using this tariff, the demand would be calculated every day between 5pm and 8pm, and the maximum value over that period would be multiplied by the rate of $0.5/kW.</p>
-<p>The optimiser will try to minimise the maximum demand in the appropriate time window during each reset period.</p>
+<section id="power-tariffs">
+<h2>Power Tariffs<a class="headerlink" href="#power-tariffs" title="Permalink to this heading"></a></h2>
+<section id="demand-tariff">
+<h3>Demand Tariff<a class="headerlink" href="#demand-tariff" title="Permalink to this heading"></a></h3>
+<p>Demand tariffs are composed of a set of demand charges.</p>
+<p>A demand charge is a price applied to the maximum power (either import or export) within certain time periods. The demand charge is reset after a certain number of time periods.</p>
+<p>For example, consider an import demand charge that applies every evening from 5pm - 8pm, with a rate of $0.5/kW, and resets every month. Each night between 5pm and 8pm, the maximum power imported would be calculated. Then, the maximum of these values would be multiplied by $0.5/kW to obtain the total cost for that month. Then the max value would reset, and the same process would occur for the next month.</p>
+<p>Assuming <code class="docutils literal notranslate"><span class="pre">cp1</span></code> refers to a port, an example of defining a demand tariff and a demand charge is</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">shoulder_rate</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">shoulder_window</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">18</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">16</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span>
+
+<span class="n">shoulder_charge</span> <span class="o">=</span> <span class="n">DemandCharge</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">shoulder_rate</span><span class="p">,</span>
+                               <span class="n">window_array</span><span class="o">=</span><span class="n">shoulder_window</span><span class="p">,</span>
+                               <span class="n">min_demand</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                               <span class="n">reset_period</span><span class="o">=</span><span class="n">ResetPeriod</span><span class="o">.</span><span class="n">Day</span><span class="p">,</span>
+                               <span class="n">import_demand</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">demand_tariff</span> <span class="o">=</span> <span class="n">ImportDemandTariffObjective</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">cp1</span><span class="p">,</span>
+                                            <span class="n">demand_charges</span><span class="o">=</span><span class="p">[</span><span class="n">shoulder_charge</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><strong>Parameters</strong></p>
+<p>Each demand charge has the following parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">window_array</span></code> (<span class="math notranslate nohighlight">\(w\)</span>): the time window when the charge applies</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rate</span></code> (<span class="math notranslate nohighlight">\(r\)</span>): the rate (in $/kW or equivalent for a different commodity)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_demand</span></code> (<span class="math notranslate nohighlight">\(d^\text{min}\)</span>): the minimum demand</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reset_period</span></code> (<span class="math notranslate nohighlight">\(f\)</span>): the reset period frequency (how often the calculation resets)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">import_demand</span></code>: parameter for controlling whether the charge applies to imports or exports</p></li>
+</ul>
+<p>The objective penalises the maximum demand (either import or export) in the corresponding time window during each reset period.</p>
+<p><strong>Variables</strong></p>
+<p><span class="math notranslate nohighlight">\(p^+\)</span>, positive port component (imports)</p>
+<p><span class="math notranslate nohighlight">\(p^-\)</span>, negative port component (exports)</p>
+<p>Each demand charge has the following variables, which are indexed by the reset period <span class="math notranslate nohighlight">\(f\)</span></p>
+<p><span class="math notranslate nohighlight">\(d_f\)</span>, max demand value</p>
+<p><strong>Constraints</strong></p>
+<p>For each demand charge and each reset period:</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">import_demand</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>:</p>
+<p><span class="math notranslate nohighlight">\(d_f \geq (p^+ - d^\text{min}) \cdot w\)</span></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">import_demand</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>:</p>
+<p><span class="math notranslate nohighlight">\(d_f \leq (p^- - d^\text{min}) \cdot w\)</span></p>
+<p><strong>Objective expression</strong></p>
+<p>If the demand tariff has <span class="math notranslate nohighlight">\(n\)</span> demand charges, then the total objective is:</p>
+<p><span class="math notranslate nohighlight">\(O = \sum_{i=0}^n x_i\)</span></p>
+<p>Where <span class="math notranslate nohighlight">\(x\)</span> is the total cost of each demand charge, and for each demand charge, if <code class="docutils literal notranslate"><span class="pre">import_demand</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>:</p>
+<p><span class="math notranslate nohighlight">\(x = \sum_{j=0}^{f} d_j \cdot r\)</span></p>
+<p>else if <code class="docutils literal notranslate"><span class="pre">import_demand</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>:</p>
+<p><span class="math notranslate nohighlight">\(x = \sum_{j=0}^{f} d_j \cdot r \cdot -1\)</span></p>
+</section>
 </section>
 <section id="other-objectives">
-<h2>Other Objectives<a class="headerlink" href="#other-objectives" title="Permalink to this headline"></a></h2>
+<h2>Other Objectives<a class="headerlink" href="#other-objectives" title="Permalink to this heading"></a></h2>
 <section id="not-fully-charged-penalty">
-<h3>Not Fully Charged Penalty<a class="headerlink" href="#not-fully-charged-penalty" title="Permalink to this headline"></a></h3>
+<h3>Not Fully Charged Penalty<a class="headerlink" href="#not-fully-charged-penalty" title="Permalink to this heading"></a></h3>
 <p>The optimiser will penalise a storage asset for not being fully charged.</p>
 </section>
 <section id="template-objective">

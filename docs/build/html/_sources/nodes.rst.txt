@@ -667,7 +667,7 @@ Cooling output constraint:
 
 Chiller
 ^^^^^^^^^^^^^
-A chiller has two ports, an input electrical port :math:`p^\text{in}_{x, t}`, and an output cooling port :math:`p^\text{out}_{x, t}`. It converts electrical input to cooling according to a coefficient of performance (COP), which depends on ambient temperature, as well as loading (current input/nominal rating).
+A Chiller node has two ports, an input electrical port :math:`p^\text{in}_{x, t}`, and an output cooling port :math:`p^\text{out}_{x, t}`. It converts electrical input to cooling according to a coefficient of performance (COP), which depends on ambient temperature, as well as loading (current input/nominal rating).
 
 
 

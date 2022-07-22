@@ -1,18 +1,24 @@
 Optimisation objectives
 ===================================
+Objectives can be applied to an echo model in order to optimise the behaviour of controllable variables (decision variables) to achieve a certain outcome.
 
 Objective Set
 --------------
-
+The objective set contains a list of objectives as defined in the sections below. Each objective in the list will be added to a total objective term. Multi-objective optimisation problems are not supported.
 
 Power/Flow Objectives
 ----------------------
-
+Power/flow objectives are applied to a port value directly.
 
 Peak Positive Power
 ^^^^^^^^^^^^^^^^^^^^
-Cost = peak positive power at port.
-The optimiser will try to minimise the peak power imported.
+This objective penalises the peak positive (imported) power at a port.
+
+Assuming ``cp1`` refers to a port, an example of defining this objective is
+
+.. code-block::
+
+    ppp = PeakPositivePower(component=cp1)
 
 **Variables**
 
@@ -22,18 +28,22 @@ The optimiser will try to minimise the peak power imported.
 
 **Constraints**
 
-:math:`p^\text{max+} >= p^+`
+:math:`p^\text{max+} \geq p^+`
 
 **Objective expression**
 
 :math:`o = p^\text{max+}`
 
 
-
 Peak Negative Power
 ^^^^^^^^^^^^^^^^^^^^
-cost = peak negative power at port.
-the optimiser will try to minimise the peak power exported.
+This objective penalises the peak negative (exported) power at a port.
+
+Assuming ``cp1`` refers to a port, an example of defining this objective is
+
+.. code-block::
+
+    pnp = PeakNegativePower(component=cp1)
 
 **Variables**
 
@@ -43,16 +53,23 @@ the optimiser will try to minimise the peak power exported.
 
 **Constraints**
 
-:math:`p^\text{max-} <= p^-`
+:math:`p^\text{max-} \leq p^-`
 
 **Objective expression**
 
-:math:`o = p^\text{max-}`
+:math:`o = p^\text{max-} \cdot -1`
 
 
 Quadratic Power
 ^^^^^^^^^^^^^^^^^^^^
-The optimiser will try to minimise power squared, which has a regularising effect.
+This objective penalises the port power squared. This objective acts as a regularization term. This makes the optimal solution, if there is one, unique.
+
+
+Assuming ``cp1`` refers to a port, an example of defining a quadratic power cost is
+
+.. code-block::
+
+    quad_cost = QuadraticPower(component=cp1)
 
 **Variables**
 
@@ -63,9 +80,50 @@ The optimiser will try to minimise power squared, which has a regularising effec
 :math:`o = p^2`
 
 
+Contingency Negative
+^^^^^^^^^^^^^^^^^^^^
+This objective maximises the available capacity for an FCAS raise bid. An FCAS raise bid is the power that an asset could export (generate) and deliver upstream.
+
+**Parameters**
+
+* ``path``, the path that the flow would theoretically take from the bidder to the upstream grid.
+* ``duration`` (:math:`d`): duration in seconds that the asset must sustain their bid power.
+
+**Variables**
+
+:math:`C^\text{neg}`
+
+
+**Constraints**
+
+The specific constraints will depend on the network. If there are any flow constraints between the bidding port and the upstream port, these need to be accounted for.
+
+
+**Objective expression**
+
+Contingency Positive
+^^^^^^^^^^^^^^^^^^^^
+This objective maximises the available capacity an FCAS lower bid. An FCAS lower bid is a quantity of energy that an asset could import from upstream.
+
+
+**Constraints**
+
+The specific constraints will depend on the network. If there are any flow constraints between the bidding port and the upstream port, these need to be accounted for.
+
+**Objective expression**
+
+
 Throughput Cost
 ^^^^^^^^^^^^^^^^
-The optimiser will try to minimise the total throughput through a port.
+This objective applies a given rate to the total throughput (import plus export) at a port. If the rate is positive, then throughput will be penalised, and if the rate is negative, throughput will be rewarded.
+
+Assuming ``cp1`` refers to a port, an example of defining a throughput cost is
+
+.. code-block::
+
+    throughput_cost = ThroughputCost(component=cp1, rate=0.000001)
+
+
 
 **Variables**
 
@@ -82,30 +140,22 @@ The optimiser will try to minimise the total throughput through a port.
 :math:`o = (p^+ - p^-) \cdot r`
 
 
-Contingency Negative
-^^^^^^^^^^^^^^^^^^^^
-FCAS Raise
-How much energy could your asset export (generate) to the upstream grid?
-The optimiser will try to maximise the available capacity for contingency bids.
-
-Contingency Positive
-^^^^^^^^^^^^^^^^^^^^
-FCAS Lower
-How much energy could your asset import (consume) from the upstream grid?
-The optimiser will try to maximise the available capacity for contingency bids.
-
-Economic Objectives
---------------------
-
-
 Energy Tariffs
 ---------------
 Tariffs apply an array of prices to the energy imported or exported at a given port.
+Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
 
 Import Energy Tariff
-^^^^^^^^^^^^^
-Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
-The optimiser will try to minimise the cost of importing energy to the port.
+^^^^^^^^^^^^^^^^^^^^^
+This objective applies positive prices to energy imported at a port. Therefore, this objective penalises energy imported at a port.
+
+Assuming ``cp1`` refers to a port, an example of defining an import tariff is
+
+.. code-block::
+
+    import_tariff_array = [0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12
+    import_cost = ImportTariff(component=cp1,
+                               tariff_array=import_tariff_array)
 
 **Variables**
 
@@ -123,10 +173,17 @@ The optimiser will try to minimise the cost of importing energy to the port.
 
 
 Export Energy Tariff
-^^^^^^^^^^^^^
-Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
+^^^^^^^^^^^^^^^^^^^^^
+This objective applies positive prices to energy exported from a port. This objective maximises the returns (negative costs) from exporting energy from the port.
 
-The optimiser will try to maximise the returns from exporting energy from the port.
+Assuming ``cp1`` refers to a port, an example of defining an export tariff is
+
+.. code-block::
+
+    export_tariff_array = [0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12
+    export_cost = ExportTariff(component=cp1,
+                               tariff_array=export_tariff_array)
+
 
 **Variables**
 
@@ -144,21 +201,92 @@ The optimiser will try to maximise the returns from exporting energy from the po
 
 Time of Use Energy Tariffs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
+Time of use energy tariffs can be formulated as import/export tariffs, by setting the price to zero during the times when the tariff is inactive.
 
 
 Path Tariff
 ^^^^^^^^^^^^^
-Prices should be given in $/kWh, or $/equivalent energy unit for a different commodity.
+TBC
+
+Power Tariffs
+----------------
+
+Demand Tariff
+^^^^^^^^^^^^^^
+Demand tariffs are composed of a set of demand charges.
+
+A demand charge is a price applied to the maximum power (either import or export) within certain time periods. The demand charge is reset after a certain number of time periods.
+
+For example, consider an import demand charge that applies every evening from 5pm - 8pm, with a rate of $0.5/kW, and resets every month. Each night between 5pm and 8pm, the maximum power imported would be calculated. Then, the maximum of these values would be multiplied by $0.5/kW to obtain the total cost for that month. Then the max value would reset, and the same process would occur for the next month.
+
+Assuming ``cp1`` refers to a port, an example of defining a demand tariff and a demand charge is
+
+.. code-block::
+
+    shoulder_rate = 1.0
+    shoulder_window = [0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4
+
+    shoulder_charge = DemandCharge(rate=shoulder_rate,
+                                   window_array=shoulder_window,
+                                   min_demand=0.0,
+                                   reset_period=ResetPeriod.Day,
+                                   import_demand=True)
+
+    demand_tariff = ImportDemandTariffObjective(component=cp1,
+                                                demand_charges=[shoulder_charge])
 
 
-Demand Tariffs
------------------
-Demand tariffs are composed of a set of demand charges. They are typically used on loads/energy consuming ports. Each demand charge specifies a time window over which it applies, a rate (in $/kW or equivalent for a different commodity), and a reset period.
+**Parameters**
 
-For example, a demand tariff could include a charge that applies at evening peak time (5pm - 8pm), at a rate of $0.5/kW, and resets every month. Using this tariff, the demand would be calculated every day between 5pm and 8pm, and the maximum value over that period would be multiplied by the rate of $0.5/kW.
+Each demand charge has the following parameters:
 
-The optimiser will try to minimise the maximum demand in the appropriate time window during each reset period.
+* ``window_array`` (:math:`w`): the time window when the charge applies
+* ``rate`` (:math:`r`): the rate (in $/kW or equivalent for a different commodity)
+* ``min_demand`` (:math:`d^\text{min}`): the minimum demand
+* ``reset_period`` (:math:`f`): the reset period frequency (how often the calculation resets)
+* ``import_demand``: parameter for controlling whether the charge applies to imports or exports
+
+
+The objective penalises the maximum demand (either import or export) in the corresponding time window during each reset period.
+
+**Variables**
+
+:math:`p^+`, positive port component (imports)
+
+:math:`p^-`, negative port component (exports)
+
+Each demand charge has the following variables, which are indexed by the reset period :math:`f`
+
+:math:`d_f`, max demand value
+
+
+**Constraints**
+
+For each demand charge and each reset period:
+
+If ``import_demand`` is ``True``:
+
+:math:`d_f \geq (p^+ - d^\text{min}) \cdot w`
+
+If ``import_demand`` is ``False``:
+
+:math:`d_f \leq (p^- - d^\text{min}) \cdot w`
+
+**Objective expression**
+
+If the demand tariff has :math:`n` demand charges, then the total objective is:
+
+:math:`O = \sum_{i=0}^n x_i`
+
+Where :math:`x` is the total cost of each demand charge, and for each demand charge, if ``import_demand`` is ``True``:
+
+:math:`x = \sum_{j=0}^{f} d_j \cdot r`
+
+else if ``import_demand`` is ``False``:
+
+:math:`x = \sum_{j=0}^{f} d_j \cdot r \cdot -1`
+
+
 
 Other Objectives
 -----------------
