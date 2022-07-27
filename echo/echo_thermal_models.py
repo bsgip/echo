@@ -475,7 +475,7 @@ class GasBoilerFixedCOP(InputOutputNode):
                 weighted_inputs = p_in[p, t] * self.startup_cop
                 weighted_outputs = 0
             else:
-                weighted_inputs = (p_in[p, t] * self.startup_cop + p_in[p, t - 1] * (1 - self.startup_cop)) * self.cop
+                weighted_inputs = p_in[p, t] * self.startup_cop + p_in[p, t - 1] * (self.cop - self.startup_cop)
                 # todo decide whether to include past outputs in rule
                 weighted_outputs = p_out[p, t - 1] * -0.0
             return p_out[p, t] == (weighted_inputs + weighted_outputs) * -1
