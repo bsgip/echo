@@ -767,7 +767,7 @@ def extract_site_results(optimiser, site, node_uid_dict):
         ev['SOC'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].soc_value, 0)
         ev['delta'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].port_name, 0)
         ev['trip_infeasibility'] = optimiser.values(site.node_obj[node_uid_dict[ev_name]].ports['ev'].trip_slack, 0)
-        ev['charge_status'] = 'success' if all(ev['trip_infeasibility'] == 0) else 'infeasible trips'
+        ev['charge_status'] = 'success' if np.max(ev['trip_infeasibility']) <= 1e-6 else 'infeasible trips'
 
         evs.append(ev)
 
