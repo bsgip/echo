@@ -969,7 +969,7 @@ class Storage(Port):
 
     def initialise_port(self, model):
         super(Storage, self).initialise_port(model)
-        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0,
+        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=self.initial_state_of_charge,
                                               bounds=(self.min_soc, self.max_capacity)))  # Actual SOC
 
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
