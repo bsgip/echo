@@ -534,11 +534,16 @@ class Storage(Port):
 
         def soc_conservative_rule(model, p, t): # a rule for enforcing conservativness while plugged in
             if self.available[t]:
-                return getattr(model, self.soc_value)[p,t] + getattr(model, self.cons_slack)[p,t] - self.soc_conserv >= - model.bigM * (getattr(model, self.is_pos)[p, t])
+                return getattr(model, self.soc_value)[p,t] + getattr(model, self.cons_slack)[p,t] - self.soc_conserv[t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
             else:
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
+            if not hasattr(self.soc_conserv, "__len__"):
+                self.soc_conserv = [self.soc_conserv] * len(model.Time)
+            if len(self.soc_conserv)==1:
+                self.soc_conserv = [self.soc_conserv[0]] * len(model.Time)
+            assert len(self.soc_conserv) == len(model.Time), "soc_conserv must be scalar or array of same length as model time"
             assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
             assert self.available is not None, 'soc_conserve requires available'
             con_name = 'cons_soc' + self.port_name
