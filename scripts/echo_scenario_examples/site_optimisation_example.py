@@ -117,7 +117,7 @@ EVs at a site are given by a list of dictionaries. Each dictionary defines a sin
 - name: name of the ev (each ev at a site should have a unique name, important for how results are appended)
 - available: a bool array of length time_steps with true when the EV is at the site and available to charge
 - usage: an array containing the power used (kW) during each interval when the EV is away on a trip (i.e. not available)
-- max_capacity: maximum capacity of the EV battery (h)
+- max_capacity: maximum capacity of the EV battery (kWh)
 - depth_of_discharge_limit: percentage minimum charge allowed (0-100)
 - charging_power_limit: max charging power from the grid  (kW)
 - dicharging_power_limit: maximum rate of discharge back to the grid (kW)
@@ -127,7 +127,7 @@ EVs at a site are given by a list of dictionaries. Each dictionary defines a sin
 - charge_mode: (optional, default=V2G) choose between V0G, V1G, V2G. If V1G then the discharge power limit should be 0
 - tod_charging: (optional parameter for V0G charge_mode), this implements a time of day charging protacol. It is a bool array of length time_steps with True at times the ev is permitted to charge.
 - soc_conserv: (optional parameter for V1G/V2G) state of charge that a conservative user would like the battery to be above while plugged in (kWh).
-- soc_conserv_cost: (optional parameter needed if conserv_soc is used) perceived cost (dolalrs per kwh) for going below the conservative soc limit (not this is not an actual cost incurred by user).
+- soc_conserv_cost: (optional parameter needed if conserv_soc is used) perceived cost (dollars per kwh) for going below the conservative soc limit (not this is not an actual cost incurred by user).
 
 """
 
@@ -248,3 +248,8 @@ processing_errors = netset.optimise_network_set()
 This dictionary contains all results
 """
 results = netset.results[0]
+
+ev = results['ev1']
+import matplotlib.pyplot as plt
+plt.plot(ev["vehicle_soc"])
+plt.show()
