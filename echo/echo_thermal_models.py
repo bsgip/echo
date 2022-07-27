@@ -242,18 +242,20 @@ class ThermalPort(FlexPort):
 class FlexHeatSource(ThermalPort):
     flows = Flows.Export
 
+class FlexCoolingSource(ThermalPort):
+    flows = Flows.Import
 
 class FlexHeatSink(ThermalPort):
     flows = Flows.Import
 
-
-class FlexCoolingSource(ThermalPort):
-    flows = Flows.Import
-
-
 class FlexCoolingSink(ThermalPort):
     flows = Flows.Export
 
+class HeatSource(Source):
+    units = Units.KWT
+
+class HeatSink(Sink):
+    units = Units.KWT
 
 class FixedThermalPort(FixedPort):
     """ Fixed thermal port, +ve if importing heat, -ve if exporting heat."""
@@ -451,10 +453,10 @@ class GasBoilerFixedCOP(InputOutputNode):
     cop: NonNegativeFloat
     input_port_unit = Units.JPS
     output_port_unit = Units.KWT
-    startup_eta: NonNegativeFloat  # efficiency in startup period
+    startup_cop: NonNegativeFloat  # efficiency in startup period
 
-    check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
-    set_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_eta)
+    check_cop = root_validator(allow_reuse=True)(validate_startup_efficiency)
+    set_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -470,10 +472,10 @@ class GasBoilerFixedCOP(InputOutputNode):
             p_in = getattr(model, self.ports['input'].port_name)
             p_out = getattr(model, self.ports['output'].port_name)
             if p == 0 and t == 0:
-                weighted_inputs = p_in[p, t] * self.startup_eta
+                weighted_inputs = p_in[p, t] * self.startup_cop
                 weighted_outputs = 0
             else:
-                weighted_inputs = (p_in[p, t] * self.startup_eta + p_in[p, t - 1] * (1 - self.startup_eta)) * self.cop
+                weighted_inputs = (p_in[p, t] * self.startup_cop + p_in[p, t - 1] * (1 - self.startup_cop)) * self.cop
                 # todo decide whether to include past outputs in rule
                 weighted_outputs = p_out[p, t - 1] * -0.0
             return p_out[p, t] == (weighted_inputs + weighted_outputs) * -1
@@ -499,7 +501,7 @@ class TempControlledBoiler(InputOutputNode):
     return_temp_bounds: tuple = (50, 80)
     deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
     cop: float  # coefficient of performance, which determines how much of the input energy is delivered as heating energy
-    startup_eta: Optional[float]
+    startup_cop: Optional[float]
 
     # pyomo vars
     is_on: Optional[str]
@@ -507,7 +509,7 @@ class TempControlledBoiler(InputOutputNode):
     exit_t: Optional[str]
 
     check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
-    set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_eta)
+    set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)
 
     def __init__(self, **data):
         super().__init__(**data)

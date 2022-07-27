@@ -1153,10 +1153,12 @@ class OffOrConstrainedPort(FlexPort):
 
     bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
 
+    @property
+    def active(self):
+        return 'active_' + self.port_name
+
     def initialise_port(self, model):
         super(OffOrConstrainedPort, self).initialise_port(model)
-        # Define an on/off variable
-        self.active = 'active_' + self.port_name
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
@@ -1448,22 +1450,23 @@ class CarbonPort(FlexPort):
     units = Units.CO2
 
 
-class CarbonSource(FlexSource):
+class CarbonSource(CarbonPort):
     """ A variable source of CO2 """
     flows = Flows.Export
 
 
-class CarbonSink(FlexSink):
+class CarbonSink(CarbonPort):
     """ A variable sink of CO2 """
     flows = Flows.Import
 
 
 class CarbonAggregation(Node):
     """ This node has an additional variable, 'total', which equals the sum of all ports defined on the node."""
+    node_rule = NodeRule.Custom
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.total = 'total_CO2_' + self.node_name
+    @property
+    def total(self):
+        return 'total_CO2_' + self.node_name
 
     def verify_node(self):
         super(CarbonAggregation, self).verify_node()

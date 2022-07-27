@@ -74,15 +74,13 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])
+    system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site1.ports['load'], l1)
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
 
-    bess_edge1 = Edge(vertices=[site1.ports['bess'], b1])
-    load_edge1 = Edge(vertices=[site1.ports['load'], l1])
-    grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
-    system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
-
-    demand_tariff = ImportDemandTariffObjective(component=cp1,
-                                          demand_charges=[DemandCharge(rate=1.0, window_array=dc_window, min_demand=minimum_demand)])
+    demand_tariff = DemandTariffObjective(component=cp1,
+                                          demand_charges=[ImportDemandCharge(rate=1.0, window_array=dc_window, min_demand=minimum_demand)])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
     objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -148,20 +146,18 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load1.ports['demand'] = l1
 
-    bess_edge1 = Edge(vertices=[site1.ports['bess'], b1])
-    load_edge1 = Edge(vertices=[site1.ports['load'], l1])
-    pv_edge = Edge(vertices=[pv1, site1.ports['pv']])
-    grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
-
     system.add_node_obj([grid, battery1, site1, solar, load1])
-    system.add_edge_obj([bess_edge1, load_edge1, pv_edge, grid_edge])
+    system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site1.ports['load'], l1)
+    system.connect_ports_and_create_edge(pv1, site1.ports['pv'])
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
 
     import_tariff = ImportTariff(component=cp1,
                                  tariff_array=[1.0] * 24 + [1.05] * 24,
                                  expansion_periods=expansion_periods)
 
-    demand_tariff = ImportDemandTariffObjective(component=cp1,
-                                          demand_charges=[DemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)])
+    demand_tariff = DemandTariffObjective(component=cp1,
+                                          demand_charges=[ImportDemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.1)
 
@@ -223,18 +219,15 @@ def test_system_path_flows_adjust_to_path_tariffs():
     l1.add_demand_profile_from_array([demand]*time_periods, expansion_periods)
     load1.ports['demand'] = l1
 
-    site1 = ElectricalNode()
+    site1 = TellegenNode()
     site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
-    site1.node_rule = NodeRule.Tellegen
     cp1 = site1.ports['cp']
 
     system.add_node_obj([grid, battery1, load1, site1])
 
-    bess_edge1 = Edge(vertices=[site1.ports['bess'], b1])
-    load_edge1 = Edge(vertices=[site1.ports['load'], l1])
-    grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
-
-    system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
+    system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site1.ports['load'], l1)
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
 
     system.create_path_objects(sources=[grid, battery1, load1], sinks=[grid, battery1, load1])
 
@@ -293,9 +286,8 @@ def test_path_flows_respect_port_constraints():
     pv1.export_constraint_value = 0
     solar.ports['solar'] = pv1
 
-    site = ElectricalNode()
+    site = TellegenNode()
     site.add_electrical_ports_from_list(['cp', 'load', 'bess', 'pv'])
-    site.node_rule = NodeRule.Tellegen
     cp1 = site.ports['cp']
 
     load = Node()
@@ -303,13 +295,13 @@ def test_path_flows_respect_port_constraints():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load.ports['demand'] = l1
 
-    bess_edge1 = Edge(vertices=[site.ports['bess'], b1])
-    load_edge1 = Edge(vertices=[site.ports['load'], l1])
-    pv_edge = Edge(vertices=[pv1, site.ports['pv']])
-    grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
 
     system.add_node_obj([grid, battery, site, solar, load])
-    system.add_edge_obj([bess_edge1, load_edge1, pv_edge, grid_edge])
+    system.connect_ports_and_create_edge(site.ports['bess'], b1)
+    system.connect_ports_and_create_edge(site.ports['load'], l1)
+    system.connect_ports_and_create_edge(pv1, site.ports['pv'])
+    system.connect_ports_and_create_edge(cp1, grid.ports['grid'])
+
 
     system.create_path_objects(sources=[grid, battery, solar, load], sinks=[grid, battery, solar, load])
 
@@ -372,11 +364,11 @@ def test_demand_tariff_reset_periods():
     tariff_array_day = [0]*12 + [1]*12 + [0]*12 + [1]*12
 
     reset_periods = [day_periods] * num_days
-    import_charge = DemandCharge(rate=1.0,
+    import_charge = ImportDemandCharge(rate=1.0,
                                  reset_periods=reset_periods,
                                  window_array=tariff_array_day * num_days)
 
-    dt = ImportDemandTariffObjective(component=l1,
+    dt = DemandTariffObjective(component=l1,
                                      demand_charges=[import_charge])
 
     objective_set = ObjectiveSet(objective_list=[dt])

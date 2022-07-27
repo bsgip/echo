@@ -497,7 +497,7 @@ class DemandCharge(echoBaseModel):
     min_demand: float = 0.0
     window_array: Optional[Union[ArrayType, List]]
     window_object: Optional[Window] = None
-    reset_periods: Optional[Union[ArrayType, List]] = None
+    reset_periods: Optional[Union[ArrayType, List]]
     import_demand: bool = False
     export_demand: bool = False
 
@@ -552,7 +552,7 @@ class DemandCharge(echoBaseModel):
         self.reset_index = en.RangeSet(0, self.num_reset_periods - 1)
 
     def _process_window_array(self):
-        if self.reset_periods:
+        if self.reset_periods is not None:
             assert sum(self.reset_periods) == len(self.window_array), \
                 'Total reset period lengths must equal window array length.'
             self.num_reset_periods = len(self.reset_periods)
