@@ -8,14 +8,15 @@ Configuration classes
 class Units(object):
     """ The units in which the optimisation is undertaken. """
 
-    NA = 0  # Used for initialisation but optimisation will fail if units not set prior to execution.
-    KW = 1  # Instantaneous electrical power
-    CO2 = 2  # Instantaneous CO2e emissions (in kg)
-    KWT = 3  # Instantaneous thermal power
-    JPS = 4  # Joules per second
-    KWh = 5  # kWh
-    kVA = 6  # kVA - apparent power
-    kVAR = 7  # reactive power
+    NA = 0      # Used for initialisation but optimisation will fail if units not set prior to execution.
+    KW = 1      # Instantaneous electrical power
+    CO2 = 2     # Instantaneous CO2e emissions (in kg)
+    KWT = 3     # Instantaneous thermal power
+    JPS = 4     # Joules per second
+    KWh = 5     # kWh
+    kVA = 6     # kVA - apparent power
+    kVAR = 7    # reactive power
+    LPS = 8     # diesel/petrol in Litres/second
 
 
 class Flows(object):

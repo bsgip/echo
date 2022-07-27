@@ -1944,3 +1944,49 @@ class NewEV(Node):
                               expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
+
+class InputOutputNode(Node):
+    """
+    An input-output node has one input port and one output port.
+    A custom transformation can be defined between input and output.
+    """
+    input_port_unit: int
+    output_port_unit: int
+    # Optional parameters for controlling input/output port flows
+    max_output: Optional[float]  # output might be neg or pos, leave it open
+    min_output: Optional[float]
+    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
+    min_input: Optional[NonNegativeFloat]
+    node_rule = NodeRule.Custom
+
+class DieselGenerator(InputOutputNode):
+    """
+    A diesel generator node. Converts diesel into electricity
+    """
+    input_port_unit = Units.LPS
+    output_port_unit = Units.KW
+    cop: NonNegativeFloat = 0.4 * 3600           # litres per second
+    startup_efficiency: NonNegativeFloat = 0.5   # ratio of efficiency in startup and shutdown period
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        # add an input and output node, and create appropraite transformations
+        self.ports["input"] = OffOrConstrainedPort(upper_bound=self.max_input,
+                                                   lower_bound=self.min_input,
+                                                   units=self.input_port_unit)
+        self.ports["output"] = FlexPort(units=self.output_port_unit)
+
+    def apply_node_constraints(self, model):
+        super(DieselGenerator, self).apply_node_constraints(model)
+
+        def node_constraint(model, p, t):
+            p_in = getattr(model, self.ports['input'].port_name)
+            p_out = getattr(model, self.ports['output'].port_name)
+
+            if (p == 0) and (t == 0):
+                out = p_in[p, t] * self.startup_efficiency * self.cop
+            else:
+                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t -1] *(1-self.startup_efficiency) )* self.cop
+            return p_out[p, t] == - out
+
+        setattr(model, 'node_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))

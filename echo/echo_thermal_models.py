@@ -10,22 +10,6 @@ from echo.echo_models import *
 
 """
 
-
-class InputOutputNode(Node):
-    """
-    An input-output node has one input port and one output port.
-    A custom transformation can be defined between input and output.
-    """
-    input_port_unit: int
-    output_port_unit: int
-    # Optional parameters for controlling input/output port flows
-    max_output: Optional[float]  # output might be neg or pos, leave it open
-    min_output: Optional[float]
-    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
-    min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
-
-
 class TimeVaryingPiecewiseIONode(InputOutputNode):
     """
     Node with an input and output port. The relationship between input and output is defined at each time
@@ -446,7 +430,6 @@ class FixedGasPort(GasPort):
         super(FixedGasPort, self).__init__()
         self.opt_type = OptimisationType.Parameter
 
-
 class GasBoilerFixedCOP(InputOutputNode):
     """
     A gas boiler converts gas to heat at a fixed coefficient of performance (COP) where COP = output/input."""
@@ -580,3 +563,4 @@ class TimeDelayNode(InputOutputNode):
 
         con_name = 'time_delay_con_' + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
+
