@@ -1961,7 +1961,8 @@ class InputOutputNode(Node):
 
 class DieselGenerator(InputOutputNode):
     """
-    A diesel generator node. Converts diesel into electricity
+    A diesel generator node. Converts diesel into electricity at a fixed rate of cop which is in units of
+    kW/liters per second
     """
     input_port_unit = Units.LPS
     output_port_unit = Units.KW
