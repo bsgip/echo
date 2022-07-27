@@ -975,7 +975,7 @@ class Storage(Port):
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
                 return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv >= 0
+                    p, t] - self.soc_conserv >= - model.bigM * (getattr(model, self.is_pos)[p, t])
             else:
                 return en.Constraint.Skip
 
@@ -984,6 +984,8 @@ class Storage(Port):
             assert self.available is not None, 'soc_conserve requires available'
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            if not hasattr(model, self.is_pos):
+                self.constrain_pos_neg(model)
             setattr(model, f"cons_soc_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
 
@@ -1719,7 +1721,7 @@ class MobileStorage(NewStorage):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[float, None] = None
+    soc_conserv: Union[ArrayType,list,float, None] = None
     soc_conserv_cost: Union[float, None] = None
     available: Union[ArrayType, list, None] = None
 
@@ -1751,13 +1753,20 @@ class MobileStorage(NewStorage):
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
                 return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv >= 0
+                    p, t] - self.soc_conserv[t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
             else:
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
+            if not hasattr(self.soc_conserv, "__len__"):
+                self.soc_conserv = [self.soc_conserv] * len(self.available)
+            if len(self.soc_conserv)==1:
+                self.soc_conserv = [self.soc_conserv[0]] * len(self.available)
+            assert len(self.soc_conserv)==len(self.available), "soc_conserv must be scalar or have same length as 'available"
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            if not hasattr(model, self.is_pos):
+                self.constrain_pos_neg(model)
             setattr(model, f"cons_soc_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
 
