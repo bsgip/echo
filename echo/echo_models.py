@@ -283,7 +283,7 @@ class Port(BaseModel):
     units: int = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = 0.
     opt_type: int = OptimisationType.NA
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     port_name: Optional[str] = None
     flows: int = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
@@ -302,34 +302,42 @@ class Port(BaseModel):
     @property
     def pos(self):
         return positive_variable_component + self.port_name
+
     @property
     def neg(self):
         return negative_variable_component + self.port_name
+
     @property
     def is_pos(self):
         return f"is_pos_{self.port_name}"
+
     @property
     def import_con_val(self):
         return f"import_con_val_{self.port_name}"
+
     @property
     def export_con_val(self):
         return f"export_con_val_{self.port_name}"
+
     @property
     def import_slack(self):
         return f"import_slack_{self.port_name}"
+
     @property
     def import_slack_max(self):
         return f"import_slack_max_{self.port_name}"
+
     @property
     def export_slack(self):
         return f"export_slack_{self.port_name}"
+
     @property
     def export_slack_max(self):
         return f"export_slack_max_{self.port_name}"
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.port_name is None: # if no name is provided, give it a default name using the uid
+        if self.port_name is None:  # if no name is provided, give it a default name using the uid
             self.port_name = 'port_' + str(self.uid)
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
@@ -742,7 +750,6 @@ class Edge(BaseModel):
         con_name = 'edge_con_' + port1.port_name + '_' + port2.port_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=edge_constraint_rule))
 
-
     def get_max_flow_along_edge(self, forwards: bool = True):
         max_flow = None
         if forwards is True:
@@ -815,11 +822,15 @@ class Path(BaseModel):
     """ A path is a sequence of distinct vertices (nodes). """
     edge_ports: List[tuple] = []  # list of edge name tuples
     vertices: list  # list of node names
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     path_name: Optional[str] = None
-    units = Units.KW
+    units: Units = Units.KW
     regularise: bool = False
     objective: Optional[Any] = 0
+
+    @property
+    def flow_value(self):
+        return 'flow_value_' + self.path_name
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -831,7 +842,6 @@ class Path(BaseModel):
         super().__init__(**data)
         if self.path_name is None:
             self.path_name = 'path_' + str(self.uid)
-        self.flow_value = 'flow_value_' + self.path_name
 
     def add_vertices(self, vertex_list):
         if type(vertex_list) is not list:
@@ -952,12 +962,15 @@ class Storage(Port):
     @property
     def soc_value(self):
         return 'storage_soc_' + self.port_name
+
     @property
     def cons_slack(self):
         return 'con_slack' + self.port_name
+
     @property
     def trip_slack(self):
         return 'trip_slack_' + self.port_name
+
     @property
     def optimised_capacity(self):
         return 'optimised_storage_capacity_' + self.port_name
@@ -1622,7 +1635,7 @@ class NewStorage(Port):
     regularise: bool = False
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
-    
+
     @property
     def soc_value(self):
         return 'storage_soc_' + self.port_name
@@ -1630,7 +1643,7 @@ class NewStorage(Port):
     @property
     def optimised_capacity(self):
         return 'optimised_storage_capacity_' + self.port_name
-    
+
     @property
     def soc_constraint(self):
         return 'soc_cons_' + self.port_name
@@ -1713,21 +1726,24 @@ class NewStorage(Port):
 
         self.objective += total
 
+
 class NewElectricalStorage(NewStorage):
     units = Units.KW
+
 
 class MobileStorage(NewStorage):
     """ New Storage + EV attributes"""
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayType,list,float, None] = None
+    soc_conserv: Union[ArrayType, list, float, None] = None
     soc_conserv_cost: Union[float, None] = None
     available: Union[ArrayType, list, None] = None
 
     @property
     def cons_slack(self):
         return 'con_slack' + self.port_name
+
     @property
     def trip_slack(self):
         return 'trip_slack_' + self.port_name
@@ -1760,9 +1776,10 @@ class MobileStorage(NewStorage):
         if self.soc_conserv is not None:
             if not hasattr(self.soc_conserv, "__len__"):
                 self.soc_conserv = [self.soc_conserv] * len(self.available)
-            if len(self.soc_conserv)==1:
+            if len(self.soc_conserv) == 1:
                 self.soc_conserv = [self.soc_conserv[0]] * len(self.available)
-            assert len(self.soc_conserv)==len(self.available), "soc_conserv must be scalar or have same length as 'available"
+            assert len(self.soc_conserv) == len(
+                self.available), "soc_conserv must be scalar or have same length as 'available"
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             if not hasattr(model, self.is_pos):
@@ -1782,7 +1799,7 @@ class MobileStorage(NewStorage):
                 return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
                        neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
             elif t == 0:
-                return soc[p, t] == soc[p-1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                return soc[p, t] == soc[p - 1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
                        neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
             else:
                 return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
@@ -1792,7 +1809,7 @@ class MobileStorage(NewStorage):
             if p == 0 and t == 0:
                 return soc[p, t] == self.initial_state_of_charge + power[p, t] * kw_to_kWh + slack[p, t]
             elif t == 0:
-                return soc[p, t] == soc[p, t - 1] + power[p-1, max_t] * kw_to_kWh + slack[p, t]
+                return soc[p, t] == soc[p, t - 1] + power[p - 1, max_t] * kw_to_kWh + slack[p, t]
             else:
                 return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh + slack[p, t]
 
@@ -1804,7 +1821,8 @@ class MobileStorage(NewStorage):
             slack = getattr(model, self.trip_slack)  # get slack variable for writing constraints
             # Apply the modified soc constraint, which will overwrite the previously created one
             if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
-                setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
+                setattr(model, self.soc_constraint,
+                        en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
             else:
                 self.constrain_pos_neg(model)
                 pos = getattr(model, self.pos)  # get pos variable for writing constraints
@@ -1825,8 +1843,10 @@ class MobileStorage(NewStorage):
 
         self.objective += total
 
+
 class MobileElectricalStorage(MobileStorage):
     units = Units.KW
+
 
 class NewEV(Node):
     charge_mode: str = None
@@ -1845,7 +1865,7 @@ class NewEV(Node):
     initial_state_of_charge: float
 
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    trip_slack: bool = False  #todo call this 'enable_trip_slack' so we can give it straight to port
+    trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     soc_conserv: Union[float, None] = None
     soc_conserv_cost: Union[float, None] = None
@@ -1954,6 +1974,7 @@ class NewEV(Node):
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
+
 class InputOutputNode(Node):
     """
     An input-output node has one input port and one output port.
@@ -1968,6 +1989,7 @@ class InputOutputNode(Node):
     min_input: Optional[NonNegativeFloat]
     node_rule = NodeRule.Custom
 
+
 class DieselGenerator(InputOutputNode):
     """
     A diesel generator node. Converts diesel into electricity at a fixed rate of cop which is in units of
@@ -1975,8 +1997,8 @@ class DieselGenerator(InputOutputNode):
     """
     input_port_unit = Units.LPS
     output_port_unit = Units.KW
-    cop: NonNegativeFloat = 0.4 * 3600           # litres per second
-    startup_efficiency: NonNegativeFloat = 0.5   # ratio of efficiency in startup and shutdown period
+    cop: NonNegativeFloat = 0.4 * 3600  # litres per second
+    startup_efficiency: NonNegativeFloat = 0.5  # ratio of efficiency in startup and shutdown period
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -1996,7 +2018,7 @@ class DieselGenerator(InputOutputNode):
             if (p == 0) and (t == 0):
                 out = p_in[p, t] * self.startup_efficiency * self.cop
             else:
-                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t -1] *(1-self.startup_efficiency) )* self.cop
+                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t - 1] * (1 - self.startup_efficiency)) * self.cop
             return p_out[p, t] == - out
 
-        setattr(model, 'node_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+        setattr(model, 'node_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
