@@ -28,7 +28,7 @@ class BaseModel(PydanticBaseModel):
 
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
-        extra = 'ignore'  # To control whether we can create new attributes after instantiation.
+        extra = 'forbid'  # To control whether we can create new attributes after instantiation.
 
 
 class OptimisationGraph(Graph):

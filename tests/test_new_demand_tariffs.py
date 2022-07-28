@@ -82,7 +82,7 @@ def test_system_export_demand_tariff():
     gen.ports['gen'] = g1
 
     system.add_node_obj([grid, gen])
-    system.connect_ports_and_create_edge(l1, grid.ports['grid'])
+    system.connect_ports_and_create_edge(g1, grid.ports['grid'])
 
     dc_window = [1] * 24 + [0] * 24
     minimum_demand = 0.0

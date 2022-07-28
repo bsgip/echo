@@ -59,8 +59,9 @@ peak_window_new = Window(
 
 peak_charge = ImportDemandCharge(name='peak',
                                  rate=10.0,
-                                 window_object=peak_window_new,
-                                 min_demand=0.0)
+                                 window_array=peak_window_new.to_bool_periods(profile),
+                                 min_demand=0.0,
+                                 reset_periods=peak_window_new.get_reset_period_array(profile))
 
 demand_tariff = DemandTariffObjective(component=cp1,
                                       demand_charges=[peak_charge])

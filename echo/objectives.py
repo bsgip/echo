@@ -5,7 +5,7 @@ from typing import Optional, Union, List, TypeVar
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Field
+from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Field, root_validator, NonPositiveFloat
 
 from echo.echo_models import Port, Path, Storage
 from echo.echo_models import BaseModel as echoBaseModel
@@ -429,9 +429,9 @@ class TimePeriod(echoBaseModel):
 
 
 class Window(echoBaseModel):
-    """ Class for specifying window over which a tariff is calculated"""
+    """ Class for specifying window over which a tariff is calculated using datetimes"""
     time_periods: List[TimePeriod]
-    reset_periods: Optional[ResetPeriod] = ResetPeriod.year
+    reset_periods: Optional[ResetPeriod] = None
 
     @validator('time_periods')
     def non_overlapping_periods(cls, v):
@@ -450,8 +450,9 @@ class Window(echoBaseModel):
         return time_period_stack.any(axis=1).astype(int)
 
     def get_reset_period_array(self, df: pd.DataFrame) -> list:
-        """ Returns an array where each entry is the number of time steps within which the demand charge is calculated. """
-        interval_duration = (df.index[1] - df.index[0]).seconds // 60  # interval duration in minutes
+        """ Returns an array where each value is the number of time intervals within which the demand charge is calculated. """
+        interval_duration = (df.index[1] - df.index[0]).seconds // 60  # get the interval duration in minutes
+        total_intervals = len(df)
 
         def _find_rollover(df, interval_duration):
             """ Finds when there is a rollover for a specified time period (year, month), and calculates the number of intervals in each rollover period"""
@@ -472,7 +473,9 @@ class Window(echoBaseModel):
                 return _reset_periods
 
             reset_periods = []
-            if self.reset_periods == ResetPeriod.day:
+            if self.reset_periods is None:
+                reset_periods = [total_intervals]
+            elif self.reset_periods == ResetPeriod.day:
                 assert interval_duration <= 60 * 24, 'Reset period cannot be a day if interval duration is greater than a day.'
                 reset_periods = perform_rollover_calc(np.diff(df.index.day))
             elif self.reset_periods == ResetPeriod.week:
@@ -495,31 +498,48 @@ class DemandCharge(echoBaseModel):
     name: Optional[str] = None
     rate: NonNegativeFloat
     min_demand: float = 0.0
-    window_array: Optional[Union[ArrayType, List]]
-    window_object: Optional[Window] = None
+    window_array: Union[ArrayType, List]
     reset_periods: Optional[Union[ArrayType, List]]
     import_demand: bool = False
     export_demand: bool = False
 
-    # pyomo var/param names
-    window_active: Optional[str]
     num_reset_periods: Optional[int]
     reset_index: Optional[RangeSet]  # index for separating different reset periods
-    max_demand_val: Optional[str]
 
     @property
     def max_demand_val(self):
         return 'max_demand_' + self.name
 
+    @property
+    def window_active(self):
+        return 'window_active_' + self.name
+
+    @root_validator
+    def check_reset_periods(cls, values):
+        rp = values.get('reset_periods')
+        window_array = values.get('window_array')
+        if rp is not None:
+            assert sum(rp) == len(window_array), \
+                'Sum of reset period lengths ({}) is not equal to window array length ({}).'.format(sum(rp), len(window_array))
+            values['num_reset_periods'] = len(rp)
+        else:
+            values['reset_periods'] = [len(window_array)]
+            values['num_reset_periods'] = 1
+        values['reset_index'] = en.RangeSet(0, values.get('num_reset_periods') - 1)
+        return values
+
+    @root_validator
+    def check_import_or_export(cls, values):
+        assert (values.get('import_demand') is True) or (values.get('export_demand') is True), \
+            'Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,' \
+            ' set DemandCharge.import_demand or DemandCharge.export_demand as True before adding ' \
+            'the demand charge to the demand tariff objective.'
+        return values
+
     def __init__(self, **data):
         super().__init__(**data)
         if self.name is None:
             self.name = 'dc_' + str(self.uid)
-        self.window_active = 'window_active_' + self.name
-        if self.window_object is not None and self.window_array is not None:
-            raise ValueError('Only window array or window object should be set, not both.')
-        if self.window_object is None and self.window_array is None:
-            raise ValueError('Either window array or window object must be set.')
 
     @staticmethod
     def _get_active_periods(window_bool, reset_periods):  # todo only works for single expansion period
@@ -544,30 +564,10 @@ class DemandCharge(echoBaseModel):
                 initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
         return initial_window_val
 
-    def _process_window_object(self, df):
-        """ Converts window object to bool, updates reset periods"""
-        self.window_array = self.window_object.to_bool_periods(df)
-        self.reset_periods = self.window_object.get_reset_period_array(df)
-        self.num_reset_periods = len(self.reset_periods)
-        self.reset_index = en.RangeSet(0, self.num_reset_periods - 1)
-
-    def _process_window_array(self):
-        if self.reset_periods is not None:
-            assert sum(self.reset_periods) == len(self.window_array), \
-                'Total reset period lengths must equal window array length.'
-            self.num_reset_periods = len(self.reset_periods)
-        else:
-            self.reset_periods = [len(self.window_array)]
-            self.num_reset_periods = 1
-        self.reset_index = en.RangeSet(0, self.num_reset_periods - 1)
-
     def create_params(self, model, df):
-        if self.window_array is not None:
-            self._process_window_array()
-        if self.window_object is not None:
-            self._process_window_object(df)
 
         initial_val = self._get_active_periods(self.window_array, self.reset_periods)
+        # Initialise binary parameter for when the demand charge applies, indexed by Expansion, reset period, Time
         setattr(model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time,
                                                     initialize=initial_val, domain=en.Binary))
 
@@ -599,42 +599,32 @@ class DemandTariffObjective(Objective):
     def verify_objective(self, model, df):
 
         def verify_non_overlapping():
-            # Check that windows are not overlapping if there are multiple demand charges defined
+            # Check that windows are not overlapping if multiple demand charges defined
             prev_window = np.array([])
             prev_dc = None
             for dc in self.demand_charges:
-                if dc.window_array is not None:
-                    if prev_window.size > 0:
-                        comparison = np.array(prev_window) * np.array(dc.window_array)
-                        if sum(comparison) > 0:
-                            raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
-                        prev_window = np.array(prev_window) + np.array(dc.window_array)
-                    else:
-                        prev_dc = dc
-                        prev_window = np.array(dc.window_array)
+                if prev_window.size > 0:
+                    comparison = np.array(prev_window) * np.array(dc.window_array)
+                    if sum(comparison) > 0:
+                        raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
+                    prev_window = np.array(prev_window) + np.array(dc.window_array)
+                else:
+                    prev_dc = dc
+                    prev_window = np.array(dc.window_array)
 
         def verify_same_length_windows():
+            # Check that all windows have the same length, and that this length matches the number of model time intervals
             prev_length = None
             for dc in self.demand_charges:
-                if dc.window_array is not None:
-                    if prev_length is not None:
-                        assert len(dc.window_array) == prev_length, f"Demand charge windows are not all the same length"
-                        prev_length = len(dc.window_array)
-                    else:
-                        prev_length = len(dc.window_array)
-                    assert prev_length == model.number_of_intervals, f"Demand charge {dc} windows do not match optimiser time periods."
-
-
-        def verify_demand_charge_settings():
-            for dc in self.demand_charges:
-                assert (dc.import_demand is True) or (dc.export_demand is True), \
-                    'Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,' \
-                    ' set DemandCharge.import_demand or DemandCharge.export_demand as True before adding ' \
-                    'the demand charge to the demand tariff objective.'
+                if prev_length is not None:
+                    assert len(dc.window_array) == prev_length, f"Demand charge windows are not all the same length"
+                    prev_length = len(dc.window_array)
+                else:
+                    prev_length = len(dc.window_array)
+                assert prev_length == model.number_of_intervals, f"Demand charge {dc} windows do not match optimiser time periods."
 
         verify_non_overlapping()
         verify_same_length_windows()
-        verify_demand_charge_settings()
 
     def create_params(self, model, df):
         for dc in self.demand_charges:
@@ -676,10 +666,12 @@ class DemandTariffObjective(Objective):
 class ImportDemandCharge(DemandCharge):
     import_demand = True
     export_demand = False
-
+    min_demand: NonNegativeFloat
 
 class ExportDemandCharge(DemandCharge):
     import_demand = False
     export_demand = True
+    min_demand: NonPositiveFloat
+
 
 
