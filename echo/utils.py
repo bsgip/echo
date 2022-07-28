@@ -74,6 +74,13 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
                     i += 1
     return d
 
+# class PretendArray:
+#     def __init__(self, var):
+#         self.var = var
+#
+#     # initialisation check
+
+
 def fix_port_variable(model, var_name: str, new_values: ArrayType, expansion_periods=1):
     """
     Updates existing pyomo variable to have fixed values.

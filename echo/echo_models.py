@@ -1721,8 +1721,9 @@ class MobileStorage(NewStorage):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayType,list,float, None] = None
+    soc_conserv: Union[ArrayType,list,float, None, dict] = None
     soc_conserv_cost: Union[float, None] = None
+    # soc_conserve: scalarOrArray
     available: Union[ArrayType, list, None] = None
 
     @property
@@ -1758,11 +1759,7 @@ class MobileStorage(NewStorage):
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
-            if not hasattr(self.soc_conserv, "__len__"):
-                self.soc_conserv = [self.soc_conserv] * len(self.available)
-            if len(self.soc_conserv)==1:
-                self.soc_conserv = [self.soc_conserv[0]] * len(self.available)
-            assert len(self.soc_conserv)==len(self.available), "soc_conserv must be scalar or have same length as 'available"
+            self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             if not hasattr(model, self.is_pos):
@@ -1975,16 +1972,20 @@ class DieselGenerator(InputOutputNode):
     """
     input_port_unit = Units.LPS
     output_port_unit = Units.KW
-    cop: NonNegativeFloat = 0.4 * 3600           # litres per second
-    startup_efficiency: NonNegativeFloat = 0.5   # ratio of efficiency in startup and shutdown period
+    cop: NonNegativeFloat = 0.4 * 3600           # kW / litres per second
+    startup_efficiency: NonNegativeFloat = 0.5   # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
+    C02Intensity: NonNegativeFloat = 2.7        # emissions intensity kg per sec / litre per sec = kg/litre
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # add an input and output node, and create appropraite transformations
-        self.ports["input"] = OffOrConstrainedPort(upper_bound=self.max_input,
-                                                   lower_bound=self.min_input,
-                                                   units=self.input_port_unit)
-        self.ports["output"] = FlexPort(units=self.output_port_unit)
+        self.ports["output"] = OffOrConstrainedPort(upper_bound=self.min_output,
+                                                   lower_bound=self.max_output,
+                                                   units=self.output_port_unit)
+
+        self.ports["input"] = FlexSink(units=self.input_port_unit)     # the node is importing through this port
+        self.ports['co2'] = CarbonSource()
+        # todo: add some validators :-)
 
     def apply_node_constraints(self, model):
         super(DieselGenerator, self).apply_node_constraints(model)
@@ -1996,7 +1997,13 @@ class DieselGenerator(InputOutputNode):
             if (p == 0) and (t == 0):
                 out = p_in[p, t] * self.startup_efficiency * self.cop
             else:
-                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t -1] *(1-self.startup_efficiency) )* self.cop
+                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t -1] *(1-self.startup_efficiency)) * self.cop
             return p_out[p, t] == - out
 
+        def carbon_rule(model, p, t):
+            p_in = getattr(model, self.ports['input'].port_name)
+            c_out = getattr(model, self.ports['co2'].port_name)
+            return c_out[p, t] == - p_in[p, t]
+
         setattr(model, 'node_con_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+        setattr(model, 'node_con_co2_'+self.node_name, en.Constraint(model.Expansion, model.Time, rule=carbon_rule))
