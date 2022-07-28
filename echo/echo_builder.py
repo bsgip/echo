@@ -547,7 +547,7 @@ def create_ev(node_dict: dict, df: pd.DataFrame) -> em.Node:
     ev_dict['available'] = process_field(ev_dict['available'], df)
     ev_dict['usage'] = process_field(ev_dict['usage'], df)
     node = em.EV(node_name=node_dict['id'],
-                 cp_name=cp_port_name,
+                 connection_port_name=cp_port_name,
                  **ev_dict)  # pass all our params as kwargs
     return node
 
