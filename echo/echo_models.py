@@ -1502,7 +1502,6 @@ class EV(Node):
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
 
-
 class BoundedElectricalLoad(BoundedLoad):
     units = Units.KW
 
@@ -1667,14 +1666,7 @@ class FlexNodeWithEmissions(Node):
                                          emission_factor=emissions_factor)
 
 
-# New ports
-
-
-
-
-
-
-
+# Other nodes
 
 class InputOutputNode(Node):
     """
@@ -1723,3 +1715,24 @@ class DieselGenerator(InputOutputNode):
             return p_out[p, t] == - out
 
         setattr(model, 'node_con_' + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+
+
+class ThermalStorage(Storage):
+    # Should just need input and output heat, an internal bounded temp, external temp
+
+    # todo finish implementing
+    self_discharge: float = 0  # rate at which energy is lost from storage
+    units = Units.KWT
+    external_temp: ArrayType
+
+    @property
+    def internal_temp(self):
+        return 'internal_temp_' + self.port_name
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+
+    def initialise_port(self, model):
+        super(ThermalStorage, self).initialise_port(model)
+        # Create a variable for the internal temperature

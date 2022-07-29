@@ -246,25 +246,6 @@ class FixedThermalPort(FixedPort):
     units = Units.KWT
 
 
-class ThermalStorage(Storage):
-    # todo finish implementing
-    self_discharge: float = 0  # rate at which energy is lost from storage
-    units = Units.KWT
-    external_temp: ArrayType
-
-    # pyomo vars/params
-    internal_temp: Optional[str]
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.internal_temp = 'internal_temp_' + self.port_name
-
-    def initialise_port(self, model):
-        super(ThermalStorage, self).initialise_port(model)
-        # Create a variable for the internal temperature
-
-
-
 class HeatPump(Node):
     """
     A heat pump is input output node, where input is an electrical port, and either one or two output thermal ports.
