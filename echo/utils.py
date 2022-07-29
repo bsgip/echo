@@ -3,12 +3,80 @@ from echo.echo_validators import *
 from sklearn import linear_model
 import pandas as pd
 import pyomo.environ as en
+from collections.abc import Sequence
 
 def _to_values(profile, key):
     if isinstance(profile, dict):
         return profile[key]
     return dict(enumerate(profile[key].values))
 
+
+class ArrayWrap(Sequence):
+    def __init__(self, var):            # scalar, 1d list, 2d list,
+        self.var = var
+        if not hasattr(var, "__len__"):
+            self.get_func = self.get_scalar
+            self.is_scalar = True
+        elif (len(var)==1) and (not hasattr(var[0], "__len__")) :
+            self.get_func = self.get_scalar
+            self.is_scalar = True
+            self.var = var[0]
+        else:
+            self.get_func = self.get_dummy
+            self.is_scalar = False
+        self.time_periods = None
+        self.expansion_periods = None
+        self.tp_set = False
+
+        super().__init__()
+
+    def set_periods(self, expansion_periods, time_periods):
+        if not self.is_scalar:
+            self.time_periods = time_periods
+            self.expansion_periods = expansion_periods
+            self.tp_set = True
+            self.get_func = self.get_array
+            var_array = np.array(self.var).flatten()
+            if len(var_array) == time_periods:   # tile across expansion periods
+                self.var = np.vstack([var_array]*expansion_periods)
+            elif len(var_array) == time_periods*expansion_periods:
+                self.var = np.reshape(var_array, (expansion_periods, time_periods))
+            else:
+                raise Exception("must have shape of scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)")
+
+    def __getitem__(self, i):
+        return self.get_func(i)
+
+    def get_scalar(self, i):
+        return self.var
+
+    def get_dummy(self, i):
+        assert self.tp_set, "for non scalar values must set time and expansion periods of ArrayWrap"
+        return None
+
+    def get_array(self, i):
+        return self.var[i]
+    #
+    # def get_non_scalar(self, i):
+    #     if isinstance(i, tuple):
+    #         p = i[0], t=i[1]
+
+
+    def __len__(self):
+        return len(self.var)
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, ArrayWrap):
+            return v
+        if isinstance(v, (float, int, list, np.ndarray)):
+            return cls(v)
+        else:
+            raise TypeError('requires float, int, list or arraylike')
 
 def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or None) -> None:
     """
@@ -73,6 +141,13 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
                     d[(p, t)] = constraint[i]
                     i += 1
     return d
+
+# class PretendArray:
+#     def __init__(self, var):
+#         self.var = var
+#
+#     # initialisation check
+
 
 def fix_port_variable(model, var_name: str, new_values: ArrayType, expansion_periods=1):
     """
