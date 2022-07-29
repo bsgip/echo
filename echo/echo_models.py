@@ -1721,7 +1721,8 @@ class MobileStorage(NewStorage):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayType,list,float, None, dict] = None
+    # soc_conserv: Union[ArrayType,list,float, None, dict] = None
+    soc_conserv: Union[ArrayWrap, None] = None
     soc_conserv_cost: Union[float, None] = None
     # soc_conserve: scalarOrArray
     available: Union[ArrayType, list, None] = None
@@ -1754,12 +1755,13 @@ class MobileStorage(NewStorage):
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
                 return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv[t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
+                    p, t] - self.soc_conserv[p, t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
             else:
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
-            self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
+            self.soc_conserv.set_periods(len(model.Expansion),len(model.Time))
+            # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             if not hasattr(model, self.is_pos):
@@ -1844,7 +1846,7 @@ class NewEV(Node):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  #todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[float, None] = None
+    soc_conserv: Union[ArrayWrap, None] = None
     soc_conserv_cost: Union[float, None] = None
 
     V0G_delta: Optional[Union[ArrayType, list]]

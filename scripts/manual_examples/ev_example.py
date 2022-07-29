@@ -78,7 +78,7 @@ ev_v1g = EV(charge_mode='V1G',
 available = np.array([1] * 24 + [0] * 24)  # bool when at charger
 usage = np.array([0.0] * 24 + [2] * 24)  # kw average during use
 
-ev_v2g = EV(charge_mode='V2G',
+ev_v2g = NewEV(charge_mode='V2G',
             available=available,
             usage=usage,
             connection_port_name='cp',
@@ -88,9 +88,10 @@ ev_v2g = EV(charge_mode='V2G',
             discharging_power_limit=-1e4,
             charging_efficiency=1,
             discharging_efficiency=1,
-            initial_state_of_charge=40,
-            soc_conserv=None,
-            soc_conserv_cost=0.,
+            initial_state_of_charge=20,
+            soc_conserv=[30]*20 + [10]*28,
+            # soc_conserv=[30]*len(available),
+            soc_conserv_cost=1.,
             interval_duration=interval_duration,
             tod_charging=False,
             trip_slack=True)
@@ -132,6 +133,7 @@ plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value, 0))
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack, 0))
 plt.legend(['Usage', 'EV soc', 'infeasibility'])
 plt.xlim([0, 47])
+plt.show()
 
 ev_cp = ev_v1g
 
@@ -147,6 +149,7 @@ plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value, 0))
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack, 0))
 plt.legend(['Usage', 'EV soc', 'infeasibility'])
 plt.xlim([0, 47])
+plt.show()
 
 ev_cp = ev_v2g
 
@@ -162,3 +165,4 @@ plt.plot(optimiser.values(ev_cp.ports['vehicle'].soc_value, 0))
 plt.plot(optimiser.values(ev_cp.ports['vehicle'].trip_slack, 0))
 plt.legend(['Usage', 'EV soc', 'infeasibility'])
 plt.xlim([0, 47])
+plt.show()
