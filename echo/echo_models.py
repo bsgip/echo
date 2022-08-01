@@ -1060,173 +1060,6 @@ class Sink(Port):
         self.add_initial_value_from_array(array=sink_values, expansion_periods=expansion_periods)
 
 
-class Storage(Port):
-    """ Storage for a commodity. """
-    flows = Flows.Both
-    opt_type = OptimisationType.Variable
-    import_constraint = FlowConstraint.Fixed
-    export_constraint = FlowConstraint.Fixed
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    min_soc: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
-    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    enable_trip_slack: bool = False
-    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[float, None] = None
-    soc_conserv_cost: Union[float, None] = None
-    available: Union[ArrayType, list, None] = None
-
-    dod_check = root_validator(allow_reuse=True)(dod_checks)
-
-    @property
-    def soc_value(self):
-        return 'storage_soc_' + self.port_name
-    @property
-    def cons_slack(self):
-        return 'con_slack' + self.port_name
-    @property
-    def trip_slack(self):
-        return 'trip_slack_' + self.port_name
-    @property
-    def optimised_capacity(self):
-        return 'optimised_storage_capacity_' + self.port_name
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.import_constraint_value = self.charging_power_limit
-        self.export_constraint_value = self.discharging_power_limit
-
-    def initialise_port(self, model, profile):
-        super(Storage, self).initialise_port(model, profile)
-        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=self.initial_state_of_charge,
-                                              bounds=(self.min_soc, self.max_capacity)))  # Actual SOC
-
-        def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
-            if self.available[t]:
-                return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv >= - model.bigM * (getattr(model, self.is_pos)[p, t])
-            else:
-                return en.Constraint.Skip
-
-        if self.soc_conserv is not None:
-            assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
-            assert self.available is not None, 'soc_conserve requires available'
-            setattr(model, self.cons_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            if not hasattr(model, self.is_pos):
-                self.constrain_pos_neg(model)
-            setattr(model, f"cons_soc_{self.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
-
-        # def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
-        #     return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
-
-        if self.fixed_storage_capacity is False:
-            setattr(model, self.optimised_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
-        else:
-            setattr(model, self.optimised_capacity, en.Param(initialize=self.max_capacity, domain=en.NonNegativeReals))
-
-        def cap_limit(model, p, t):  # Ensure SOC is within max capacity
-            return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_capacity)
-
-        setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
-
-        # Apply charging constraints as bounds on port_name variable
-        set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
-
-        def SOC_rule(model, p, t):
-            if t == 0:
-                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
-
-            else:
-                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
-                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency
-
-        def SOC_rule_slack(model, p, t):
-            if t == 0:
-                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency + \
-                       getattr(model, self.trip_slack)[p, t]
-
-            else:
-                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
-                       getattr(model, self.pos)[p, t] * (model.interval_duration / 60) * self.charging_efficiency + \
-                       getattr(model, self.neg)[p, t] * (model.interval_duration / 60) / self.discharging_efficiency + \
-                       getattr(model, self.trip_slack)[p, t]
-
-        def SOC_rule_perfect_efficiency_slack(model, p, t):
-            if t == 0:
-                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60) \
-                       + getattr(model, self.trip_slack)[p, t]
-            else:
-                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
-                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60) + \
-                       getattr(model, self.trip_slack)[p, t]
-
-        def SOC_rule_perfect_efficiency(model, p, t):
-            if t == 0:
-                return getattr(model, self.soc_value)[p, t] == self.initial_state_of_charge + \
-                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
-            else:
-                return getattr(model, self.soc_value)[p, t] == getattr(model, self.soc_value)[p, t - 1] + \
-                       getattr(model, self.port_name)[p, t] * (model.interval_duration / 60)
-
-        if self.enable_trip_slack is True:
-            setattr(model, self.trip_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
-                setattr(model, f"soc_lim_trip_slack{self.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
-            else:
-                self.constrain_pos_neg(model)
-                setattr(model, f"soc_lim_trip_slack{self.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=SOC_rule_slack))
-        else:
-            if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
-                setattr(model, f"soc_lim_{self.port_name}",
-                        en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
-            else:
-                self.constrain_pos_neg(model)
-                setattr(model, f"soc_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
-
-    def add_objective(self, model):
-        super(Storage, self).add_objective(model)
-        total = 0
-
-        # To get unique solution
-        if self.regularise is True:
-            total += sum(
-                getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
-                getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
-                for p in model.Expansion for t in model.Time) * 0.0000001
-
-        if self.enable_trip_slack:
-            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
-
-        if self.soc_conserv is not None:
-            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                         model.Time) * self.soc_conserv_cost
-
-        if self.storage_capacity_cost is not None:
-            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
-
-        self.objective += total
-
-
 class Demand(Sink):
 
     def add_demand_profile(self, demand: dict):
@@ -1337,6 +1170,223 @@ class BoundedLoad(BoundedPort):
     def initialise_port(self, model, profile):
         super(BoundedLoad, self).initialise_port(model, profile)
 
+class Storage(Port):
+    """ Same as old storage but without all the EV attributes"""
+    flows = Flows.Both
+    opt_type = OptimisationType.Variable
+    import_constraint = FlowConstraint.Fixed
+    export_constraint = FlowConstraint.Fixed
+    max_capacity: float
+    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
+    min_soc: float = 0
+    charging_power_limit: float
+    discharging_power_limit: float
+    charging_efficiency: float = 1
+    discharging_efficiency: float = 1
+    initial_state_of_charge: float
+    fixed_storage_capacity: bool = True
+    storage_capacity_cost: Optional[PositiveFloat]
+    regularise: bool = False
+
+    dod_check = root_validator(allow_reuse=True)(dod_checks)
+
+    @property
+    def soc_value(self):
+        return 'storage_soc_' + self.port_name
+
+    @property
+    def optimised_capacity(self):
+        return 'optimised_storage_capacity_' + self.port_name
+
+    @property
+    def soc_constraint(self):
+        return 'soc_cons_' + self.port_name
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.import_constraint_value = self.charging_power_limit
+        self.export_constraint_value = self.discharging_power_limit
+
+    def initialise_port(self, model, profile):
+        super(Storage, self).initialise_port(model, profile)
+        self.create_storage_variables(model)
+        self.apply_soc_constraints(model)
+
+    def create_storage_variables(self, model):
+        # Create soc variable and bound it
+        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0,
+                                              bounds=(self.min_soc, self.max_capacity)))
+        # Apply charging constraints as bounds on port_name variable
+        set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
+
+        if self.fixed_storage_capacity is False:
+            setattr(model, self.optimised_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
+
+            def cap_limit(model, p, t):  # Ensure SOC is within max capacity
+                return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_capacity)
+
+            setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
+        else:
+            setattr(model, self.optimised_capacity, en.Param(initialize=self.max_capacity, domain=en.NonNegativeReals))
+
+    def apply_soc_constraints(self, model):
+        # Extract some variables to make constraints easier to write
+        max_t = len(model.Time)  # maximum time interval t
+        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
+        soc = getattr(model, self.soc_value)
+        power = getattr(model, self.port_name)
+
+        def SOC_rule(model, p, t):
+            if p == 0 and t == 0:
+                return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
+            elif t == 0:
+                return soc[p, t] == soc[p - 1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
+            else:
+                return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
+
+        def SOC_rule_perfect_efficiency(model, p, t):
+            if p == 0 and t == 0:
+                return soc[p, t] == self.initial_state_of_charge + power[p, t] * kw_to_kWh
+            elif t == 0:
+                return soc[p, t] == soc[p - 1, max_t] + power[p, t] * kw_to_kWh
+            else:
+                return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh
+
+        if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
+            setattr(model, self.soc_constraint,
+                    en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
+        else:
+            self.constrain_pos_neg(model)
+            pos = getattr(model, self.pos)  # get pos variable for writing constraints
+            neg = getattr(model, self.neg)  # get neg variable for writing constraints
+            setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
+
+    def add_objective(self, model):
+        super(Storage, self).add_objective(model)
+        total = 0
+
+        # To get unique solution
+        if self.regularise is True:
+            total += sum(
+                getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
+                getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
+                for p in model.Expansion for t in model.Time) * 0.0000001
+
+        if self.storage_capacity_cost is not None:
+            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
+
+        self.objective += total
+
+class MobileStorage(Storage):
+    """ New Storage + EV attributes"""
+    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
+    enable_trip_slack: bool = False
+    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
+    # soc_conserv: Union[ArrayType,list,float, None, dict] = None
+    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv_cost: Union[float, None] = None
+    # soc_conserve: scalarOrArray
+    available: Union[ArrayType, list, None] = None
+
+    @property
+    def cons_slack(self):
+        return 'con_slack' + self.port_name
+    @property
+    def trip_slack(self):
+        return 'trip_slack_' + self.port_name
+
+    @root_validator
+    def check_soc_conserv_has_cost(cls, values):
+        soc_conserv = values.get('soc_conserv')
+        soc_conserv_cost = values.get('soc_conserv_cost')
+        available = values.get('available')
+        if soc_conserv is not None:
+            assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
+            assert available is not None, 'soc_conserve requires available'
+        return values
+
+    def initialise_port(self, model, profile):
+        super(Storage, self).initialise_port(model, profile)
+        self.create_storage_variables(model)
+        self.apply_modified_soc_constraints(model)
+        self.apply_conserv_soc_constraints(model)
+
+    def apply_conserv_soc_constraints(self, model):
+
+        def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
+            if self.available[t]:
+                return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
+                    p, t] - self.soc_conserv[p, t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
+            else:
+                return en.Constraint.Skip
+
+        if self.soc_conserv is not None:
+            self.soc_conserv.set_periods(len(model.Expansion),len(model.Time))
+            # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
+            setattr(model, self.cons_slack,
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            if not hasattr(model, self.is_pos):
+                self.constrain_pos_neg(model)
+            setattr(model, f"cons_soc_{self.port_name}",
+                    en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
+
+    def apply_modified_soc_constraints(self, model):
+        # Get some variables to make constraints easier to write
+        max_t = len(model.Time)  # maximum time interval t
+        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
+        soc = getattr(model, self.soc_value)
+        power = getattr(model, self.port_name)
+
+        def SOC_rule_slack(model, p, t):
+            if p == 0 and t == 0:
+                return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
+            elif t == 0:
+                return soc[p, t] == soc[p-1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
+            else:
+                return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
+                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
+
+        def SOC_rule_perfect_efficiency_slack(model, p, t):
+            if p == 0 and t == 0:
+                return soc[p, t] == self.initial_state_of_charge + power[p, t] * kw_to_kWh + slack[p, t]
+            elif t == 0:
+                return soc[p, t] == soc[p, t - 1] + power[p-1, max_t] * kw_to_kWh + slack[p, t]
+            else:
+                return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh + slack[p, t]
+
+        if self.enable_trip_slack is True:
+            # Create a slack variable
+            setattr(model, self.trip_slack,
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+
+            slack = getattr(model, self.trip_slack)  # get slack variable for writing constraints
+            # Apply the modified soc constraint, which will overwrite the previously created one
+            if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
+                setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
+            else:
+                self.constrain_pos_neg(model)
+                pos = getattr(model, self.pos)  # get pos variable for writing constraints
+                neg = getattr(model, self.neg)  # get neg variable for writing constraints
+                setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_slack))
+
+    def add_objective(self, model):
+        super(MobileStorage, self).add_objective(model)
+        total = 0
+
+        if self.enable_trip_slack:
+            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
+
+        if self.soc_conserv is not None:
+            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * self.soc_conserv_cost
+
+        self.objective += total
 
 """
 
@@ -1370,74 +1420,11 @@ class ElectricalGeneration(Source):
             # Constrain solar gen to be within initial value (max value)
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
 
-
 class ElectricalStorage(Storage):
     units = Units.KW
 
-
-class ElectricalPort(FlexPort):
-    """ Flexible electrical port """
+class MobileElectricalStorage(MobileStorage):
     units = Units.KW
-
-
-class FixedElectricalPort(FixedPort):
-    """ An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
-    units = Units.KW
-
-
-class Inverter(Node):
-    """ An inverter is a node with one AC port and at least one DC port.
-    Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
-    max_import: Union[float, None]
-    max_export: Union[float, None]
-    dc_ac_efficiency: confloat(ge=0, le=1) = 1.0
-    ac_dc_efficiency: confloat(ge=0, le=1) = 1.0
-    dc_port_names: Optional[list] = []
-    ac_port_name: Optional[str] = None  # There should generally only be one ac port
-    node_rule = NodeRule.Custom
-
-    def add_dc_port(self, port_name):
-        p = ElectricalPort()
-        self.dc_port_names.append(port_name)
-        self.ports[port_name] = p
-
-    def add_ac_port(self, port_name):
-        if self.ac_port_name is not None:
-            raise ConfigurationError('AC port already specified for this inverter.')
-        else:
-            p = ElectricalPort()
-            p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
-            self.ac_port_name = port_name
-            self.ports[port_name] = p
-
-    def verify_node(self):
-        # Check that we have at least one ac and one dc port
-        assert self.ac_port_name is not None, 'Define at least one ac port on inverter.'
-        assert self.dc_port_names is not None, 'Define at least one dc port on inverter.'
-        # Check that all ports are either ac or dc
-        all_port_names = [x for x in self.ports.keys()]
-        named_ports = [self.ac_port_name] + self.dc_port_names
-        assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
-
-    def initialise_node(self, model, profile):
-        super(Inverter, self).initialise_node(model, profile)
-
-        ac_port = self.ports[self.ac_port_name]
-        # Split ac port into pos/neg, so we can apply the correct efficiencies
-        ac_port.constrain_pos_neg(model)
-
-        def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
-            dc_total = 0
-            for dc_port_name in self.dc_port_names:
-                dc_port = self.ports[dc_port_name]
-                dc_total += getattr(model, dc_port.port_name)[p, t]
-
-            return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
-                   getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == dc_total * -1
-
-        setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
-            model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
-
 
 class EV(Node):
     charge_mode: str = None
@@ -1456,10 +1443,11 @@ class EV(Node):
     initial_state_of_charge: float
 
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    trip_slack: bool = False
+    trip_slack: bool = False  #todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[float, None] = None
+    soc_conserv: Union[ArrayWrap, None] = None
     soc_conserv_cost: Union[float, None] = None
+
     V0G_delta: Optional[Union[ArrayType, list]]
     V0G_SOC: Optional[Union[ArrayType, list]]
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
@@ -1473,23 +1461,15 @@ class EV(Node):
                 raise ValueError('Usage requirement of {} exceeds battery discharge limit of {}.'.format(i,
                                                                                                          self.discharging_power_limit))
 
-        self.ports['vehicle'] = ElectricalStorage(**data)  # EV always has a storage port
+        self.ports['vehicle'] = MobileElectricalStorage(**data)  # EV always has a storage port
         self.ports['vehicle'].enable_trip_slack = self.trip_slack  # Apply trip slack
-        # Process any constraints on the storage port
-        if self.soc_conserv is not None:  # todo validator
-            assert self.soc_conserv_cost is not None, 'soc_conserv requires soc_conserve_cost'
-            self.ports['vehicle'].soc_conserv = self.soc_conserv  # kWh
-            self.ports['vehicle'].soc_conserv_cost = self.soc_conserv_cost  # dollars per kwh
-            self.ports['vehicle'].available = self.available
 
         self.ports['usage'] = ElectricalDemand()  # EV always has a fixed trip port
         self.ports['usage'].add_demand_profile_from_array(self.usage, expansion_periods=1)
         # Customise connection point port type based on the charge mode
         if self.charge_mode == EVChargeMode.V0G:
-            if self.trip_slack is False:
-                print('Trip slack must be enabled for V0G charge mode. Enabling trip slack.')
-                self.trip_slack = True
-                self.ports['vehicle'].enable_trip_slack = self.trip_slack
+            self.trip_slack = True  # Set slack to true
+            self.ports['vehicle'].enable_trip_slack = self.trip_slack
             self.ports[self.cp_name] = ElectricalDemand()
             self.process_V0G_charging(self.interval_duration)
             self.ports[self.cp_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
@@ -1571,6 +1551,69 @@ class EV(Node):
                               expansion_periods=1)
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
+
+class ElectricalPort(FlexPort):
+    """ Flexible electrical port """
+    units = Units.KW
+
+
+class FixedElectricalPort(FixedPort):
+    """ An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
+    units = Units.KW
+
+
+class Inverter(Node):
+    """ An inverter is a node with one AC port and at least one DC port.
+    Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
+    max_import: Union[float, None]
+    max_export: Union[float, None]
+    dc_ac_efficiency: confloat(ge=0, le=1) = 1.0
+    ac_dc_efficiency: confloat(ge=0, le=1) = 1.0
+    dc_port_names: Optional[list] = []
+    ac_port_name: Optional[str] = None  # There should generally only be one ac port
+    node_rule = NodeRule.Custom
+
+    def add_dc_port(self, port_name):
+        p = ElectricalPort()
+        self.dc_port_names.append(port_name)
+        self.ports[port_name] = p
+
+    def add_ac_port(self, port_name):
+        if self.ac_port_name is not None:
+            raise ConfigurationError('AC port already specified for this inverter.')
+        else:
+            p = ElectricalPort()
+            p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
+            self.ac_port_name = port_name
+            self.ports[port_name] = p
+
+    def verify_node(self):
+        # Check that we have at least one ac and one dc port
+        assert self.ac_port_name is not None, 'Define at least one ac port on inverter.'
+        assert self.dc_port_names is not None, 'Define at least one dc port on inverter.'
+        # Check that all ports are either ac or dc
+        all_port_names = [x for x in self.ports.keys()]
+        named_ports = [self.ac_port_name] + self.dc_port_names
+        assert set(all_port_names) == set(named_ports), 'All ports on inverter must be ac or dc.'
+
+    def initialise_node(self, model, profile):
+        super(Inverter, self).initialise_node(model, profile)
+
+        ac_port = self.ports[self.ac_port_name]
+        # Split ac port into pos/neg, so we can apply the correct efficiencies
+        ac_port.constrain_pos_neg(model)
+
+        def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
+            dc_total = 0
+            for dc_port_name in self.dc_port_names:
+                dc_port = self.ports[dc_port_name]
+                dc_total += getattr(model, dc_port.port_name)[p, t]
+
+            return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
+                   getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == dc_total * -1
+
+        setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
+            model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))
 
 
 class BoundedElectricalLoad(BoundedLoad):
@@ -1740,355 +1783,6 @@ class FlexNodeWithEmissions(Node):
 # New ports
 
 
-class NewStorage(Port):
-    """ Same as old storage but without all the EV attributes"""
-    flows = Flows.Both
-    opt_type = OptimisationType.Variable
-    import_constraint = FlowConstraint.Fixed
-    export_constraint = FlowConstraint.Fixed
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    min_soc: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
-
-    dod_check = root_validator(allow_reuse=True)(dod_checks)
-
-    @property
-    def soc_value(self):
-        return 'storage_soc_' + self.port_name
-
-    @property
-    def optimised_capacity(self):
-        return 'optimised_storage_capacity_' + self.port_name
-
-    @property
-    def soc_constraint(self):
-        return 'soc_cons_' + self.port_name
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.import_constraint_value = self.charging_power_limit
-        self.export_constraint_value = self.discharging_power_limit
-
-    def initialise_port(self, model, profile):
-        super(NewStorage, self).initialise_port(model, profile)
-        self.create_storage_variables(model)
-        self.apply_soc_constraints(model)
-
-    def create_storage_variables(self, model):
-        # Create soc variable and bound it
-        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0,
-                                              bounds=(self.min_soc, self.max_capacity)))
-        # Apply charging constraints as bounds on port_name variable
-        set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
-
-        if self.fixed_storage_capacity is False:
-            setattr(model, self.optimised_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
-
-            def cap_limit(model, p, t):  # Ensure SOC is within max capacity
-                return getattr(model, self.soc_value)[p, t] <= getattr(model, self.optimised_capacity)
-
-            setattr(model, f"cap_lim_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=cap_limit))
-        else:
-            setattr(model, self.optimised_capacity, en.Param(initialize=self.max_capacity, domain=en.NonNegativeReals))
-
-    def apply_soc_constraints(self, model):
-        # Extract some variables to make constraints easier to write
-        max_t = len(model.Time)  # maximum time interval t
-        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
-        soc = getattr(model, self.soc_value)
-        power = getattr(model, self.port_name)
-
-        def SOC_rule(model, p, t):
-            if p == 0 and t == 0:
-                return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
-            elif t == 0:
-                return soc[p, t] == soc[p - 1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
-            else:
-                return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
-
-        def SOC_rule_perfect_efficiency(model, p, t):
-            if p == 0 and t == 0:
-                return soc[p, t] == self.initial_state_of_charge + power[p, t] * kw_to_kWh
-            elif t == 0:
-                return soc[p, t] == soc[p - 1, max_t] + power[p, t] * kw_to_kWh
-            else:
-                return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh
-
-        if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
-            setattr(model, self.soc_constraint,
-                    en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
-        else:
-            self.constrain_pos_neg(model)
-            pos = getattr(model, self.pos)  # get pos variable for writing constraints
-            neg = getattr(model, self.neg)  # get neg variable for writing constraints
-            setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
-
-    def add_objective(self, model):
-        super(NewStorage, self).add_objective(model)
-        total = 0
-
-        # To get unique solution
-        if self.regularise is True:
-            total += sum(
-                getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
-                getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
-                for p in model.Expansion for t in model.Time) * 0.0000001
-
-        if self.storage_capacity_cost is not None:
-            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
-
-        self.objective += total
-
-class NewElectricalStorage(NewStorage):
-    units = Units.KW
-
-class MobileStorage(NewStorage):
-    """ New Storage + EV attributes"""
-    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    enable_trip_slack: bool = False
-    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: Union[ArrayWrap, None] = None
-    soc_conserv_cost: Union[float, None] = None
-    # soc_conserve: scalarOrArray
-    available: Union[ArrayType, list, None] = None
-
-    @property
-    def cons_slack(self):
-        return 'con_slack' + self.port_name
-    @property
-    def trip_slack(self):
-        return 'trip_slack_' + self.port_name
-
-    @root_validator
-    def check_soc_conserv_has_cost(cls, values):
-        soc_conserv = values.get('soc_conserv')
-        soc_conserv_cost = values.get('soc_conserv_cost')
-        available = values.get('available')
-        if soc_conserv is not None:
-            assert soc_conserv_cost is not None, 'soc_conserv requires soc_conserv_cost'
-            assert available is not None, 'soc_conserve requires available'
-        return values
-
-    def initialise_port(self, model, profile):
-        super(NewStorage, self).initialise_port(model, profile)
-        self.create_storage_variables(model)
-        self.apply_modified_soc_constraints(model)
-        self.apply_conserv_soc_constraints(model)
-
-    def apply_conserv_soc_constraints(self, model):
-
-        def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
-            if self.available[t]:
-                return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv[p, t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
-            else:
-                return en.Constraint.Skip
-
-        if self.soc_conserv is not None:
-            self.soc_conserv.set_periods(len(model.Expansion),len(model.Time))
-            # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
-            setattr(model, self.cons_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            if not hasattr(model, self.is_pos):
-                self.constrain_pos_neg(model)
-            setattr(model, f"cons_soc_{self.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
-
-    def apply_modified_soc_constraints(self, model):
-        # Get some variables to make constraints easier to write
-        max_t = len(model.Time)  # maximum time interval t
-        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
-        soc = getattr(model, self.soc_value)
-        power = getattr(model, self.port_name)
-
-        def SOC_rule_slack(model, p, t):
-            if p == 0 and t == 0:
-                return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
-            elif t == 0:
-                return soc[p, t] == soc[p-1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
-            else:
-                return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency + slack[p, t]
-
-        def SOC_rule_perfect_efficiency_slack(model, p, t):
-            if p == 0 and t == 0:
-                return soc[p, t] == self.initial_state_of_charge + power[p, t] * kw_to_kWh + slack[p, t]
-            elif t == 0:
-                return soc[p, t] == soc[p, t - 1] + power[p-1, max_t] * kw_to_kWh + slack[p, t]
-            else:
-                return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh + slack[p, t]
-
-        if self.enable_trip_slack is True:
-            # Create a slack variable
-            setattr(model, self.trip_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-
-            slack = getattr(model, self.trip_slack)  # get slack variable for writing constraints
-            # Apply the modified soc constraint, which will overwrite the previously created one
-            if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
-                setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency_slack))
-            else:
-                self.constrain_pos_neg(model)
-                pos = getattr(model, self.pos)  # get pos variable for writing constraints
-                neg = getattr(model, self.neg)  # get neg variable for writing constraints
-                setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_slack))
-
-    def add_objective(self, model):
-        super(MobileStorage, self).add_objective(model)
-        total = 0
-
-        if self.enable_trip_slack:
-            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
-
-        if self.soc_conserv is not None:
-            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                         model.Time) * self.soc_conserv_cost
-
-        self.objective += total
-
-class MobileElectricalStorage(MobileStorage):
-    units = Units.KW
-
-class NewEV(Node):
-    charge_mode: str = None
-    available: Union[ArrayType, list]
-    usage: Union[ArrayType, list]
-    cp_name: str = 'cp'
-    tod_charging: Union[ArrayType, list, None] = None
-    interval_duration: int
-    # Battery attributes
-    max_capacity: float
-    depth_of_discharge_limit: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-
-    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    trip_slack: bool = False  #todo call this 'enable_trip_slack' so we can give it straight to port
-    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayWrap, None] = None
-    soc_conserv_cost: Union[float, None] = None
-
-    V0G_delta: Optional[Union[ArrayType, list]]
-    V0G_SOC: Optional[Union[ArrayType, list]]
-    V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
-    charge_status: Optional[str]
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
-        for i in self.usage:
-            if i > self.discharging_power_limit * -1:
-                raise ValueError('Usage requirement of {} exceeds battery discharge limit of {}.'.format(i,
-                                                                                                         self.discharging_power_limit))
-
-        self.ports['vehicle'] = MobileElectricalStorage(**data)  # EV always has a storage port
-        self.ports['vehicle'].enable_trip_slack = self.trip_slack  # Apply trip slack
-
-        self.ports['usage'] = ElectricalDemand()  # EV always has a fixed trip port
-        self.ports['usage'].add_demand_profile_from_array(self.usage, expansion_periods=1)
-        # Customise connection point port type based on the charge mode
-        if self.charge_mode == EVChargeMode.V0G:
-            self.trip_slack = True  # Set slack to true
-            self.ports['vehicle'].enable_trip_slack = self.trip_slack
-            self.ports[self.cp_name] = ElectricalDemand()
-            self.process_V0G_charging(self.interval_duration)
-            self.ports[self.cp_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
-        else:
-            self.ports[self.cp_name] = ElectricalPort()
-            self.ports[self.cp_name].add_active_periods_from_array(self.available, expansion_periods=1)
-            if self.charge_mode == EVChargeMode.V1G:
-                self.ports[self.cp_name].set_flow_constraints(max_import=self.charging_power_limit, max_export=0.)
-
-        # EV needs a custom transformation because of the positive load convention
-        self.create_ev_transformation()
-
-    def create_ev_transformation(self):
-        # Create appropriate transformation: vehicle = cp - usage
-        t = Transform()
-        t.add_lhs_term(self.ports['vehicle'], TransformRule.Both, 1)
-        t.add_rhs_term(self.ports['usage'], TransformRule.Both, -1)
-        t.add_rhs_term(self.ports[self.cp_name], TransformRule.Both, 1)
-        self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
-
-    def process_V0G_charging(self, interval_duration):
-        success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
-        self.V0G_delta = ev_delta
-        self.V0G_SOC = ev_soc
-        if self.tod_charging is not None:
-            if success:
-                self.charge_status = 'success'
-            else:  # force convenience charging
-                success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
-                self.charge_status = 'time of day infeasible, convenience success' if success else 'infeasible'
-                self.V0G_delta = ev_delta
-                self.V0G_SOC = ev_soc
-
-        else:
-            self.charge_status = 'success' if success else 'infeasible'
-        self.V0G_trip_infeasibility = trip_infeasibility
-
-    def V0G_charging(self, interval_duration, force_conv=False):
-        """ Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
-        if (self.tod_charging is not None) and (not force_conv):
-            self.available = self.available * self.tod_charging
-        T = len(self.available)
-        soc = np.zeros((T + 1,))
-        soc[0] = self.ports['vehicle'].initial_state_of_charge
-        trip_infeasibility = np.zeros((T,))
-        delta = np.zeros((T,))
-        max_capacity = self.ports['vehicle'].max_capacity
-        charge_limit = self.ports['vehicle'].charging_power_limit
-        charging_efficiency = self.ports['vehicle'].charging_efficiency
-
-        for t in range(T):
-            if self.available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
-                delta[t] = min(charge_limit, (max_capacity - soc[t]) / charging_efficiency / (interval_duration / 60))
-                soc[t + 1] = soc[t] + delta[t] * (interval_duration / 60) * charging_efficiency
-            else:  # if not available then it might be on a trip and using power
-                soc[t + 1] = soc[t] - self.usage[t] * (interval_duration / 60)
-            trip_infeasibility[t] = - min(soc[t + 1], 0)
-            soc[t + 1] = max(soc[t + 1], 0)
-
-        success = True if (trip_infeasibility.max() == 0) else False
-
-        return success, soc[1:], delta, trip_infeasibility
-
-    def verify_node(self):
-        super(NewEV, self).verify_node()
-        if self.charge_mode == EVChargeMode.V0G:
-            assert self.ports[self.cp_name].initial_value != 0, 'V0G connection pt port needs demand profile added.'
-        else:
-            assert self.ports[self.cp_name].active_periods is not None, 'Add available periods to EV connection pt port'
-        assert self.ports['usage'].initial_value != 0, 'EV usage port needs usage profile added.'
-
-    def initialise_node(self, model, profile):
-        super(NewEV, self).initialise_node(model, profile)
-        if self.charge_mode == EVChargeMode.V0G:
-            # Fix the battery state of charge, the slack variable, and battery charging/discharging
-            fix_port_variable(model, self.ports['vehicle'].soc_value, self.V0G_SOC, expansion_periods=1)
-            fix_port_variable(model, self.ports['vehicle'].trip_slack, self.V0G_trip_infeasibility,
-                              expansion_periods=1)
-            power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
-            fix_port_variable(model, self.ports['vehicle'].port_name, power_profile, expansion_periods=1)
 
 class InputOutputNode(Node):
     """

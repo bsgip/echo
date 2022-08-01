@@ -762,12 +762,12 @@ class DemandTariffObjective(Objective):
 class ImportDemandCharge(DemandCharge):
     import_demand = True
     export_demand = False
-    min_demand: NonNegativeFloat
+    min_demand: NonNegativeFloat = 0.0
 
 class ExportDemandCharge(DemandCharge):
     import_demand = False
     export_demand = True
-    min_demand: NonPositiveFloat
+    min_demand: NonPositiveFloat = 0.0
 
 
 

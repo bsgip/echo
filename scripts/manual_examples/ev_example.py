@@ -78,7 +78,7 @@ ev_v1g = EV(charge_mode='V1G',
 available = np.array([1] * 24 + [0] * 24)  # bool when at charger
 usage = np.array([0.0] * 24 + [2] * 24)  # kw average during use
 
-ev_v2g = NewEV(charge_mode='V2G',
+ev_v2g = EV(charge_mode='V2G',
             available=available,
             usage=usage,
             connection_port_name='cp',
