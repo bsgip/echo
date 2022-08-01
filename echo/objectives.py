@@ -174,6 +174,102 @@ class ExportTariff(Tariff):
                    model.Time)
 
 
+class BlockTariff(Objective):
+    """ A block tariff, or step tariff, divides consumption over a time period into different blocks, and each block has a different price."""
+    component: Port
+    blocks: list  # list of consumption blocks/steps (cumulative) as tuple ranges
+    rates: list  # list of rates per tuple
+    reset_periods: Optional[list]
+    reset_index: Optional[RangeSet]
+
+    @property
+    def num_price_bands(self):
+        return len(self.rates)
+
+    @root_validator
+    def check_block_rates(cls, values):
+        assert len(values.get('blocks')) + 1 == len(values.get('rates')), 'Enter one more rate than num blocks'
+        return values
+
+    @root_validator
+    def set_reset_index(cls, values):
+        rp = values.get('reset_periods')
+        if rp is not None:
+            values['reset_index'] = en.RangeSet(0, len(rp)-1)
+        else:
+            values['reset_index'] = en.RangeSet(0, 0)
+        return values
+
+
+    def get_block_var_name(self, i):
+        return 'block_' + str(i)
+
+    def _get_active_periods(self, time_periods):  # todo only works for single expansion period
+        """
+        Creates a dict for initialising the window_active pyomo var
+        Args:
+            window_bool: array of when charge applies, over entire optimisation period
+            reset_periods: list of how many intervals per period in which a tariff is calculated.
+        Returns:
+            initial_window_val: triple indexed dict (expansion, reset index, time) for initialising demand charge var
+        """
+        initial_window_val = {}
+        if self.reset_periods is None:
+            self.reset_periods = [time_periods]
+        else:
+            assert sum(self.reset_periods) == time_periods, 'Total reset intervals doesn\'t match time periods.'
+        window_bool = np.ones(time_periods)
+        num_resets = len(self.reset_periods)
+        blank = np.zeros([num_resets, time_periods])  # Create template blank array that we will populate with 1s
+        index = 0  # for indexing each reset period
+        for i in range(num_resets):
+            blank[i, index:index + self.reset_periods[i]] = 1.0  # put the right number of 1s in
+            index += self.reset_periods[i]
+            new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
+            for t in range(time_periods):
+                initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
+        return initial_window_val
+
+class BlockImportTariff(BlockTariff):
+
+    @property
+    def window_active(self):
+        return 'window_active_' + self.name
+
+    def create_vars(self, model):
+        self.component.constrain_pos_neg(model)
+        for i in range(self.num_price_bands):
+            # Create a variable for each price band, and bound it
+            var_name = self.get_block_var_name(i)
+            setattr(model, var_name, en.Var(self.reset_index, domain=en.NonNegativeReals))
+            if i == 0:
+                getattr(model, var_name).setub(self.blocks[i])
+            elif i != self.num_price_bands - 1:
+                getattr(model, var_name).setub(self.blocks[i] - self.blocks[i-1])
+
+        initial_val = self._get_active_periods(time_periods=len(model.Time))
+        setattr(model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val))
+
+    def apply_constraints(self, model):
+
+        def total_rule(model, r):
+            all_blocks = 0
+            for i in range(self.num_price_bands):
+                var = self.get_block_var_name(i)
+                all_blocks += getattr(model, var)[r]
+            total_energy = sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.window_active)[p, r, t] for p in model.Expansion for t in model.Time)
+
+            return all_blocks >= total_energy
+
+        con_name = 'total_energy_con_' + self.name
+        setattr(model, con_name, en.Constraint(self.reset_index, rule=total_rule))
+
+    def objective_expr(self, model):
+        total = 0
+        for i in range(self.num_price_bands):
+            total += self.rates[i] * sum(getattr(model, self.get_block_var_name(i))[r] for r in self.reset_index)
+        return total
+
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
     component: Path
