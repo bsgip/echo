@@ -46,7 +46,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#creating-a-model">Creating a model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#creating-a-model-using-echo-builder-recommended">Creating a model using echo_builder (recommended)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#creating-a-model-from-scratch">Creating a model from scratch</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#loading-model-from-external-file">Loading model from external file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#saving-and-loading-models">Saving and loading models</a></li>
 </ul>
 </li>
 </ul>
@@ -55,9 +55,10 @@
 <li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Ports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edges</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html"><em>echo</em> Optimisation Objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
-<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
@@ -105,8 +106,30 @@ Edges represents physical flows of a single commodity between two network Nodes 
 <section id="creating-a-model-from-scratch">
 <h3>Creating a model from scratch<a class="headerlink" href="#creating-a-model-from-scratch" title="Permalink to this heading"></a></h3>
 </section>
-<section id="loading-model-from-external-file">
-<h3>Loading model from external file<a class="headerlink" href="#loading-model-from-external-file" title="Permalink to this heading"></a></h3>
+<section id="saving-and-loading-models">
+<h3>Saving and loading models<a class="headerlink" href="#saving-and-loading-models" title="Permalink to this heading"></a></h3>
+<p>Echo graphs can be saved and loaded using either the <a class="reference external" href="https://docs.python.org/3/library/json.html#module-json">json</a> module or the <a class="reference external" href="https://docs.python.org/3/library/pickle.html">pickle</a> module (python-specific).</p>
+<p><strong>Pickle</strong></p>
+<p>Pickling converts the network object to a byte stream, which can be saved and re-loaded at a later time.</p>
+<p>An example of pickling and unpickling an echo graph is shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">system</span> <span class="o">=</span> <span class="n">OptGraph</span><span class="p">()</span>
+<span class="c1"># Assume we add some things to the graph here....</span>
+<span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;my_network&#39;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>  <span class="c1"># create a file in write mode</span>
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>  <span class="c1"># pickle to that file</span>
+<span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c1"># load the graph from the file in read mode</span>
+<span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;my_network&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+<span class="n">loaded_system</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+<span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The optimiser itself cannot be pickled (yet) - it requires all class functions to be defined at the top level, and most constraint functions are not.</p>
+</div>
+<p><strong>JSON</strong></p>
+<p>TBC - can’t convert graph to json yet because of issue with serializing tuples as dict keys</p>
 </section>
 </section>
 </section>

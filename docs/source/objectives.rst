@@ -1,4 +1,4 @@
-Optimisation objectives
+*echo* Optimisation Objectives
 ===================================
 Objectives can be applied to an echo model in order to optimise the behaviour of controllable variables (decision variables) to achieve a certain outcome.
 
@@ -12,10 +12,10 @@ Power/flow objectives are applied to a port value directly.
 
 Peak Positive Power
 ^^^^^^^^^^^^^^^^^^^^
+
 This objective penalises the peak positive (imported) power at a port.
 
-Assuming ``cp1`` refers to a port, an example of defining this objective is
-
+Assuming ``cp1`` is a port object, an example of defining this objective is
 .. code-block::
 
     ppp = PeakPositivePower(component=cp1)
@@ -32,14 +32,14 @@ Assuming ``cp1`` refers to a port, an example of defining this objective is
 
 **Objective expression**
 
-:math:`o = p^\text{max+}`
+:math:`O = p^\text{max+}`
 
 
 Peak Negative Power
 ^^^^^^^^^^^^^^^^^^^^
 This objective penalises the peak negative (exported) power at a port.
 
-Assuming ``cp1`` refers to a port, an example of defining this objective is
+Assuming ``cp1`` is a port object, an example of defining this objective is
 
 .. code-block::
 
@@ -57,7 +57,7 @@ Assuming ``cp1`` refers to a port, an example of defining this objective is
 
 **Objective expression**
 
-:math:`o = p^\text{max-} \cdot -1`
+:math:`O = p^\text{max-} \cdot -1`
 
 
 Quadratic Power
@@ -65,7 +65,7 @@ Quadratic Power
 This objective penalises the port power squared. This objective acts as a regularization term. This makes the optimal solution, if there is one, unique.
 
 
-Assuming ``cp1`` refers to a port, an example of defining a quadratic power cost is
+Assuming ``cp1`` is a port object, an example of defining a quadratic power cost is
 
 .. code-block::
 
@@ -77,7 +77,7 @@ Assuming ``cp1`` refers to a port, an example of defining a quadratic power cost
 
 **Objective expression**
 
-:math:`o = p^2`
+:math:`O = p^2`
 
 
 Contingency Negative
@@ -117,7 +117,7 @@ Throughput Cost
 ^^^^^^^^^^^^^^^^
 This objective applies a given rate to the total throughput (import plus export) at a port. If the rate is positive, then throughput will be penalised, and if the rate is negative, throughput will be rewarded.
 
-Assuming ``cp1`` refers to a port, an example of defining a throughput cost is
+Assuming ``cp1`` is a port object, an example of defining a throughput cost is
 
 .. code-block::
 
@@ -137,7 +137,7 @@ Assuming ``cp1`` refers to a port, an example of defining a throughput cost is
 
 **Objective expression**
 
-:math:`o = (p^+ - p^-) \cdot r`
+:math:`O = (p^+ - p^-) \cdot r`
 
 
 Energy Tariffs
@@ -149,7 +149,7 @@ Import Energy Tariff
 ^^^^^^^^^^^^^^^^^^^^^
 This objective applies positive prices to energy imported at a port. Therefore, this objective penalises energy imported at a port.
 
-Assuming ``cp1`` refers to a port, an example of defining an import tariff is
+Assuming ``cp1`` is a port object, an example of defining an import tariff is
 
 .. code-block::
 
@@ -169,14 +169,14 @@ Assuming ``cp1`` refers to a port, an example of defining an import tariff is
 
 **Objective expression**
 
-:math:`o = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}`
+:math:`O = p^+ \cdot c \cdot \frac{d^\text{interval}}{60}`
 
 
 Export Energy Tariff
 ^^^^^^^^^^^^^^^^^^^^^
 This objective applies positive prices to energy exported from a port. This objective maximises the returns (negative costs) from exporting energy from the port.
 
-Assuming ``cp1`` refers to a port, an example of defining an export tariff is
+Assuming ``cp1`` is a port object, an example of defining an export tariff is
 
 .. code-block::
 
@@ -197,7 +197,7 @@ Assuming ``cp1`` refers to a port, an example of defining an export tariff is
 
 **Objective expression**
 
-:math:`o = p^- \cdot c \cdot \frac{d^\text{interval}}{60}`
+:math:`O = p^- \cdot c \cdot \frac{d^\text{interval}}{60}`
 
 Time of Use Energy Tariffs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,7 +219,7 @@ A demand charge is a price applied to the maximum power (either import or export
 
 For example, consider an import demand charge that applies every evening from 5pm - 8pm, with a rate of $0.5/kW, and resets every month. Each night between 5pm and 8pm, the maximum power imported would be calculated. Then, the maximum of these values would be multiplied by $0.5/kW to obtain the total cost for that month. Then the max value would reset, and the same process would occur for the next month.
 
-Assuming ``cp1`` refers to a port, an example of defining a demand tariff and a demand charge is
+Assuming ``cp1`` is a port object, an example of defining a demand tariff and a demand charge is
 
 .. code-block::
 
@@ -298,6 +298,29 @@ The optimiser will penalise a storage asset for not being fully charged.
 
 
 
+
+Advanced Use
+----------------
+
+Defining Custom Objectives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If custom objectives are required, they should be added to the optimiser **after** the optimiser has been initialised. Initialising the optimiser will automatically set the objectives, if any are defined, and so any additional objectives should be added after this initialisation.
+
+.. code-block::
+
+        optimiser = EchoOptimiser(
+                                interval_duration=interval_duration,
+                                number_of_intervals=time_periods,
+                                number_of_expansion_intervals=expansion_periods,
+                                discount_rate=0,
+                                ES=system,
+                                objective_set=objective_set)
+
+        optimiser.objective += sum(getattr(optimiser.model, pv1.port_name)[p, t]
+                          for p in optimiser.model.Expansion for t in optimiser.model.Time)
+
+
+Note the use of ``+=``.
 
 Template Objective
 ^^^^^^^^^^^^^^^^^^^^

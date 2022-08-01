@@ -1,8 +1,4 @@
 Commodity flows
 =================
 
-Flow tracing
-----------------
-
-Flow resolution
------------------
+TBC some info on flow units and power/energy distinctions.

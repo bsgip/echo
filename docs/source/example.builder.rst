@@ -1,4 +1,4 @@
-Behind the meter battery optimisation
+Echo builder example
 ==========================================
 .. toctree::
    :maxdepth: 0

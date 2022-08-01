@@ -22,6 +22,8 @@ class Units(object):
     """Instantaneous electrical apparent power kVA """
     kVAR = 7
     """Instantaneous electrical reactive power kVAR """
+    LPS = 8
+
 
 
 class Flows(object):

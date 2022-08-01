@@ -19,8 +19,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Optimisation objectives" href="objectives.html" />
-    <link rel="prev" title="Commodity flows" href="flows.html" /> 
+    <link rel="next" title="echo Optimiser" href="optimiser.html" />
+    <link rel="prev" title="echo Optimisation Objectives" href="objectives.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,14 +46,20 @@
 <li class="toctree-l1"><a class="reference internal" href="ports.html"><em>echo</em> Ports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="edges.html"><em>echo</em> Edges</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html"><em>echo</em> Optimisation Objectives</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Defining Optimisation Constraints</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#node-constraints">Node constraints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#port-constraints">Port constraints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#unpacking-individual-constrains">Unpacking individual constrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#node-constraints">Node constraints</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generic-linear-node-constraints">Generic Linear Node Constraints</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-use">Advanced use</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#writing-custom-constraints-outside-of-the-optimiser">Writing custom constraints outside of the optimiser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
@@ -84,14 +90,111 @@
              
   <section id="defining-optimisation-constraints">
 <h1>Defining Optimisation Constraints<a class="headerlink" href="#defining-optimisation-constraints" title="Permalink to this heading"></a></h1>
+<p>Optimisation constraints are typically defined on either nodes or ports. There is a range of pre-defined ports and nodes that come with appropriate pre-defined constraints, but sometimes custom constraints are required.</p>
 <section id="node-constraints">
 <h2>Node constraints<a class="headerlink" href="#node-constraints" title="Permalink to this heading"></a></h2>
+<p>As discussed in <a class="reference internal" href="nodes.html#echo-nodes"><span class="std std-ref">echo Nodes</span></a>, nodes can have pre-built constraints (e.g., a Tellegen constraint), or they can have custom constraints that are defined internally. To allow the user to define generic linear node constraints, echo has a <code class="docutils literal notranslate"><span class="pre">Transform</span></code> class that is designed specifically for this purpose. It is a convenient and extendable way of defining arbitrary linear node constraints, where each constraint consists of weighted port variables.</p>
+<section id="generic-linear-node-constraints">
+<h3>Generic Linear Node Constraints<a class="headerlink" href="#generic-linear-node-constraints" title="Permalink to this heading"></a></h3>
+<p>Each <code class="docutils literal notranslate"><span class="pre">Transform</span></code> object is designed to hold a single linear constraint expression. It has a RHS (right-hand-side) and LHS (left-hand-side) expression, and the user can add as many linearly weighted <em>terms</em> to each side of the constraint expression. Each term in a transformation has the following parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">variable</span></code>: the name of the variable</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">weight</span></code>: a float, or an array of floats that will be used to weight the variable</p></li>
+</ul>
+<p>Once a custom transform has been built, it is simply added to a node. This automatically sets <code class="docutils literal notranslate"><span class="pre">NodeRule=NodeRule.Transform</span></code> so that the echo optimiser builds the correct constraint.</p>
+<p>To create a custom transform:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a node with some ports</span>
+<span class="n">n</span> <span class="o">=</span> <span class="n">Node</span><span class="p">()</span>
+<span class="n">n</span><span class="o">.</span><span class="n">add_port</span><span class="p">(</span><span class="n">ElectricalPort</span><span class="p">(),</span> <span class="s1">&#39;grid&#39;</span><span class="p">)</span>
+<span class="n">n</span><span class="o">.</span><span class="n">add_port</span><span class="p">(</span><span class="n">CarbonSource</span><span class="p">(),</span> <span class="s1">&#39;emissions&#39;</span><span class="p">)</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">Transform</span><span class="p">()</span>  <span class="c1"># initialise a transform object</span>
+<span class="n">t</span><span class="o">.</span><span class="n">add_lhs_term</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;emissions&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">port_name</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># use .port_name so that the port variable appears in the constraint expression</span>
+<span class="n">t</span><span class="o">.</span><span class="n">add_rhs_term</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;grid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">neg</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>  <span class="c1"># use.neg so that only the negative component of the port variable appears in the constraint expression</span>
+<span class="n">n</span><span class="o">.</span><span class="n">add_transformation</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>An arbitrary number of these transformations can be added to a node. Each transform will get ‘unpacked’ into a single pyomo constraint when the optimiser is initialised. The function that unpacks any transformation is shown below for completeness:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Be careful to check the signs when defining a Transform.  The signs used in constructing the transform are consistent with any signs that may be implicit in the creation of the ports themselves. In the above example, the <code class="docutils literal notranslate"><span class="pre">CarbonSource</span></code> port is export only, so we know that this port variable <code class="docutils literal notranslate"><span class="pre">self.ports['emissions'].port_name</span></code> must be negative. If we had defined the weight on the grid variable as -0.6 instead of 0.6, this would have constrained the carbon port to be positive, (since <code class="docutils literal notranslate"><span class="pre">self.ports['grid'].neg</span></code> is negative), and the optimisation would be infeasible.</p>
+</div>
 </section>
-<section id="port-constraints">
-<h2>Port constraints<a class="headerlink" href="#port-constraints" title="Permalink to this heading"></a></h2>
 </section>
-<section id="unpacking-individual-constrains">
-<h2>Unpacking individual constrains<a class="headerlink" href="#unpacking-individual-constrains" title="Permalink to this heading"></a></h2>
+<section id="advanced-use">
+<h2>Advanced use<a class="headerlink" href="#advanced-use" title="Permalink to this heading"></a></h2>
+<section id="writing-custom-constraints-outside-of-the-optimiser">
+<h3>Writing custom constraints outside of the optimiser<a class="headerlink" href="#writing-custom-constraints-outside-of-the-optimiser" title="Permalink to this heading"></a></h3>
+<p>For advanced users, custom constraints can also be written directly using pyomo modules. These constraints can then be added directly to the pyomo model.
+An example of how this might be done in code is shown below. First, we define an example network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">system</span> <span class="o">=</span> <span class="n">OptimisationGraph</span><span class="p">()</span>
+
+<span class="n">grid</span> <span class="o">=</span> <span class="n">FlexNode</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_unit</span><span class="o">=</span><span class="n">Units</span><span class="o">.</span><span class="n">KW</span><span class="p">)</span>
+
+<span class="n">battery</span> <span class="o">=</span> <span class="n">Battery</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;battery&#39;</span><span class="p">,</span>
+                  <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;battery&#39;</span><span class="p">,</span>
+                  <span class="n">max_capacity</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                  <span class="n">depth_of_discharge_limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">charging_power_limit</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+                  <span class="n">discharging_power_limit</span><span class="o">=-</span><span class="mf">2.0</span><span class="p">,</span>
+                  <span class="n">charging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                  <span class="n">discharging_efficiency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                  <span class="n">initial_state_of_charge</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+<span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;load&#39;</span><span class="p">,</span>
+            <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;load&#39;</span><span class="p">,</span>
+            <span class="n">port_unit</span><span class="o">=</span><span class="n">Units</span><span class="o">.</span><span class="n">KW</span><span class="p">,</span>
+            <span class="n">profile</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">time_periods</span><span class="p">)</span>
+
+<span class="n">site</span> <span class="o">=</span> <span class="n">TellegenNode</span><span class="p">()</span>
+<span class="n">site</span><span class="o">.</span><span class="n">add_electrical_ports_from_list</span><span class="p">([</span><span class="s1">&#39;cp&#39;</span><span class="p">,</span> <span class="s1">&#39;load&#39;</span><span class="p">,</span> <span class="s1">&#39;battery&#39;</span><span class="p">])</span>
+
+<span class="n">system</span><span class="o">.</span><span class="n">add_node_obj</span><span class="p">([</span><span class="n">grid</span><span class="p">,</span> <span class="n">battery</span><span class="p">,</span> <span class="n">load</span><span class="p">,</span> <span class="n">site</span><span class="p">])</span>
+
+<span class="n">system</span><span class="o">.</span><span class="n">connect_ports_and_create_edge</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;grid&#39;</span><span class="p">],</span> <span class="n">site</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;cp&#39;</span><span class="p">])</span>
+<span class="n">system</span><span class="o">.</span><span class="n">connect_ports_and_create_edge</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;battery&#39;</span><span class="p">],</span> <span class="n">site</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;battery&#39;</span><span class="p">])</span>
+<span class="n">system</span><span class="o">.</span><span class="n">connect_ports_and_create_edge</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;load&#39;</span><span class="p">],</span> <span class="n">site</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;load&#39;</span><span class="p">])</span>
+
+<span class="n">throughput_cost</span> <span class="o">=</span> <span class="n">ThroughputCost</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;battery&#39;</span><span class="p">],</span> <span class="n">rate</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+<span class="n">objective_set</span> <span class="o">=</span> <span class="n">ObjectiveSet</span><span class="p">(</span><span class="n">objective_list</span><span class="o">=</span><span class="p">[</span><span class="n">throughput_cost</span><span class="p">])</span>
+
+<span class="n">optimiser</span> <span class="o">=</span> <span class="n">EchoOptimiser</span><span class="p">(</span>
+    <span class="n">interval_duration</span><span class="o">=</span><span class="n">interval_duration</span><span class="p">,</span>
+    <span class="n">number_of_intervals</span><span class="o">=</span><span class="n">time_periods</span><span class="p">,</span>
+    <span class="n">number_of_expansion_intervals</span><span class="o">=</span><span class="n">expansion_periods</span><span class="p">,</span>
+    <span class="n">discount_rate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ES</span><span class="o">=</span><span class="n">system</span><span class="p">,</span>
+    <span class="n">objective_set</span><span class="o">=</span><span class="n">objective_set</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>This will build the echo graph, initialise the optimiser, and build the pyomo model. Now that the pyomo model has been built, we can simple add custom constraints to it, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyomo.environ</span> <span class="k">as</span> <span class="nn">en</span>
+<span class="c1"># Write a constraint rule</span>
+<span class="c1"># The rule must take the pyomo model, and the two indices (expansion and time intervals) as arguments.</span>
+<span class="k">def</span> <span class="nf">constraint_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">grid_node</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="s1">&#39;downstream&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">port_name</span><span class="p">)[</span><span class="n">p</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">10</span>
+
+<span class="n">constraint_name</span> <span class="o">=</span> <span class="s1">&#39;max_import_constraint_&#39;</span> <span class="o">+</span> <span class="n">grid_node</span><span class="o">.</span><span class="n">node_name</span>
+<span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">constraint_name</span><span class="p">,</span> <span class="n">en</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">Expansion</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">Time</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">constraint_rule</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>After defining this custom constraint, and adding it to the pyomo model, you can optimise:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">optimiser</span><span class="o">.</span><span class="n">optimise</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Mistakes are easy to make when writing custom rules, so make sure to:</p>
+<ul class="simple">
+<li><p>use the correct variable names when retrieving a variable using <code class="docutils literal notranslate"><span class="pre">getattr(model,</span> <span class="pre">variable_name)</span></code>.</p></li>
+<li><p>index the variables correctly in the constraint rule. Most variables are indexed by expansion period (p) and time interval (t), but some are only indexed by one, or are not indexed at all.</p></li>
+<li><p>use a unique constraint name. If the name matches an existing constraint, the original constraint will be overwritten.</p></li>
+<li><p>pass <code class="docutils literal notranslate"><span class="pre">model.Expansion</span></code> and <code class="docutils literal notranslate"><span class="pre">model.Time</span></code> in the same order as the order they are defined and used in the constraint rule.</p></li>
+<li><p>make sure sign conventions are consistent, otherwise the optimisation will be infeasible.</p></li>
+</ul>
+</div>
+</section>
 </section>
 </section>
 
@@ -99,8 +202,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="flows.html" class="btn btn-neutral float-left" title="Commodity flows" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="objectives.html" class="btn btn-neutral float-right" title="Optimisation objectives" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="objectives.html" class="btn btn-neutral float-left" title="echo Optimisation Objectives" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="optimiser.html" class="btn btn-neutral float-right" title="echo Optimiser" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -23,9 +23,10 @@ This project is developed and maintained by the Battery Storage and Integration 
    ports
    edges
    echo_graph
-   flows
-   constraints
    objectives
+   constraints
+   optimiser
+   flows
    examples
    echo
 

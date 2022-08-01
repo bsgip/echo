@@ -6,7 +6,7 @@ It is both a representation of a physical network, as well as an object on which
 Mathematically, the optimisation graph is a graph :math:`G=(N,E)`, where :math:`N` is the set of nodes in the graph, and :math:`E`
 is the set of edges. Each node contains a list of ports that belong to the node:
 
-:math:`n=(p_0, p_1, ..., p_m)` where there are :math:`m` ports in a node.
+:math:`n=(p_0, p_1, ..., p_m)` where there are :math:`m` ports belonging to the node.
 
 Each edge is a node pair, and since nodes are a set of ports, edges are also a corresponding pair of ports.
 
@@ -23,21 +23,23 @@ Once the graph has been created, we can create some nodes and add them to the gr
 
 .. code-block::
 
-    grid = FlexNode(node_name='grid', port_name='grid', port_unit=Units.KW)
+    grid = FlexNode(node_name='grid', port_name='grid', port_unit=Units.KW)  # creates a node with one flexible port called 'grid'
 
     load = Load(node_name='load',
                  port_name='load',
                  port_unit=Units.KW,
-                 profile=[2]*24)
+                 profile=[2]*24)  # creates a node with one fixed demand port called 'load'
 
     system.add_node_obj([grid, battery])
 
 
-We can connect nodes together using the ``.connect_nodes_by_name`` method, as shown below:
+To connect nodes together via ports, we need to retrieve the port objects as well as the node names. We can then create an edge using the ``.connect_ports_and_create_edge`` method, as shown below:
 
 .. code-block::
 
-    system.connect_nodes_by_name(ports=('grid', 'load'), nodes=('grid', 'load'))
+    grid_port = grid.get_port('grid')
+    load_port = load.get_port('load')
+    system.connect_ports_and_create_edge(grid_port, load_port, nodes=('grid', 'load'))
 
 .. note::
     Any nodes that are part of an edge must be added to the graph first, before edges can be created.

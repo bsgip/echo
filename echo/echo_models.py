@@ -583,6 +583,12 @@ class Node(BaseModel):
         if self.node_name is None:
             self.node_name = 'node_' + str(self.uid)
 
+    def add_port(self, port_obj: Port, name: str):
+        self.ports[name] = port_obj
+
+    def get_port(self, port_name: str):
+        return self.ports.get(port_name)
+
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
         Args:
@@ -634,7 +640,6 @@ class Node(BaseModel):
         t.add_lhs_term(carbon_port, TransformRule.NegativeComponent, 1)
         t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
         self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
         if bool(self.ports) is False:
@@ -902,7 +907,7 @@ class Path(BaseModel):
 
 
 
-class OptGraph(PydanticBaseModel):
+class OptGraph(BaseModel):
     node_obj: dict = {}
     edge_obj: dict = {}
     paths: dict = {}
@@ -948,8 +953,13 @@ class OptGraph(PydanticBaseModel):
             return self.edge_obj.get(nodes)
         elif self.edge_obj.get(reversed(nodes)) is not None:
             return self.edge_obj.get(reversed(nodes))
+        # Check whether nodes are defined on graph
+        elif nodes[0] not in self.node_obj.keys():
+            print('No node with name "{}" is defined on this graph.'.format(nodes[0]))
+        elif nodes[1] not in self.node_obj.keys():
+            print('No node with name "{}" is defined on this graph.'.format(nodes[1]))
         elif warn:
-            print('Edge between {} and {} does not exist'.format(nodes[0], nodes[1]))
+            print('Edge between nodes "{}" and "{}" does not exist'.format(nodes[0], nodes[1]))
 
     def connect_ports_and_create_edge(self, port1: Port, port2: Port, nodes: Tuple[str], edge_name=None):
         e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)

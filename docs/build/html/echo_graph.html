@@ -20,7 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Commodity flows" href="flows.html" />
+    <link rel="next" title="echo Optimisation Objectives" href="objectives.html" />
     <link rel="prev" title="echo Edges" href="edges.html" /> 
 </head>
 
@@ -55,9 +55,10 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectives.html"><em>echo</em> Optimisation Objectives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="constraints.html">Defining Optimisation Constraints</a></li>
-<li class="toctree-l1"><a class="reference internal" href="objectives.html">Optimisation objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flows.html">Commodity flows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="echo.html"><em>echo</em> API</a></li>
 </ul>
@@ -92,7 +93,7 @@
 It is both a representation of a physical network, as well as an object on which we can perform optimisation and analysis.</p>
 <p>Mathematically, the optimisation graph is a graph <span class="math notranslate nohighlight">\(G=(N,E)\)</span>, where <span class="math notranslate nohighlight">\(N\)</span> is the set of nodes in the graph, and <span class="math notranslate nohighlight">\(E\)</span>
 is the set of edges. Each node contains a list of ports that belong to the node:</p>
-<p><span class="math notranslate nohighlight">\(n=(p_0, p_1, ..., p_m)\)</span> where there are <span class="math notranslate nohighlight">\(m\)</span> ports in a node.</p>
+<p><span class="math notranslate nohighlight">\(n=(p_0, p_1, ..., p_m)\)</span> where there are <span class="math notranslate nohighlight">\(m\)</span> ports belonging to the node.</p>
 <p>Each edge is a node pair, and since nodes are a set of ports, edges are also a corresponding pair of ports.</p>
 <section id="creating-and-modifying-the-graph">
 <h2>Creating and Modifying the Graph<a class="headerlink" href="#creating-and-modifying-the-graph" title="Permalink to this heading"></a></h2>
@@ -101,18 +102,20 @@ is the set of edges. Each node contains a list of ports that belong to the node:
 </pre></div>
 </div>
 <p>Once the graph has been created, we can create some nodes and add them to the graph, as shown below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">FlexNode</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_unit</span><span class="o">=</span><span class="n">Units</span><span class="o">.</span><span class="n">KW</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">FlexNode</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">port_unit</span><span class="o">=</span><span class="n">Units</span><span class="o">.</span><span class="n">KW</span><span class="p">)</span>  <span class="c1"># creates a node with one flexible port called &#39;grid&#39;</span>
 
 <span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">node_name</span><span class="o">=</span><span class="s1">&#39;load&#39;</span><span class="p">,</span>
              <span class="n">port_name</span><span class="o">=</span><span class="s1">&#39;load&#39;</span><span class="p">,</span>
              <span class="n">port_unit</span><span class="o">=</span><span class="n">Units</span><span class="o">.</span><span class="n">KW</span><span class="p">,</span>
-             <span class="n">profile</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="mi">24</span><span class="p">)</span>
+             <span class="n">profile</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="mi">24</span><span class="p">)</span>  <span class="c1"># creates a node with one fixed demand port called &#39;load&#39;</span>
 
 <span class="n">system</span><span class="o">.</span><span class="n">add_node_obj</span><span class="p">([</span><span class="n">grid</span><span class="p">,</span> <span class="n">battery</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>We can connect nodes together using the <code class="docutils literal notranslate"><span class="pre">.connect_nodes_by_name</span></code> method, as shown below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">system</span><span class="o">.</span><span class="n">connect_nodes_by_name</span><span class="p">(</span><span class="n">ports</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="s1">&#39;load&#39;</span><span class="p">),</span> <span class="n">nodes</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="s1">&#39;load&#39;</span><span class="p">))</span>
+<p>To connect nodes together via ports, we need to retrieve the port objects as well as the node names. We can then create an edge using the <code class="docutils literal notranslate"><span class="pre">.connect_ports_and_create_edge</span></code> method, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grid_port</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">get_port</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">)</span>
+<span class="n">load_port</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">get_port</span><span class="p">(</span><span class="s1">&#39;load&#39;</span><span class="p">)</span>
+<span class="n">system</span><span class="o">.</span><span class="n">connect_ports_and_create_edge</span><span class="p">(</span><span class="n">grid_port</span><span class="p">,</span> <span class="n">load_port</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="s1">&#39;load&#39;</span><span class="p">))</span>
 </pre></div>
 </div>
 <div class="admonition note">
@@ -179,7 +182,7 @@ To achieve this we introduce a binary node variable, <span class="math notransla
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="edges.html" class="btn btn-neutral float-left" title="echo Edges" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="flows.html" class="btn btn-neutral float-right" title="Commodity flows" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="objectives.html" class="btn btn-neutral float-right" title="echo Optimisation Objectives" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

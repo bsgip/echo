@@ -22,6 +22,35 @@ Creating a model using echo_builder (recommended)
 Creating a model from scratch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Loading model from external file
+Saving and loading models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Echo graphs can be saved and loaded using either the `json <https://docs.python.org/3/library/json.html#module-json>`_ module or the `pickle <https://docs.python.org/3/library/pickle.html>`_ module (python-specific).
+
+**Pickle**
+
+Pickling converts the network object to a byte stream, which can be saved and re-loaded at a later time.
+
+An example of pickling and unpickling an echo graph is shown below:
+
+.. code-block::
+
+    system = OptGraph()
+    # Assume we add some things to the graph here....
+    file = open('my_network', 'wb')  # create a file in write mode
+    pickle.dump(system, file)  # pickle to that file
+    file.close()
+
+    # load the graph from the file in read mode
+    file = open('my_network', 'rb')
+    loaded_system = pickle.load(file)
+    file.close()
+
+
+.. note::
+    The optimiser itself cannot be pickled (yet) - it requires all class functions to be defined at the top level, and most constraint functions are not.
+
+
+**JSON**
+
+TBC - can't convert graph to json yet because of issue with serializing tuples as dict keys
