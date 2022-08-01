@@ -5,6 +5,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
+from echo.echo_models import *
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location

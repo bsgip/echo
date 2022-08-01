@@ -112,7 +112,7 @@ class EchoOptimiser(object):
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
             node_obj.verify_node()
-            node_obj.initialise_node(self.model)
+            node_obj.initialise_node(self.model, self.profile)
 
         # Initialise edge variables/params and add edge constraints
         for _, edge_obj in self.ES.edge_obj.items():

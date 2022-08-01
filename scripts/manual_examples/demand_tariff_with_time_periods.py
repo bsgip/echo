@@ -3,6 +3,7 @@ import os
 from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
+from datetime import datetime
 
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
@@ -41,11 +42,10 @@ cp1 = site1.ports['cp']
 
 system.add_node_obj([grid, battery1, load1, site1])
 
-bess_edge1 = Edge(vertices=[site1.ports['bess'], b1])
-load_edge1 = Edge(vertices=[site1.ports['load'], l1])
-grid_edge = Edge(vertices=[cp1, grid.ports['grid']])
+system.connect_ports_and_create_edge(grid.ports['grid'], cp1)
+system.connect_ports_and_create_edge(site1.ports['bess'], b1)
+system.connect_ports_and_create_edge(site1.ports['load'], l1)
 
-system.add_edge_obj([bess_edge1, load_edge1, grid_edge])
 
 # peak usage
 peak_window_new = Window(
@@ -59,8 +59,9 @@ peak_window_new = Window(
 
 peak_charge = ImportDemandCharge(name='peak',
                                  rate=10.0,
-                                 window_object=peak_window_new,
-                                 min_demand=0.0)
+                                 window_array=peak_window_new.to_bool_periods(profile),
+                                 min_demand=0.0,
+                                 reset_periods=peak_window_new.get_reset_period_array(profile))
 
 demand_tariff = DemandTariffObjective(component=cp1,
                                       demand_charges=[peak_charge])
@@ -84,9 +85,9 @@ print(optimiser.opt_status)
 
 print(optimiser.values(peak_charge.max_demand_val))
 
-print(optimiser.values(b1.port_name))
-
-plt.plot(optimiser.values(cp1.port_name))
-plt.plot(peak_charge.window_array+10)
-plt.show()
-plt.legend(['demand', 'active demand periods'])
+# print(optimiser.values(b1.port_name))
+#
+# plt.plot(optimiser.values(cp1.port_name))
+# plt.plot(peak_charge.window_array+10)
+# plt.show()
+# plt.legend(['demand', 'active demand periods'])

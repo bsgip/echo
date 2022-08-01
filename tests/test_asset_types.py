@@ -4,6 +4,7 @@ import pytest
 from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
 from echo.configuration import *
+from echo.echo_thermal_models import GasPort, GasBoilerFixedCOP, FlexHeatSink, FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives import *
 
 import os
@@ -27,10 +28,10 @@ def test_gas_boiler_fixed_cop():
     gas_mains = Node()
     gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5)
+    boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5, startup_cop=0.5)
 
     heating_load = Node()
-    hl = ThermalLoad()
+    hl = HeatSink()
     hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 
@@ -70,12 +71,12 @@ def test_modulating_gas_boiler():
     system = OptimisationGraph()
 
     gas_mains = Node()
-    gas_mains.ports['mains'] = GasSource()
+    gas_mains.ports['mains'] = GasPort()
 
-    boiler = GasBoilerFixedCOP(cop=0.8)
+    boiler = GasBoilerFixedCOP(max_input=100, min_input=0, cop=0.8, startup_cop=0.8)
 
     heating_load = Node()
-    hl = HCLoad()
+    hl = HeatSink()
     hl.add_sink_profile_from_array([5]*time_periods, expansion_periods)
     heating_load.ports['load'] = hl
 
@@ -115,13 +116,13 @@ def test_chiller_operation():
     nonlin_array = [-0.0068, 5.5052, 0]
     input_breakpoints = [0, 2, 3, 8]
     output_values = [0, -3, -4, -8]
-    chiller = Chiller(max_output=-8,
-                      max_input=8)
-    chiller.set_input_output_breakpoints(input_array=input_breakpoints, output_array=output_values, time_periods=time_periods)
+    chiller = SimpleChiller()
+    chiller.add_input_pts(input_breakpoints, time_periods=time_periods)
+    chiller.add_output_pts(output_values, time_periods=time_periods)
 
     cooling_load = Node()
-    cl = HeatingOrCoolingLoad()
-    cl.add_sink_profile_from_array([4]*time_periods, expansion_periods)
+    cl = FixedThermalPort()
+    cl.add_initial_value_from_array([4]*time_periods, expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -191,8 +192,6 @@ def test_carbon_aggregation():
     carbon_aggr = CarbonAggregation()
     carbon_aggr.ports['grid'] = CarbonSink()
     carbon_aggr.ports['bess'] = CarbonSink()
-    carbon_aggr.ports['sum'] = CarbonSink()
-    carbon_aggr.add_aggregation_transformation('sum')
 
     system.add_node_obj([grid, battery1, load1, site1, carbon_aggr])
     system.connect_ports_and_create_edge(grid.ports['grid'], site1.ports['cp'])
@@ -217,7 +216,7 @@ def test_carbon_aggregation():
 
     grid_emissions = optimiser.values(grid.ports['CO2'].port_name, 0)
     bess_emissions = optimiser.values(battery1.ports['CO2'].port_name, 0)
-    aggr = optimiser.values(carbon_aggr.ports['sum'].port_name, 0)
+    aggr = optimiser.values(carbon_aggr.total, 0)
 
     for i in range(time_periods):
         assert aggr[i]*-1 == grid_emissions[i] + bess_emissions[i]

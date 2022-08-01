@@ -65,21 +65,23 @@ def test_objectives_sum_correctly():
 
     # Define a set of objectives
     tp_cost = ThroughputCost(component=b1, rate=0.1)
+
     import_t = ImportTariff(component=cp.ports['grid'],
                             tariff_array=[0.1]*24 + [0.4]*24)
+
     export_t = ExportTariff(component=cp.ports['grid'],
                             tariff_array=[0.0]*24 + [0.1]*24)
     # peak usage
-    peak_charge = DemandCharge(rate=2.0,
+    peak_charge = ImportDemandCharge(rate=2.0,
                                window_array=[0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8,
                                min_demand=0.0)
 
     # shoulder usage
-    shoulder_charge = DemandCharge(rate=1.6,
+    shoulder_charge = ImportDemandCharge(rate=1.6,
                                    window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
                                    min_demand=0.0)
 
-    demand_tariff = ImportDemandTariffObjective(component=cp.ports['grid'],
+    demand_tariff = DemandTariffObjective(component=cp.ports['grid'],
                                                 demand_charges=[peak_charge,
                                                                 shoulder_charge])
 
