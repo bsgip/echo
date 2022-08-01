@@ -935,6 +935,7 @@ class OptGraph(PydanticBaseModel):
             self._add_single_edge(e)
 
     def get_edge(self, nodes: tuple, warn: bool = True):
+        """ Retrieves the edge that connects a tuple of nodes, if an edge exists."""
         if self.edge_obj.get(nodes) is not None:
             return self.edge_obj.get(nodes)
         elif self.edge_obj.get(reversed(nodes)) is not None:
@@ -958,8 +959,8 @@ class OptGraph(PydanticBaseModel):
         If you are generating paths to use path tariffs, consider converting these tariffs to port tariffs.')
         all_paths = {}
         g = self.convert_to_nx()  # convert the graph to nx to use its path finding algorithm
-        tellegen_node_set = set()
-        source_sink_set = set(sources + sinks)
+        tellegen_node_set = set()  # create a set to store list of nodes that are treated as tellegen nodes
+        source_sink_set = set(sources + sinks)  # create a set of nodes that are treated as sinks/sources
         for source_node in sources:
             for sink_node in sinks:
                 if source_node is not sink_node:
@@ -967,16 +968,16 @@ class OptGraph(PydanticBaseModel):
                     simple_paths = nx.all_simple_paths(g, source_node, sink_node)
                     simple_edges = nx.all_simple_edge_paths(g, source_node, sink_node)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
-                        tellegen_node_set.update(vertex_list[1:-1])
-
+                        tellegen_node_set.update(vertex_list[1:-1])  # update set of tellegen nodes
                         p = self._create_single_path_object(vertex_list, edge_list, regularise, unit=path_unit)
                         all_paths[tuple(vertex_list)] = p
 
-        intersec = source_sink_set.intersection(tellegen_node_set)
+        intersec = source_sink_set.intersection(tellegen_node_set)  # check intersection of tellegen and source/sink nodes
         assert len(intersec) == 0, f"Nodes '{intersec}' are being treated as both tellegen and source/sink."
         self.paths = all_paths
 
     def _create_single_path_object(self, vertex_list: list, edge_list: list, regularise: bool, unit: int):
+        """ Creates a path object given its vertices, a list of its edges, and its units."""
         p = Path(vertices=vertex_list)  # Create path object
         p.regularise = regularise  # For adding regularisation (ie equal sharing) to give a unique solution
         p.units = unit
