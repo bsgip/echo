@@ -4,6 +4,7 @@ from sklearn import linear_model
 import pandas as pd
 import pyomo.environ as en
 from collections.abc import Sequence
+import orjson as orjson
 
 def _to_values(profile, key):
     if isinstance(profile, dict):
@@ -295,3 +296,23 @@ def tile_array_over_expansion_periods(array, expansion_periods):
     """ Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
     output = np.tile(np.array(array), expansion_periods)
     return output
+
+
+def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int):
+    values = profile[key].values
+    assert len(values) == time_periods, 'Initial values are wrong length.'
+    keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
+    d = dict(zip(keys, values))
+    return d
+
+def orjson_dumps(v, *, default):
+    # orjson.dumps returns bytes, to match standard json.dumps we need to decode
+    return orjson.dumps(v, default=default).decode()
+
+def orjson_dumps(v, *, default):
+    for key, value in v.items():
+        if isinstance(value, dict):
+            v[key] = ':'.join(value)
+
+    # orjson.dumps returns bytes, to match standard json.dumps we need to decode
+    return orjson.dumps(v, default=default).decode()

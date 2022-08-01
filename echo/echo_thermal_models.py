@@ -38,8 +38,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         assert self.input_pts is not None, 'No input points defined'
         assert self.output_pts is not None, 'No output points defined'
 
-    def initialise_node(self, model):
-        super(TimeVaryingPiecewiseIONode, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(TimeVaryingPiecewiseIONode, self).initialise_node(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         set_float_var_bounds(model=model, var_name=self.ports['input'].port_name, ub=self.input_ub, lb=self.input_lb)
         set_float_var_bounds(model=model, var_name=self.ports['output'].port_name, ub=self.output_ub, lb=self.output_lb)
@@ -156,8 +156,8 @@ class ThermalNode(Node):
         self.losses = 'losses_' + self.node_name
         self.gains = 'gains_' + self.node_name
 
-    def initialise_node(self, model):
-        super(ThermalNode, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(ThermalNode, self).initialise_node(model, profile)
         self.create_and_bound_temp_vars(model)
         self.loss_and_gain_constraints_and_variables(model)
         self.apply_energy_balance_constraint(model)
@@ -273,8 +273,8 @@ class HeatPump(Node):
         self.heat_in = 'heat_in_' + self.node_name
         self.cool_in = 'cool_in_' + self.node_name
 
-    def initialise_node(self, model):
-        super(HeatPump, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(HeatPump, self).initialise_node(model, profile)
 
         # Create variables for attributing the input to either heating or cooling
         setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
@@ -353,8 +353,8 @@ class HeatPumpSingleOutput(HeatPump):
         # Create output port
         self.ports['output'] = FlexPort(units=Units.KWT)
 
-    def initialise_node(self, model):
-        super(HeatPumpSingleOutput, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(HeatPumpSingleOutput, self).initialise_node(model, profile)
         # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
         self.ports['output'].constrain_pos_neg(model)
 
@@ -375,8 +375,8 @@ class HeatPumpDualOutput(HeatPump):
         self.ports['heating'] = FlexSource(units=Units.KWT)
         self.ports['cooling'] = FlexSink(units=Units.KWT)
 
-    def initialise_node(self, model):
-        super(HeatPumpDualOutput, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(HeatPumpDualOutput, self).initialise_node(model, profile)
         self.ports['cooling'].constrain_pos_neg(model)  # need to do this so we have a binary variable for the constraints
 
     def apply_node_constraints(self, model):
@@ -485,8 +485,8 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = 'inlet_temp_' + self.node_name
         self.exit_t = 'outlet_temp_' + self.node_name
 
-    def initialise_node(self, model):
-        super(TempControlledBoiler, self).initialise_node(model)
+    def initialise_node(self, model, profile):
+        super(TempControlledBoiler, self).initialise_node(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(model, self.return_t,
                 en.Var(model.Expansion, model.Time, initialize=0, bounds=self.return_temp_bounds, domain=en.Reals))
