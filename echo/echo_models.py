@@ -1430,7 +1430,7 @@ class EV(Node):
     charge_mode: str = None
     available: Union[ArrayType, list]
     usage: Union[ArrayType, list]
-    cp_name: str = 'cp'
+    connection_port_name: str = 'cp'
     tod_charging: Union[ArrayType, list, None] = None
     interval_duration: int
     # Battery attributes
@@ -1470,14 +1470,14 @@ class EV(Node):
         if self.charge_mode == EVChargeMode.V0G:
             self.trip_slack = True  # Set slack to true
             self.ports['vehicle'].enable_trip_slack = self.trip_slack
-            self.ports[self.cp_name] = ElectricalDemand()
+            self.ports[self.connection_port_name] = ElectricalDemand()
             self.process_V0G_charging(self.interval_duration)
-            self.ports[self.cp_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
+            self.ports[self.connection_port_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
-            self.ports[self.cp_name] = ElectricalPort()
-            self.ports[self.cp_name].add_active_periods_from_array(self.available, expansion_periods=1)
+            self.ports[self.connection_port_name] = ElectricalPort()
+            self.ports[self.connection_port_name].add_active_periods_from_array(self.available, expansion_periods=1)
             if self.charge_mode == EVChargeMode.V1G:
-                self.ports[self.cp_name].set_flow_constraints(max_import=self.charging_power_limit, max_export=0.)
+                self.ports[self.connection_port_name].set_flow_constraints(max_import=self.charging_power_limit, max_export=0.)
 
         # EV needs a custom transformation because of the positive load convention
         self.create_ev_transformation()
@@ -1487,7 +1487,7 @@ class EV(Node):
         t = Transform()
         t.add_lhs_term(self.ports['vehicle'], TransformRule.Both, 1)
         t.add_rhs_term(self.ports['usage'], TransformRule.Both, -1)
-        t.add_rhs_term(self.ports[self.cp_name], TransformRule.Both, 1)
+        t.add_rhs_term(self.ports[self.connection_port_name], TransformRule.Both, 1)
         self.add_transformation(t)
         self.node_rule = NodeRule.Transform
 
@@ -1537,9 +1537,9 @@ class EV(Node):
     def verify_node(self):
         super(EV, self).verify_node()
         if self.charge_mode == EVChargeMode.V0G:
-            assert self.ports[self.cp_name].initial_value != 0, 'V0G connection pt port needs demand profile added.'
+            assert self.ports[self.connection_port_name].initial_value != 0, 'V0G connection pt port needs demand profile added.'
         else:
-            assert self.ports[self.cp_name].active_periods is not None, 'Add available periods to EV connection pt port'
+            assert self.ports[self.connection_port_name].active_periods is not None, 'Add available periods to EV connection pt port'
         assert self.ports['usage'].initial_value != 0, 'EV usage port needs usage profile added.'
 
     def initialise_node(self, model, profile):
