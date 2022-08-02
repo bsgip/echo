@@ -1183,7 +1183,7 @@ class Storage(Port):
     discharging_power_limit: float
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-    initial_state_of_charge: float
+    initial_state_of_charge: float = 0
     fixed_storage_capacity: bool = True
     storage_capacity_cost: Optional[PositiveFloat]
     regularise: bool = False
@@ -1214,7 +1214,7 @@ class Storage(Port):
 
     def create_storage_variables(self, model):
         # Create soc variable and bound it
-        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0,
+        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=self.initial_state_of_charge,
                                               bounds=(self.min_soc, self.max_capacity)))
         # Apply charging constraints as bounds on port_name variable
         set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
@@ -1817,6 +1817,7 @@ class DieselGenerator(InputOutputNode):
                                                    units=self.output_port_unit)
 
         self.ports["input"] = FlexSink(units=self.input_port_unit)     # the node is importing through this port
+        self.ports["input"].set_flow_constraints(max_import=-self.max_output/self.cop, max_export=0)
         self.ports['co2'] = CarbonSource()
         # todo: add some validators :-)
 
