@@ -399,7 +399,7 @@ def test_block_tariff():
     interval_duration = 60
     expansion_periods = 1
 
-    system = OptGraph()
+    system = OptimisationGraph()
 
     grid = FlexNode(node_name='grid', port_name='grid', port_unit=Units.KW)
     load = Load(node_name='load', port_name='load', profile=[10]*time_periods, port_unit=Units.KW)
