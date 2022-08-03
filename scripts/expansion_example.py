@@ -5,6 +5,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
+from echo.echo_models import *
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location
@@ -46,9 +47,8 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
-keys = generate_pyomo_indices(time_periods, expansion_periods)
 l1.add_initial_value_from_array([0] * time_periods + [30] * time_periods + [40] * time_periods + [40] * time_periods,
-                                 keys=keys)
+                                expansion_periods=expansion_periods, time_periods=time_periods)
 load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 inverter = Inverter()
@@ -69,17 +69,18 @@ battery = Battery(port_name='bess',
                   retirement_planning=True,
                   replace_cost=0.)  # initial state of charge in kWh
 
-battery_future = Battery(port_name='bess',
-                         expansion_planning=True,
-                         install_cost=50,  # $ /unit capacity
-                         max_capacity=100.0,  # max capacity of battery in kwh
-                         depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-                         charging_power_limit=2,  # max charging rate in kW
-                         discharging_power_limit=-2,  # max discharging rate in kW
-                         charging_efficiency=1,  # charging efficiency in range [0,1]
-                         discharging_efficiency=1,  # discharging efficiency in range [0,1]
-                         initial_state_of_charge=0.0,
-                         fixed_storage_capacity=False)  # initial state of charge in kWh
+battery_future = ExpansionNode(node_name='bess_future',
+                               expansion_planning=True,
+                               install_cost=50)
+bf = ElectricalStorage(max_capacity=100.0,  # max capacity of battery in kwh
+                       depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
+                       charging_power_limit=2,  # max charging rate in kW
+                       discharging_power_limit=-2,  # max discharging rate in kW
+                       charging_efficiency=1,  # charging efficiency in range [0,1]
+                       discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                       initial_state_of_charge=0.0,
+                       fixed_storage_capacity=False)  # initial state of charge in kWh
+battery_future.add_port('bess', bf)
 
 inverter.add_dc_port('bess_future')
 
