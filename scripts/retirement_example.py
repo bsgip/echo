@@ -47,9 +47,10 @@ connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
 load = Node()  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
+
 # Create an array of increasing load each expansion period
 init_demand = 10
-inc = 5
+inc = 10
 demand = []
 for i in range(expansion_periods):
     demand += [init_demand + inc*i] * time_periods
@@ -59,31 +60,31 @@ load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 inverter = Inverter()
 inverter.add_ac_port('inv')  # add a port that is used to connect back to the connection_point
+inverter.add_dc_port('bess')  # add a port to connect to the battery
 
-battery_future = ExpansionNode(node_name='bess_future',
-                               install_cost=150)
+# create a retirement node for the battery - retirement parameters are specified at node level
+battery = RetirementNode(node_name='battery',
+                         initial_life_left=2,
+                         nominal_lifetime=3,
+                         replace_cost=10.)
 
-bf = ElectricalStorage(max_capacity=100.0,  # max capacity of battery in kwh
-                       depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-                       charging_power_limit=2,  # max charging rate in kW
-                       discharging_power_limit=-2,  # max discharging rate in kW
-                       charging_efficiency=1,  # charging efficiency in range [0,1]
-                       discharging_efficiency=1,  # discharging efficiency in range [0,1]
-                       initial_state_of_charge=0.0,
-                       fixed_storage_capacity=False)  # initial state of charge in kWh
-
-battery_future.add_port('bess', bf)
-
-inverter.add_dc_port('bess_future')
+b = ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
+                                           depth_of_discharge_limit=0, # allowable depth of discharge in range [0,100] (i.e. percent)
+                                           charging_power_limit=2,  # max charging rate in kW
+                                           discharging_power_limit=-2,  # max discharging rate in kW
+                                           charging_efficiency=1,  # charging efficiency in range [0,1]
+                                           discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                                           initial_state_of_charge=0.0) # initial state of charge in kWh
+battery.add_port('bess', b)
 
 # Populate graph with assets (nodes)
-system.add_node_obj([grid, load, connection_point, inverter, battery_future])
+system.add_node_obj([grid, battery, load, connection_point, inverter])
 
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
 system.connect_ports_and_create_edge(connection_point.ports['load'], load.ports['load'])
 system.connect_ports_and_create_edge(connection_point.ports['inv'], inverter.ports['inv'])
-system.connect_ports_and_create_edge(inverter.ports['bess_future'], battery_future.ports['bess'])
+system.connect_ports_and_create_edge(inverter.ports['bess'], battery.ports['bess'])
 
 # Create objectives/tariffs
 import_cost = ImportTariff(name='import_cost',
@@ -108,10 +109,11 @@ opt.optimise(tee=True)
 
 log_infeasible_constraints(opt.model)
 
-print('total cost:', opt.get_total_objective_value())
-print('Exp Battery installed: ', opt.values(battery_future.is_installed, 0))
-print('Planning period installed: ', opt.values(battery_future.installed_when))
 
+print('Battery1 life remaining: ', opt.values(battery.lifetime_remaining, 0))
+print('Battery1 retired: ', opt.values(battery.retire, 0))
+print('Battery1 replaced: ', opt.values(battery.replace, 0))
+print('Total cost: ', opt.get_total_objective_value())
 
 ############################ Analyse the Optimisation ########################################
 
