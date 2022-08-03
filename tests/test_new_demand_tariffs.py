@@ -35,16 +35,16 @@ def test_system_import_demand_tariff():
     load1.ports['demand'] = l1
 
     system.add_node_obj([grid, load1])
-    grid_edge = Edge(vertices=[l1, grid.ports['grid']])
-    system.add_edge_obj([grid_edge])
+    system.connect_ports_and_create_edge(l1, grid.ports['grid'])
 
     dc_window = [1] * 24 + [0] * 24
     minimum_demand = 1.0
-    demand_tariff = ImportDemandTariffObjective(component=l1,
-                                                demand_charges=[DemandCharge(
+    demand_tariff = DemandTariffObjective(component=l1,
+                                                demand_charges=[ImportDemandCharge(
                                                     rate=1.0,
                                                     window_array=dc_window,
-                                                    min_demand=minimum_demand)])
+                                                    min_demand=minimum_demand,
+                                                    reset_periods=[time_periods])])
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
@@ -83,16 +83,16 @@ def test_system_export_demand_tariff():
     gen.ports['gen'] = g1
 
     system.add_node_obj([grid, gen])
-    grid_edge = Edge(vertices=[g1, grid.ports['grid']])
-    system.add_edge_obj([grid_edge])
+    system.connect_ports_and_create_edge(g1, grid.ports['grid'])
 
     dc_window = [1] * 24 + [0] * 24
     minimum_demand = 0.0
-    demand_tariff = ExportDemandTariffObjective(component=g1,
-                                                demand_charges=[DemandCharge(
+    demand_tariff = DemandTariffObjective(component=g1,
+                                                demand_charges=[ExportDemandCharge(
                                                     rate=1.0,
                                                     window_array=dc_window,
-                                                    min_demand=minimum_demand)])
+                                                    min_demand=minimum_demand,
+                                                    reset_periods=[time_periods])])
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
@@ -135,9 +135,9 @@ def test_system_import_demand_tariff_two_resets():
 
     dc_window = [1]*6 + [0]*6 + [0]*24 + [1]*6 + [0]*6
     minimum_demand = 1.0
-    demand_tariff = ImportDemandTariffObjective(component=l1,
+    demand_tariff = DemandTariffObjective(component=l1,
                                                 demand_charges=[
-                                                    DemandCharge(
+                                                    ImportDemandCharge(
                                                         rate=1.0,
                                                         import_demand=True,
                                                         window_array=dc_window,

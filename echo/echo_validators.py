@@ -3,6 +3,8 @@ from typing import TypeVar
 from pydantic import BaseModel, Field
 import numpy as np
 
+
+
 DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class ArrayType(np.ndarray):
@@ -30,7 +32,7 @@ def var_in_range(var1, range_min, range_max):
 def is_non_negative(v, err_msg):
     if v is not None:
         if hasattr(v, '__iter__'):
-            if type(v) is dict:
+            if isinstance(v, dict):
                 for i in v.values():
                     if i < 0:
                         raise ValueError(err_msg)
@@ -156,9 +158,9 @@ def set_bounds_from_piecewise_pts(cls, values):
     return values
 
 
-def set_output_bounds_from_input_bounds_and_cop_and_startup_eta(cls, values):
+def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values):
     cop = values.get('cop')
-    eta = values.get('startup_eta')
+    eta = values.get('startup_cop')
     max_in = values.get('max_input')
     min_in = values.get('min_input')
     values['max_output'] = max_in * cop * -1
@@ -171,7 +173,7 @@ def set_output_bounds_from_input_bounds_and_cop_and_startup_eta(cls, values):
 
 def validate_startup_efficiency(cls, values):
     cop = values.get('cop')
-    eta = values.get('startup_eta')
+    eta = values.get('startup_cop')
     if eta is not None:
         assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
     return values

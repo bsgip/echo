@@ -5,7 +5,6 @@ The echo builder module contains functions and classes used for building an echo
 from typing import Optional, Union, Any
 import pandas as pd
 import numpy as np
-import networkx as nx
 from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
@@ -23,6 +22,7 @@ class Network(em.BaseModel):
     components = {}  # network components (nodes)
     edges = {}  # network edges, representing connectivity
     objectives = {}  # any objectives we want to define
+    profile = {}  # any static time series data
 
     def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Any = None, params: dict = None,
                                data: Any = None):
@@ -39,13 +39,12 @@ class Network(em.BaseModel):
         """
         self.validate_new_port(ports)
         if self.components.get(n_id) is not None:
-            print('Node {} is already defined in components. Updating node with any additional ports'.format(n_id))
-            self.components[n_id]['ports'].update(ports)
+            print('Node {} is already defined in components. Ignoring duplicate.'.format(n_id))
         else:
             d = {'id': n_id, 'type': n_type, 'ports': ports}
-            if params:
+            if params is not None:
                 d['parameters'] = params
-            if data:
+            if data is not None:
                 d['data'] = data
             self.components[n_id] = d
 
@@ -60,45 +59,55 @@ class Network(em.BaseModel):
         self.validate_new_edge(edge_name, node_tuple)
         self.edges[edge_name] = e
 
-    def add_edge_between_nodes(self, node_tuple: tuple, resource: Units, edge_name: str = None):
-        # Adds an edge between two nodes with no specified ports
-        # First create a port on each node, with units matching the res, and port name = node name at other end of edge
-        port1_dict = {node_tuple[1]: {'units': resource}}
-        port2_dict = {node_tuple[0]: {'units': resource}}
-        self.add_port_to_existing_node(n_id=node_tuple[0], port_dict=port1_dict)
-        self.add_port_to_existing_node(n_id=node_tuple[1], port_dict=port2_dict)
-        self.add_edge_between_ports(node_tuple=node_tuple, port_tuple=node_tuple, edge_name=edge_name,
-                                    resource=resource)
-
-    def add_port_to_existing_node(self, n_id: str, port_dict: dict):
-        """ Updates the port dict of the node to include the new port"""
-        (new_port_name, new_port_values), = port_dict.items()
-        if self.components[n_id]['ports'].get(new_port_name) is not None:
-            print('Port {} is already defined on node {}'.format(new_port_name, n_id))
-            if new_port_values != self.components[n_id]['ports'].get(new_port_name):
-                raise ValueError('Port dicts conflict, and node could not be updated.')
-        else:
-            self.components[n_id]['ports'].update(port_dict)
-
-    def add_objective(self, obj_name: str, obj_type: TariffType, component: dict = None, prices: Any = None,
+    def add_objective(self, name: str, obj_type: TariffType, component: dict = None, prices: Any = None,
                       charges: list = None):
-        o = {'type': obj_type, 'name': obj_name}
+        o = {'type': obj_type, 'name': name}
         if component:
             o['component'] = component
         if prices:
             o['prices'] = prices
         if charges:
             o['charges'] = charges
-        self.objectives[obj_name] = o
+        self.objectives[name] = o
 
-    def validate_new_edge(self, edge_name: str, node_tuple: tuple) -> None:
+    def add_profile(self, profile: pd.DataFrame):
+        self.profile = dict(profile)
+
+    def update_port_list_on_node(self, n_id: str, port: str):
+        """ Updates the port list of the node to include new port name (str)"""
+        assert self.components[n_id]['ports'] is not None, 'Initialise port list before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is list, \
+            'Cannot use this method on node {} because this node does not use a port list.'.format(n_id)
+        if port in self.components[n_id]['ports']:
+            'Port with name {} is already defined on node.'.format(port)
+        else:
+            self.components[n_id]['ports'].append(port)
+
+    def update_port_dict_on_node(self, n_id: str, port_dict: dict):
+        self.validate_new_port(port_dict)
+        assert self.components[n_id]['ports'] is not None, 'Initialise port dict before adding ports using this method.'
+        assert type(self.components[n_id]['ports']) is dict, \
+            'Cannot use this method on node {} this node does not use a port dict.'.format(n_id)
+        (new_port_name, new_port_values), = port_dict.items()
+        if self.components[n_id]['ports'].get(new_port_name) is not None:
+            print('Port {} is already defined on node {}'.format(new_port_name, n_id))
+            if new_port_values != self.components[n_id]['ports'].get(new_port_name):
+                raise ValueError('Port dicts conflict, the node could not be updated.')
+        else:
+            self.components[n_id]['ports'].update(port_dict)
+
+    def validate_new_edge(self, edge_name: str, node_tuple: tuple):
         """ Checks that edge has unique name and unique node tuple."""
-        assert self.edges.get(edge_name) is None, 'Edge with name "{}" is already defined.'.format(edge_name)
+        if self.edges.get(edge_name) is not None:
+            print('Edge with name "{}" is already defined. Ignoring current edge'.format(edge_name))
+            return None
         for existing_edge_name, existing_edge_dict in self.edges.items():
-            assert existing_edge_dict['nodes'] != node_tuple, \
-                'Nodes {} are already connected with existing edge named "{}".'.format(node_tuple, existing_edge_name)
+            if existing_edge_dict['nodes'] == node_tuple:
+                print('Nodes {} are already connected with existing edge named "{}". Ignoring current edge.'.format(node_tuple, existing_edge_name))
+                return None
         # Checks that nodes are different
         assert node_tuple[0] != node_tuple[1], 'A node cannot be connected to itself.'
+        return edge_name
 
     @staticmethod
     def validate_new_port(ports: Union[dict, list]) -> None:
@@ -113,8 +122,6 @@ class Network(em.BaseModel):
                 'Ports should be defined as a list of port names, or as a dictionary with the port name as key.')
 
     def validate_network(self):
-        print('Validating network "{}"'.format(self.name))
-
         # check consistency of port names as defined in self.components and self.edges
         err = []
         for edge_name, edge in self.edges.items():
@@ -130,7 +137,7 @@ class Network(em.BaseModel):
                             edge_name, port1, node1, node2))
         assert len(err) == 0, err
 
-        # Print msg warning if no objectives are defined
+        # Print warning if no objectives are defined
         if bool(self.objectives) is True:
             for obj_name, obj in self.objectives.items():
                 component_node = obj['component']['node']
@@ -149,6 +156,12 @@ class Network(em.BaseModel):
                                                                                                          component_node))
         else:
             print('No objectives defined for network "{}"'.format(self.name))
+
+    def convert_to_echo(self):
+        """ Converts the dict to an echo model"""
+        df = pd.DataFrame(self.profile)
+        return convert_network_to_echo(self, df)
+
 
 
 class NetworkSet:
@@ -273,10 +286,12 @@ def process_single_network(network_dict: dict, interval_duration: int, time_peri
     # append_results(results, network_dict, in_place=True)
     network_dict['infeasible'] = True if 'infeasible' in opt.opt_status['Termination condition'] else False
     results['infeasible'] = network_dict['infeasible']
+    cost_summary = extract_objectives(opt)
+    results['cost_summary'] = cost_summary
     return results
 
 
-def convert_network_to_echo(netw: Network, df: pd.DataFrame, verbose: bool = True):
+def convert_network_to_echo(netw: Network, df: pd.DataFrame = None, verbose: bool = True):
     # Converts a network class to a dict, then turns it into an echo model
     netw.validate_network()
     return convert_dict_to_echo(netw=netw.dict(), df=df, verbose=verbose)
@@ -290,10 +305,10 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
 
     node_name_dict = {}
     system = em.OptimisationGraph()
-    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not(verbose)):
+    for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not (verbose)):
         construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
 
-    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not(verbose)):
+    for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not (verbose)):
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
 
     obj_set = construct_echo_objective(system=system, objective_dict=netw['objectives'], node_name_dict=node_name_dict)
@@ -304,12 +319,9 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
     return system, obj_set, node_name_dict
 
 
-def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict, objective_dict: dict,
-                             verbose: bool = True):
+def construct_echo_objective(system: em.OptimisationGraph, node_name_dict: dict, objective_dict: dict):
     """ Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set. """
-    if verbose:
-        print('Constructing objective...')
 
     objective_list = []
     for obj_name, obj_dict in objective_dict.items():
@@ -417,9 +429,8 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
     else:
-        raise ValueError(
-            'Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
-    update()     # Update our graph
+        raise ValueError('Node type "{}" not recognised, does not have a builder function'.format(node_dict['type']))
+    update()  # Update our graph
 
 
 def run_echo_optimiser(echo_graph,
@@ -473,14 +484,21 @@ def create_tellegen_node(node_dict: dict, port_unit):
     node = em.TellegenNode(node_name=node_dict['id'])
     port_list = node_dict['ports']
     add_flex_ports_to_node(node, port_list, [port_unit] * len(port_list))
+    # Check for any flow constraints on ports
+    if node_dict.get('parameters') is not None:
+        for port_name, port_params in node_dict['parameters'].items():
+            node.ports[port_name].set_flow_constraints(max_import=port_params.get('max_import'),
+                                                       max_export=port_params.get('max_export'),
+                                                       slack=port_params.get('slack'))
+
     return node
 
 
-def create_flex_node(node_dict: dict, units: int) -> em.Node:
+def create_flex_node(node_dict: dict, unit: int) -> em.Node:
     """ Creates an echo flexible node from the provided node dict.
     A flexible node is a node with a single flexible port with a specified unit."""
     port_name = check_node_has_only_one_port(node_dict)
-    node = em.FlexNode(node_name=node_dict['id'], port_name=port_name, units=units)
+    node = em.FlexNode(node_name=node_dict['id'], port_name=port_name, port_unit=unit)
     return node
 
 
@@ -524,7 +542,9 @@ def create_ev(node_dict: dict, df: pd.DataFrame) -> em.Node:
     ev_dict = node_dict['parameters']
     ev_dict['available'] = process_field(ev_dict['available'], df)
     ev_dict['usage'] = process_field(ev_dict['usage'], df)
-    node = em.EV(node_name=node_dict['id'], cp_name=cp_port_name, **ev_dict)  # pass all our params as kwargs
+    node = em.EV(node_name=node_dict['id'],
+                 connection_port_name=cp_port_name,
+                 **ev_dict)  # pass all our params as kwargs
     return node
 
 
@@ -554,17 +574,18 @@ def create_demand_tariff(tariff_dict: dict, component_obj: em.Port):
         else:
             min_demand = 0
         # todo allow demand tariffs to be specific with start/end times
-        c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window)  # Create demand charge
+        if tariff_dict['type'] == TariffType.ImportDemandTariff:
+            c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window, import_demand=True, export_demand=False)
+        if tariff_dict['type'] == TariffType.ExportDemandTariff:
+            c = eobj.DemandCharge(rate=rate, min_demand=min_demand, window_array=window, import_demand=False, export_demand=True)
+
         echo_charge_list.append(c)
 
-    import_demand = True if tariff_dict['type'] == TariffType.ImportDemandTariff else False
-    export_demand = False if tariff_dict['type'] == TariffType.ImportDemandTariff else True
     demand_tariff = eobj.DemandTariffObjective(name=tariff_dict['name'],
-                                          component=component_obj,
-                                          demand_charges=echo_charge_list,
-                                          export_demand=export_demand,
-                                          import_demand=import_demand)
+                                               component=component_obj,
+                                               demand_charges=echo_charge_list)
     return demand_tariff
+
 
 def get_tariff_component_from_node_port_name(tariff_dict: dict, node_name_dict: dict, system: em.OptimisationGraph):
     """ Retrieves an objective component defined in an objective dict from an echo model and returns it."""
@@ -605,7 +626,9 @@ def check_node_has_only_one_port(node_dict: dict):
 
 def process_field(field, df):
     """ Checks if a field points to data in a df or if it contains the data directly."""
+
     if type(field) is str:
+        assert df is not None, 'Dataframe must be provided, since field is defined by a dataframe column {}.'.format(field)
         try:
             x = df[field]
             vals = x.values
@@ -627,9 +650,8 @@ def array_length_check(array, length: int, message, scalar_ok=False):
 
 ### Result extraction functions
 
-def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict, results_key: dict = None) -> dict:
-    """ Extracts results from an echo model and returns them in a dict.
-    Results key arg allows user to specify which results they want returned."""
+def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict) -> dict:
+    """ Extracts results from an echo model and returns them in a dict. """
 
     system = optimiser.ES
     output = {}  # for storing results
@@ -661,17 +683,16 @@ def extract_results(optimiser: eo.EchoOptimiser, node_name_dict: dict, results_k
                     output[node_name][port_name]['import_violation_max'] = optimiser.values(port_obj.import_slack_max,
                                                                                             0)
                 else:
-                    pass
-                    # output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    # output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['import_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['import_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
                 if hasattr(optimiser.model, port_obj.export_slack):
                     output[node_name][port_name]['export_violation'] = optimiser.values(port_obj.export_slack, 0)
                     output[node_name][port_name]['export_violation_max'] = optimiser.values(port_obj.export_slack_max,
                                                                                             0)
                 else:
                     pass
-                    # output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
-                    # output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['export_violation'] = 0 * optimiser.values(port_obj.port_name, 0)
+                    output[node_name][port_name]['export_violation_max'] = 0 * optimiser.values(port_obj.port_name, 0)
 
     return output
 
