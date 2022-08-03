@@ -62,13 +62,13 @@ class EchoOptimiser(object):
 
         self.ES.verify_graph()
 
-        # Give a warning for any ports that are not connected to anything - sometimes this is ok, eg if the port has a well defined transformation,
-        # but sometimes it will cause the optimisation to give an incorrect result
-        x = self.ES.get_port_set_on_nodes()
-        y = self.ES.get_port_set_on_edges()
-        z = x - y
-        if z:
-            print('The following ports are defined on a node but not an edge, or vice versa:', z)
+        # # Give a warning for any ports that are not connected to anything - sometimes this is ok, eg if the port has a well defined transformation,
+        # # but sometimes it will cause the optimisation to give an incorrect result
+        # x = self.ES.get_port_set_on_nodes()
+        # y = self.ES.get_port_set_on_edges()
+        # z = x - y
+        # if z:
+        #     print('The following ports are defined on a node but not an edge, or vice versa:', z)
 
 
 
@@ -249,7 +249,7 @@ class EchoOptimiser(object):
     def get_single_objective_total_value(self, objective_obj):
         """ Returns the value of a single objective"""
         assert self.objective_set is not None, 'No objectives defined for this optimiser.'
-        return objective_obj.get_objective_total(optimiser=self)
+        return objective_obj.get_objective_value()
 
     def get_total_objective_value(self):
         """ Returns the value of the objective function."""
@@ -261,6 +261,6 @@ class EchoOptimiser(object):
         total = 0
         for obj in self.objective_set.objective_list:
             if obj.component == port_obj:
-                total += obj.get_objective_total(optimiser=self)
+                total += obj.get_objective_value()
         return total
 

@@ -1,3 +1,4 @@
+import enum
 import uuid
 import pickle
 import uuid
@@ -289,7 +290,7 @@ class Port(BaseModel):
 
         x = ArrayWrap(array)
         if time_periods is None:
-            time_period = len(array)
+            time_periods = len(array)
         x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
         vals = x.dict()
         self.add_initial_value(vals)
@@ -324,6 +325,9 @@ class Port(BaseModel):
                              model.Time) * model.bigM * 0.1
 
         self.objective += total
+
+    def get_port_objective_value(self):
+        return en.value(self.objective)
 
 
 class Transform(BaseModel):
@@ -487,26 +491,21 @@ class Node(BaseModel):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
-
     def add_objective(self, model):
         total = 0
-        if self.expansion_planning is True:
-            total += self.install_cost * getattr(model, self.max_install)
-        if self.retirement_planning is True:
-            total += self.replace_cost * sum(getattr(model, self.replace)[p] for p in model.Expansion)
         self.objective += total
 
     def num_ports(self):
         return len(self.ports)
 
+    def get_node_objective_value(self):
+        return en.value(self.objective)
+
+
 class ExpansionNode(Node):
     """ A node with extra attributes for expansion planning."""
-    expansion_planning: Optional[bool] = False  # Attribute for whether we are considering installing this node
-    retirement_planning: Optional[bool] = False  # Attribute for whether we are considering retiring this node
-    install_cost: Optional[float]
-    replace_cost: Optional[float]
-    nominal_lifetime: int = None  # node nominal lifetime in number of expansion_planning period units
-    initial_life_left: int = None  # node life left at start of optimisation
+
+    install_cost: float
 
     @property
     def is_installed(self):
@@ -520,26 +519,9 @@ class ExpansionNode(Node):
     def max_install(self):
         return f"is_installed_total_{self.node_name}"
 
-    @property
-    def replace(self):
-        return f"is_replaced_{self.node_name}"
-
-    @property
-    def retire(self):
-        return f"is_retired_{self.node_name}"
-
-    @property
-    def lifetime_remaining(self):
-        return f"lifetime_remaining_{self.node_name}"
-
     def apply_node_constraints(self, model):
         super(ExpansionNode, self).apply_node_constraints(model)
-
-        if self.expansion_planning is True:
-            self._apply_expansion_constraints(model)
-
-        if self.retirement_planning is True:
-            self._apply_retirement_constraints(model)
+        self._apply_expansion_constraints(model)
 
     def _apply_expansion_constraints(self, model):
         # Create an indexed binary variable for which time period if any the port is installed
@@ -583,6 +565,35 @@ class ExpansionNode(Node):
                     en.Constraint(model.Expansion, model.Time, rule=install_before_active1))
             setattr(model, 'install_b4_run2_' + port_name,
                     en.Constraint(model.Expansion, model.Time, rule=install_before_active2))
+
+    def add_objective(self, model):
+        super(ExpansionNode, self).add_objective(model)
+        total = 0
+        total += self.install_cost * getattr(model, self.max_install)
+        self.objective += total
+
+class RetirementNode(Node):
+    """ Node for retirement planning."""
+
+    replace_cost: float
+    nominal_lifetime: int  # node nominal lifetime in number of expansion_planning period units
+    initial_life_left: int  # node life left at start of optimisation
+
+    @property
+    def replace(self):
+        return f"is_replaced_{self.node_name}"
+
+    @property
+    def retire(self):
+        return f"is_retired_{self.node_name}"
+
+    @property
+    def lifetime_remaining(self):
+        return f"lifetime_remaining_{self.node_name}"
+
+    def apply_node_constraints(self, model):
+        super(RetirementNode, self).apply_node_constraints(model)
+        self._apply_retirement_constraints(model)
 
     def _apply_retirement_constraints(self, model):
         # Create retirement planning variables
@@ -636,6 +647,11 @@ class ExpansionNode(Node):
             setattr(model, 'retire_1_'+port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule1))
             setattr(model, 'retire_2_' + port_name, en.Constraint(model.Expansion, model.Time, rule=retire_rule2))
 
+    def add_objective(self, model):
+        super(RetirementNode, self).add_objective(model)
+        total = 0
+        total += self.replace_cost * sum(getattr(model, self.replace)[p] for p in model.Expansion)
+        self.objective += total
 
 class Edge(BaseModel):
     """
@@ -1320,7 +1336,7 @@ class Storage(Port):
 
     def apply_soc_constraints(self, model):
         # Extract some variables to make constraints easier to write
-        max_t = len(model.Time)  # maximum time interval t
+        max_t = len(model.Time) - 1  # maximum time interval t
         kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
         soc = getattr(model, self.soc_value)
         power = getattr(model, self.port_name)

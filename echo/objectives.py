@@ -1,7 +1,7 @@
 import uuid
 from datetime import time
 from enum import Enum
-from typing import Optional, Union, List, TypeVar
+from typing import Optional, Union, List, TypeVar, Any
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
@@ -10,6 +10,7 @@ from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Fi
 from echo.echo_models import Port, Path, Storage
 from echo.echo_models import BaseModel as echoBaseModel
 from echo.echo_validators import ArrayType
+from echo.utils import ArrayWrap
 
 RangeSet = TypeVar('pyomo.core.base.set.RangeSet')  # type for rangeset
 
@@ -18,6 +19,7 @@ class Objective(echoBaseModel):
     component: Union[Port, Path, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: Optional[str] = None
+    value: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -36,9 +38,8 @@ class Objective(echoBaseModel):
     def objective_expr(self, model):
         pass
 
-    def get_objective_total(self, optimiser):
-        obj_expr = self.objective_expr(optimiser.model)  # Retrieve the objective expression
-        return en.value(obj_expr)  # Return the value of the summed expression
+    def get_objective_value(self):
+        return en.value(self.value)
 
 
 class ObjectiveSet(echoBaseModel):
@@ -74,14 +75,16 @@ class PeakPositivePower(Objective):
         def max_value_rule(model, p, t):
             return getattr(model, self.max_pos) >= getattr(model, self.component.pos)[p, t]
 
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+
+        self.component.constrain_pos_neg(model)
 
         setattr(model, f"max_pos_con_{self.component.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
-        return getattr(model, self.max_pos)
+        total = getattr(model, self.max_pos)
+        self.value = total
+        return total
 
 
 class PeakNegativePower(Objective):
@@ -96,8 +99,7 @@ class PeakNegativePower(Objective):
         setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
         def max_value_rule(model, p, t):
             return getattr(model, self.max_neg) <= getattr(model, self.component.neg)[p, t]
@@ -106,72 +108,62 @@ class PeakNegativePower(Objective):
                 en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
-        return getattr(model, self.max_neg) * -1
+        total = getattr(model, self.max_neg) * -1
+        self.value = total
+        return total
 
 
 class Tariff(Objective):
     tariff_array: Union[ArrayType, list]  # tariff array prices should always be positive
     expansion_periods: Optional[PositiveInt] = 1
 
-    @staticmethod
-    def return_tariff_dict(array, expansion_periods):
-        #todo update this to work for multiple expansion periods
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
-        return vals
-
-
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
     component: Port
-    import_tariff_dict: Optional[dict]
 
     @property
     def import_tariff(self):
         return 'import_tariff_' + self.name
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
-
     def create_params(self, model, df):
-        setattr(model, self.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict))
+        x = ArrayWrap(self.tariff_array)
+        x.set_periods(expansion_periods=len(model.Expansion), time_periods=len(model.Time))
+        setattr(model, self.import_tariff, en.Param(model.Expansion, model.Time, initialize=x.dict()))
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.import_tariff)[p, t] *
+        total = sum(getattr(model, self.component.pos)[p, t] * getattr(model, self.import_tariff)[p, t] *
                    model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in
                    model.Time)
+        self.value = total
+        return total
 
 
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
      to the negative (exporting) component of the specified port."""
     component: Port
-    export_tariff_dict: Optional[dict]
 
     @property
     def export_tariff(self):
         return 'export_tariff_' + self.name
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
-
     def create_params(self, model, df):
-        setattr(model, self.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict))
+        x = ArrayWrap(self.tariff_array)
+        x.set_periods(expansion_periods=len(model.Expansion), time_periods=len(model.Time))
+        setattr(model, self.export_tariff, en.Param(model.Expansion, model.Time, initialize=x.dict()))
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.export_tariff)[p, t] *
+        total = sum(getattr(model, self.component.neg)[p, t] * getattr(model, self.export_tariff)[p, t] *
                    model.interval_duration / 60 * getattr(model, model.dr)[p] for p in model.Expansion for t in
                    model.Time)
+        self.value = total
+        return total
 
 
 class BlockTariff(Objective):
@@ -199,7 +191,6 @@ class BlockTariff(Objective):
         else:
             values['reset_index'] = en.RangeSet(0, 0)
         return values
-
 
     def get_block_var_name(self, i):
         return 'block_' + str(i)
@@ -268,6 +259,7 @@ class BlockImportTariff(BlockTariff):
         total = 0
         for i in range(self.num_price_bands):
             total += self.rates[i] * sum(getattr(model, self.get_block_var_name(i))[r] for r in self.reset_index)
+        self.value = total
         return total
 
 class PathTariff(Tariff):
@@ -290,8 +282,10 @@ class PathTariff(Tariff):
         pass
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.path_tariff)[p, t] *
+        total = sum(getattr(model, self.component.flow_value)[p, t] * getattr(model, self.path_tariff)[p, t] *
                    getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+        self.value = total
+        return total
 
 
 class ThroughputCost(Objective):
@@ -300,14 +294,14 @@ class ThroughputCost(Objective):
     rate: PositiveFloat
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        obj = sum(
+        total = sum(
             (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
-        return obj
+        self.value = total
+        return total
 
 
 class NotFullyChargedPenalty(Objective):
@@ -317,18 +311,18 @@ class NotFullyChargedPenalty(Objective):
     rate_array: list
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
         if self.rate_array is None:
             self.rate_array = [self.rate] * len(model.Time)
-        obj = sum(
+        total = sum(
             (self.component.max_capacity - getattr(model, self.component.soc_value)[p, t]) * self.rate_array[t] *
             getattr(model, model.dr)[p]
             for p in model.Expansion for t in model.Time
         )
-        return obj
+        self.value = total
+        return total
 
 
 class QuadraticPower(Objective):
@@ -336,13 +330,14 @@ class QuadraticPower(Objective):
     component: Port
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model):
-        return sum(
+        total = sum(
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t]) *
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
+        self.value = total
+        return total
 
 
 class Contingency(Objective):
@@ -597,6 +592,7 @@ class DemandCharge(echoBaseModel):
     reset_periods: Union[ArrayType, List]
     import_demand: bool = False
     export_demand: bool = False
+    value: Optional[Any] = 0
 
     num_reset_periods: Optional[int]
     reset_index: Optional[RangeSet]  # index for separating different reset periods
@@ -673,16 +669,14 @@ class DemandCharge(echoBaseModel):
             setattr(model, self.max_demand_val, en.Var(self.reset_index, initialize=0, domain=en.NonPositiveReals))
 
     def objective_expr(self, model):
-        objective = 0
+        total = 0
         if self.import_demand:
-            objective += sum(getattr(model, self.max_demand_val)[r] * self.rate for r in self.reset_index)
+            total = sum(getattr(model, self.max_demand_val)[r] * self.rate for r in self.reset_index)
         elif self.export_demand:
-            objective += sum(getattr(model, self.max_demand_val)[r] * self.rate * -1 for r in self.reset_index)
-        return objective
+            total = sum(getattr(model, self.max_demand_val)[r] * self.rate * -1 for r in self.reset_index)
+        self.value = total
+        return total
 
-    def get_objective_total(self, optimiser):
-        expr = en.value(self.objective_expr(optimiser.model))
-        return expr
 
 
 class DemandTariffObjective(Objective):
@@ -730,8 +724,7 @@ class DemandTariffObjective(Objective):
             dc.create_vars(model)
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        self.component.constrain_pos_neg(model)
 
         for dc in self.demand_charges:
             if dc.import_demand is True:
@@ -752,10 +745,20 @@ class DemandTariffObjective(Objective):
                         en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_export_demand_rule))
 
     def objective_expr(self, model):
-        objective = 0
+        total = 0
         for dc in self.demand_charges:
-            objective += dc.objective_expr(model)
-        return objective
+            total += dc.objective_expr(model)
+        self.value = total
+        return total
+
+    def get_charge_value(self, dc: Union[DemandCharge, str]):
+        """ Returns the value of an individual demand charge in a demand tariff,
+        where the demand charge is either the object or the charge name."""
+        if hasattr(dc, 'name'):
+            dc = dc.name
+        for i in self.demand_charges:
+            if i.name == dc:
+                return en.value(i.value)
 
 
 class ImportDemandCharge(DemandCharge):

@@ -31,7 +31,7 @@ np.set_printoptions(suppress=True)
 
 ## Set up hyper params
 time_periods = 12  # number of time periods to run the optimisation for
-interval_duration = 60  # each time period is 15 mins long
+interval_duration = 60
 expansion_periods = 4
 discount_rate = 0  # not yet implemented leave as 0
 
@@ -56,22 +56,24 @@ inverter.add_ac_port('inv')  # add a port that is used to connect back to the co
 inverter.add_dc_port('bess')  # add a port to connect to the battery
 
 # create a node for the battery
-battery = Battery(port_name='bess',
-                  max_capacity=10.0,  # max capacity of battery in kwh
-                  depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-                  charging_power_limit=2,  # max charging rate in kW
-                  discharging_power_limit=-2,  # max discharging rate in kW
-                  charging_efficiency=1,  # charging efficiency in range [0,1]
-                  discharging_efficiency=1,  # discharging efficiency in range [0,1]
-                  initial_state_of_charge=0.0,
-                  initial_life_left=2,
-                  nominal_lifetime=3,
-                  retirement_planning=True,
-                  replace_cost=0.)  # initial state of charge in kWh
+battery = RetirementNode(node_name='battery',
+                         initial_life_left=2,
+                         nominal_lifetime=3,
+                         replace_cost=10.)
+
+battery.add_port('bess', ElectricalStorage(max_capacity=10.0,  # max capacity of battery in kwh
+                                           depth_of_discharge_limit=0,
+                                           # allowable depth of discharge in range [0,100] (i.e. percent)
+                                           charging_power_limit=2,  # max charging rate in kW
+                                           discharging_power_limit=-2,  # max discharging rate in kW
+                                           charging_efficiency=1,  # charging efficiency in range [0,1]
+                                           discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                                           initial_state_of_charge=0.0) # initial state of charge in kWh
+                 )
 
 battery_future = ExpansionNode(node_name='bess_future',
-                               expansion_planning=True,
                                install_cost=50)
+
 bf = ElectricalStorage(max_capacity=100.0,  # max capacity of battery in kwh
                        depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
                        charging_power_limit=2,  # max charging rate in kW
@@ -80,6 +82,7 @@ bf = ElectricalStorage(max_capacity=100.0,  # max capacity of battery in kwh
                        discharging_efficiency=1,  # discharging efficiency in range [0,1]
                        initial_state_of_charge=0.0,
                        fixed_storage_capacity=False)  # initial state of charge in kWh
+
 battery_future.add_port('bess', bf)
 
 inverter.add_dc_port('bess_future')
@@ -95,10 +98,10 @@ system.connect_ports_and_create_edge(inverter.ports['bess'], battery.ports['bess
 system.connect_ports_and_create_edge(inverter.ports['bess_future'], battery_future.ports['bess'])
 
 # Create objectives/tariffs
-import_cost = ImportTariff(component=connection_point.ports['grid'],
+import_cost = ImportTariff(name='import_cost',
+                           component=connection_point.ports['grid'],
                            tariff_array=[2] * 6 + [1] * 6,
                            expansion_periods=expansion_periods)  # create the import objective cost
-import_cost.name = 'import_cost'
 
 objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -118,7 +121,7 @@ opt.optimise(tee=True)
 log_infeasible_constraints(opt.model)
 
 print('total cost:', opt.get_total_objective_value())
-print('Battery2 installed: ', opt.values(battery_future.is_installed, 0))
+print('Exp Battery installed: ', opt.values(battery_future.is_installed, 0))
 print('Planning period installed: ', opt.values(battery_future.installed_when))
 
 print('Battery1 life remaining: ', opt.values(battery.lifetime_remaining, 0))
