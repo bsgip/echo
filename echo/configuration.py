@@ -3,9 +3,10 @@
 Configuration classes
 
 """
+from enum import Enum
 
 
-class Units(object):
+class Units(Enum):
     """ The units in which the optimisation is undertaken. """
 
     NA = 0      # Used for initialisation but optimisation will fail if units not set prior to execution.
@@ -19,7 +20,7 @@ class Units(object):
     LPS = 8     # diesel/petrol in Litres/second
 
 
-class Flows(object):
+class Flows(Enum):
     """ Can the asset support two way flows. """
 
     NA = 0
@@ -28,7 +29,7 @@ class Flows(object):
     Both = 3  # the port can import and export
 
 
-class FlowConstraint(object):
+class FlowConstraint(Enum):
     NA = 0
     NoConstraint = 1  # No constraint on flow at this port
     Fixed = 2  # A fixed constraint exists
@@ -36,27 +37,27 @@ class FlowConstraint(object):
     InRange = 4  # a lower bound constraint and upper bound constraint exist at this port
 
 
-class OptimisationType(object):
+class OptimisationType(Enum):
     NA = 0
     Parameter = 1  # The port variable is fixed
     Variable = 2  # The port variable is variable/optimisable
 
 
-class NodeRule(object):
+class NodeRule(Enum):
     NA = 0
     Tellegen = 1  # The node sums all ports to 0.
     Custom = 2  # The node has some custom transformation
     Transform = 3  # The node has a transformation defined with a Transform object
 
 
-class TransformRule(object):
+class TransformRule(Enum):
     NA = 0
     Both = 1  # the transformation applies to both pos and neg components of the port variable
-    PositiveComponent = 2  # " " applies to only the positive component of the port variable
-    NegativeComponent = 3  # "" applies to only the negative component of the port variable
+    Pos = 2  # " " applies to only the positive component of the port variable
+    Neg = 3  # "" applies to only the negative component of the port variable
 
 
-class ExpansionType(object):
+class ExpansionType(Enum):
     NA = 0
     Storage = 1
     Generation = 2

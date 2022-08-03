@@ -5,7 +5,6 @@ The echo builder module contains functions and classes used for building an echo
 from typing import Optional, Union, Any
 import pandas as pd
 import numpy as np
-import networkx as nx
 from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
@@ -123,8 +122,6 @@ class Network(em.BaseModel):
                 'Ports should be defined as a list of port names, or as a dictionary with the port name as key.')
 
     def validate_network(self):
-        print('Validating network "{}"'.format(self.name))
-
         # check consistency of port names as defined in self.components and self.edges
         err = []
         for edge_name, edge in self.edges.items():
@@ -140,7 +137,7 @@ class Network(em.BaseModel):
                             edge_name, port1, node1, node2))
         assert len(err) == 0, err
 
-        # Print msg warning if no objectives are defined
+        # Print warning if no objectives are defined
         if bool(self.objectives) is True:
             for obj_name, obj in self.objectives.items():
                 component_node = obj['component']['node']
@@ -432,8 +429,7 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
     else:
-        raise ValueError(
-            'Node type "{}" is not recognised and does not have a builder function'.format(node_dict['type']))
+        raise ValueError('Node type "{}" not recognised, does not have a builder function'.format(node_dict['type']))
     update()  # Update our graph
 
 

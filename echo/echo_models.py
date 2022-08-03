@@ -39,17 +39,17 @@ class Port(BaseModel):
     # Pydantic attribute declaration follows this format:
     # attribute_name: type = default_value
 
-    units: int = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
+    units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = 0.
     initial_value_ref: Optional[str]  # string ref to df column
-    opt_type: int = OptimisationType.NA
+    opt_type: OptimisationType = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     port_name: Optional[str] = None
-    flows: int = Flows.NA  # What flow directions are possible (import, export, both)
+    flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
-    import_constraint: int = FlowConstraint.NA
+    import_constraint: FlowConstraint = FlowConstraint.NA
     import_constraint_value: Union[ArrayType, float, None] = None
-    export_constraint: int = FlowConstraint.NA
+    export_constraint: FlowConstraint = FlowConstraint.NA
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
@@ -119,6 +119,14 @@ class Port(BaseModel):
         if slack is not None:
             self.slack = slack
 
+    def process_initial_value(self, initial_val, expansion_periods: int=1, time_periods: int=None ):
+        if isinstance(initial_val, dict):
+            self.add_initial_value(initial_val)
+        elif isinstance(initial_val, str):
+            self.initial_value_ref = initial_val
+        elif hasattr(initial_val, '__iter__'):
+            self.add_initial_value_from_array(initial_val, expansion_periods, time_periods)
+
     def verify_port(self):
         """ Used to verify that a port has been set up appropriately"""
         if self.flows is Flows.NA:
@@ -158,11 +166,10 @@ class Port(BaseModel):
             domain = en.NonNegativeReals
 
         if self.initial_value_ref is not None:
-            initial_value = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods)
+            initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods)
         else:
-            initial_value = self.initial_value
-        setattr(model, self.port_name,
-                en.Var(model.Expansion, model.Time, initialize=initial_value, domain=domain))
+            initial_val = self.initial_value
+        setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
@@ -235,26 +242,26 @@ class Port(BaseModel):
 
     def constrain_pos_neg(self, model):
         """ Applies a mixed integer constraint that splits a port var into positive and negative components """
+        if hasattr(model, self.pos) is False:
+            setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+            setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
-        setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-        setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
-        setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+            con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
+            con_name = positive_variable_component + negative_variable_component + self.port_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
-        con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
-        con_name = positive_variable_component + negative_variable_component + self.port_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+            def only_pos_or_neg_one(model, p, t):
+                return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
 
-        def only_pos_or_neg_one(model, p, t):
-            return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
+            setattr(model, f"pos_neg_con1_{self.port_name}",
+                    en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
 
-        setattr(model, f"pos_neg_con1_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
+            def only_pos_or_neg_two(model, p, t):
+                return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
 
-        def only_pos_or_neg_two(model, p, t):
-            return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
-
-        setattr(model, f"pos_neg_con2_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
+            setattr(model, f"pos_neg_con2_{self.port_name}",
+                    en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
 
     @staticmethod
     def factory_pos_neg_flows(var_name, pos_name, neg_name):
@@ -265,42 +272,42 @@ class Port(BaseModel):
 
         return constraint
 
-    def add_initial_value(self, initial_value):
+    def add_initial_value(self, initial_value: dict):
         """ Adds initial port value which will be used to initialise the pyomo var/param
         Args:
             initial_value: dict of initial values
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods=1, keys: list = None):
+    def add_initial_value_from_array(self, array, expansion_periods: int = 1, time_periods: int = None):
         """ Adds initial port value which is used to initialise the pyomo var/param
         Args:
-            keys: optional list of tuple keys
-            array: array, list of initial values
-            expansion_periods: number of expansion periods (int)
+            array: array, list of initial values. Should have length = time_periods, or length = time_periods*expansion_periods
+            time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
+            expansion_periods: number of expansion periods
         """
-        if keys:
-            assert len(keys) == len(array), 'Dimensions are mismatched.'
-            vals = dict(zip(keys, array))
-        else:
-            # print(
-            #     f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
-            keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-            tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
-            vals = dict(zip(keys, tiled_array))
+
+        x = ArrayWrap(array)
+        if time_periods is None:
+            time_period = len(array)
+        x.set_periods(time_periods=time_period, expansion_periods=expansion_periods)
+        vals = x.dict()
         self.add_initial_value(vals)
 
-    def add_active_periods_from_array(self, array, expansion_periods=1):
+    def add_active_periods_from_array(self, array, expansion_periods: int = 1, time_periods: int = None):
         """ Adds port active periods
         Args:
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
         """
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
+        x = ArrayWrap(array)
+        if time_periods is None:
+            time_period = len(array)
+        x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
+        vals = x.dict()
         self.active_periods = vals
 
-    def add_objective(self, model):
+    def add_objective(self, model: en.ConcreteModel):
         """ Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
@@ -319,6 +326,34 @@ class Port(BaseModel):
         self.objective += total
 
 
+class Transform(BaseModel):
+    """ An object for carrying a generic linear node transformation. """
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    transform_name: Optional[str] = None
+    lhs: list = []
+    rhs = 0
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.transform_name is None:
+            self.transform_name = 'transform_' + str(self.uid)
+
+    def add_lhs_term(self, var: Port, rule: TransformRule, weight: ArrayWrap):
+        """ Adds a left-hand side (LHS) term to the transform """
+        if isinstance(weight, ArrayWrap) is False:
+            weight = ArrayWrap(weight)
+        term = {'var': var, 'rule': rule, 'weight': weight}
+        self.lhs.append(term)
+
+    def initialise_transform(self, model):
+        # Check if we need to create pos/neg components, and initialise the weights
+        for i in range(len(self.lhs)):
+            self.lhs[i]['weight'].set_periods(model.Expansion, model.Time)
+            if self.lhs[i]['rule'] is not TransformRule.Both:
+                var = self.lhs[i]['var']
+                var.constrain_pos_neg(model)
+
+
 class Node(BaseModel):
     """
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
@@ -327,7 +362,7 @@ class Node(BaseModel):
     node_name: Optional[str]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     ports: dict = {}
-    node_rule: int = NodeRule.NA
+    node_rule: NodeRule = NodeRule.NA
     transformations: dict = {}
     objective: Optional[Any] = 0  # For adding any node objectives
 
@@ -340,6 +375,16 @@ class Node(BaseModel):
         if self.node_name is None:
             self.node_name = 'node_' + str(self.uid)
 
+    def add_port(self, name: str, port: Port):
+        if self.ports.get(name) is None:
+            self.ports[name] = port
+        else:
+            print(f'Port with name {name} is already defined on node {self.node_name}')
+
+    def get_port(self, port_name: str):
+        if self.ports.get(port_name) is not None:
+            return self.ports.get(port_name)
+
     def add_flex_port(self, name, unit=Units.NA):
         """ Adds named port of specified type to node.
         Args:
@@ -350,22 +395,18 @@ class Node(BaseModel):
         if unit is not Units.NA:
             self.ports[name].units = unit
 
-    def add_electrical_port(self, port_name):
+    def add_electrical_port(self, port_name: str):
         self.add_flex_port(port_name, unit=Units.KW)
 
-    def add_electrical_ports_from_list(self, name_list):
-        if type(name_list) is not list:
-            return ConfigurationError('Please enter named ports as list of port names.')
+    def add_electrical_ports_from_list(self, name_list: list):
         for name in name_list:
             self.add_electrical_port(port_name=name)
 
-    def add_flex_ports_from_list(self, name_list, unit=Units.NA):
-        if type(name_list) is not list:
-            return ConfigurationError('Please enter named ports as list of port names.')
+    def add_flex_ports_from_list(self, name_list: list, unit=Units.NA):
         for name in name_list:
             self.add_flex_port(name, unit)
 
-    def add_transformation(self, transformation_obj):
+    def add_transformation(self, transformation_obj: Transform):
         """ Adds a transformation object to a node.
         Args:
             transformation_obj: Transform
@@ -376,10 +417,10 @@ class Node(BaseModel):
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         t = Transform()
         t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
-        t.add_rhs_term(var=input_port, rule=TransformRule.Both, weight=input_weight)
+        t.add_lhs_term(var=input_port, rule=TransformRule.Both, weight=-input_weight)
         self.add_transformation(t)
 
-    def add_emission_transformation(self, emitting_port, carbon_port, emission_factor):
+    def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor):
         """ Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
@@ -388,10 +429,9 @@ class Node(BaseModel):
         """
         # Create appropriate transformation
         t = Transform()
-        t.add_lhs_term(carbon_port, TransformRule.NegativeComponent, 1)
-        t.add_rhs_term(emitting_port, TransformRule.NegativeComponent, emission_factor)
+        t.add_lhs_term(carbon_port, TransformRule.Neg, 1)
+        t.add_lhs_term(emitting_port, TransformRule.Neg, -emission_factor)
         self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
 
     def verify_node(self):
         if bool(self.ports) is False:
@@ -422,38 +462,26 @@ class Node(BaseModel):
             return a == 0
 
         def transform(model, p, t):  # Generic transformation node
-            def unpack_transform(x):
-                expr = 0
-                for term in x:
-                    transform_rule = term['rule']
-                    # todo make this less hacky, this is a fix for marginal emission factors
-                    if hasattr(term['weight'], '__iter__'):
-                        if len(model.Time) == len(term['weight']):
-                            weight = term['weight'][t]
-                        else:
-                            raise ValueError(
-                                'Weight/factor in transformation {} has inconsistent length with model time intervals.'.format(
-                                    current_transform))
-                    else:
-                        weight = term['weight']
-                    var = term['var']
-                    if transform_rule is TransformRule.Both:
-                        expr += getattr(model, var.port_name)[p, t] * weight
-                    if transform_rule is TransformRule.NegativeComponent:
-                        expr += getattr(model, var.neg)[p, t] * weight
-                    if transform_rule is TransformRule.PositiveComponent:
-                        expr += getattr(model, var.pos)[p, t] * weight
-                return expr
-
-            rhs = unpack_transform(current_transform.rhs)
-            lhs = unpack_transform(current_transform.lhs)
-            return lhs == rhs
+            lhs = 0
+            for term in current_transform.lhs:
+                weight = term['weight']
+                var = term['var']
+                rule = term['rule']
+                if rule is TransformRule.Both:
+                    var = term['var'].port_name
+                elif rule is TransformRule.Pos:
+                    var = term['var'].pos
+                elif rule is TransformRule.Neg:
+                    var = term['var'].neg
+                lhs += getattr(model, var)[p, t] * weight[p, t]
+            return lhs == current_transform.rhs
 
         if self.node_rule == NodeRule.Transform:
             for _, current_transform in self.transformations.items():
-                current_transform.initialise_transform(model)
-                con_name = 'transformation_con_' + current_transform.transform_name
+                current_transform.initialise_transform(model)  # make sure that all variables have been initialised
+                con_name = 'transformation_con_' + self.node_name
                 setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
+
         if self.node_rule == NodeRule.Tellegen:
             node_ports = self.ports
             con_name = 'reliability_con_' + self.node_name
@@ -559,6 +587,18 @@ class OptimisationGraph(BaseModel):
         assert node_obj.node_name not in self.node_obj, 'Node \'{}\' already defined'.format(node_obj.node_name)
         self.node_obj[node_obj.node_name] = node_obj
 
+    def delete_node(self, node_name: str):
+        if self.get_node(node_name) is not None:
+            del self.node_obj[node_name]
+        else:
+            print(f'Node {node_name} not found.')
+
+    def delete_edge(self, edge_nodes: Tuple[str, str]):
+        if self.get_edge(edge_nodes) is not None:
+            del self.edge_obj[edge_nodes]
+        else:
+            print(f'Edge {edge_nodes} not found.')
+
     def add_node_obj(self, node: Union[list, Node]):
         """ Adds either a single node or list of nodes to graph"""
         # todo phase out this method
@@ -581,7 +621,7 @@ class OptimisationGraph(BaseModel):
         """ Returns node object given node name"""
         return self.node_obj.get(node_name)
 
-    def get_edge(self, nodes: Tuple[str, str], warn: bool = True):
+    def get_edge(self, nodes: Tuple[str, str], warn: bool = False):
         """ Retrieves the edge that connects a tuple of nodes, if an edge exists."""
         if self.edge_obj.get(nodes) is not None:
             return self.edge_obj.get(nodes)
@@ -623,7 +663,7 @@ class OptimisationGraph(BaseModel):
         self._add_single_edge(edge)
 
     def connect_ports_and_create_edge(self, port1: Port, port2: Port, edge_name: str = None, nodes: Tuple[str] = None,
-                                      warn: bool = True):
+                                      warn: bool = False):
         """ Creates an edge between port1 and port2 and adds it to the graph"""
         if nodes is None and warn is True:
             print('No edge nodes defined. Defining edge nodes here speeds up constructing of echo graph.')
@@ -636,7 +676,7 @@ class OptimisationGraph(BaseModel):
             for _, p in node.ports.items():
                 if port == p:
                     return node_name
-        raise ConfigurationError('Port is not part of any node, or node has not been added to graph.')
+        raise ConfigurationError(f'Port {port.port_name} is not part of any node, or node has not been added to graph.')
 
     def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> (Port, Port):
         """ Returns the ports that are on the edge from node1 to node2. """
@@ -682,7 +722,7 @@ class OptimisationGraph(BaseModel):
                     # A node can't be both a tellegen node and a source/sink node
                     raise ConfigurationError('Source/sink node is being treated as a tellegen node.')
 
-    def create_path_objects(self, sources: List[str], sinks: List[str], path_unit: int = Units.KW,
+    def create_path_objects(self, sources: List[str], sinks: List[str], path_unit: Units = Units.KW,
                             regularise: bool = False):
         """ Creates path objects according to source/sink lists provided."""
         warnings.warn(
@@ -721,32 +761,35 @@ class OptimisationGraph(BaseModel):
 
     def apply_path_constraints(self, model: en.ConcreteModel):
         """ Applies path tracing constraints to model """
+
         def path_flow_rule(model, p, t):
             a = 0
-            for _, path in self.paths.items(): # Iterate through all paths in the model
-                if path.vertices[0] is current_node_name: # If the path starts at the current node
-                    a += getattr(model, path.flow_value)[p, t] # Add the flow value
-                if path.vertices[-1] is current_node_name: # If the path ends at the current node
-                    a -= getattr(model, path.flow_value)[p, t] # Subtract the flow value
-            return a == getattr(model, current_port.port_name)[p, t] * -1 # Flows out - flows in = -1 * port
+            for _, path in self.paths.items():  # Iterate through all paths in the model
+                if path.vertices[0] is current_node_name:  # If the path starts at the current node
+                    a += getattr(model, path.flow_value)[p, t]  # Add the flow value
+                if path.vertices[-1] is current_node_name:  # If the path ends at the current node
+                    a -= getattr(model, path.flow_value)[p, t]  # Subtract the flow value
+            return a == getattr(model, current_port.port_name)[p, t] * -1  # Flows out - flows in = -1 * port
 
         def only_inflow_or_outflow1(model, p, t):
             a = 0
             for _, path in self.paths.items():
-                if path.vertices[-1] is current_node_name: # If the path ends at the current node
+                if path.vertices[-1] is current_node_name:  # If the path ends at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
-            return a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM  # Incoming paths can only be non-zero if inflow=1
+            return a <= getattr(model, current_node_obj.inflow)[
+                p, t] * model.bigM  # Incoming paths can only be non-zero if inflow=1
 
         def only_inflow_or_outflow2(model, p, t):
             a = 0
             for _, path in self.paths.items():
                 if path.vertices[0] is current_node_name:  # If the path starts at the node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
-            return a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.bigM  # Outgoing paths can only be non-zero if inflow=0
+            return a <= (1 - getattr(model, current_node_obj.inflow)[
+                p, t]) * model.bigM  # Outgoing paths can only be non-zero if inflow=0
 
         sources_and_sinks = self.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
         for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
-            current_node_obj = self.node_obj[current_node_name]   # get the node obj
+            current_node_obj = self.node_obj[current_node_name]  # get the node obj
             for path_vertices, path_obj in self.paths.items():  # Iterate through all paths
                 if current_node_name is path_vertices[0]:  # If the path starts at the current node
                     current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
@@ -816,56 +859,6 @@ class OptimisationGraph(BaseModel):
         G2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
 
         return G1, G2
-
-
-class Transform(BaseModel):
-    """ An object for carrying a generic linear node transformation. """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    transform_name: Optional[str] = None
-    rhs: list = []
-    lhs: list = []
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.transform_name is None:
-            self.transform_name = 'transform_' + str(self.uid)
-
-    def add_rhs_term(self, var, rule, weight):
-        """ Adds a right hand side (RHS) term to the transform
-        Args:
-            var: pyomo var name
-            rule: TransformationRule object
-            weight: linear factor (float)
-        """
-        term = {'var': var, 'rule': rule, 'weight': weight}
-        self.rhs.append(term)
-
-    def add_lhs_term(self, var, rule, weight):
-        """ Adds a left hand side (RHS) term to the transform
-        Args:
-            var: pyomo var name
-            rule: TransformationRule object
-            weight: linear factor (float)
-        """
-        term = {'var': var, 'rule': rule, 'weight': weight}
-        self.lhs.append(term)
-
-    def initialise_transform(self, model):
-        # todo update this
-        # Check if we need to create pos/neg components
-        for i in range(len(self.lhs)):
-            rule = self.lhs[i]['rule']
-            if rule is not TransformRule.Both:
-                var = self.lhs[i]['var']
-                if hasattr(model, var.pos) is False:
-                    var.constrain_pos_neg(model)
-
-        for i in range(len(self.rhs)):
-            rule = self.rhs[i]['rule']
-            if rule is not TransformRule.Both:
-                var = self.rhs[i]['var']
-                if hasattr(model, var.pos) is False:
-                    var.constrain_pos_neg(model)
 
 
 class Path(BaseModel):
@@ -993,8 +986,8 @@ class Source(Port):
     def add_source_profile(self, source_values: dict):
         self.add_initial_value(source_values)
 
-    def add_source_profile_from_array(self, source_values, expansion_periods=1):
-        self.add_initial_value_from_array(source_values, expansion_periods)
+    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: int = None):
+        self.add_initial_value_from_array(source_values, expansion_periods, time_periods)
 
 
 class Sink(Port):
@@ -1009,8 +1002,9 @@ class Sink(Port):
     def add_sink_profile(self, sink_values: dict):
         self.add_initial_value(sink_values)
 
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1):
-        self.add_initial_value_from_array(array=sink_values, expansion_periods=expansion_periods)
+    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int = None):
+        self.add_initial_value_from_array(array=sink_values, expansion_periods=expansion_periods,
+                                          time_periods=time_periods)
 
 
 class Demand(Sink):
@@ -1018,8 +1012,8 @@ class Demand(Sink):
     def add_demand_profile(self, demand: dict):
         self.add_initial_value(demand)
 
-    def add_demand_profile_from_array(self, demand: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(array=demand, expansion_periods=expansion_periods)
+    def add_demand_profile_from_array(self, demand, expansion_periods=1, time_periods: int = None):
+        self.add_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
 class ControlledLoadOrGen(FlexPort):
@@ -1032,7 +1026,7 @@ class ControlledLoadOrGen(FlexPort):
     max_utilisation: float = None
     max_power: float = None
     min_power: float = None
-    units: int = Units.KW
+    units: Units = Units.KW
 
     def initialise_port(self, model, profile):
         super(ControlledLoadOrGen, self).initialise_port(model, profile)
@@ -1366,12 +1360,11 @@ class ElectricalGeneration(Source):
     def add_generation_profile(self, generation: dict):
         self.add_initial_value(generation)
 
-    def add_generation_profile_from_array(self, generation: ArrayType, expansion_periods=1):
-        self.add_initial_value_from_array(generation, expansion_periods)
+    def add_generation_profile_from_array(self, generation: ArrayType, expansion_periods=1, time_periods: int = None):
+        self.add_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def initialise_port(self, model, profile):
-        setattr(model, self.port_name,
-                en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=en.NonPositiveReals))
+        super(ElectricalGeneration, self).initialise_port(model, profile)
         if self.curtailable is False:
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
@@ -1389,10 +1382,10 @@ class MobileElectricalStorage(MobileStorage):
 
 class EV(Node):
     charge_mode: str = None
-    available: Union[ArrayType, list]
-    usage: Union[ArrayType, list]
+    available: Union[ArrayType, list, str]
+    usage: Union[ArrayType, list, str]
     connection_port_name: str = 'cp'
-    tod_charging: Union[ArrayType, list, None] = None
+    tod_charging: Union[ArrayType, list, str, None] = None
     interval_duration: int
     # Battery attributes
     max_capacity: float
@@ -1448,10 +1441,9 @@ class EV(Node):
         # Create appropriate transformation: vehicle = cp - usage
         t = Transform()
         t.add_lhs_term(self.ports['vehicle'], TransformRule.Both, 1)
-        t.add_rhs_term(self.ports['usage'], TransformRule.Both, -1)
-        t.add_rhs_term(self.ports[self.connection_port_name], TransformRule.Both, 1)
+        t.add_lhs_term(self.ports['usage'], TransformRule.Both, 1)
+        t.add_lhs_term(self.ports[self.connection_port_name], TransformRule.Both, -1)
         self.add_transformation(t)
-        self.node_rule = NodeRule.Transform
 
     def process_V0G_charging(self, interval_duration):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
@@ -1753,14 +1745,14 @@ class InputOutputNode(Node):
     An input-output node has one input port and one output port.
     A custom transformation can be defined between input and output.
     """
-    input_port_unit: int
-    output_port_unit: int
+    input_port_unit: Units
+    output_port_unit: Units
     # Optional parameters for controlling input/output port flows
     max_output: Optional[float]  # output might be neg or pos, leave it open
     min_output: Optional[float]
     max_input: Optional[NonNegativeFloat]  # input should generally be non negative
     min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
+    node_rule: NodeRule = NodeRule.Custom
 
 
 class DieselGenerator(InputOutputNode):

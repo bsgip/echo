@@ -80,7 +80,10 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
 
 
     demand_tariff = DemandTariffObjective(component=cp1,
-                                          demand_charges=[ImportDemandCharge(rate=1.0, window_array=dc_window, min_demand=minimum_demand)])
+                                          demand_charges=[ImportDemandCharge(rate=1.0,
+                                                                             window_array=dc_window,
+                                                                             min_demand=minimum_demand,
+                                                                             reset_periods=[time_periods])])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
     objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -157,7 +160,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
                                  expansion_periods=expansion_periods)
 
     demand_tariff = DemandTariffObjective(component=cp1,
-                                          demand_charges=[ImportDemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)])
+                                          demand_charges=[ImportDemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand, reset_periods=[time_periods])])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.1)
 
