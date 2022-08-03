@@ -524,11 +524,11 @@ class ExpansionNode(Node):
         self._apply_expansion_constraints(model)
 
     def _apply_expansion_constraints(self, model):
-        # Create an indexed binary variable for which time period if any the port is installed
+        # Create an indexed binary variable for which time period if any the node is installed
         setattr(model, self.is_installed, en.Var(model.Expansion, initialize=0, domain=en.Binary))
         # Create an integer variable for which period the asset is installed in, if installed
         setattr(model, self.installed_when, en.Var(initialize=0, domain=en.NonNegativeIntegers))
-        # Create a non-indexed var to track whether we ever install the port
+        # Create a non-indexed var to track whether we ever install the node
         setattr(model, self.max_install, en.Var(initialize=0, domain=en.Binary))
 
         # Set constraints on integer variable so that it correctly tracks the expansion_planning period in which we install
@@ -636,7 +636,7 @@ class RetirementNode(Node):
         # setattr(model, 'eol_1_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule1))
         # setattr(model, 'eol_2_' + self.node_name, en.Constraint(model.Expansion, rule=eol_rule2))
 
-        # Force node ports == 0 if retired using a pair of big M constraints
+        # Force ports on node to be 0 if retired, using a pair of big M constraints
         for port_name, port_obj in self.ports.items():
             def retire_rule1(model, p, t):
                 return getattr(model, port_obj.port_name)[p, t] <= (1 - getattr(model, self.retire)[p]) * model.bigM
