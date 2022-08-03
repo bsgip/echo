@@ -512,7 +512,7 @@ class Edge(BaseModel):
         if self.edge_name is None:
             self.edge_name = 'edge_' + str(self.uid)
 
-    def add_vertices(self, obj1, obj2):
+    def add_vertices(self, obj1: Port, obj2: Port):
         """ Adds edge vertices (which are ports on nodes)
         Args:
             obj1: port object
@@ -820,9 +820,30 @@ class OptimisationGraph(BaseModel):
             for pn, p in n.ports.items():
                 print(pn, ', ', p.port_name)
 
+    def get_port_names_from_nodes(self):
+        output = set()
+        for n in self.node_obj.values():
+            for pn, p in n.ports.items():
+                output.add(p.port_name)
+        return output
+
+    def get_port_names_from_edges(self):
+        output = set()
+        for e in self.edge_obj.values():
+            output.add(e.vertices[0].port_name)
+            output.add(e.vertices[1].port_name)
+        return output
+
     def verify_graph(self):
-        """ Checks that the graph is connected (all nodes have at least one edge)"""
+        """ Checks that the graph is connected (all nodes have at least one edge), and warns if there are unconnected ports"""
         assert nx.is_connected(self.convert_to_nx()) is True, 'Graph is not connected.'
+        # Check graph for ports that are not connected
+        ports_on_edges = self.get_port_names_from_nodes()
+        ports_on_nodes = self.get_port_names_from_edges()
+        diff = ports_on_edges - ports_on_nodes  # check overlap
+        if len(diff) != 0:
+            print(f'Ports {diff} are defined on nodes but are not part of an edge. '
+                  f'This may cause erroneous optimisation results.')
 
     def split_graph_on_edge(self, node1: str, node2: str):
         """ Splits a graph between node1 and node 2, and returns two echo optimisation graphs.
