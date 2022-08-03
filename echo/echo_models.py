@@ -2,11 +2,11 @@ import uuid
 import pickle
 import uuid
 import warnings
-from typing import Optional, Union, List, Any, Iterable, Tuple
+from typing import Optional, Union, List, Any, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from networkx import Graph
+
 from pydantic import BaseModel as PydanticBaseModel, PositiveFloat, NonNegativeFloat
 from pydantic import validator, root_validator, confloat
 
@@ -153,7 +153,7 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         """ Creates pyomo vars, params, and constraints for the port. """
 
         time_periods = len(model.Time)
@@ -503,7 +503,7 @@ class Edge(BaseModel):
     """
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     edge_name: Optional[str] = None
-    vertices: tuple
+    vertices: Tuple[Port, Port]
     nodes: Optional[Tuple[str, str]]  # tuple of node names - todo make this required
     tariff: Optional[Union[list, None]]
 
@@ -529,7 +529,7 @@ class Edge(BaseModel):
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
             raise ConfigurationError('Port flow constraints do not allow any flow along the edge.')
 
-    def initialise_edge(self, model):
+    def initialise_edge(self, model: en.ConcreteModel):
         """ Applies edge constraint: port1 = -1 *port2
         Args:
             model: pyomo concrete model
@@ -904,15 +904,15 @@ class Path(BaseModel):
             self.path_name = 'path_' + str(self.uid)
         self.flow_value = 'flow_value_' + self.path_name
 
-    def add_vertices(self, vertex_list):
-        if type(vertex_list) is not list:
-            raise ConfigurationError('Please enter path vertices (nodes) as a list.')
+    def add_vertices(self, vertex_list: list):
+        if hasattr(vertex_list[0], 'node_name'):
+            vertex_list = [i.node_name for i in vertex_list]
         self.vertices = vertex_list
 
-    def initialise_path(self, model):
+    def initialise_path(self, model: en.ConcreteModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
-    def add_objective(self, model):
+    def add_objective(self, model: en.ConcreteModel):
         total = 0
 
         if self.regularise is True:
@@ -1049,7 +1049,7 @@ class ControlledLoadOrGen(FlexPort):
     min_power: float = None
     units: Units = Units.KW
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(ControlledLoadOrGen, self).initialise_port(model, profile)
 
         # Set bounds using min and max power
@@ -1097,7 +1097,7 @@ class OffOrConstrainedPort(FlexPort):
     def active(self):
         return 'active_' + self.port_name
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(OffOrConstrainedPort, self).initialise_port(model, profile)
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
@@ -1119,7 +1119,7 @@ class BoundedPort(FlexPort):
 
     bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(BoundedPort, self).initialise_port(model, profile)
         # Set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
@@ -1135,7 +1135,7 @@ class BoundedLoad(BoundedPort):
     upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
     lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(BoundedLoad, self).initialise_port(model, profile)
 
 
@@ -1176,7 +1176,7 @@ class Storage(Port):
         self.import_constraint_value = self.charging_power_limit
         self.export_constraint_value = self.discharging_power_limit
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(Storage, self).initialise_port(model, profile)
         self.create_storage_variables(model)
         self.apply_soc_constraints(model)
@@ -1279,7 +1279,7 @@ class MobileStorage(Storage):
             assert available is not None, 'soc_conserve requires available'
         return values
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(Storage, self).initialise_port(model, profile)
         self.create_storage_variables(model)
         self.apply_modified_soc_constraints(model)
@@ -1384,7 +1384,7 @@ class ElectricalGeneration(Source):
     def add_generation_profile_from_array(self, generation: ArrayType, expansion_periods=1, time_periods: int = None):
         self.add_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
-    def initialise_port(self, model, profile):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(ElectricalGeneration, self).initialise_port(model, profile)
         if self.curtailable is False:
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
@@ -1466,7 +1466,7 @@ class EV(Node):
         t.add_lhs_term(self.ports[self.connection_port_name], TransformRule.Both, -1)
         self.add_transformation(t)
 
-    def process_V0G_charging(self, interval_duration):
+    def process_V0G_charging(self, interval_duration: float):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
@@ -1483,7 +1483,7 @@ class EV(Node):
             self.charge_status = 'success' if success else 'infeasible'
         self.V0G_trip_infeasibility = trip_infeasibility
 
-    def V0G_charging(self, interval_duration, force_conv=False):
+    def V0G_charging(self, interval_duration: float, force_conv=False):
         """ Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
         if (self.tod_charging is not None) and (not force_conv):
             self.available = self.available * self.tod_charging
@@ -1773,7 +1773,7 @@ class InputOutputNode(Node):
     min_output: Optional[float]
     max_input: Optional[NonNegativeFloat]  # input should generally be non negative
     min_input: Optional[NonNegativeFloat]
-    node_rule: NodeRule = NodeRule.Custom
+    node_rule = NodeRule.Custom
 
 
 class DieselGenerator(InputOutputNode):
