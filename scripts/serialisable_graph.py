@@ -59,7 +59,7 @@ expansion_periods = 1
 discount_rate = 0
 
 # Create graph
-system = OptGraph()
+system = OptimisationGraph()
 
 # Create assets
 grid = Node(node_name='grid')

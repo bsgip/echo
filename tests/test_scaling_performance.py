@@ -71,7 +71,7 @@ def test_many_node_system_no_objective():
         name = 'load_' + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
-        system.add_node_obj(load)
+        system.add_nodes_from(load)
         system.connect_port_to_node_create_edges_create_port(lp, sel_node)
 
     # Connect generators to random nodes
@@ -88,7 +88,7 @@ def test_many_node_system_no_objective():
         name = 'gen_' + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
-        system.add_node_obj(gen)
+        system.add_nodes_from(gen)
         system.connect_port_to_node_create_edges_create_port(gp, sel_node)
 
     # Connect storage to random nodes
@@ -109,7 +109,7 @@ def test_many_node_system_no_objective():
         name = 'bess_' + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
-        system.add_node_obj(bess)
+        system.add_nodes_from(bess)
         system.connect_port_to_node_create_edges_create_port(b1, sel_node)
 
     # To ensure we can always meet reliability, add a grid node, connect it to a random tellegen node
@@ -120,7 +120,7 @@ def test_many_node_system_no_objective():
     g = ElectricalPort()
     grid.ports['grid'] = g
     node_name_map['grid'] = grid
-    system.add_node_obj(grid)
+    system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
     # nx.draw(system, with_labels=True)
@@ -200,7 +200,7 @@ def test_many_node_system_with_objectives():
         name = 'load_' + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
-        system.add_node_obj(load)
+        system.add_nodes_from(load)
         system.connect_port_to_node_create_edges_create_port(lp, sel_node)
 
     # Connect generators to random nodes
@@ -217,7 +217,7 @@ def test_many_node_system_with_objectives():
         name = 'gen_' + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
-        system.add_node_obj(gen)
+        system.add_nodes_from(gen)
         system.connect_port_to_node_create_edges_create_port(gp, sel_node)
 
     # Connect storage to random nodes
@@ -238,7 +238,7 @@ def test_many_node_system_with_objectives():
         name = 'bess_' + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
-        system.add_node_obj(bess)
+        system.add_nodes_from(bess)
         system.connect_port_to_node_create_edges_create_port(b1, sel_node)
 
     # To ensure we can always meet reliability, add a grid node, connect it to a random tellegen node
@@ -249,7 +249,7 @@ def test_many_node_system_with_objectives():
     g = ElectricalPort()
     grid.ports['grid'] = g
     node_name_map['grid'] = grid
-    system.add_node_obj(grid)
+    system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
     # nx.draw(system, with_labels=True)
@@ -335,7 +335,7 @@ def test_many_node_system_with_path_tracing():
         name = 'load_' + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
-        system.add_node_obj(load)
+        system.add_nodes_from(load)
         system.connect_port_to_node_create_edges_create_port(lp, sel_node)
 
     # Connect generators to random nodes
@@ -352,7 +352,7 @@ def test_many_node_system_with_path_tracing():
         name = 'gen_' + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
-        system.add_node_obj(gen)
+        system.add_nodes_from(gen)
         system.connect_port_to_node_create_edges_create_port(gp, sel_node)
 
     # Connect storage to random nodes
@@ -373,7 +373,7 @@ def test_many_node_system_with_path_tracing():
         name = 'bess_' + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
-        system.add_node_obj(bess)
+        system.add_nodes_from(bess)
         system.connect_port_to_node_create_edges_create_port(b1, sel_node)
 
     # To ensure we can always meet reliability, add a grid node, connect it to a random tellegen node
@@ -384,7 +384,7 @@ def test_many_node_system_with_path_tracing():
     g = ElectricalPort()
     grid.ports['grid'] = g
     node_name_map['grid'] = grid
-    system.add_node_obj(grid)
+    system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
     # nx.draw(system, with_labels=True)
@@ -399,7 +399,7 @@ def test_many_node_system_with_path_tracing():
         if ('gen' in k) or ('sto' in k) or ('grid' in k):
             sources.append(v)
 
-    system.create_path_objects(sources=sources, sinks=sinks)
+    system.create_all_path_objects(sources=sources, sinks=sinks)
 
 
     optimiser = EchoOptimiser(

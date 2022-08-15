@@ -18,7 +18,6 @@ from echo.echo_models import *
 
 """
 
-
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
     'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
@@ -45,7 +44,6 @@ test_pv = 2 * np.array(
      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 test_pv *= -1  # convert solar generation to negative to match convention.
 
-
 # Tariffs are in $ / kwh
 import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
 export_tariff_array = np.array(([0.0] * 96))
@@ -55,59 +53,60 @@ export_tariff_array = np.array(([0.0] * 96))
 np.set_printoptions(suppress=True)
 
 ## Set up hyper params
-time_periods = len(test_load)   # number of time periods to run the optimisation for
-interval_duration = 15          # each time period is 15 mins long
-expansion_periods = 1           # not yet implemented leave as 1
-discount_rate = 0               # not yet implemented leave as 0
+time_periods = len(test_load)  # number of time periods to run the optimisation for
+interval_duration = 15  # each time period is 15 mins long
+expansion_periods = 1  # not yet implemented leave as 1
+discount_rate = 0  # not yet implemented leave as 0
 
 # Create graph in echo
 system = OptimisationGraph()
 
 # Create assets
-grid = Node(node_name='grid')                                   # create node representing upstream grid
-grid.add_electrical_ports_from_list(['grid'])  # create a port which will be used to connect this with the connection_point
+grid = Node(node_name='grid')  # create node representing upstream grid
+grid.add_electrical_ports_from_list(
+    ['grid'])  # create a port which will be used to connect this with the connection_point
 
-connection_point = TellegenNode(node_name='cp')     # create the connection point
+connection_point = TellegenNode(node_name='cp')  # create the connection point
 connection_point.add_electrical_ports_from_list(
     ['load', 'inv', 'grid'])  # create ports to connect to the grid, the load, and the inverter
 # set flow constraints for the port that connects to the grid,
 # such that         max_export <= 0 <= max_import
 # set slack=True to allow the constraints to be violated if the optimisation problem would be infeasible otherwise
-connection_point.ports['grid'].set_flow_constraints(max_import=15,max_export=-15, slack=True)
+connection_point.ports['grid'].set_flow_constraints(max_import=15, max_export=-15, slack=True)
 # todo: value of slack
 
-load = Node(node_name='load')                     # create a node to represent the load
-l1 = ElectricalDemand()             # create an electrical demand to attach to this node
+load = Node(node_name='load')  # create a node to represent the load
+l1 = ElectricalDemand()  # create an electrical demand to attach to this node
 l1.add_demand_profile_from_array(test_load, expansion_periods)
-load.ports['load'] = l1             # add the electrical demand to a port of the load node
+load.ports['load'] = l1  # add the electrical demand to a port of the load node
 
 # create an inverter node with some properties,
 # if the constraints are not none then they should be max_export <= 0 <= max_import
 # can also set efficiency on the dc and the ac side in the range 0-1
 inverter = Inverter(node_name='inv', max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-inverter.add_ac_port('inv')     # add a port that is used to connect back to the connection_point
-inverter.add_dc_port('bess')    # add a port to connect to the battery
-inverter.add_dc_port('pv')      # add a port to connect to the pv
+inverter.add_ac_port('inv')  # add a port that is used to connect back to the connection_point
+inverter.add_dc_port('bess')  # add a port to connect to the battery
+inverter.add_dc_port('pv')  # add a port to connect to the pv
 
 # create a node for the battery
 battery = Node(node_name='battery')
 # create an electrical storage object
-b = ElectricalStorage(max_capacity=15.0,                # max capacity of battery in kwh
-                       depth_of_discharge_limit=0,      # allowable depth of discharge in range [0,100] (i.e. percent)
-                       charging_power_limit=1.25,       # max charging rate in kW
-                       discharging_power_limit=-1.25,   # max discharging rate in kW
-                       charging_efficiency=1,           # charging efficiency in range [0,1]
-                       discharging_efficiency=1,        # discharging efficiency in range [0,1]
-                       initial_state_of_charge=0.0)     # initial state of charge in kWh
+b = ElectricalStorage(max_capacity=15.0,  # max capacity of battery in kwh
+                      depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
+                      charging_power_limit=1.25,  # max charging rate in kW
+                      discharging_power_limit=-1.25,  # max discharging rate in kW
+                      charging_efficiency=1,  # charging efficiency in range [0,1]
+                      discharging_efficiency=1,  # discharging efficiency in range [0,1]
+                      initial_state_of_charge=0.0)  # initial state of charge in kWh
 # connect the electrical storage to a port on the battery node
 battery.ports['bess'] = b
 
 # create a node for the solar
 solar = Node(node_name='solar')
-pv = ElectricalGeneration()     # create an electrical generation object
-pv.curtailable = False          # set whether this can be curtailed or not
+pv = ElectricalGeneration()  # create an electrical generation object
+pv.curtailable = False  # set whether this can be curtailed or not
 pv.add_generation_profile_from_array(test_pv, expansion_periods)
-solar.ports['pv'] = pv          # add the electrical generation to a port on the solar node
+solar.ports['pv'] = pv  # add the electrical generation to a port on the solar node
 
 # Populate graph with assets (nodes)
 system.add_node_obj([grid, battery, load, solar, connection_point, inverter])
@@ -120,20 +119,19 @@ system.connect_ports_and_create_edge(inverter.ports['bess'], battery.ports['bess
 system.connect_ports_and_create_edge(inverter.ports['pv'], solar.ports['pv'])
 
 # Create objectives/tariffs
-throughput_cost = ThroughputCost(component=b, rate=0.000001)        # assign a throughput cost to the battery
-peak_power_obj = PeakNegativePower(component=grid.ports['grid'])    # assign a cost on the peak negative power
+throughput_cost = ThroughputCost(component=b, rate=0.000001)  # assign a throughput cost to the battery
+peak_power_obj = PeakNegativePower(component=grid.ports['grid'])  # assign a cost on the peak negative power
 import_cost = ImportTariff(component=connection_point.ports['grid'],
                            tariff_array=import_tariff_array,
                            expansion_periods=expansion_periods)  # create the import objective cost
 import_cost2 = ImportTariff(component=connection_point.ports['grid'],
-                           tariff_array=import_tariff_array,
-                           expansion_periods=expansion_periods)  # create the import objective cost
+                            tariff_array=import_tariff_array,
+                            expansion_periods=expansion_periods)  # create the import objective cost
 export_cost = ExportTariff(component=connection_point.ports['grid'],
                            tariff_array=export_tariff_array,
                            expansion_periods=expansion_periods)  # create the export objective cost
 
 objective_set = ObjectiveSet(objective_list=[import_cost, import_cost2, export_cost, peak_power_obj, throughput_cost])
-
 
 ############################ ----------------------- ########################################
 
@@ -149,7 +147,6 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
 optimiser.optimise(tee=True)
 
 log_infeasible_constraints(optimiser.model)
-
 
 ############################ Analyse the Optimisation ########################################
 

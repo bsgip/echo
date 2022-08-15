@@ -16,7 +16,6 @@ from networkx import Graph, draw
 
 
 def test_objectives_sum_correctly():
-
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -52,7 +51,7 @@ def test_objectives_sum_correctly():
 
     load = Node()
     l1 = ElectricalDemand()
-    l1.add_demand_profile_from_array([6]*time_periods, expansion_periods)
+    l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
     load.ports['load'] = l1
 
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
@@ -67,23 +66,25 @@ def test_objectives_sum_correctly():
     tp_cost = ThroughputCost(component=b1, rate=0.1)
 
     import_t = ImportTariff(component=cp.ports['grid'],
-                            tariff_array=[0.1]*24 + [0.4]*24)
+                            tariff_array=[0.1] * 24 + [0.4] * 24)
 
     export_t = ExportTariff(component=cp.ports['grid'],
-                            tariff_array=[0.0]*24 + [0.1]*24)
+                            tariff_array=[0.0] * 24 + [0.1] * 24)
     # peak usage
     peak_charge = ImportDemandCharge(rate=2.0,
-                               window_array=[0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8,
-                               min_demand=0.0)
+                                     window_array=[0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8,
+                                     min_demand=0.0,
+                                     reset_periods=[time_periods])
 
     # shoulder usage
     shoulder_charge = ImportDemandCharge(rate=1.6,
-                                   window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
-                                   min_demand=0.0)
+                                         window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
+                                         min_demand=0.0,
+                                         reset_periods=[time_periods])
 
     demand_tariff = DemandTariffObjective(component=cp.ports['grid'],
-                                                demand_charges=[peak_charge,
-                                                                shoulder_charge])
+                                          demand_charges=[peak_charge,
+                                                          shoulder_charge])
 
     obj_set = ObjectiveSet(objective_list=[tp_cost, import_t, export_t, demand_tariff])
 
@@ -106,6 +107,4 @@ def test_objectives_sum_correctly():
     dt = optimiser.get_single_objective_total_value(demand_tariff)
     total = optimiser.get_total_objective_value()
 
-    assert tp+it+et+dt == total
-
-
+    assert tp + it + et + dt == total

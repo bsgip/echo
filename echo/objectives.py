@@ -445,7 +445,6 @@ class ContingencyPositive(Contingency):
 
 
 class ResetPeriod(Enum):
-    # TODO How can we model rolling reset windows in the optimisation?
     day = 'day'
     week = 'week'
     month = 'month'
@@ -527,7 +526,7 @@ class TimePeriod(echoBaseModel):
 class Window(echoBaseModel):
     """ Class for specifying window over which a tariff is calculated using datetimes"""
     time_periods: List[TimePeriod]
-    reset_periods: Optional[ResetPeriod] = None
+    reset_periods: ResetPeriod = None
 
     @validator('time_periods')
     def non_overlapping_periods(cls, v):
@@ -595,7 +594,7 @@ class DemandCharge(echoBaseModel):
     rate: NonNegativeFloat
     min_demand: float = 0.0
     window_array: Union[ArrayType, List]
-    reset_periods: Optional[Union[ArrayType, List]]
+    reset_periods: Union[ArrayType, List]
     import_demand: bool = False
     export_demand: bool = False
 

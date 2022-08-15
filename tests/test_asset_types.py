@@ -122,7 +122,7 @@ def test_chiller_operation():
 
     cooling_load = Node()
     cl = FixedThermalPort()
-    cl.add_initial_value_from_array([4]*time_periods, expansion_periods)
+    cl.add_initial_value_from_array([4]*time_periods, expansion_periods=expansion_periods)
     cooling_load.ports['load'] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
