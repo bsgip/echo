@@ -43,7 +43,7 @@ class ArrayWrap(Sequence):
         d = dict(zip(keys, vals))
         return d
 
-    def set_periods(self, expansion_periods, time_periods):
+    def set_periods(self, expansion_periods: int, time_periods: int)->None:
         self.time_periods = time_periods
         self.expansion_periods = expansion_periods
         self.tp_set = True
