@@ -348,7 +348,7 @@ class Transform(BaseModel):
     def initialise_transform(self, model):
         # Check if we need to create pos/neg components, and initialise the weights
         for i in range(len(self.lhs)):
-            self.lhs[i]['weight'].set_periods(model.Expansion, model.Time)
+            self.lhs[i]['weight'].set_periods(len(model.Expansion), len(model.Time))
             if self.lhs[i]['rule'] is not TransformRule.Both:
                 var = self.lhs[i]['var']
                 var.constrain_pos_neg(model)
