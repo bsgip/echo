@@ -1290,7 +1290,7 @@ class MobileStorage(Storage):
         def soc_conservative_rule(model, p, t):  # a rule for enforcing conservativness while plugged in
             if self.available[t]:
                 return getattr(model, self.soc_value)[p, t] + getattr(model, self.cons_slack)[
-                    p, t] - self.soc_conserv[p, t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
+                    p, t] - self.soc_conserv[p, t] >= 0
             else:
                 return en.Constraint.Skip
 
@@ -1299,8 +1299,6 @@ class MobileStorage(Storage):
             # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
             setattr(model, self.cons_slack,
                     en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            if not hasattr(model, self.is_pos):
-                self.constrain_pos_neg(model)
             setattr(model, f"cons_soc_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
 
