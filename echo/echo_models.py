@@ -527,14 +527,11 @@ class Storage(Port):
         super(Storage, self).initialise_port(model)
 
         self.soc_value = 'storage_soc_' + self.port_name
-        # if not self.enable_min_soc_slack:
         setattr(model, self.soc_value,en.Var(model.Expansion, model.Time, initialize=0, bounds=(0, self.max_capacity)))  # Actual SOC
-        # else:
-        #     setattr(model, self.soc_value, en.Var(model.Expansion, model.Time, initialize=0, bounds=(None, self.max_capacity)))
 
         def soc_conservative_rule(model, p, t): # a rule for enforcing conservativness while plugged in
             if self.available[t]:
-                return getattr(model, self.soc_value)[p,t] + getattr(model, self.cons_slack)[p,t] - self.soc_conserv[t] >= - model.bigM * (getattr(model, self.is_pos)[p, t])
+                return getattr(model, self.soc_value)[p,t] + getattr(model, self.cons_slack)[p,t] - self.soc_conserv[t] >= 0
             else:
                 return en.Constraint.Skip
 
@@ -550,12 +547,9 @@ class Storage(Port):
             self.cons_slack = 'con_slack' + self.port_name
             setattr(model, self.cons_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
             # if not hasattr(model, self.is_pos):
-            if not hasattr(self, "is_pos"):
-                self.constrain_pos_neg(model)
+            # if not hasattr(self, "is_pos"):
+                # self.constrain_pos_neg(model)
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=soc_conservative_rule))
-
-        # def min_soc_rule_slack(model,p,t):    # ensure soc stays above min charge but has slack variable for EV infeasible trips
-        #     return getattr(model, self.soc_value)[p, t] + getattr(model, self.min_soc_slack) >= 0
 
         self.optimised_storage_capacity = 'optimised_storage_capacity_' + self.port_name
         if self.fixed_storage_capacity is False:

@@ -26,7 +26,7 @@ if sys.version_info < (3, 7):
 
 setuptools.setup(
     name="echo",
-    version="1.0.7",
+    version="1.0.8",
     description="For ",
     long_description=long_description,
     long_description_content_type="text/markdown",
