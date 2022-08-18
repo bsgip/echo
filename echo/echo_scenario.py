@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from tqdm.notebook import tqdm as jtqdm
 import pickle
 import seaborn as sns
 import cmath
@@ -188,7 +189,7 @@ class EchoScenario:
     #     # optimise
     #     # amalgamate results
 
-    def optimise_sites(self, time_periods, interval_duration, log_file=None):
+    def optimise_sites(self, time_periods, interval_duration, log_file=None, notebook=False):
         self.time_periods = time_periods
         self.interval_duration = interval_duration
         aggregate_loads = []
@@ -197,7 +198,13 @@ class EchoScenario:
             prog_file = open(log_file, 'w')
         else:
             prog_file = None
-        for i in tqdm(range(self.num_sites), desc='Optimising sites', file=prog_file):
+
+        if notebook:
+            tqdm_handl = jtqdm
+        else:
+            tqdm_handl = tqdm
+
+        for i in tqdm_handl(range(self.num_sites), desc='Optimising sites', file=prog_file):
             try:
                 self.sites[i] = process_site(self.sites[i], interval_duration, time_periods)
                 self.sites[i]['processed'] = True
