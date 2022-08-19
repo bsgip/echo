@@ -310,6 +310,21 @@ class ThroughputCost(Objective):
         return obj
 
 
+class FinalChargeObjective(Objective):
+    """ A cost on the final state of charge of a storage asset being below full. """
+    component: Storage
+    rate: PositiveFloat
+
+    def apply_constraints(self, model):
+        pass
+        # if hasattr(model, self.component.pos) is False:
+        #     self.component.constrain_pos_neg(model)
+
+    def objective_expr(self, model):
+
+        obj = sum((self.component.max_capacity - getattr(model, self.component.soc_value)[p, model.Time.at(-1)]) * self.rate for p in model.Expansion)
+        return obj
+
 class NotFullyChargedPenalty(Objective):
     """ A penalty objective for penalising a storage asset for not being fulling charged. """
     component: Storage
