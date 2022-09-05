@@ -239,3 +239,9 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
                 d[(p, t)] = array[i]
                 i += 1
     return d
+
+def tile_array_over_expansion_periods(array, expansion_periods):
+    """ Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
+    output = np.tile(np.array(array), expansion_periods)
+    return output
+

@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import Optional, Union, List, TypeVar
+from typing import Optional, Union, List, TypeVar, Any
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -26,7 +26,7 @@ DataFrame = TypeVar('pandas.core.frame.DataFrame')
 class BaseModel(PydanticBaseModel):
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
-        extra = 'allow'  # Set to allow so that we can create new fields on the fly
+        extra = 'allow'  # To control whether we can create new attributes after instantiation.
 
 
 class OptimisationGraph(Graph):
@@ -253,9 +253,40 @@ class OptimisationGraph(Graph):
                 print(pn, ', ', p.port_name)
 
     def verify_graph(self):
-        # Check for any floating nodes - use nx method for this
-        isolated_nodes = set(i for i in nx.isolates(self))  # nx.isolates returns nodes with no neighbours
-        assert len(isolated_nodes) == 0, 'Node {} has no edge.'.format(isolated_nodes)
+        assert nx.is_connected(self) is True, 'Graph is not connected.'
+
+    def split_graph_on_edge(self, node1, node2):
+        system = self.copy()
+        # Find the edge that connects these nodes
+        if system.has_edge(node1, node2):
+            system.remove_edge(node1, node2)
+        else:
+            raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
+
+        # Get a list of the two sets of nodes
+        y = nx.connected_components(system)
+        g1_nodes = next(y)
+        g2_nodes = next(y)
+
+        g1_subgraph = self.subgraph(g1_nodes)
+        g2_subgraph = self.subgraph(g2_nodes)
+
+        def create_new_graph(nodes, edges):
+            new_graph = OptimisationGraph()
+            for n in nodes:
+                new_graph.add_node_obj(self.node_obj[n])
+            for ed in edges:
+                if self.edge_obj.get(ed) is not None:
+                    new_graph.add_edge_obj(self.edge_obj[ed])
+                else:
+                    new_graph.add_edge_obj(self.edge_obj[(ed[1], ed[0])])
+
+            return new_graph
+
+        G1 = create_new_graph(g1_subgraph.nodes, g1_subgraph.edges)
+        G2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
+
+        return G1, G2
 
 
 class ConfigurationError(Exception):
@@ -279,6 +310,7 @@ class Port(BaseModel):
     export_constraint_value: Union[ArrayType, float, None] = None
     active_periods: Optional[dict]
     slack: bool = False
+    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -481,15 +513,24 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods=1):
+    def add_initial_value_from_array(self, array, expansion_periods=1, keys: list = None):
         """ Adds initial port value which is used to initialise the pyomo var/param
         Args:
+            keys: optional list of tuple keys
             array: array, list of initial values
             expansion_periods: number of expansion periods (int)
         """
-        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
+        if keys:
+            assert len(keys) == len(array), 'Dimensions are mismatched.'
+            vals = dict(zip(keys, array))
+        else:
+            print(
+                f'Inferring time_periods={len(array)}, planning_periods={expansion_periods}. Tiling array across exp periods.')
+            keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+            tiled_array = tile_array_over_expansion_periods(array, expansion_periods)
+            vals = dict(zip(keys, tiled_array))
         self.add_initial_value(vals)
+
 
     def add_active_periods_from_array(self, array, expansion_periods=1):
         """ Adds port active periods
@@ -502,22 +543,22 @@ class Port(BaseModel):
         self.active_periods = vals
 
     def add_objective(self, model):
-        """ Adds port-specific objective terms to pyomo model
+        """ Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
         """
-        objective = 0
+        total = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
-                objective += -1 * getattr(model, self.import_slack_max) * model.bigM
-                objective += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
-                                      model.Time) * model.bigM * 0.1
+                total += -1 * getattr(model, self.import_slack_max) * model.bigM
+                total += -1 * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in
+                                  model.Time) * model.bigM * 0.1
             if hasattr(model, self.export_slack) is True:
-                objective += getattr(model, self.export_slack_max) * model.bigM
-                objective += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
-                                 model.Time) * model.bigM * 0.1
-        return objective
+                total += getattr(model, self.export_slack_max) * model.bigM
+                total += sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in
+                             model.Time) * model.bigM * 0.1
 
+        self.objective += total
 
 class Node(BaseModel):
     """
@@ -529,6 +570,7 @@ class Node(BaseModel):
     ports: dict = {}
     node_rule: int = NodeRule.NA
     transformations: dict = {}
+    objective: Optional[Any] = 0  # For adding any node objectives
 
     inflow: Optional[str]
 
@@ -653,6 +695,11 @@ class Node(BaseModel):
             con_name = 'reliability_con_' + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
+    def add_objective(self, model):
+        total = 0
+
+        self.objective += total
+
     def num_ports(self):
         return len(self.ports)
 
@@ -764,6 +811,7 @@ class Path(BaseModel):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
+    objective: Optional[Any] = 0
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -786,14 +834,14 @@ class Path(BaseModel):
         setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model):
-        objective = 0
+        super(Path, self).add_objective(model)
+        total = 0
 
         if self.regularise is True:
-            objective += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
-                             for p in model.Expansion for t in model.Time) * 0.0000001
+            total += sum(getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t] \
+                         for p in model.Expansion for t in model.Time) * 0.0000001
 
-        return objective
-
+        self.objective += total
 
 """
 
@@ -1017,28 +1065,27 @@ class Storage(Port):
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
-        objective = 0
+        total = 0
 
         # To get unique solution
         if self.regularise is True:
-            objective += sum(
+            total += sum(
                 getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
                 getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
                 for p in model.Expansion for t in model.Time) * 0.0000001
 
         if self.enable_trip_slack:
-            objective += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
+            total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
 
         if self.soc_conserv is not None:
-            objective += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
-                             model.Time) * self.soc_conserv_cost
+            total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
+                         model.Time) * self.soc_conserv_cost
 
         if self.storage_capacity_cost is not None:
-            objective += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
+            total += getattr(model, self.optimised_capacity) * self.storage_capacity_cost
 
-        return objective
-
+        self.objective += total
 
 class Demand(Sink):
     import_constraint = FlowConstraint.NoConstraint
@@ -1437,69 +1484,98 @@ class CarbonAggregation(Node):
 
 """
 
-New nodes
+Prebuilt nodes
 
 """
 
-
 class Battery(Node):
-    port_name: str
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name,
+                 max_capacity: float,
+                 initial_state_of_charge: float,
+                 charging_power_limit: float,
+                 discharging_power_limit: float,
+                 storage_capacity_cost: Optional[PositiveFloat] = None,
+                 charging_efficiency: float = 1,
+                 discharging_efficiency: float = 1,
+                 depth_of_discharge_limit: float = 0,
+                 fixed_storage_capacity: bool = True,
+                 regularise: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalStorage(**data)
+        self.ports[port_name] = ElectricalStorage(max_capacity=max_capacity,
+                                                  depth_of_discharge_limit=depth_of_discharge_limit,
+                                                  charging_power_limit=charging_power_limit,
+                                                  discharging_power_limit=discharging_power_limit,
+                                                  charging_efficiency=charging_efficiency,
+                                                  discharging_efficiency=discharging_efficiency,
+                                                  initial_state_of_charge=initial_state_of_charge,
+                                                  fixed_storage_capacity=fixed_storage_capacity,
+                                                  storage_capacity_cost=storage_capacity_cost,
+                                                  regularise=regularise)
 
 
 class Solar(Node):
-    port_name: str
-    curtailable: bool = False
-    profile: Union[ArrayType, dict]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 profile: Union[ArrayType, dict],
+                 curtailable: bool = False,
+                 **data):
         super().__init__(**data)
-        data.pop('port_name')
-        self.ports[self.port_name] = ElectricalGeneration(curtailable=self.curtailable)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
 
 
 class Load(Node):
-    port_name: str
-    port_unit: int
-    profile: Union[dict, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self,
+                 port_name: str,
+                 port_unit: int,
+                 profile: Union[dict, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.port_name] = Demand(units=self.port_unit)
-        if type(self.profile) is dict:
-            self.ports[self.port_name].add_initial_value(self.profile)
+        self.ports[port_name] = Demand(units=port_unit)
+        if type(profile) is dict:
+            self.ports[port_name].add_initial_value(profile)
         else:
-            self.ports[self.port_name].add_initial_value_from_array(self.profile)
+            self.ports[port_name].add_initial_value_from_array(profile)
+
+class FlexNode(Node):
+
+    def __init__(self,
+                 port_name: str,
+                 port_unit: int,
+                 **data):
+        super().__init__(**data)
+        self.ports[port_name] = FlexPort(units=port_unit)
+
+class NewInverter(Inverter):
+
+    def __init__(self,
+                 ac_port_name: str,
+                 dc_port_names: list,
+                 **data):
+        super().__init__(**data)
+        self.add_ac_port(ac_port_name)
+        for i in dc_port_names:
+            self.add_dc_port(i)
 
 class FlexNodeWithEmissions(Node):
-    emitting_port: str
-    emitting_port_units: int
-    carbon_port: str
-    emissions_factor: Union[float, ArrayType]
 
-    def __init__(self, **data):
+    def __init__(self, emitting_port: str,
+                 emitting_port_units: int,
+                 carbon_port: str,
+                 emissions_factor:
+                 Union[float, ArrayType],
+                 **data):
         super().__init__(**data)
-        self.ports[self.emitting_port] = FlexPort(units=self.emitting_port_units)
-        self.ports[self.carbon_port] = CarbonSource()
-        self.add_emission_transformation(emitting_port=self.ports[self.emitting_port],
-                                         carbon_port=self.ports[self.carbon_port],
-                                         emission_factor=self.emissions_factor)
-
+        self.ports[emitting_port] = FlexPort(units=emitting_port_units)
+        self.ports[carbon_port] = CarbonSource()
+        self.add_emission_transformation(emitting_port=self.ports[emitting_port],
+                                         carbon_port=self.ports[carbon_port],
+                                         emission_factor=emissions_factor)
