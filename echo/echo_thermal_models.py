@@ -523,7 +523,7 @@ Control system models
 class TimeDelayNode(InputOutputNode):
     """ A time delay node is an input-output node that implements a fixed delay between input and output."""
     time_delay: int  # number of time intervals delay between input and output
-    node_rule = NodeRule.Custom
+    node_rule: NodeRule = NodeRule.Custom
 
     def __init__(self, **data):
         super().__init__(**data)

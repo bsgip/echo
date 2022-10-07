@@ -3,6 +3,8 @@ from typing import TypeVar
 from pydantic import BaseModel, Field
 import numpy as np
 
+
+
 DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class ArrayType(np.ndarray):
@@ -30,7 +32,7 @@ def var_in_range(var1, range_min, range_max):
 def is_non_negative(v, err_msg):
     if v is not None:
         if hasattr(v, '__iter__'):
-            if type(v) is dict:
+            if isinstance(v, dict):
                 for i in v.values():
                     if i < 0:
                         raise ValueError(err_msg)

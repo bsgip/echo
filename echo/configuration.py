@@ -1,8 +1,9 @@
 """ Enumerations of possible configurations for echo model components.
 
 """
+from enum import Enum
 
-class Units(object):
+class Units(Enum):
     """ Enumeration object containing units in which the optimisation is undertaken.
     """
 
@@ -25,8 +26,7 @@ class Units(object):
     LPS = 8
 
 
-
-class Flows(object):
+class Flows(Enum):
     """ Enumeration object defining the direction of commodity flow supported by the Port.
     """
 
@@ -40,7 +40,7 @@ class Flows(object):
     """the port supports two-way flow (import and export)"""
 
 
-class FlowConstraint(object):
+class FlowConstraint(Enum):
     """ Enumeration object defining the type (format) of constraint at the Port.
     """
 
@@ -56,9 +56,11 @@ class FlowConstraint(object):
     """A lower bound constraint and upper bound constraint exist at this port"""
 
 
-class OptimisationType(object):
+
+class OptimisationType(Enum):
     """ Enumeration object defining the type Port value variable in optimisation context.
     """
+
     NA = 0
     """Value type is not specified for this port"""
     Parameter = 1
@@ -67,9 +69,10 @@ class OptimisationType(object):
     """The port variable is variable/optimisable"""
 
 
-class NodeRule(object):
+class NodeRule(Enum):
     """ Enumeration object defining the type Transformation for the Node object.
     """
+
     NA = 0
     """Transformation type is not specified for this Node"""
     Tellegen = 1
@@ -80,22 +83,21 @@ class NodeRule(object):
     """The Node has a transformation rule defined with a Transform object"""
 
 
-class TransformRule(object):
+class TransformRule(Enum):
     """ Enumeration object defining to which component of the Port value the Transformation Rule applies
     """
     NA = 0
     """Not specified for this Port"""
     Both = 1
     """The transformation applies to both pos and neg components of the port variable"""
-    PositiveComponent = 2
+    Pos = 2
     """The transformation applies to only the positive component of the port variable"""
-    NegativeComponent = 3
+    Neg = 3
     """The transformation applies to only the negative component of the port variable"""
 
 
-class ExpansionType(object):
-    """ Enumeration object defining the type of Expansion
-    """
+class ExpansionType(Enum):
+    """ Enumeration object defining the type of Expansion"""
     NA = 0
     """Not specified"""
     Storage = 1
@@ -105,7 +107,7 @@ class ExpansionType(object):
     Edge = 3
     """Energy throughput (Edge capacity) expansion"""
 
-class NodeType(object):
+class NodeType(Enum):
     ElectricalFlex = 'electrical_flex'
     ElectricalTellegen = 'elec_tellegen'
     MultiCommodityTellegen = 'multi_commodity_tellegen'
@@ -132,7 +134,7 @@ class NodeType(object):
     """Heat water pump Node"""
     FlexWithEmissions = 'flex_with_emissions'
 
-class Resource:
+class Resource(Enum):
     """ Enumeration object defining the types of Energy Resources (Commodities)
     """
     Electricity = 0
@@ -144,7 +146,7 @@ class Resource:
     CO2 = 3
     """CO2 (emissions)"""
 
-class TariffType:
+class TariffType(Enum):
     """ Tariff types"""
     ImportTariff = 'import tariff'
     ExportTariff = 'export tariff'
@@ -158,7 +160,7 @@ class TariffType:
     ContingencyNegative = 'contingency negative'
 
 
-class Resets:
+class Resets(Enum):
     """ How often something resets """
     minute = 'minute'
     hourly = 'hourly'
@@ -167,7 +169,7 @@ class Resets:
     yearly = 'annually'
 
 
-class EVChargeMode:
+class EVChargeMode(Enum):
     V0G = 'V0G'
     V1G = 'V1G'
     V2G = 'V2G'

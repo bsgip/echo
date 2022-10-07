@@ -43,7 +43,8 @@ def test_system_import_demand_tariff():
                                                 demand_charges=[ImportDemandCharge(
                                                     rate=1.0,
                                                     window_array=dc_window,
-                                                    min_demand=minimum_demand)])
+                                                    min_demand=minimum_demand,
+                                                    reset_periods=[time_periods])])
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
@@ -90,7 +91,8 @@ def test_system_export_demand_tariff():
                                                 demand_charges=[ExportDemandCharge(
                                                     rate=1.0,
                                                     window_array=dc_window,
-                                                    min_demand=minimum_demand)])
+                                                    min_demand=minimum_demand,
+                                                    reset_periods=[time_periods])])
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 

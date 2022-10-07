@@ -27,15 +27,27 @@ class ArrayWrap(Sequence):
             self.is_scalar = False
         self.time_periods = None
         self.expansion_periods = None
-        self.tp_set = False
+        self.tp_set = False  # for indicating whether the time period has been set
 
         super().__init__()
 
-    def set_periods(self, expansion_periods, time_periods):
+
+    def dict(self):
+        """ For converting array wrap to a dict"""
+        assert self.tp_set is True, 'Set time periods before converting to dict'
+        keys = [(x, i) for x in range(self.expansion_periods) for i in range(self.time_periods)]
         if not self.is_scalar:
-            self.time_periods = time_periods
-            self.expansion_periods = expansion_periods
-            self.tp_set = True
+            vals = np.reshape(self.var, self.expansion_periods*self.time_periods)
+        else:
+            vals = self.var * np.ones(self.expansion_periods*self.time_periods)
+        d = dict(zip(keys, vals))
+        return d
+
+    def set_periods(self, expansion_periods: int, time_periods: int)->None:
+        self.time_periods = time_periods
+        self.expansion_periods = expansion_periods
+        self.tp_set = True
+        if not self.is_scalar:
             self.get_func = self.get_array
             var_array = np.array(self.var).flatten()
             if len(var_array) == time_periods:   # tile across expansion periods
@@ -49,6 +61,7 @@ class ArrayWrap(Sequence):
         return self.get_func(i)
 
     def get_scalar(self, i):
+        #todo this will return valid numbers even if the index is out of range
         return self.var
 
     def get_dummy(self, i):
@@ -299,6 +312,8 @@ def tile_array_over_expansion_periods(array, expansion_periods):
 
 
 def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int):
+    if profile is None:
+        raise ValueError('No profile dataframe defined. Check that you added the profile to the optimiser.')
     values = profile[key].values
     assert len(values) == time_periods, 'Initial values are wrong length.'
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
@@ -316,3 +331,9 @@ def orjson_dumps(v, *, default):
 
     # orjson.dumps returns bytes, to match standard json.dumps we need to decode
     return orjson.dumps(v, default=default).decode()
+
+
+
+def process_time_series_data(array: np.ndarray, time_periods: int, expansion_periods: int = 1):
+    x = ArrayWrap(array)
+    x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)

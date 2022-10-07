@@ -135,8 +135,8 @@ def test_feedback_loop():
     load.ports['load'] = l1
     load.ports['excess'] = excess
     t = Transform()
-    t.add_lhs_term(l1, TransformRule.Both, 0.5)
-    t.add_rhs_term(excess, TransformRule.Both, -1)
+    t.add_lhs_term(l1, TransformRule.Both, 1)
+    t.add_lhs_term(excess, TransformRule.Both, 1)
     load.add_transformation(t)
     load.node_rule = NodeRule.Transform
 

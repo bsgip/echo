@@ -80,7 +80,10 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
 
 
     demand_tariff = DemandTariffObjective(component=cp1,
-                                          demand_charges=[ImportDemandCharge(rate=1.0, window_array=dc_window, min_demand=minimum_demand)])
+                                          demand_charges=[ImportDemandCharge(rate=1.0,
+                                                                             window_array=dc_window,
+                                                                             min_demand=minimum_demand,
+                                                                             reset_periods=[time_periods])])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
     objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -157,7 +160,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
                                  expansion_periods=expansion_periods)
 
     demand_tariff = DemandTariffObjective(component=cp1,
-                                          demand_charges=[ImportDemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand)])
+                                          demand_charges=[ImportDemandCharge(rate=10.0, window_array=[0] * 24 + [1] * 12 + [0] * 12, min_demand=minimum_demand, reset_periods=[time_periods])])
 
     throughput_cost = ThroughputCost(component=b1, rate=0.1)
 
@@ -394,6 +397,38 @@ def test_demand_tariff_reset_periods():
         np.testing.assert_almost_equal(max_opt, max_calc, 5)
 
 
+def test_block_tariff():
+    time_periods = 24
+    interval_duration = 60
+    expansion_periods = 1
+
+    system = OptimisationGraph()
+
+    grid = FlexNode(node_name='grid', port_name='grid', port_unit=Units.KW)
+    load = Load(node_name='load', port_name='load', profile=[10]*time_periods, port_unit=Units.KW)
+
+    system.add_nodes_from([grid,load])
+    system.connect_ports_and_create_edge(load.ports['load'], grid.ports['grid'], nodes=('grid', 'load'))
+
+
+    block_tariff = BlockImportTariff(component=load.ports['load'],
+                                     blocks=[50, 100],
+                                     rates=[1, 2, 3],
+                                     reset_periods=[5, 19])
+
+    objective_set = ObjectiveSet(objective_list=[block_tariff])
+
+    optimiser = EchoOptimiser(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=0,
+        ES=system,
+        objective_set=objective_set
+    )
+    optimiser.optimise(tee=True)
+
+    print()
 
 
 
