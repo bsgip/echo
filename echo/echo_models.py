@@ -226,9 +226,9 @@ class OptimisationGraph(nx.Graph):
             setattr(model, f"path_flow_con3_{current_node_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow_two))
 
-    def draw_echo_graph(self, with_labels=False, labels=None):
+    def draw_echo_graph(self, with_labels=False, labels=None, node_size=1, font_size=5, width=0.5):
         """ Draws the network with or without node labels """
-        nx.draw_networkx(self, with_labels=with_labels, labels=labels)
+        nx.draw_networkx(self, with_labels=with_labels, labels=labels, node_size=node_size, font_size=font_size, width=width)
         plt.show()
 
     def get_node(self, node_name: str):
@@ -423,7 +423,11 @@ class Port(BaseModel):
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
+            setattr(model, self.port_name,
+                    en.Param(model.Expansion, model.Time, initialize=self.initial_value))
+        else:
+            setattr(model, self.port_name,
+                    en.Var(model.Expansion, model.Time, initialize=self.initial_value, domain=domain))
 
         # Import/export capacity constraint with slack rules
         def import_cap_rule_slack(model, p, t):
@@ -443,6 +447,8 @@ class Port(BaseModel):
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
             con_name = 'import_con_' + self.port_name
             # Generate an array of constraints (ie indexed by time and expansion period)
+            time_periods = len(model.Time)
+            exp_periods = len(model.Expansion)
             import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
             setattr(model, self.import_con_val,
                     en.Param(model.Expansion, model.Time, initialize=import_constraint_dict,
@@ -462,6 +468,8 @@ class Port(BaseModel):
 
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             con_name = 'export_con_' + self.port_name
+            time_periods = len(model.Time)
+            exp_periods = len(model.Expansion)
             export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
             setattr(model, self.export_con_val,
                     en.Param(model.Expansion, model.Time, initialize=export_constraint_dict,
@@ -490,6 +498,18 @@ class Port(BaseModel):
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule1))
             setattr(model, f"active_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
+
+    @staticmethod
+    def generic_bigM_1(var, binary_var):
+        def constraint(model, p, t):
+            return getattr(model, var)[p, t] <= getattr(model, binary_var)[p, t] * model.bigM
+        return constraint
+
+    @staticmethod
+    def generic_bigM_2(var, binary_var):
+        def constraint(model, p, t):
+            return getattr(model, var)[p, t] >= - getattr(model, binary_var)[p, t] * model.bigM
+        return constraint
 
     def constrain_pos_neg(self, model):
         """ Applies a mixed integer constraint that splits a port var into positive and negative components """
@@ -788,7 +808,6 @@ class Edge(BaseModel):
 
         port1 = self.vertices[0]
         port2 = self.vertices[1]
-
         def edge_constraint_rule(model, p, t):
             return getattr(model, port1.port_name)[p, t] + getattr(model, port2.port_name)[p, t] == 0
 
@@ -811,7 +830,6 @@ class Edge(BaseModel):
             else:
                 max_flow = port2.import_constraint_value
         return max_flow
-
 
 class OptimisationGraph(BaseModel):
     node_obj: dict = {}
@@ -1173,7 +1191,6 @@ class Path(BaseModel):
         self.objective += total
 
 
-
 class OptGraph(BaseModel):
     node_obj: dict = {}
     edge_obj: dict = {}
@@ -1285,6 +1302,35 @@ class TellegenNode(Node):
     node_rule = NodeRule.Tellegen
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+
+class MultiCommodityTellegenNode(TellegenNode):
+    """
+    A node with ports that have multiple commodities.
+    A tellegen constraint is applied per commodity.
+    """
+    node_rule = NodeRule.Custom
+
+    def apply_node_constraints(self, model):
+
+        # todo avoid repeating the below
+        def reliability(model, p, t):  # Tellegen node rule
+            a = 0
+            for port in commodity_ports:
+                b = getattr(model, port.port_name)
+                a += b[p, t]
+            return a == 0
+
+        commodities = dict()
+        for p in self.ports.values():
+            if commodities.get(p.units) is None:
+                commodities[p.units] = []
+                commodities[p.units].append(p)
+            else:
+                commodities[p.units].append(p)
+
+        for ctype, commodity_ports in commodities.items():
+            setattr(model, 'node_con_' + str(ctype) + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+
 
 class FlexPort(Port):
     """ Flexible variable port, which can import and export without constraints."""
@@ -1682,7 +1728,6 @@ class MobileStorage(Storage):
 
 """
 
-
 class ElectricalDemand(Demand):
     """ Fixed electrical demand."""
     units = Units.KW
@@ -1706,7 +1751,6 @@ class ElectricalGeneration(Source):
         else:
             # Constrain solar gen to be within initial value (max value)
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
-
 
 class ElectricalStorage(Storage):
     units = Units.KW

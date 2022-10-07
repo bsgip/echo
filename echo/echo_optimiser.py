@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from pyomo.opt import SolverFactory
 import pyomo.environ as en
 import pyomo.network
@@ -7,7 +8,7 @@ from echo.configuration import Units, Flows, FlowConstraint, OptimisationType, N
 from echo.constants import minutes_per_hour
 from echo.echo_models import ConfigurationError, Path
 import pandas as pd
-
+from tqdm import tqdm
 
 ## export OPTIMISER_ENGINE_EXECUTABLE=/home/anna/IBM/ILOG/CPLEX_Studio221/cplex/bin/x86-64_linux/cplex
 ## export OPTIMISER_ENGINE='cplex'
@@ -34,7 +35,8 @@ class EchoOptimiser(object):
                  ES,
                  objective_set,
                  optimiser_engine=None,
-                 profile=None):
+                 profile=None,
+                 verbose: bool = True):
 
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
@@ -60,6 +62,8 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
+        self.verbose=verbose
+
         self.validate_network_graph()
         self.build_model()
         self.apply_constraints()
@@ -71,6 +75,8 @@ class EchoOptimiser(object):
         - name consistency between objects (eg node.node_name) and graph nodes
         - floating nodes that have no edge connecting them to another node
         """
+        if self.verbose:
+            print('validating network graph')
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
                 'Node {} name has been updated after being added to the network graph.'.format(node_name)
@@ -110,12 +116,13 @@ class EchoOptimiser(object):
         setattr(self.model, self.model.dr, en.Param(self.model.Expansion, initialize=dr))
 
         # Initialise node variables/params and add node constraints
-        for _, node_obj in self.ES.node_obj.items():
+
+        for _, node_obj in tqdm(self.ES.node_obj.items(), desc='initialise nodes and ports'):
             node_obj.verify_node()
             node_obj.initialise_node(self.model, self.profile)
 
         # Initialise edge variables/params and add edge constraints
-        for _, edge_obj in self.ES.edge_obj.items():
+        for _, edge_obj in tqdm(self.ES.edge_obj.items(), desc='initialising edges'):
             edge_obj.verify_edge()
             edge_obj.initialise_edge(self.model)
 
@@ -129,13 +136,15 @@ class EchoOptimiser(object):
             self._apply_path_constraints()
 
     def _apply_node_constraints(self):
-        for _, obj in self.ES.node_obj.items():
+        for _, obj in tqdm(self.ES.node_obj.items(), desc='applying node constraints'):
             obj.apply_node_constraints(self.model)
 
     def _apply_path_constraints(self):
         self.ES.apply_path_constraints(self.model)
 
     def build_objective(self):
+        if self.verbose:
+            print('building objectives')
         self.objective = 0
         # Add objectives defined in the objective set
         if hasattr(self, 'objective_set'):
@@ -168,6 +177,8 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
+        if self.verbose:
+            print('Optimising...')
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 
@@ -269,3 +280,6 @@ class EchoOptimiser(object):
                 total += obj.get_objective_total(optimiser=self)
         return total
 
+    def plot_values(self, var_name):
+        plt.plot(self.values(var_name))
+        plt.show()

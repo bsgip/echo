@@ -429,6 +429,3 @@ def test_block_tariff():
     optimiser.optimise(tee=True)
 
     print()
-
-
-

@@ -24,12 +24,12 @@ class Network(em.BaseModel):
     objectives = {}  # any objectives we want to define
     profile = {}  # any static time series data
 
-    def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Any = None, params: dict = None,
+    def add_node_to_components(self, n_id: str, n_type: NodeType, ports: Union[list, dict], params: dict = None,
                                data: Any = None):
         """
         Adds an asset (node) to the component dictionary.
         Args:
-            ports: dict of info on ports (names, units, parameters)
+            ports: string, list, or dict of info on ports (names, units, parameters)
             n_id: unique node id
             n_type: node type from NodeType class, so we know what to build in echo
             params: any params that belong to the node (asset) rather than a particular port
@@ -111,15 +111,16 @@ class Network(em.BaseModel):
 
     @staticmethod
     def validate_new_port(ports: Union[dict, list]) -> None:
-        """ Checks that each port has at least a unit key """
+        """ If ports are a list of names, checks for duplicates. If ports are a dict, checks each port has a unit. """
         if type(ports) is dict:
             for port_name, port_attr in ports.items():
                 assert port_attr.get('units') is not None, 'Port {} has no units defined.'.format(port_name)
         elif type(ports) is list:
+            if len(set(ports)) != len(ports):
+                print()
             assert len(set(ports)) == len(ports), 'Port names must be unique.'
         else:
-            raise ValueError(
-                'Ports should be defined as a list of port names, or as a dictionary with the port name as key.')
+            raise ValueError('Ports should be either a list of string(s), or a dict with the port name as key.')
 
     def validate_network(self):
         # check consistency of port names as defined in self.components and self.edges
@@ -377,9 +378,7 @@ def construct_echo_edge(system: em.OptimisationGraph, edge_name: str, edge_dict:
     else:
         p1 = node1.ports[port2]
         p2 = node2.ports[port1]
-    assert p1.units == edge_unit, 'In edge "{}", port and edge units are inconsistent.'.format(edge_name)
-    assert p2.units == edge_unit, 'In edge "{}", Port and edge units are inconsistent.'.format(edge_name)
-    system.connect_ports_and_create_edge(p1, p2)
+    system.connect_ports_and_create_edge(port1=p1, port2=p2, nodes=(node1.node_name, node2.node_name))
 
 
 def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
@@ -407,8 +406,14 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     elif node_dict['type'] == NodeType.ElectricalTellegen:
         new_node = create_tellegen_node(node_dict, Units.KW)
 
+    elif node_dict['type'] == NodeType.GasTellegen:
+        new_node = create_tellegen_node(node_dict, Units.JPS)
+
     elif node_dict['type'] == NodeType.ElectricalFlex:
         new_node = create_flex_node(node_dict, Units.KW)
+
+    elif node_dict['type'] == NodeType.GasFlex:
+        new_node = create_flex_node(node_dict, Units.JPS)
 
     elif node_dict['type'] == NodeType.ElectricalLoad:
         new_node = create_load_node(node_dict, Units.KW, df)
@@ -428,6 +433,8 @@ def construct_echo_node(system: em.OptimisationGraph, node_name_dict: dict, node
     elif node_dict['type'] == NodeType.FlexWithEmissions:
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
+    elif node_dict['type'] == NodeType.MultiCommodityTellegen:
+        new_node = create_multi_commodity_tellegen_node(node_dict)
     else:
         raise ValueError('Node type "{}" not recognised, does not have a builder function'.format(node_dict['type']))
     update()  # Update our graph
@@ -444,10 +451,9 @@ def run_echo_optimiser(echo_graph,
                        logfile=None,
                        verbose=True):
     """ Runs the echo optimiser on an echo graph with an echo objective set. Returns the optimiser object."""
-    if verbose:
-        print('Performing whole model checks...')
+
     # Check we have consistent array lengths for ports
-    for node_name, node_obj in echo_graph.node_obj.items():
+    for node_name, node_obj in tqdm(echo_graph.node_obj.items(), desc='performing whole model checks'):
         for port_name, port_obj in node_obj.ports.items():
             # Check we have the correct array lengths - todo may not be sufficient to just check initial value, what about other arrays
             array_length_check(port_obj.initial_value, time_periods,
@@ -462,7 +468,8 @@ def run_echo_optimiser(echo_graph,
                                  discount_rate=discount_rate,
                                  ES=echo_graph,
                                  objective_set=objective_set,
-                                 optimiser_engine=optimiser_engine)
+                                 optimiser_engine=optimiser_engine,
+                                 verbose=verbose)
 
     optimiser.optimise(tee=opt_display, logfile=logfile)
     log_infeasible_constraints(optimiser.model)
@@ -557,6 +564,17 @@ def create_carbon_aggregation_node(node_dict: dict):
     node = em.CarbonAggregation(node_name=node_dict['id'])
     ports = node_dict['ports']
     add_flex_ports_to_node(node_obj=node, port_list=ports, port_units=[Units.CO2] * len(ports))
+    return node
+
+def create_multi_commodity_tellegen_node(node_dict: dict):
+    """ Creates an echo multi commodity tellegen node from the provided node dict."""
+    node = em.TellegenNode(node_name=node_dict['id'])
+    port_dict = node_dict['ports']
+    assert type(port_dict) is dict, 'Multi tellegen node requires ports defined using a dict'
+    port_units = []
+    for p_name, p_dict in port_dict.items():
+        port_units.append(p_dict['units'])
+    add_flex_ports_to_node(node, port_list=list(port_dict.keys()), port_units=port_units)
     return node
 
 

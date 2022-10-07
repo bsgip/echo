@@ -109,6 +109,8 @@ class ExpansionType(Enum):
 
 class NodeType(Enum):
     ElectricalFlex = 'electrical_flex'
+    GasFlex = 'gas_flex'
+    GasTellegen = 'gas_tellegen'
     ElectricalTellegen = 'elec_tellegen'
     MultiCommodityTellegen = 'multi_commodity_tellegen'
     Battery = 'battery'
@@ -117,9 +119,6 @@ class NodeType(Enum):
     Solar = 'solar'
     """Solar generator (PV) Node"""
     EV = 'ev'
-    V0GEV = 'v0g_ev'
-    V1GEV = 'v1g_ev'
-    V2GEV = 'v2g_ev'
     Inverter = 'inverter'
     """DC/AC inverter Node"""
     Chiller = 'chiller'
@@ -134,9 +133,11 @@ class NodeType(Enum):
     """Heat water pump Node"""
     FlexWithEmissions = 'flex_with_emissions'
 
+
 class Resource(Enum):
     """ Enumeration object defining the types of Energy Resources (Commodities)
     """
+
     Electricity = 0
     """Electricity"""
     Gas = 1
