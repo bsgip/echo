@@ -161,13 +161,13 @@ objective_dict = {
 
 
 # Convert dict to nx
-x = convert_dict_to_nx(network_dict)
+x = Network(**network_dict)
 
 # Convert nx to echo
-em, node_uid_dict = convert_nx_to_echo(x, df)
+em, node_uid_dict = convert_dict_to_echo(network_dict, df)
 
 # Convert objective dict to echo objective
-obj = convert_objective_to_echo_objective(em, node_uid_dict, objective_dict)
+obj = construct_echo_objective(em, node_uid_dict, objective_dict)
 
 # Run optimiser on echo model and echo objective
 opt = run_echo_optimiser(em,
