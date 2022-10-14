@@ -6,6 +6,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
 from echo.echo_models import *
+import time
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location
@@ -141,7 +142,10 @@ optimiser = EchoOptimiser(interval_duration=interval_duration,
                           objective_set=objective_set,
                           optimiser_engine='cplex')
 
+t1 = time.time()
 optimiser.optimise(tee=True)
+t2 = time.time()
+print("optimisation time = ",t2-t1)
 
 log_infeasible_constraints(optimiser.model)
 
