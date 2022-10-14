@@ -1,18 +1,18 @@
 import pandas as pd
 from echo.echo_builder import *
-from echo.bz_utils import *
+import echo.bz_utils as bz_utils
 
 time_periods = 48
-
+acton_json_file = 'bz_data/acton_network.json'
 # Import network data as json
-netw_jsn = get_anu_electrical_network_json()
+netw_jsn = bz_utils.get_anu_electrical_network_json(file_name=acton_json_file)
 
 # Import time series data as df
 # Units are SI (Watts)
-df = get_cleaned_electrical_data()
+df = pd.read_csv('/home/anna/GitBSGIP/bz_data/processed_data/bz_test_data.csv').set_index("timestamp")
 
-b = ['B1', 'B2']
-c = building_name_match_wrapper(b, df)
+b = ['B10', 'B108']
+c = bz_utils.building_name_match_wrapper(b, df)
 
 
 # Dummy data

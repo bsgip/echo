@@ -307,7 +307,7 @@ def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
     node_name_dict = {}
     system = em.OptimisationGraph()
     for node_name, node_dict in tqdm(netw['components'].items(), desc='building nodes', disable=not (verbose)):
-        construct_echo_node(system=system, node_dict=node_dict, node_name_dict=node_name_dict, node=node_name, df=df)
+        construct_echo_node(system=system, node_dict=node_dict['None'], node_name_dict=node_name_dict, node=node_name, df=df)
 
     for edge_name, edge_dict in tqdm(netw['edges'].items(), desc='building edges', disable=not (verbose)):
         construct_echo_edge(system=system, edge_name=edge_name, edge_dict=edge_dict, node_name_dict=node_name_dict)
