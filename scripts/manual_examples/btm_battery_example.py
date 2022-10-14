@@ -27,7 +27,7 @@ sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction'
 ############################ Define an Example Optimisation Problem ########################################
 
 
-duration_multiplication = 10
+duration_multiplication = 1
 
 # The load and pv arrays below are in average kw consumed per 15 minutes
 # define load (loads must be positive values)
@@ -128,14 +128,14 @@ peak_power_obj = PeakNegativePower(component=grid.ports['grid'])  # assign a cos
 import_cost = ImportTariff(component=connection_point.ports['grid'],
                            tariff_array=import_tariff_array,
                            expansion_periods=expansion_periods)  # create the import objective cost
-import_cost2 = ImportTariff(component=connection_point.ports['grid'],
-                            tariff_array=import_tariff_array,
-                            expansion_periods=expansion_periods)  # create the import objective cost
+# import_cost2 = ImportTariff(component=connection_point.ports['grid'],
+#                             tariff_array=import_tariff_array,
+#                             expansion_periods=expansion_periods)  # create the import objective cost
 export_cost = ExportTariff(component=connection_point.ports['grid'],
                            tariff_array=export_tariff_array,
                            expansion_periods=expansion_periods)  # create the export objective cost
 
-objective_set = ObjectiveSet(objective_list=[import_cost, import_cost2, export_cost, peak_power_obj, throughput_cost])
+objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost])
 
 ############################ ----------------------- ########################################
 
