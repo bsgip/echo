@@ -36,7 +36,7 @@ If you plan to use echo_scenario to solve power flows then you will need to inst
 The following solvers can be used
 
 Free for academic use only:
-- CPLEX (recommended): This has been tested the most. It requires a license but is free for academic users. To install, follow instructions [here](https://www.ibm.com/products/ilog-cplex-optimization-studio).
+- CPLEX (recommended): This has been tested the most. It requires a license but is free for academic users. To install, follow instructions [here](https://www.ibm.com/products/ilog-cplex-optimization-studio). After installing CPLEX you will need to add the binaries to your system path. 
 - GUROBI: Minimal testing: It requires a license but is free for academic users. Check their website for instructions on installing https://www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html
 
 Open source:
