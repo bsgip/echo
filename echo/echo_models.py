@@ -59,17 +59,17 @@ class Port(BaseModel):
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
     export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
 
-    @property
-    def pos(self):
-        return positive_variable_component + self.port_name
-
-    @property
-    def neg(self):
-        return negative_variable_component + self.port_name
-
-    @property
-    def is_pos(self):
-        return f"is_pos_{self.port_name}"
+    # @property
+    # def pos(self):
+    #     return positive_variable_component + self.port_name
+    #
+    # @property
+    # def neg(self):
+    #     return negative_variable_component + self.port_name
+    #
+    # @property
+    # def is_pos(self):
+    #     return f"is_pos_{self.port_name}"
 
     @property
     def import_con_val(self):
@@ -240,37 +240,38 @@ class Port(BaseModel):
             setattr(model, f"active_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=on_off_rule2))
 
-    def constrain_pos_neg(self, model):
-        """ Applies a mixed integer constraint that splits a port var into positive and negative components """
-        if hasattr(model, self.pos) is False:
-            setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-            setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
-            setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
-
-            con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
-            con_name = positive_variable_component + negative_variable_component + self.port_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
-
-            def only_pos_or_neg_one(model, p, t):
-                return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
-
-            setattr(model, f"pos_neg_con1_{self.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
-
-            def only_pos_or_neg_two(model, p, t):
-                return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
-
-            setattr(model, f"pos_neg_con2_{self.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
-
-    @staticmethod
-    def factory_pos_neg_flows(var_name, pos_name, neg_name):
-        def constraint(model, expansion_interval, time_interval):
-            return getattr(model, var_name)[expansion_interval, time_interval] == \
-                   (getattr(model, pos_name)[expansion_interval, time_interval] +
-                    getattr(model, neg_name)[expansion_interval, time_interval])
-
-        return constraint
+    # todo: remove this and remove where it is getting used!
+    # def constrain_pos_neg(self, model):
+    #     """ Applies a mixed integer constraint that splits a port var into positive and negative components """
+    #     if hasattr(model, self.pos) is False:
+    #         setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+    #         setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+    #         setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+    #
+    #         con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
+    #         con_name = positive_variable_component + negative_variable_component + self.port_name
+    #         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
+    #
+    #         def only_pos_or_neg_one(model, p, t):
+    #             return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
+    #
+    #         setattr(model, f"pos_neg_con1_{self.port_name}",
+    #                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
+    #
+    #         def only_pos_or_neg_two(model, p, t):
+    #             return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
+    #
+    #         setattr(model, f"pos_neg_con2_{self.port_name}",
+    #                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))
+    #
+    # @staticmethod
+    # def factory_pos_neg_flows(var_name, pos_name, neg_name):
+    #     def constraint(model, expansion_interval, time_interval):
+    #         return getattr(model, var_name)[expansion_interval, time_interval] == \
+    #                (getattr(model, pos_name)[expansion_interval, time_interval] +
+    #                 getattr(model, neg_name)[expansion_interval, time_interval])
+    #
+    #     return constraint
 
     def add_initial_value(self, initial_value: dict):
         """ Adds initial port value which will be used to initialise the pyomo var/param
@@ -1206,15 +1207,8 @@ class Storage(Port):
         power = getattr(model, self.port_name)
 
         def SOC_rule(model, p, t):
-            if p == 0 and t == 0:
-                return soc[p, t] == self.initial_state_of_charge + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
-            elif t == 0:
-                return soc[p, t] == soc[p - 1, max_t] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
-            else:
-                return soc[p, t] == soc[p, t - 1] + pos[p, t] * kw_to_kWh * self.charging_efficiency + \
-                       neg[p, t] * kw_to_kWh / self.discharging_efficiency
+            raise NotImplementedError   # charging and discharging efficiency not implemented with LP formualtion yet
+
 
         def SOC_rule_perfect_efficiency(model, p, t):
             if p == 0 and t == 0:
@@ -1228,10 +1222,8 @@ class Storage(Port):
             setattr(model, self.soc_constraint,
                     en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency))
         else:
-            self.constrain_pos_neg(model)
-            pos = getattr(model, self.pos)  # get pos variable for writing constraints
-            neg = getattr(model, self.neg)  # get neg variable for writing constraints
-            setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
+            assert False, "charging and discharging efficiency not implemented with LP formulation yet"
+
 
     def add_objective(self, model):
         super(Storage, self).add_objective(model)
@@ -1240,8 +1232,7 @@ class Storage(Port):
         # To get unique solution
         if self.regularise is True:
             total += sum(
-                getattr(model, self.pos)[p, t] * getattr(model, self.pos)[p, t] + \
-                getattr(model, self.neg)[p, t] * getattr(model, self.neg)[p, t]
+                getattr(model, self.port_name)[p, t] ** 2
                 for p in model.Expansion for t in model.Time) * 0.0000001
 
         if self.storage_capacity_cost is not None:
@@ -1576,8 +1567,6 @@ class Inverter(Node):
         super(Inverter, self).initialise_node(model, profile)
 
         ac_port = self.ports[self.ac_port_name]
-        # Split ac port into pos/neg, so we can apply the correct efficiencies
-        ac_port.constrain_pos_neg(model)
 
         def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
             dc_total = 0
@@ -1585,8 +1574,12 @@ class Inverter(Node):
                 dc_port = self.ports[dc_port_name]
                 dc_total += getattr(model, dc_port.port_name)[p, t]
 
-            return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
-                   getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == dc_total * -1
+            assert (self.ac_dc_efficiency==1. and self.dc_ac_efficiency==1.), "efficiencies less than 1 not " \
+                                                                              "implemented yet"
+
+            return getattr(model, ac_port.port_name)[p, t] == - dc_total
+            # return getattr(model, ac_port.pos)[p, t] * self.ac_dc_efficiency + \
+            #        getattr(model, ac_port.neg)[p, t] / self.dc_ac_efficiency == dc_total * -1
 
         setattr(model, f"con_inverter_{self.node_name}", en.Constraint(
             model.Expansion, model.Time, rule=inverter_ac_output_must_track_efficiency))

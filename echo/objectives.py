@@ -96,11 +96,11 @@ class PeakNegativePower(Objective):
         setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        # if hasattr(model, self.component.pos) is False:
+        #     self.component.constrain_pos_neg(model)
 
         def max_value_rule(model, p, t):
-            return getattr(model, self.max_neg) <= getattr(model, self.component.neg)[p, t]
+            return getattr(model, self.max_neg) <= getattr(model, self.component.port_name)[p, t]
 
         setattr(model, f"max_neg_con_{self.component.port_name}",
                 en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
@@ -119,6 +119,75 @@ class Tariff(Objective):
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array))
         return vals
+
+class ImportExportTariff(Objective):
+    # todo: we should be checking that import_tariff_array > export_tariff_array
+    import_tariff_array: Union[ArrayType, list]
+    export_tariff_array: Union[ArrayType, list]
+    component: Port
+    import_tariff_dict: Optional[dict]
+    export_tariff_dict: Optional[dict]
+    expansion_periods: Optional[PositiveInt] = 1
+
+    @property
+    def import_tariff(self):
+        return 'import_tariff_' + self.name
+    @property
+    def export_tariff(self):
+        return 'export_tariff_' + self.name
+
+    @property
+    def tariff_auxilliary(self):
+        return "tariff_auxilliary_" + self.name
+
+    @staticmethod
+    def return_tariff_dict(array, expansion_periods):
+        #todo update this to work for multiple expansion periods
+        keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
+        vals = dict(zip(keys, array))
+        return vals
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.import_tariff_dict = self.return_tariff_dict(self.import_tariff_array, self.expansion_periods)
+        self.export_tariff_dict = self.return_tariff_dict(self.export_tariff_array, self.expansion_periods)
+
+    def create_params(self, model, df):
+        setattr(model, self.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict))
+        setattr(model, self.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict))
+        # auxilliary variable
+        setattr(model, self.tariff_auxilliary, en.Var(model.Expansion, model.Time, initialize=1000, domain=en.Reals))
+
+    def apply_constraints(self, model):
+        # def export_bound(model, p, t):
+        #     return getattr(model, self.tariff_auxilliary)[p,t] >= getattr(model, self.export_tariff)[p, t] * getattr(
+        #         model, self.component.port_name) * model.interval_duration / 60
+        #
+        # def import_bound(model, p, t):
+        #     return getattr(model, self.tariff_auxilliary)[p, t] >= getattr(model, self.import_tariff)[p, t] * getattr(
+        #         model, self.component.port_name)[p,t] * model.interval_duration / 60
+
+        # todo: should do below with setattr and adding rule
+        model.aux_bound = en.ConstraintList()
+        for t in model.Time:
+            for p in model.Expansion:
+                model.aux_bound.add(
+                    getattr(model, self.tariff_auxilliary)[p, t] >= getattr(model, self.import_tariff)[
+                    p, t] * getattr(model, self.component.port_name)[p,t] * model.interval_duration / 60
+                )
+                model.aux_bound.add(
+                    getattr(model, self.tariff_auxilliary)[p, t] >= getattr(model, self.export_tariff)[
+                    p, t] * getattr(model, self.component.port_name)[p,t] * model.interval_duration / 60
+                )
+
+        # setattr(model, f"auxilliary_import_bound{self.component.port_name}",
+        #         en.Constraint(model.Expansion, model.Time, rule=import_bound))
+        #
+        # setattr(model, f"auxilliary_export_bound{self.component.port_name}",
+        #         en.Constraint(model.Expansion, model.Time, rule=export_bound))
+
+    def objective_expr(self, model):
+        return sum(getattr(model, self.tariff_auxilliary)[p, t] for p in model.Expansion for t in model.Time)
 
 
 class ImportTariff(Tariff):
@@ -299,14 +368,32 @@ class ThroughputCost(Objective):
     component: Port
     rate: PositiveFloat
 
+    @property
+    def tariff_auxilliary(self):
+        return "tariff_auxilliary_" + self.name
+
+    def create_params(self, model, df):
+        # auxilliary variable
+        # todo: put the tariff auxilliary on the port
+        setattr(model, self.tariff_auxilliary, en.Var(model.Expansion, model.Time, initialize=1000, domain=en.Reals))
+
+
     def apply_constraints(self, model):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
+        model.aux_bound_throughput = en.ConstraintList()        # todo: this needs to be done using set attribute and
+        # applying a rule instead
+        for t in model.Time:
+            for p in model.Expansion:
+                model.aux_bound.add(
+                    getattr(model, self.tariff_auxilliary)[p, t] >= self.rate *
+                    getattr(model, self.component.port_name)[p,t] * model.interval_duration / 60
+                )
+                model.aux_bound.add(
+                    getattr(model, self.tariff_auxilliary)[p, t] >= - self.rate *
+                    getattr(model, self.component.port_name)[p,t] * model.interval_duration / 60
+                )
 
     def objective_expr(self, model):
-        obj = sum(
-            (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t]) *
-            getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time) * self.rate
+        obj = sum(getattr(model, self.tariff_auxilliary)[p, t] for p in model.Expansion for t in model.Time)
         return obj
 
 

@@ -121,17 +121,14 @@ system.connect_ports_and_create_edge(inverter.ports['pv'], solar.ports['pv'])
 # Create objectives/tariffs
 throughput_cost = ThroughputCost(component=b, rate=0.000001)  # assign a throughput cost to the battery
 peak_power_obj = PeakNegativePower(component=grid.ports['grid'])  # assign a cost on the peak negative power
-import_cost = ImportTariff(component=connection_point.ports['grid'],
-                           tariff_array=import_tariff_array,
-                           expansion_periods=expansion_periods)  # create the import objective cost
-import_cost2 = ImportTariff(component=connection_point.ports['grid'],
-                            tariff_array=import_tariff_array,
-                            expansion_periods=expansion_periods)  # create the import objective cost
-export_cost = ExportTariff(component=connection_point.ports['grid'],
-                           tariff_array=export_tariff_array,
-                           expansion_periods=expansion_periods)  # create the export objective cost
 
-objective_set = ObjectiveSet(objective_list=[import_cost, import_cost2, export_cost, peak_power_obj, throughput_cost])
+import_export_cost = ImportExportTariff(component=connection_point.ports['grid'],
+                                        import_tariff_array=import_tariff_array,
+                                        export_tariff_array=export_tariff_array,
+                                        expansion_periods=expansion_periods)
+
+
+objective_set = ObjectiveSet(objective_list=[import_export_cost, peak_power_obj, throughput_cost])
 
 ############################ ----------------------- ########################################
 
