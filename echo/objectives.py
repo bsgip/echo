@@ -8,15 +8,14 @@ import pyomo.environ as en
 from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Field, root_validator, NonPositiveFloat
 
 from echo.echo_models import Port, Path, Storage
-from echo.echo_models import BaseModel as echoBaseModel
-from echo.echo_pydantic import BaseModel
+from echo.echo_pydantic import BaseModel as echoBaseModel
 from echo.echo_validators import ArrayType
 
 RangeSet = TypeVar('pyomo.core.base.set.RangeSet')  # type for rangeset
 
 
 class Objective(echoBaseModel):
-    component: Union[Port, Path, None]
+    component: Union[object, object, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: Optional[str] = None
 
@@ -62,7 +61,7 @@ class ObjectiveSet(echoBaseModel):
 
 class PeakPositivePower(Objective):
     """ The PeakPositivePower objective minimises the peak positive (imported) power at the specified port. """
-    component: Port
+    component: object # port
 
     @property
     def max_pos(self):
@@ -87,7 +86,7 @@ class PeakPositivePower(Objective):
 
 class PeakNegativePower(Objective):
     """ The PeakNegativePower objective minimises the peak negative (exported) power at the specified port. """
-    component: Port
+    component: object # port
 
     @property
     def max_neg(self):
@@ -124,7 +123,7 @@ class Tariff(Objective):
 
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
-    component: Port
+    component: object # port
     import_tariff_dict: Optional[dict]
 
     @property
@@ -151,7 +150,7 @@ class ImportTariff(Tariff):
 class ExportTariff(Tariff):
     """ The ExportTariff objective applies a tariff, defined as an array of prices,
      to the negative (exporting) component of the specified port."""
-    component: Port
+    component: object
     export_tariff_dict: Optional[dict]
 
     @property
@@ -177,7 +176,7 @@ class ExportTariff(Tariff):
 
 class BlockTariff(Objective):
     """ A block tariff, or step tariff, divides consumption over a time period into different blocks, and each block has a different price."""
-    component: Port
+    component: object # port
     blocks: list  # list of consumption blocks/steps (cumulative) as tuple ranges
     rates: list  # list of rates per tuple
     reset_periods: Optional[list]
@@ -273,7 +272,7 @@ class BlockImportTariff(BlockTariff):
 
 class PathTariff(Tariff):
     """ The PathTariff objective applies a cost per kW of power flow on a specified path."""
-    component: Path
+    component: object # port
     path_tariff_dict: Optional[dict]
 
     @property
@@ -297,7 +296,7 @@ class PathTariff(Tariff):
 
 class ThroughputCost(Objective):
     """ A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port. """
-    component: Port
+    component: object # Port
     rate: PositiveFloat
 
     def apply_constraints(self, model):
@@ -313,7 +312,7 @@ class ThroughputCost(Objective):
 
 class FinalChargeObjective(Objective):
     """ A cost on the final state of charge of a storage asset being below full. """
-    component: Storage
+    component: object
     rate: PositiveFloat
 
     def apply_constraints(self, model):
@@ -328,7 +327,7 @@ class FinalChargeObjective(Objective):
 
 class NotFullyChargedPenalty(Objective):
     """ A penalty objective for penalising a storage asset for not being fulling charged. """
-    component: Storage
+    component: object # Storage
     rate: Optional[PositiveFloat]
     rate_array: list
 
@@ -349,7 +348,7 @@ class NotFullyChargedPenalty(Objective):
 
 class QuadraticPower(Objective):
     """ The QuadraticPower objective minimises flow^2 at a specified port."""
-    component: Port
+    component: object # Port
 
     def apply_constraints(self, model):
         if hasattr(model, self.component.pos) is False:
@@ -362,7 +361,7 @@ class QuadraticPower(Objective):
 
 
 class Contingency(Objective):
-    component: Path
+    component: object # Path
 
 
 class ContingencyNegative(Contingency):
@@ -703,7 +702,7 @@ class DemandCharge(echoBaseModel):
 
 class DemandTariffObjective(Objective):
     """ A demand tariff objective contains a set of one or more demand charges."""
-    component: Port
+    component: object # Port
     demand_charges: List[DemandCharge]
     expansion_periods: Optional[PositiveInt] = 1
 

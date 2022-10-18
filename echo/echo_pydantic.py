@@ -145,3 +145,14 @@ class StorageChecker(BaseModel):
     regularise: bool = False
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
+
+
+class InverterChecker(BaseModel):
+    """ inputer checker for inverter class """
+    max_import: Union[float, None]
+    max_export: Union[float, None]
+    dc_ac_efficiency: confloat(ge=0, le=1) = 1.0
+    ac_dc_efficiency: confloat(ge=0, le=1) = 1.0
+    dc_port_names: Optional[list] = []
+    ac_port_name: Optional[str] = None  # There should generally only be one ac port
+    node_rule = NodeRule.Custom

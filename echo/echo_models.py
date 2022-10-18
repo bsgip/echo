@@ -38,27 +38,31 @@ class ConfigurationError(Exception):
 
 class Port:
     def __init__(
-            self, units: Units = Units.NA, initial_value: dict = 0, initial_value_ref: str = "", opt_type:
-            OptimisationType = OptimisationType.NA, uid: uuid.UUID = uuid.uuid4(), port_name: str = None,
+            self, units: Units = Units.NA, initial_value: dict = None, initial_value_ref: str = None, opt_type:
+            OptimisationType = OptimisationType.NA, port_name: str = None,
             flows: Flows = Flows.NA, import_constraint: FlowConstraint = FlowConstraint.NA, import_constraint_value:
             Union[ArrayType, float, None] = None, export_constraint: FlowConstraint = FlowConstraint.NA,
             export_constraint_value: Union[ArrayType, float, None] = None, active_periods: dict = None,
             slack: bool = False,
-            Objective: Any = 0
+            objective: Any = 0
     ):
 
-        inputs = epyd.PortChecker(**locals())  # type checks, do this first!
+        initial_value = initial_value if initial_value is not None else {}
+        inputs = epyd.PortChecker( **locals())  # type checks, do this first!
         self.units = inputs.units
         self.initial_value = inputs.initial_value
         self.initial_value_ref = inputs.initial_value_ref
         self.opt_type = inputs.opt_type
         self.uid = inputs.uid
-        self.port_name = inputs.port_name
+        self.port_name = inputs.port_name if port_name is not None else "port_" + str(self.uid)
         self.flows = inputs.flows
         self.import_constraint = inputs.import_constraint
         self.import_constraint_value = inputs.import_constraint_value
         self.export_constraint = inputs.export_constraint
         self.export_constraint_value = inputs.export_constraint_value
+        self.active_periods = inputs.active_periods
+        self.slack = inputs.slack
+        self.objective = inputs.objective
 
     @property
     def pos(self):
@@ -96,10 +100,7 @@ class Port:
     def export_slack_max(self):
         return f"export_slack_max_{self.port_name}"
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.port_name is None:  # if no name is provided, give it a default name using the uid
-            self.port_name = 'port_' + str(self.uid)
+
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """ Sets the values of port flow constraints.
@@ -331,10 +332,10 @@ class Transform:
     """ An object for carrying a generic linear node transformation. """
 
     def __init__(
-            self, uid: uuid.UUID = uuid.uuid4(), transform_name: str = None, lhs: list = [], rhs: float = 0.
+            self, transform_name: str = None, lhs: list = [], rhs: float = 0.
     ):
         inputs = epyd.TransformChecker(**locals())
-        self.uid = inputs.uid
+        self.uid = inputs.uid       # unique uuid created in the checker
         self.transform_name = inputs.transform_name if transform_name is not None else "transform_" + str(self.uid)
         self.transform_name = inputs.transform_name
         self.lhs = inputs.lhs
@@ -363,7 +364,7 @@ class Node:
     """
 
     def __init__(
-            self, node_name: str = None, uid: uuid.UUID = uuid.uuid4(), ports=None, node_rule: NodeRule = NodeRule.NA,
+            self, node_name: str = None, ports=None, node_rule: NodeRule = NodeRule.NA,
             transformations=None, objective: Any = 0,
     ):
         if ports is None:
@@ -371,8 +372,8 @@ class Node:
         if transformations is None:
             transformations = {}
         inputs = epyd.NodeChecker(**locals())
+        self.uid = inputs.uid   # unique uuid created in the checker
         self.node_name = inputs.node_name if node_name is not None else 'node_' + str(self.uid)
-        self.uid = inputs.uid
         self.ports = inputs.ports
         self.node_rule = inputs.node_rule
         self.transformations = inputs.transformations
@@ -510,11 +511,11 @@ class Edge:
     """
 
     def __init__(
-            self, vertices: Tuple[Port, Port], nodes: Tuple[str, str], uid: uuid.UUID = uuid.uuid4(),
+            self, vertices: Tuple[Port, Port], nodes: Tuple[str, str],
             edge_name: str = None, tariff: Union[list, None] = None
     ):
         epyd.EdgeChecker(**locals())
-        self.uid = uid
+        self.uid = uuid.uuid4()
         self.edge_name = edge_name if edge_name is not None else 'edge_' + str(self.uid)
         self.vertices = vertices
         self.nodes = nodes
@@ -904,7 +905,7 @@ class Path:
     """ A path is a sequence of distinct vertices (nodes). """
 
     def __init__(
-            self, vertices: list, edge_ports=None, uid: uuid.UUID = uuid.uuid4(), path_name: str = None,
+            self, vertices: list, edge_ports=None, path_name: str = None,
             units: Units = Units.KW, regularise: bool = False, objective: Any = 0,
             contingency_neg: str = None, contingency_pos: str = None, path_tariff: str = None, slack: str = None
     ):
@@ -915,7 +916,7 @@ class Path:
         self.flow_value = "flow_value_" + self.path_name
         self.vertices = inputs.vertices
         self.edge_ports = inputs.edge_ports
-        self.uid = inputs.uid
+        self.uid = inputs.uid # unique uuid created in the checker
         self.path_name = inputs.path_name
         self.units = inputs.units
         self.regularise = inputs.regularise
@@ -1401,13 +1402,17 @@ class MobileStorage(Storage):
 
 class ElectricalDemand(Demand):
     """ Fixed electrical demand."""
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
-    units = Units.KW
-    curtailable: bool = False
+    def __init__(self, curtailable: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
+        self.curtailable = curtailable
 
     def add_generation_profile(self, generation: dict):
         self.add_initial_value(generation)
@@ -1425,11 +1430,15 @@ class ElectricalGeneration(Source):
 
 
 class ElectricalStorage(Storage):
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 class MobileElectricalStorage(MobileStorage):
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 class EV(Node):
@@ -1563,24 +1572,36 @@ class EV(Node):
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 class FixedElectricalPort(FixedPort):
     """ An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 class Inverter(Node):
     """ An inverter is a node with one AC port and at least one DC port.
     Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
-    max_import: Union[float, None]
-    max_export: Union[float, None]
-    dc_ac_efficiency: confloat(ge=0, le=1) = 1.0
-    ac_dc_efficiency: confloat(ge=0, le=1) = 1.0
-    dc_port_names: Optional[list] = []
-    ac_port_name: Optional[str] = None  # There should generally only be one ac port
-    node_rule = NodeRule.Custom
+    def __init__(
+            self, max_import: float=None, max_export: float=None, dc_ac_efficiency: float=1.0, ac_dc_efficiency:
+            float=1.0, dc_port_names: list=None, ac_port_name: list=None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        dc_port_names = dc_port_names if dc_port_names is not None else []
+        inputs = epyd.InverterChecker(max_import=max_import, max_export=max_export, dc_ac_efficiency=dc_ac_efficiency,
+                                      ac_dc_efficiency=ac_dc_efficiency, dc_port_names=dc_port_names, ac_port_name=ac_port_name)
+        self.max_import = inputs.max_import
+        self.max_export = inputs.max_export
+        self.dc_ac_efficiency = inputs.dc_ac_efficiency
+        self.ac_dc_efficiency = inputs.ac_dc_efficiency
+        self.dc_port_names = inputs.dc_port_names
+        self.ac_port_name = inputs.ac_port_name
+        self.node_rule = NodeRule.Custom
 
     def add_dc_port(self, port_name):
         p = ElectricalPort()
@@ -1638,17 +1659,23 @@ class BoundedElectricalLoad(BoundedLoad):
 
 class CarbonPort(FlexPort):
     """ A flexible carbon port"""
-    units = Units.CO2
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.CO2
 
 
 class CarbonSource(CarbonPort):
     """ A variable source of CO2 """
-    flows = Flows.Export
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Export
 
 
 class CarbonSink(CarbonPort):
     """ A variable sink of CO2 """
-    flows = Flows.Import
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Import
 
 
 class CarbonAggregation(Node):
