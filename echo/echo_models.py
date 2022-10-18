@@ -6,6 +6,7 @@ from typing import Optional, Union, List, Any, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 
 from pydantic import BaseModel as PydanticBaseModel, PositiveFloat, NonNegativeFloat
 from pydantic import validator, root_validator, confloat
@@ -48,7 +49,7 @@ class Port:
     ):
 
         initial_value = initial_value if initial_value is not None else {}
-        inputs = epyd.PortChecker( **locals())  # type checks, do this first!
+        inputs = epyd.PortChecker(**locals())  # type checks, do this first!
         self.units = inputs.units
         self.initial_value = inputs.initial_value
         self.initial_value_ref = inputs.initial_value_ref
@@ -99,8 +100,6 @@ class Port:
     @property
     def export_slack_max(self):
         return f"export_slack_max_{self.port_name}"
-
-
 
     def set_flow_constraints(self, max_import, max_export, slack=False):
         """ Sets the values of port flow constraints.
@@ -335,7 +334,7 @@ class Transform:
             self, transform_name: str = None, lhs: list = [], rhs: float = 0.
     ):
         inputs = epyd.TransformChecker(**locals())
-        self.uid = inputs.uid       # unique uuid created in the checker
+        self.uid = inputs.uid  # unique uuid created in the checker
         self.transform_name = inputs.transform_name if transform_name is not None else "transform_" + str(self.uid)
         self.transform_name = inputs.transform_name
         self.lhs = inputs.lhs
@@ -372,7 +371,7 @@ class Node:
         if transformations is None:
             transformations = {}
         inputs = epyd.NodeChecker(**locals())
-        self.uid = inputs.uid   # unique uuid created in the checker
+        self.uid = inputs.uid  # unique uuid created in the checker
         self.node_name = inputs.node_name if node_name is not None else 'node_' + str(self.uid)
         self.ports = inputs.ports
         self.node_rule = inputs.node_rule
@@ -916,7 +915,7 @@ class Path:
         self.flow_value = "flow_value_" + self.path_name
         self.vertices = inputs.vertices
         self.edge_ports = inputs.edge_ports
-        self.uid = inputs.uid # unique uuid created in the checker
+        self.uid = inputs.uid  # unique uuid created in the checker
         self.path_name = inputs.path_name
         self.units = inputs.units
         self.regularise = inputs.regularise
@@ -1285,15 +1284,17 @@ class Storage(Port):
 
 
 class MobileStorage(Storage):
-    """ New Storage + EV attributes"""
-    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    enable_trip_slack: bool = False
-    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: Union[ArrayWrap, None] = None
-    soc_conserv_cost: Union[float, None] = None
-    # soc_conserve: scalarOrArray
-    available: Union[ArrayType, list, None] = None
+    """ Storage + EV attributes"""
+
+    def __init__(
+            self, enable_trip_slack: bool = False, soc_conserv: ArrayWrap = None, soc_conserv_cost:
+            float = None, available: Union[ArrayType, list] = None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.enable_trip_slack = enable_trip_slack
+        self.soc_conserv = ArrayWrap(soc_conserv)
+        self.soc_conserv_cost = soc_conserv_cost
+        self.available = available
 
     @property
     def cons_slack(self):
@@ -1328,7 +1329,7 @@ class MobileStorage(Storage):
             else:
                 return en.Constraint.Skip
 
-        if self.soc_conserv is not None:
+        if self.soc_conserv.var is not None:
             self.soc_conserv.set_periods(len(model.Expansion), len(model.Time))
             # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
             setattr(model, self.cons_slack,
@@ -1386,7 +1387,7 @@ class MobileStorage(Storage):
             total += sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in
                          model.Time) * model.bigM * 20  # we want this to be more important than import/export constraints
 
-        if self.soc_conserv is not None:
+        if self.soc_conserv.var is not None:
             total += sum(getattr(model, self.cons_slack)[p, t] for p in model.Expansion for t in
                          model.Time) * self.soc_conserv_cost
 
@@ -1402,6 +1403,7 @@ class MobileStorage(Storage):
 
 class ElectricalDemand(Demand):
     """ Fixed electrical demand."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.units = Units.KW
@@ -1409,6 +1411,7 @@ class ElectricalDemand(Demand):
 
 class ElectricalGeneration(Source):
     """ Electrical generation which can be fixed (non-curtailable) or variable (curtailable) """
+
     def __init__(self, curtailable: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.units = Units.KW
@@ -1442,42 +1445,56 @@ class MobileElectricalStorage(MobileStorage):
 
 
 class EV(Node):
-    charge_mode: str = None
-    available: Union[ArrayType, list, str]
-    usage: Union[ArrayType, list, str]
-    connection_port_name: str = 'cp'
-    tod_charging: Union[ArrayType, list, str, None] = None
-    interval_duration: int
-    # Battery attributes
-    max_capacity: float
-    depth_of_discharge_limit: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
+    def __init__(
+            self, available: Union[ArrayType, list, np.ndarray], max_capacity: float, charging_power_limit: float,
+            usage: Union[ArrayType, list, np.ndarray], initial_state_of_charge: float,
+            discharging_power_limit: float, interval_duration: int, charging_efficiency: float = 1.,
+            discharging_efficiency: float = 1., depth_of_discharge_limit: float = 0.0,
+            connection_port_name: str = 'cp', tod_charging: Union[ArrayType, list, bool] = None, trip_slack: bool =
+            False,
+            charge_mode: str = None, soc_conserv: ArrayWrap = None, soc_conserv_cost: float = None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        inputs = epyd.EVChecker(charge_mode=charge_mode, available=available, usage=usage,
+                                connection_port_name=connection_port_name, tod_charging=tod_charging,
+                                interval_duration=interval_duration, max_capacity=max_capacity,
+                                depth_of_discharge_limit=depth_of_discharge_limit,
+                                charging_power_limit=charging_power_limit,
+                                discharging_power_limit=discharging_power_limit,
+                                charging_efficiency=charging_efficiency,
+                                discharging_efficiency=discharging_efficiency,
+                                initial_state_of_charge=initial_state_of_charge,
+                                trip_slack=trip_slack, soc_conserv=soc_conserv, soc_conserv_cost=soc_conserv_cost)
+        self.available = inputs.available
+        self.max_capacity = inputs.max_capacity
+        self.charging_power_limit = inputs.charging_power_limit
+        self.usage = inputs.usage
+        self.initial_state_of_charge = inputs.initial_state_of_charge
+        self.discharging_power_limit = inputs.discharging_power_limit
+        self.interval_duration = inputs.interval_duration
+        self.charging_efficiency = inputs.charging_efficiency
+        self.discharging_efficiency = inputs.discharging_efficiency
+        self.depth_of_discharge_limit = inputs.depth_of_discharge_limit
+        self.connection_port_name = inputs.connection_port_name
+        self.tod_charging = inputs.tod_charging
+        self.trip_slack = inputs.trip_slack
+        self.charge_mode = inputs.charge_mode
+        self.soc_conserv = inputs.soc_conserv
+        self.soc_conserv_cost = inputs.soc_conserv_cost
 
-    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
-    trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
-    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayWrap, None] = None
-    soc_conserv_cost: Union[float, None] = None
-
-    V0G_delta: Optional[Union[ArrayType, list]]
-    V0G_SOC: Optional[Union[ArrayType, list]]
-    V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
-    charge_status: Optional[str]
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
-        for i in self.usage:
-            if i > self.discharging_power_limit * -1:
-                raise ValueError('Usage requirement of {} exceeds battery discharge limit of {}.'.format(i,
-                                                                                                         self.discharging_power_limit))
 
-        self.ports['vehicle'] = MobileElectricalStorage(**data)  # EV always has a storage port
-        self.ports['vehicle'].enable_trip_slack = self.trip_slack  # Apply trip slack
+        self.ports['vehicle'] = MobileElectricalStorage(enable_trip_slack=trip_slack,
+                                                        soc_conserv=soc_conserv, soc_conserv_cost=soc_conserv_cost,
+                                                        available=available, max_capacity=max_capacity,
+                                                        charging_power_limit=charging_power_limit,
+                                                        discharging_power_limit=discharging_power_limit,
+                                                        initial_state_of_charge=initial_state_of_charge,
+                                                        charging_efficiency=charging_efficiency,
+                                                        discharging_efficiency=discharging_efficiency,
+                                                        depth_of_discharge_limit=depth_of_discharge_limit
+                                                        )  # EV always
+        # has a
 
         self.ports['usage'] = ElectricalDemand()  # EV always has a fixed trip port
         self.ports['usage'].add_demand_profile_from_array(self.usage, expansion_periods=1)
@@ -1490,7 +1507,9 @@ class EV(Node):
             self.ports[self.connection_port_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
             self.ports[self.connection_port_name] = ElectricalPort()
-            self.ports[self.connection_port_name].add_active_periods_from_array(self.available, expansion_periods=1)
+            self.ports[self.connection_port_name].add_active_periods_from_array(self.available, expansion_periods=1,
+                                                                                time_periods=len(self.available))
+            # doing this here causes problems as we don't know the time periods....
             if self.charge_mode == EVChargeMode.V1G:
                 self.ports[self.connection_port_name].set_flow_constraints(max_import=self.charging_power_limit,
                                                                            max_export=0.)
@@ -1572,6 +1591,7 @@ class EV(Node):
 
 class ElectricalPort(FlexPort):
     """ Flexible electrical port """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.units = Units.KW
@@ -1579,6 +1599,7 @@ class ElectricalPort(FlexPort):
 
 class FixedElectricalPort(FixedPort):
     """ An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.units = Units.KW
@@ -1587,14 +1608,16 @@ class FixedElectricalPort(FixedPort):
 class Inverter(Node):
     """ An inverter is a node with one AC port and at least one DC port.
     Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
+
     def __init__(
-            self, max_import: float=None, max_export: float=None, dc_ac_efficiency: float=1.0, ac_dc_efficiency:
-            float=1.0, dc_port_names: list=None, ac_port_name: list=None, **kwargs
+            self, max_import: float = None, max_export: float = None, dc_ac_efficiency: float = 1.0, ac_dc_efficiency:
+            float = 1.0, dc_port_names: list = None, ac_port_name: list = None, **kwargs
     ):
         super().__init__(**kwargs)
         dc_port_names = dc_port_names if dc_port_names is not None else []
         inputs = epyd.InverterChecker(max_import=max_import, max_export=max_export, dc_ac_efficiency=dc_ac_efficiency,
-                                      ac_dc_efficiency=ac_dc_efficiency, dc_port_names=dc_port_names, ac_port_name=ac_port_name)
+                                      ac_dc_efficiency=ac_dc_efficiency, dc_port_names=dc_port_names,
+                                      ac_port_name=ac_port_name)
         self.max_import = inputs.max_import
         self.max_export = inputs.max_export
         self.dc_ac_efficiency = inputs.dc_ac_efficiency
@@ -1647,7 +1670,9 @@ class Inverter(Node):
 
 
 class BoundedElectricalLoad(BoundedLoad):
-    units = Units.KW
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.units = Units.KW
 
 
 """
@@ -1659,6 +1684,7 @@ class BoundedElectricalLoad(BoundedLoad):
 
 class CarbonPort(FlexPort):
     """ A flexible carbon port"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.units = Units.CO2
@@ -1666,6 +1692,7 @@ class CarbonPort(FlexPort):
 
 class CarbonSource(CarbonPort):
     """ A variable source of CO2 """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.flows = Flows.Export
@@ -1673,6 +1700,7 @@ class CarbonSource(CarbonPort):
 
 class CarbonSink(CarbonPort):
     """ A variable sink of CO2 """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.flows = Flows.Import
@@ -1680,7 +1708,10 @@ class CarbonSink(CarbonPort):
 
 class CarbonAggregation(Node):
     """ This node has an additional variable, 'total', which equals the sum of all ports defined on the node."""
-    node_rule = NodeRule.Custom
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        node_rule = NodeRule.Custom
 
     @property
     def total(self):
@@ -1824,14 +1855,21 @@ class InputOutputNode(Node):
     An input-output node has one input port and one output port.
     A custom transformation can be defined between input and output.
     """
-    input_port_unit: Units
-    output_port_unit: Units
-    # Optional parameters for controlling input/output port flows
-    max_output: Optional[float]  # output might be neg or pos, leave it open
-    min_output: Optional[float]
-    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
-    min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
+
+    def __init__(
+            self, input_port_unit: Units, output_port_unit: Units, max_output: float = None, min_output: float = None,
+            max_input: float = None, min_input: float = None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        inputs = epyd.InputOutputNodeChecker(input_port_unit, output_port_unit, max_output=max_output,
+                                             min_output=min_output, max_input=max_input, min_input=min_input)
+        self.input_port_unit = inputs.input_port_unit
+        self.output_port_unit = inputs.output_port_unit
+        self.max_output = inputs.max_output
+        self.min_output = inputs.min_output
+        self.max_input = inputs.max_input
+        self.min_input = inputs.min_input
+        self.node_rule = NodeRule.Custom
 
 
 class DieselGenerator(InputOutputNode):
@@ -1839,14 +1877,16 @@ class DieselGenerator(InputOutputNode):
     A diesel generator node. Converts diesel into electricity at a fixed rate of cop which is in units of
     kW/liters per second
     """
-    input_port_unit = Units.LPS
-    output_port_unit = Units.KW
-    cop: NonNegativeFloat = 0.4 * 3600  # kW / litres per second
-    startup_efficiency: NonNegativeFloat = 0.5  # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
-    C02Intensity: NonNegativeFloat = 2.7  # emissions intensity kg per sec / litre per sec = kg/litre
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __init__(
+            self, cop: float = 0.4 * 3600, startup_efficiency: float = 0.5, CO2Intensity: float = 2.7
+    ):
+        super().__init__(input_port_unit=Units.LPS, output_port_unit=Units.KW, )
+        inputs = epyd.DieselGeneratorChecker(cop=cop, startup_efficiency=startup_efficiency, CO2Intensity=CO2Intensity)
+        self.cop = inputs.cop
+        self.startup_efficiency = inputs.startup_efficiency
+        self.CO2Intensity = inputs.CO2Intensity
+
         # add an input and output node, and create appropraite transformations
         self.ports["output"] = OffOrConstrainedPort(upper_bound=self.min_output,
                                                     lower_bound=self.max_output,
@@ -1854,7 +1894,6 @@ class DieselGenerator(InputOutputNode):
 
         self.ports["input"] = FlexSink(units=self.input_port_unit)  # the node is importing through this port
         self.ports['co2'] = CarbonSource()
-        # todo: add some validators :-)
 
     def apply_node_constraints(self, model):
         super(DieselGenerator, self).apply_node_constraints(model)

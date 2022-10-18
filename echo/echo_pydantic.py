@@ -156,3 +156,47 @@ class InverterChecker(BaseModel):
     dc_port_names: Optional[list] = []
     ac_port_name: Optional[str] = None  # There should generally only be one ac port
     node_rule = NodeRule.Custom
+
+class InputOutputNodeChecker(BaseModel):
+    """
+    Input checker for the InputOutputNode class
+    """
+    input_port_unit: Units
+    output_port_unit: Units
+    # Optional parameters for controlling input/output port flows
+    max_output: Optional[float]  # output might be neg or pos, leave it open
+    min_output: Optional[float]
+    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
+    min_input: Optional[NonNegativeFloat]
+
+
+class DieselGeneratorChecker(BaseModel):
+    """
+    Input checker for the DieselGenerator class
+    """
+    cop: NonNegativeFloat = 0.4 * 3600  # kW / litres per second
+    startup_efficiency: NonNegativeFloat = 0.5  # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
+    CO2Intensity: NonNegativeFloat = 2.7  # emissions intensity kg per sec / litre per sec = kg/litre
+
+
+class EVChecker(BaseModel):
+    charge_mode: str = None
+    available: Union[ArrayType, list, str]
+    usage: Union[ArrayType, list, str]
+    connection_port_name: str = 'cp'
+    tod_charging: Union[ArrayType, list, str, None] = None
+    interval_duration: int
+    # Battery attributes
+    max_capacity: float
+    depth_of_discharge_limit: float = 0
+    charging_power_limit: float
+    discharging_power_limit: float
+    charging_efficiency: float = 1
+    discharging_efficiency: float = 1
+    initial_state_of_charge: float
+
+    # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
+    trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
+    # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
+    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv_cost: Union[float, None] = None
