@@ -9,6 +9,7 @@ from pydantic import validator, PositiveFloat, PositiveInt, NonNegativeFloat, Fi
 
 from echo.echo_models import Port, Path, Storage
 from echo.echo_models import BaseModel as echoBaseModel
+from echo.echo_pydantic import BaseModel
 from echo.echo_validators import ArrayType
 
 RangeSet = TypeVar('pyomo.core.base.set.RangeSet')  # type for rangeset

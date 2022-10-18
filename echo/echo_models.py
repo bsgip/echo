@@ -13,6 +13,7 @@ from pydantic import validator, root_validator, confloat
 from echo.configuration import *
 from echo.constants import *
 from echo.utils import *
+import echo.echo_pydantic as epyd
 
 DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
@@ -35,29 +36,29 @@ class ConfigurationError(Exception):
     pass
 
 
-class Port(BaseModel):
-    # Pydantic attribute declaration follows this format:
-    # attribute_name: type = default_value
+class Port:
+    def __init__(
+            self, units: Units = Units.NA, initial_value: dict = 0, initial_value_ref: str = "", opt_type:
+            OptimisationType = OptimisationType.NA, uid: uuid.UUID = uuid.uuid4(), port_name: str = None,
+            flows: Flows = Flows.NA, import_constraint: FlowConstraint = FlowConstraint.NA, import_constraint_value:
+            Union[ArrayType, float, None] = None, export_constraint: FlowConstraint = FlowConstraint.NA,
+            export_constraint_value: Union[ArrayType, float, None] = None, active_periods: dict = None,
+            slack: bool = False,
+            Objective: Any = 0
+    ):
 
-    units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict = 0.
-    initial_value_ref: Optional[str]  # string ref to df column
-    opt_type: OptimisationType = OptimisationType.NA
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    port_name: Optional[str] = None
-    flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
-    # Used to define the nature of import / export directions and constraints
-    import_constraint: FlowConstraint = FlowConstraint.NA
-    import_constraint_value: Union[ArrayType, float, None] = None
-    export_constraint: FlowConstraint = FlowConstraint.NA
-    export_constraint_value: Union[ArrayType, float, None] = None
-    active_periods: Optional[dict]
-    slack: bool = False
-    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
-
-    # Validators for import/export constraint values
-    import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
-    export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
+        inputs = epyd.PortChecker(**locals())  # type checks, do this first!
+        self.units = inputs.units
+        self.initial_value = inputs.initial_value
+        self.initial_value_ref = inputs.initial_value_ref
+        self.opt_type = inputs.opt_type
+        self.uid = inputs.uid
+        self.port_name = inputs.port_name
+        self.flows = inputs.flows
+        self.import_constraint = inputs.import_constraint
+        self.import_constraint_value = inputs.import_constraint_value
+        self.export_constraint = inputs.export_constraint
+        self.export_constraint_value = inputs.export_constraint_value
 
     @property
     def pos(self):
@@ -119,7 +120,7 @@ class Port(BaseModel):
         if slack is not None:
             self.slack = slack
 
-    def process_initial_value(self, initial_val, expansion_periods: int=1, time_periods: int=None ):
+    def process_initial_value(self, initial_val, expansion_periods: int = 1, time_periods: int = None):
         if isinstance(initial_val, dict):
             self.add_initial_value(initial_val)
         elif isinstance(initial_val, str):
@@ -326,17 +327,18 @@ class Port(BaseModel):
         self.objective += total
 
 
-class Transform(BaseModel):
+class Transform:
     """ An object for carrying a generic linear node transformation. """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    transform_name: Optional[str] = None
-    lhs: list = []
-    rhs = 0
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.transform_name is None:
-            self.transform_name = 'transform_' + str(self.uid)
+    def __init__(
+            self, uid: uuid.UUID = uuid.uuid4(), transform_name: str = None, lhs: list = [], rhs: float = 0.
+    ):
+        inputs = epyd.TransformChecker(**locals())
+        self.uid = inputs.uid
+        self.transform_name = inputs.transform_name if transform_name is not None else "transform_" + str(self.uid)
+        self.transform_name = inputs.transform_name
+        self.lhs = inputs.lhs
+        self.rhs = inputs.rhs
 
     def add_lhs_term(self, var: Port, rule: TransformRule, weight: ArrayWrap):
         """ Adds a left-hand side (LHS) term to the transform """
@@ -354,26 +356,31 @@ class Transform(BaseModel):
                 var.constrain_pos_neg(model)
 
 
-class Node(BaseModel):
+class Node:
     """
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
     """
-    node_name: Optional[str]
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    ports: dict = {}
-    node_rule: NodeRule = NodeRule.NA
-    transformations: dict = {}
-    objective: Optional[Any] = 0  # For adding any node objectives
+
+    def __init__(
+            self, node_name: str = None, uid: uuid.UUID = uuid.uuid4(), ports=None, node_rule: NodeRule = NodeRule.NA,
+            transformations=None, objective: Any = 0,
+    ):
+        if ports is None:
+            ports = {}
+        if transformations is None:
+            transformations = {}
+        inputs = epyd.NodeChecker(**locals())
+        self.node_name = inputs.node_name if node_name is not None else 'node_' + str(self.uid)
+        self.uid = inputs.uid
+        self.ports = inputs.ports
+        self.node_rule = inputs.node_rule
+        self.transformations = inputs.transformations
+        self.objective = inputs.objective
 
     @property
     def inflow(self):
         return f"inflow_{self.node_name}"
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.node_name is None:
-            self.node_name = 'node_' + str(self.uid)
 
     def add_port(self, name: str, port: Port):
         if self.ports.get(name) is None:
@@ -496,21 +503,22 @@ class Node(BaseModel):
         return len(self.ports)
 
 
-class Edge(BaseModel):
+class Edge:
     """
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
     """
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    edge_name: Optional[str] = None
-    vertices: Tuple[Port, Port]
-    nodes: Optional[Tuple[str, str]]  # tuple of node names - todo make this required
-    tariff: Optional[Union[list, None]]
 
-    def __int__(self, **data):
-        super().__init__(**data)
-        if self.edge_name is None:
-            self.edge_name = 'edge_' + str(self.uid)
+    def __init__(
+            self, vertices: Tuple[Port, Port], nodes: Tuple[str, str], uid: uuid.UUID = uuid.uuid4(),
+            edge_name: str = None, tariff: Union[list, None] = None
+    ):
+        epyd.EdgeChecker(**locals())
+        self.uid = uid
+        self.edge_name = edge_name if edge_name is not None else 'edge_' + str(self.uid)
+        self.vertices = vertices
+        self.nodes = nodes
+        self.tariff = tariff
 
     def add_vertices(self, obj1: Port, obj2: Port):
         """ Adds edge vertices (which are ports on nodes)
@@ -562,10 +570,20 @@ class Edge(BaseModel):
         return max_flow
 
 
-class OptimisationGraph(BaseModel):
-    node_obj: dict = {}
-    edge_obj: dict = {}
-    paths: dict = {}
+class OptimisationGraph:
+    def __init__(
+            self, node_obj=None, edge_object=None, paths=None
+    ):
+        if paths is None:
+            paths = {}
+        if edge_object is None:
+            edge_object = {}
+        if node_obj is None:
+            node_obj = {}
+        epyd.OptimisationGraphChecker(**locals())
+        self.edge_obj = edge_object
+        self.node_obj = node_obj
+        self.paths = paths
 
     def pickle(self):
         return pickle.dumps(self)
@@ -882,27 +900,30 @@ class OptimisationGraph(BaseModel):
         return G1, G2
 
 
-class Path(BaseModel):
+class Path:
     """ A path is a sequence of distinct vertices (nodes). """
-    edge_ports: List[tuple] = []  # list of edge name tuples
-    vertices: list  # list of node names
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    path_name: Optional[str] = None
-    units = Units.KW
-    regularise: bool = False
-    objective: Optional[Any] = 0
 
-    flow_value: Optional[str]
-    contingency_neg: Optional[str]
-    contingency_pos: Optional[str]
-    path_tariff: Optional[str]
-    slack: Optional[str]
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.path_name is None:
-            self.path_name = 'path_' + str(self.uid)
-        self.flow_value = 'flow_value_' + self.path_name
+    def __init__(
+            self, vertices: list, edge_ports=None, uid: uuid.UUID = uuid.uuid4(), path_name: str = None,
+            units: Units = Units.KW, regularise: bool = False, objective: Any = 0,
+            contingency_neg: str = None, contingency_pos: str = None, path_tariff: str = None, slack: str = None
+    ):
+        if edge_ports is None:
+            edge_ports = []
+        inputs = epyd.PathChecker(**locals())
+        self.path_name = inputs.path_name if path_name is not None else "path_" + str(inputs.uid)
+        self.flow_value = "flow_value_" + self.path_name
+        self.vertices = inputs.vertices
+        self.edge_ports = inputs.edge_ports
+        self.uid = inputs.uid
+        self.path_name = inputs.path_name
+        self.units = inputs.units
+        self.regularise = inputs.regularise
+        self.objective = inputs.objective
+        self.contingency_neg = inputs.contingency_neg
+        self.contingency_pos = inputs.contingency_pos
+        self.path_tariff = inputs.path_tariff
+        self.slack = inputs.slack
 
     def add_vertices(self, vertex_list: list):
         if hasattr(vertex_list[0], 'node_name'):
@@ -922,39 +943,6 @@ class Path(BaseModel):
         self.objective += total
 
 
-# def serialize_dict(d):
-#     new_d = {}
-#     for key, value in d.items():
-#         if isinstance(key, tuple):
-#             new_key = ':'.join(key)
-#             new_d[new_key] = value
-#         else:
-#             new_d[key] = value
-#     return new_d
-#
-# class CustomEncoder(json.JSONEncoder):
-#     def _transform(self, v):
-#         res = v
-#         if isinstance(v, tuple):
-#             res = ':'.join(v)
-#         # else other variants
-#         return self._encode(res)
-#
-#     def _encode(self, obj):
-#         if isinstance(obj, dict):
-#             return serialize_dict(obj)
-#         if isinstance(obj, UUID):
-#             return str(obj)
-#         else:
-#             return obj
-#
-#     def encode(self, obj):
-#         return super(CustomEncoder, self).encode(self._encode(obj))
-#
-#
-# def custom_dumps(values, *, default):
-#     return CustomEncoder().encode(values)
-
 """
 
     Commodity agnostic ports and nodes
@@ -964,45 +952,61 @@ class Path(BaseModel):
 
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
-    node_rule = NodeRule.Tellegen
 
-    tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.node_rule = NodeRule.Tellegen
+        tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)  # # todo: how to do these fucking
+        # checks???
 
 
 class FlexPort(Port):
     """ Flexible variable port, which can import and export without constraints."""
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.opt_type = OptimisationType.Variable
 
 
 class FlexSink(FlexPort):
     """ Flexible port, imports only"""
-    flows = Flows.Import
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Import
 
 
 class FlexSource(FlexPort):
     """ Flexible ports, exports only"""
-    flows = Flows.Export
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Export
 
 
 class FixedPort(Port):
     """ Fixed port (parameter), can either import or export."""
-    opt_type = OptimisationType.Parameter
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.opt_type = OptimisationType.Parameter
+        self.flows = Flows.Both
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.export_constraint = FlowConstraint.NoConstraint
 
 
 class Source(Port):
     """ A fixed source of a commodity. """
-    flows = Flows.Export
-    opt_type = OptimisationType.Parameter
-    export_constraint = FlowConstraint.NoConstraint
 
-    # Source should have non positive initial values
-    non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Export
+        self.opt_type = OptimisationType.Parameter
+        self.export_constraint = FlowConstraint.NoConstraint
+        self.initial_value = nonpositive_generation(self.initial_value)
 
     def add_source_profile(self, source_values: dict):
         self.add_initial_value(source_values)
@@ -1013,12 +1017,13 @@ class Source(Port):
 
 class Sink(Port):
     """ A fixed sink for a commodity. """
-    flows = Flows.Import
-    opt_type = OptimisationType.Parameter
-    import_constraint = FlowConstraint.NoConstraint
 
-    non_neg_check = validator("initial_value", allow_reuse=True)(
-        nonnegative_load)  # Sink should have non negative initial values
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.flows = Flows.Import
+        self.opt_type = OptimisationType.Parameter
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.initial_value = nonnegative_load(self.initial_value)
 
     def add_sink_profile(self, sink_values: dict):
         self.add_initial_value(sink_values)
@@ -1043,11 +1048,18 @@ class ControlledLoadOrGen(FlexPort):
     Min utilisation is the ratio between the minimum energy consumed/generated, and the maxinimum energy that could be consumed/generated if the load operated at max power.
     Max utilisation is the ratio between the maximum energy consumed/generated, and the maximum energy that could be consumed/generated if the load operated at max power.
     """
-    min_utilisation: Union[float, None] = None
-    max_utilisation: float = None
-    max_power: float = None
-    min_power: float = None
-    units: Units = Units.KW
+
+    def __init__(
+            self, min_utilisation: float = None, max_utilisation: float = None, max_power: float = None, min_power:
+            float = None, units: Units = Units.KW, **kwargs
+    ):
+        super().__init__(units=units, **kwargs)
+        inputs = epyd.ControlledLoadOrGenChecker(min_utilisation=min_utilisation, max_utilisation=max_utilisation,
+                                                 max_power=max_power, min_power=min_power)
+        self.min_utilisation = inputs.min_utilisation
+        self.max_utilisation = inputs.max_utilisation
+        self.max_power = inputs.max_power
+        self.min_power = inputs.min_power
 
     def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(ControlledLoadOrGen, self).initialise_port(model, profile)
@@ -1075,23 +1087,29 @@ class ControlledLoadOrGen(FlexPort):
 
 
 class ControlledLoad(ControlledLoadOrGen):
-    max_power: confloat(ge=0)
-    min_power: confloat(ge=0)
-    flows = Flows.Import
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        assert self.max_power >= 0, "max_power must be >= 0"
+        assert self.min_power >= 0, "min_power must be >= 0"
+        self.flows = Flows.Import
 
 
 class ControlledGen(ControlledLoadOrGen):
-    max_power: confloat(le=0)
-    min_power: confloat(le=0)
-    flows = Flows.Export
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        assert self.max_power <= 0, "max_power must be <= 0"
+        assert self.min_power <= 0, "min_power must be <= 0"
+        self.flows = Flows.Export
 
 
 class OffOrConstrainedPort(FlexPort):
     """ A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
-    lower_bound: float
-    upper_bound: float
 
-    bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
+    def __init__(self, lower_bound: float, upper_bound: float, **kwargs):
+        super().__init__(**kwargs)
+        inputs = epyd.OffOrConstrainedPortChecker(lower_bound=lower_bound, upper_bound=upper_bound)
+        self.lower_bound = inputs.lower_bound
+        self.upper_bound = inputs.upper_bound
 
     @property
     def active(self):
@@ -1114,10 +1132,12 @@ class OffOrConstrainedPort(FlexPort):
 
 class BoundedPort(FlexPort):
     """ A flex port with an upper and lower bound"""
-    upper_bound: Union[ArrayType, float]
-    lower_bound: Union[ArrayType, float]
 
-    bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
+    def __init__(self, upper_bound: Union[ArrayType, float], lower_bound: Union[ArrayType, float], **kwargs):
+        super().__init__(**kwargs)
+        inputs = epyd.BoundedPortChecker(upper_bound=upper_bound, lower_bound=lower_bound)
+        self.upper_bound = inputs.upper_bound
+        self.lower_bound = inputs.lower_bound
 
     def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(BoundedPort, self).initialise_port(model, profile)
@@ -1129,11 +1149,12 @@ class BoundedPort(FlexPort):
 
 class BoundedLoad(BoundedPort):
     """ A port where the load has to be within a max and min value which is specified at each timestep."""
-    import_constraint = FlowConstraint.NoConstraint
 
-    # Do additional validation to make sure both bounds are >= 0
-    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
-    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.import_constraint = FlowConstraint.NoConstraint
+        self.upper_bound = nonnegative_costs(self.upper_bound)
+        self.lower_bound = nonnegative_costs(self.lower_bound)
 
     def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(BoundedLoad, self).initialise_port(model, profile)
@@ -1141,23 +1162,40 @@ class BoundedLoad(BoundedPort):
 
 class Storage(Port):
     """ Same as old storage but without all the EV attributes"""
-    flows = Flows.Both
-    opt_type = OptimisationType.Variable
-    import_constraint = FlowConstraint.Fixed
-    export_constraint = FlowConstraint.Fixed
-    max_capacity: float
-    depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    min_soc: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
-    charging_efficiency: float = 1
-    discharging_efficiency: float = 1
-    initial_state_of_charge: float
-    fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
-    regularise: bool = False
 
-    dod_check = root_validator(allow_reuse=True)(dod_checks)
+    def __init__(
+            self, max_capacity: float, charging_power_limit: float, discharging_power_limit: float,
+            initial_state_of_charge: float, charging_efficiency: float = 1., discharging_efficiency: float = 1.,
+            fixed_storage_capacity: bool = True, storage_capacity_cost: float = None, regularise: bool = False,
+            depth_of_discharge_limit: float = 0, min_soc: float = 0., **kwargs
+    ):
+        super().__init__(**kwargs)
+        inputs = epyd.StorageChecker(max_capacity=max_capacity, charging_power_limit=charging_power_limit,
+                                     discharging_power_limit=discharging_power_limit,
+                                     initial_state_of_charge=initial_state_of_charge,
+                                     charging_efficiency=charging_efficiency,
+                                     discharging_efficiency=discharging_efficiency,
+                                     fixed_storage_capacity=fixed_storage_capacity,
+                                     storage_capacity_cost=storage_capacity_cost,
+                                     regularise=regularise, depth_of_discharge_limit=depth_of_discharge_limit,
+                                     min_soc=min_soc)
+        self.flows = Flows.Both
+        self.opt_type = OptimisationType.Variable
+        self.import_constraint = FlowConstraint.Fixed
+        self.export_constraint = FlowConstraint.Fixed
+        self.max_capacity = inputs.max_capacity
+        self.depth_of_discharge_limit = inputs.depth_of_discharge_limit
+        self.min_soc = inputs.min_soc
+        self.charging_power_limit = inputs.charging_power_limit
+        self.discharging_power_limit = inputs.discharging_power_limit
+        self.charging_efficiency = inputs.charging_efficiency
+        self.discharging_efficiency = inputs.discharging_efficiency
+        self.initial_state_of_charge = inputs.initial_state_of_charge
+        self.fixed_storage_capacity = inputs.fixed_storage_capacity
+        self.storage_capacity_cost = inputs.storage_capacity_cost
+        self.regularise = inputs.regularise
+        self.import_constraint_value = self.charging_power_limit
+        self.export_constraint_value = self.discharging_power_limit
 
     @property
     def soc_value(self):
@@ -1170,11 +1208,6 @@ class Storage(Port):
     @property
     def soc_constraint(self):
         return 'soc_cons_' + self.port_name
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.import_constraint_value = self.charging_power_limit
-        self.export_constraint_value = self.discharging_power_limit
 
     def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         super(Storage, self).initialise_port(model, profile)
