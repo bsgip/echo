@@ -360,8 +360,21 @@ class QuadraticPower(Objective):
             getattr(model, model.dr)[p] for p in model.Expansion for t in model.Time)
 
 
-class Contingency(Objective):
+class Contingency(Tariff):
     component: Path
+    contingency_tariff_dict: Optional[dict]
+
+    @property
+    def contingency_tariff(self):
+        return 'contingency_tariff_' + self.name
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        self.contingency_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
+
+    def create_params(self, model, df):
+        setattr(model, self.contingency_tariff,
+                en.Param(model.Expansion, model.Time, initialize=self.contingency_tariff_dict))
 
 
 class ContingencyNegative(Contingency):
@@ -405,8 +418,8 @@ class ContingencyNegative(Contingency):
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p]
-                   for p in model.Expansion for t in model.Time)
+        return sum(getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p] *
+                   getattr(model, self.contingency_tariff)[p, t] for p in model.Expansion for t in model.Time)
 
 
 class ContingencyPositive(Contingency):
@@ -452,8 +465,8 @@ class ContingencyPositive(Contingency):
                     en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc))
 
     def objective_expr(self, model):
-        return sum(getattr(model, self.contingency_pos)[p, t] * getattr(model, model.dr)[p]
-                   for p in model.Expansion for t in model.Time) * -1
+        return sum(getattr(model, self.contingency_pos)[p, t] * getattr(model, model.dr)[p] *
+                   getattr(model, self.contingency_tariff)[p, t] for p in model.Expansion for t in model.Time) * -1
 
 
 """ Demand tariffs """

@@ -6,8 +6,10 @@ from echo.configuration import *
 from echo.objectives import *
 import os
 
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
+SOLVER = os.environ.get('OPTIMISER_ENGINE', 'gurobi')
 SOLVER_EXECUTABLE = None
+
+SOLVER_EXECUTABLE = "/Library/gurobi912/mac64/bin/gurobi.sh"
 
 def test_negative_contingency_respects_hybrid_inverter_constraints():
 
@@ -68,8 +70,10 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=objective_set
+        objective_set=objective_set,
+        optimiser_engine='gurobi'
     )
+    optimiser.optimiser_engine_executable = SOLVER_EXECUTABLE
 
     optimiser.optimise()
 
@@ -234,3 +238,9 @@ def test_negative_contingency_calculation_with_no_available_energy():
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(cont_neg_p[i], 0.0, 5)  #Had to update to 5dp
+
+
+test_negative_contingency_respects_hybrid_inverter_constraints()
+test_negative_contingency_maximisation_curtails_solar()
+test_negative_contingency_calculation_with_no_available_energy()
+
