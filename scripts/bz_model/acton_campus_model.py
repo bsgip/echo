@@ -16,41 +16,57 @@ feeder_rating_kva = 3.18*1e3
 tx_rating_kva = 1000
 time_periods = 10
 
-## Create Electrical Grid and Gas Grid nodes
-gas_grid = models.Node(node_name ='GasGrid',
-                        node_rule = config.NodeRule.Custom,
-                        ports = {'bulk_gas_source': models.FlexSource(port_name='bulk_gas_source', units=config.Units.JPS),
-                                 'bulk_gas_emissions': models.CarbonSource(port_name='bulk_gas_emissions')})
 
+system = models.OptimisationGraph()
+
+## Create Electrical Grid and Gas Grid nodes
 gas_grid = models.FlexNodeWithEmissions(node_name='GasGrid',
                                         emitting_port='bulk_gas_source',
                                         emitting_port_units=config.Units.JPS,
                                         carbon_port='bulk_gas_emissions',
                                         emissions_factor=50, ## Assuming 1 GJ of natural gas will produce 50 kg of CO2
                                         )
+
+
 gas_distribution = models.TellegenNode(node_name='GasGridTellegen',
                                        ports={'gas_grid': models.FlexSink(port_name='grid', units=config.Units.JPS),
                                               'gas_sp01': models.FlexSource(port_name='gas_sp01', units=config.Units.JPS),
                                               'gas_sp02': models.FlexSource(port_name='gas_sp01', units=config.Units.JPS)}
                                        )
 
-
 gas_sp01 = models.TellegenNode(node_name='GasSupply01',
                                ports={'gas_grid': models.FlexSink(port_name='gas_grid', units=config.Units.JPS),
-                                      'bl1': models.FlexSource(port_name='bl1', units=config.Units.JPS)}
+                                      'bl1_gas_supply': models.FlexSource(port_name='bl1_gas_supply', units=config.Units.JPS)}
                                )
 
 gas_sp02 = models.TellegenNode(node_name='GasSupply02',
                                ports={'gas_grid': models.FlexSink(port_name='gas_grid', units=config.Units.JPS),
-                                      'bl2': models.FlexSource(port_name='bl2', units=config.Units.JPS)}
+                                      'bl2_gas_supply': models.FlexSource(port_name='bl2_gas_supply', units=config.Units.JPS)}
                                )
+
+
+carbon_aggregation = models.CarbonAggregation(ports={'bulk_gas_emissions': models.CarbonPort()})
+
+
+bl1_gas_load = models.Node(node_name='B1GasLoad',
+                           ports={'bl1_gas_demand': models.Demand(port_name='bl1_gas_demand',
+                                                                  units=config.Units.JPS,
+                                                                  initial_value_ref='bl1_gas_demand')})
+
+bl2_gas_load = models.Node(node_name='B2GasLoad',
+                           ports={'bl2_gas_demand': models.Demand(port_name='bl2_gas_demand',
+                                                                  units=config.Units.JPS,
+                                                                  initial_value_ref='bl2_gas_demand')})
+
+
+## Add gas Nodes to Optimisation graph
+system.add_nodes_from([gas_grid, gas_distribution, gas_sp01, gas_sp02, carbon_aggregation, bl1_gas_load, bl2_gas_load])
 
 
 ## Gas grid should only export ?
 # gas_grid.ports['bulk_gas_source'].flows = config.Flows.Export
 
 electrical_grid = models.FlexElectricalNode(port_name='AvenueFeeder')
-carbon_aggregation = models.CarbonAggregation()
 
 
 ## MV Feeder Node
@@ -72,15 +88,58 @@ s001 = models.TellegenNode(node_name='Substation001',
                                                             import_constraint_value=tx_rating_kva,
                                                             export_constraint=config.FlowConstraint.Fixed,
                                                             export_constraint_value=-tx_rating_kva),
-                                  'bl1': models.FlexPort(port_name='bl1', units=config.Units.KW),
-                                  'bl2': models.FlexPort(port_name='bl2', units=config.Units.KW)}
+                                  'bl1_el_supply': models.FlexPort(port_name='bl1_el_supply', units=config.Units.KW),
+                                  'bl2_el_supply': models.FlexPort(port_name='bl2_el_supply', units=config.Units.KW)}
                            )
 
 
-bl1_cp = models.MultiCommodityTellegenNode(node_name='Bld1',
-                                           ports={})
-bl2_cp = models.MultiCommodityTellegenNode()
+s002 = models.TellegenNode(node_name='Substation002',
+                           ports={'feeder': models.FlexPort(port_name='feeder', units=config.Units.KW,
+                                                            import_constraint=config.FlowConstraint.Fixed,
+                                                            import_constraint_value=tx_rating_kva,
+                                                            export_constraint=config.FlowConstraint.Fixed,
+                                                            export_constraint_value=-tx_rating_kva),
+                                  'bl2_el_supply_chiller': models.FlexPort(port_name='bl2_el_supply_chiller',
+                                                                           units=config.Units.KW)}
+                           )
+
+bl1_load_net = models.Node(node_name='B1Load',
+                       ports={'bl1_el_demand_net': models.FixedElectricalPort(port_name='bl1_el_demand_net',
+                                                                               initial_value_ref='bl1_el_demand_net')})
+
+
+bl2_load_power = models.Node(node_name='B2LoadPower',
+                             ports={'bl2_el_demand_power': models.FixedElectricalPort(port_name='bl2_el_demand_power',
+                                                                                     initial_value_ref='bl2_el_demand_power')})
+
+bl2_load_chiller = models.Node(node_name='B2LoadChiller',
+                               ports={'bl2_el_demand_chiller': models.FixedElectricalPort(port_name='bl2_el_demand_chiller',
+                                                                                       initial_value_ref='bl2_el_demand_chiller')})
+
+
+## Add electrical Nodes to Optimisation graph
+system.add_nodes_from([electrical_grid, avenue_feeder, s001, s002, bl1_load_net, bl2_load_power, bl2_load_chiller])
 
 
 
-system = models.OptimisationGraph()
+## Multicommodity connection points to represent buildings
+bl1_cp = models.Node(node_name='Bld1', node_rule = config.NodeRule.Custom,
+                                           ports={'bl1_gas_supply': models.FlexPort(port_name='bl1_gas_supply',
+                                                                                    units=config.Units.JPS),
+                                                  'bl1_gas_demand': models.FlexPort(port_name='bl1_gas_demand',
+                                                                                    units=config.Units.JPS),
+                                                  'bl1_el_supply': models.FlexPort(port_name='bl1_el_supply',
+                                                                                   units=config.Units.KW),
+                                                  'bl1_el_demand_net': models.FlexPort(port_name='bl1_el_demand_net',
+                                                                                       units=config.Units.KW)})
+
+
+bl2_cp = models.MultiCommodityTellegenNode(node_name='Bld2',)
+
+
+
+
+
+
+
+
