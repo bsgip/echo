@@ -77,7 +77,7 @@ class OptimisationGraph(nx.Graph):
                 node2_name = edge.nodes[1]
             # Need to check whether an edge already exists between these two nodes
             if self.edge_obj.get((node1_name, node2_name)) is not None:
-                raise ValueError('An edge between these nodes already exists')
+                raise ValueError(f'An edge between these nodes already exists: {node1_name}, {node2_name}')
             self.add_edge(node1_name, node2_name)
             self.edge_obj[(node1_name, node2_name)] = edge_obj
 
