@@ -1303,7 +1303,7 @@ class TellegenNode(Node):
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
-class MultiCommodityTellegenNode(TellegenNode):
+class MultiCommodityTellegenNode(Node):
     """
     A node with ports that have multiple commodities.
     A tellegen constraint is applied per commodity.
