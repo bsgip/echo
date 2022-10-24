@@ -912,7 +912,7 @@ class OptimisationGraph(BaseModel):
             node2_name = edge_obj.nodes[1]
         # Need to check whether an edge already exists between these two nodes
         if self.get_edge(nodes=(node1_name, node2_name)) is not None:
-            raise ValueError('An edge between these nodes already exists')
+            raise ValueError(f'An edge between these nodes already exists: {node1_name}, {node2_name}')
 
         self.edge_obj[(node1_name, node2_name)] = edge_obj
 
@@ -1216,7 +1216,7 @@ class OptGraph(BaseModel):
 
     def _add_single_edge(self, edge):
         if self.get_edge(edge.nodes, warn=False) is not None:
-            raise ValueError('An edge between these nodes already exists')
+            raise ValueError(f'An edge between these nodes already exists: {edge.nodes}')
 
         port1 = edge.vertices[0]
         port2 = edge.vertices[1]
