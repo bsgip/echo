@@ -6,6 +6,10 @@ import echo.echo_builder as builder
 import echo.configuration as config
 import echo.echo_optimiser as optimiser
 import pyomo.environ as en
+import networkx as nx
+import matplotlib.pyplot as plt
+
+
 
 df = pd.DataFrame({'bl1_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8],
                    'bl2_gas_demand': [0.7, 0.8, 1.1, 1.3, 0.9],
@@ -20,7 +24,10 @@ df = pd.DataFrame({'bl1_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8],
 
 feeder_rating_kva = 3.18*1e3
 tx_rating_kva = 1000
-time_periods = 10
+time_periods = 5
+interval_duration = 60 ## in minutes
+expansion_periods = 1
+discount_rate = 0
 
 
 
@@ -39,6 +46,30 @@ class MultiCommodityTellegenNodeManual(models.MultiCommodityTellegenNode):
                 tellegen_ports = [self.ports.get(i) for i in v]
                 setattr(model, 'node_con_' + str(k) + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
+
+def nx_graph_with_colors(echo_system) -> nx.graph:
+    g = nx.Graph()
+    for _n in echo_system.node_obj.values():
+        g.add_node(_n.node_name, commodity=node_commodity(_n))
+    for _e in echo_system.edge_obj:
+        g.add_edge(*_e, commodity=system.edge_obj[_e].vertices[0].units.name)
+    return g
+
+def node_commodity(echo_node)-> str:
+    port_commodities = [p.units.name for p in echo_node.ports.values()]
+    if len(set(port_commodities))==1:
+        return port_commodities[0]
+    else:
+        return 'NA'
+def plot_echo_graph_with_colors(echo_system, with_labels: bool=True, labels: bool=None, commodity_colors: dict=None):
+    graph = nx_graph_with_colors(echo_system)
+    edge_colors = None
+    node_colors = None
+    if commodity_colors:
+        edge_colors = [commodity_colors.get(graph.edges[_edge].get('commodity', 'NA'), 'grey') for _edge in graph.edges]
+        node_colors = [commodity_colors.get(graph.nodes[_node].get('commodity', 'NA'), 'grey') for _node in graph.nodes]
+    nx.draw(graph, edgelist=graph.edges(), nodelist=graph.nodes(), edge_color=edge_colors, node_color=node_colors, with_labels=with_labels, labels=labels)
+    plt.show()
 
 
 
@@ -158,7 +189,7 @@ bl1_cp = models.Node(node_name='Bld1', node_rule = config.NodeRule.Custom,
                                                                                        units=config.Units.KW)})
 
 
-bl2_cp = models.MultiCommodityTellegenNodeManual(node_name='Bld2',
+bl2_cp = MultiCommodityTellegenNodeManual(node_name='Bld2',
                                                  ports={'bl2_gas_supply': models.FlexPort(port_name='bl2_gas_supply', units=config.Units.JPS),
                                                         'bl2_gas_demand': models.FlexPort(port_name='bl2_gas_demand',units=config.Units.JPS),
                                                         'bl2_el_supply': models.FlexPort(port_name='bl2_el_supply', units=config.Units.KW),
@@ -196,13 +227,46 @@ edges = {('GasGrid', 'gas_grid') : ('GasGridTellegen', 'gas_grid'),
 
 
 
-
-
 for (node1_id, port1_id), (node2_id, port2_id) in edges.items():
     from_node = system.node_obj.get(node1_id, None)
-    from_port = from_node.get_port(port1_id)
     to_node = system.node_obj.get(node2_id, None)
-    to_port = from_node.get_port(port2_id)
+    if not from_node or not to_node:
+        print(f'Cant find connection Nodes {node1_id} is {type(from_node)},'
+              f'{node2_id} is {type(to_node)}')
+    from_port = from_node.get_port(port1_id)
+    to_port = to_node.get_port(port2_id)
+    print(f'Connecting Nodes {from_node.node_name}, {to_node.node_name} on Ports {from_port.port_name}, {to_port.port_name}')
     system.connect_ports_and_create_edge(from_port, to_port, edge_name=f'{node1_id}_{node2_id}')
+
+
+
+
+## Plot system Graph colored by commodity
+
+# commodity_colors = {'KW': 'green',
+#                    'CO2':'orange',
+#                    'KWT':'yellow',
+#                    'JPS': 'blue',
+#                    'KWh': 'green',
+#                    'kVA': 'green',
+#                    'kVAR': 'green',
+#                    'LPS': 'green',
+#                    'NA': 'grey'}
+# plot_echo_graph_with_colors(system, commodity_colors=commodity_colors)
+
+
+
+# Invoke the optimiser and optimise
+optimiser_object = optimiser.EchoOptimiser(interval_duration=interval_duration,
+                          number_of_intervals=time_periods,
+                          number_of_expansion_intervals=expansion_periods,
+                          discount_rate=discount_rate,
+                          ES=system,
+                          objective_set=None,
+                          profile=df)
+
+optimiser_object.optimise(tee=True)
+
+
 
 
