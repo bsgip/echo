@@ -1078,9 +1078,11 @@ class OptimisationGraph(BaseModel):
             setattr(model, f"path_flow_con3_{current_node_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow2))
 
-    def draw_echo_graph(self, with_labels=False, labels=None):
+    def draw_echo_graph(self, with_labels: bool=False, labels: bool=None):
         """ Draws the network with or without node labels """
-        nx.draw_networkx(self.convert_to_nx(), with_labels=with_labels, labels=labels)
+
+        graph = self.convert_to_nx()
+        nx.draw_networkx(graph, with_labels=with_labels, labels=labels)
         plt.show()
 
     def print_port_names(self):
@@ -1252,7 +1254,8 @@ class OptGraph(BaseModel):
     def convert_to_nx(self) -> nx.Graph:
         g = nx.Graph()
         g.add_nodes_from(self.node_obj.keys())
-        g.add_edges_from(self.edge_obj.keys())
+        for _e in self.edge_obj:
+            g.add_edge(*_e, commodity=self.edge_obj[_e].vertices[0].units.name)
         return g
 
     def create_all_path_objects(self, sources: List[str], sinks: List[str], path_unit: int, regularise: bool = False):

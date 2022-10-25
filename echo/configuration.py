@@ -174,4 +174,3 @@ class EVChargeMode(Enum):
     V0G = 'V0G'
     V1G = 'V1G'
     V2G = 'V2G'
-

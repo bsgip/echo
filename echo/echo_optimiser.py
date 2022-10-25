@@ -71,21 +71,23 @@ class EchoOptimiser(object):
 
     def validate_network_graph(self):
         """
-        Validates that a pyomo model can be built from the provided network graph. Checks for:
+        Validates that a pyomo model can be built from the provided network graph.
+        Checks for:
         - name consistency between objects (eg node.node_name) and graph nodes
-        - floating nodes that have no edge connecting them to another node
+        - Unconnected nodes that have no edge connecting them to another node
         """
         if self.verbose:
             print('validating network graph')
         for node_name, node_obj in self.ES.node_obj.items():
             assert node_obj.node_name == node_name, \
-                'Node {} name has been updated after being added to the network graph.'.format(node_name)
-
+                f'Node {node_name} name has been updated after being added to the network graph.'
+        # Verifies that graph is connected
         self.ES.verify_graph()
 
     def build_model(self):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
+        ## Follwoing are all User defined ()echo specific attributes (not pyomo native)
         self.model.interval_duration = self.interval_duration
         self.model.number_of_intervals = self.number_of_intervals
         self.model.paths = self.ES.paths  # Todo better way of making all path variables available for constructing objectives
@@ -98,7 +100,7 @@ class EchoOptimiser(object):
         # A bigM value for integer optimisation
         self.model.bigM = en.Param(initialize=self.bigM)
 
-        # We use RangeSet to create a index for each of the time
+        # We use RangeSet to create an index for each of the time
         # periods that we will optimise within.
         self.model.Time = en.RangeSet(0, self.number_of_intervals - 1)
         # Create index for expansion periods
