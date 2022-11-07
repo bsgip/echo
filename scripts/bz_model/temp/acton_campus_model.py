@@ -158,7 +158,11 @@ bl2_heating_demand = models.Node(node_name='B2HeatingDemand',
                                                                   initial_value_ref='bl2_heating_demand')})
 
 
-bl1_boiler = thermal_models.GasBoilerFixedCOP(node_name='B1Boiler', cop=0.85, startup_cop=0.7)
+bl1_boiler = thermal_models.GasBoilerFixedCOP(node_name='B1Boiler', cop=0.85, startup_cop=0.7, min_input=1, max_input=10)
+GasBoilerFixedCOP(max_input=8,
+                           min_input=5,
+                           cop=1,
+                           startup_eta=0.5)
 bl2_boiler = thermal_models.GasBoilerFixedCOP(node_name='B2Boiler', cop=0.85, startup_cop=0.7)
 
 
