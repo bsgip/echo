@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from echo import objectives
 import echo.echo_models as models
+import echo.echo_thermal_models as thermal_models
 import echo.echo_builder as builder
 import echo.configuration as config
 import echo.echo_optimiser as optimiser
@@ -42,9 +43,7 @@ class MultiCommodityTellegenNode(models.Node):
     A tellegen constraint is applied per commodity.
     """
     node_rule = models.NodeRule.Custom
-
     def apply_node_constraints(self, model):
-
         # todo avoid repeating the below
         def reliability(model, p, t):  # Tellegen node rule
             a = 0
@@ -52,7 +51,6 @@ class MultiCommodityTellegenNode(models.Node):
                 b = getattr(model, port.port_name)
                 a += b[p, t]
             return a == 0
-
         commodities = dict()
         for p in self.ports.values():
             if commodities.get(p.units) is None:
@@ -60,11 +58,8 @@ class MultiCommodityTellegenNode(models.Node):
                 commodities[p.units].append(p)
             else:
                 commodities[p.units].append(p)
-
         for ctype, commodity_ports in commodities.items():
             setattr(model, 'node_con_' + str(ctype) + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
-
-
 
 
 class MultiCommodityTellegenNodeManual(MultiCommodityTellegenNode):
@@ -145,14 +140,32 @@ bl1_gas_load = models.Node(node_name='B1GasLoad',
                                                                   units=config.Units.JPS,
                                                                   initial_value_ref='bl1_gas_demand')})
 
+
 bl2_gas_load = models.Node(node_name='B2GasLoad',
                            ports={'bl2_gas_demand': models.Demand(port_name='bl2_gas_demand',
                                                                   units=config.Units.JPS,
                                                                   initial_value_ref='bl2_gas_demand')})
 
+bl1_heating_demand = models.Node(node_name='B1HeatingDemand',
+                           ports={'bl1_heating_demand': models.Demand(port_name='bl1_heating_demand',
+                                                                  units=config.Units.KWT,
+                                                                  initial_value_ref='bl1_heating_demand')})
+
+
+bl2_heating_demand = models.Node(node_name='B2HeatingDemand',
+                           ports={'bl2_heating_demand': models.Demand(port_name='bl2_heating_demand',
+                                                                  units=config.Units.KWT,
+                                                                  initial_value_ref='bl2_heating_demand')})
+
+
+bl1_boiler = thermal_models.GasBoilerFixedCOP(node_name='B1Boiler', cop=0.85, startup_cop=0.7)
+bl2_boiler = thermal_models.GasBoilerFixedCOP(node_name='B2Boiler', cop=0.85, startup_cop=0.7)
+
 
 ## Add gas Nodes to Optimisation graph
-system.add_nodes_from([gas_grid, gas_distribution, gas_sp01, gas_sp02, carbon_aggregation, bl1_gas_load, bl2_gas_load])
+system.add_nodes_from([gas_grid, gas_distribution, gas_sp01, gas_sp02, carbon_aggregation,
+bl1_heating_demand, bl2_heating_demand, bl1_boiler, bl2_boiler])
+                       #bl1_gas_load, bl2_gas_load])
 
 
 ## Gas grid should only export ?
@@ -278,18 +291,18 @@ for (node1_id, port1_id), (node2_id, port2_id) in edges.items():
 
 
 
-## Plot system Graph colored by commodity
+# Plot system Graph colored by commodity
 
-# commodity_colors = {'KW': 'green',
-#                    'CO2':'orange',
-#                    'KWT':'yellow',
-#                    'JPS': 'blue',
-#                    'KWh': 'green',
-#                    'kVA': 'green',
-#                    'kVAR': 'green',
-#                    'LPS': 'green',
-#                    'NA': 'grey'}
-# plot_echo_graph_with_colors(system, commodity_colors=commodity_colors)
+commodity_colors = {'KW': 'green',
+                   'CO2':'orange',
+                   'KWT':'yellow',
+                   'JPS': 'blue',
+                   'KWh': 'green',
+                   'kVA': 'green',
+                   'kVAR': 'green',
+                   'LPS': 'green',
+                   'NA': 'grey'}
+plot_echo_graph_with_colors(system, commodity_colors=commodity_colors)
 
 def check_port_names_unique(echo_system):
     all_ports = [_p for _node in echo_system.node_obj.values() for _p in _node.ports.values()]
