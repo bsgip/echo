@@ -3,7 +3,7 @@ from collections import defaultdict
 
 
 
-kambri_central = {'151': ['156-1', '156-2', '155', '154', '153', '152', '15']}
+kambri_central = {'151': ['156-1', '156-2', '156', '155', '154', '153', '152', '15']}
 central_plant = {'135': ['46', '48', '141', '134', '136', '137', '138', '122']}
 
 # List of buildings with extra gas meters for a domestic gas supply: hot water, cooking, steam generation
@@ -34,12 +34,12 @@ for gas_meter, group in bl_with_meters[
 
 electrical_feeders = defaultdict()
 
-for _f, group in bl_with_meters[~bl_with_meters.Feeder.isnull()].groupby('Feeder'):
+for _f, group in bl_with_meters[~bl_with_meters.Feeder.isnull()&bl_with_meters.include_in_model.isin(['Y'])].groupby('Feeder'):
     feeder_subs = []
-    unique_subs = [_s for _s in group[~group.substation.isnull()].substation.unique() if _s != '1225,1744']
+    unique_subs = list(group[~group.substation.isnull()].substation.unique())
     for _s in unique_subs:
         feeder_subs.extend(str(_s).split(','))
-    electrical_feeders[_f] = [sub_id for sub_id in unique_subs]
+    electrical_feeders[_f] = list(set(feeder_subs))
 
 bl_substations = defaultdict()
 bld_not_included = []
@@ -51,12 +51,25 @@ for _bl, group in bl_with_meters[bl_with_meters.include_in_model.isin(['Y'])].gr
         continue
     for _s in unique_subs:
         bl_subs.extend(str(_s).split(','))
-    bl_substations[_bl] = bl_subs
+    bl_substations[_bl] = list(set(bl_subs))
+
+
+bl_gas_sp = defaultdict(list)
+for k,v in gas_supply_points_dict.items():
+    for bl_id in v:
+        bl_gas_sp[bl_id].append(k)
+
+
 
 substations_bl = defaultdict(list)
 for k,v in bl_substations.items():
     for _sub in v:
         substations_bl[_sub].append(k)
 
+
+substations_feeders = defaultdict(list)
+for k,v in electrical_feeders.items():
+    for _sub in v:
+        substations_feeders[_sub].append(k)
 
 

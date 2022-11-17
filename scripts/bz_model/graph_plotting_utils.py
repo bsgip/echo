@@ -8,7 +8,7 @@ def nx_graph_with_colors(echo_system) -> nx.graph:
     for _n in echo_system.node_obj.values():
         g.add_node(_n.node_name, commodity=node_commodity(_n))
     for _e in echo_system.edge_obj:
-        g.add_edge(*_e, commodity=system.edge_obj[_e].vertices[0].units.name)
+        g.add_edge(*_e, commodity=echo_system.edge_obj[_e].vertices[0].units.name)
     return g
 
 
@@ -20,8 +20,8 @@ def node_commodity(echo_node)-> str:
         return 'NA'
 
 
-def plot_echo_graph_with_colors(echo_system, with_labels: bool=True, labels: bool=None, commodity_colors: dict=None):
-    graph = nx_graph_with_colors(echo_system)
+def plot_echo_graph_with_colors(system, with_labels: bool=True, labels: bool=None, commodity_colors: dict=None):
+    graph = nx_graph_with_colors(system)
     edge_colors = None
     node_colors = None
     if commodity_colors:
