@@ -35,6 +35,7 @@ source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8],
                    'bl_cooling_demand': [387.4, 437.5, 481.0, 549.1, 569.3]})
 
 source_df = source_df.merge(heatpump_cop, how='left', left_on='ambient_temp', right_on='ambient_temp')
+source_df['zero_demand']=0.0
 
 
 ## Dictionaries with gas and electrical topologies

@@ -5,6 +5,7 @@ import echo.echo_builder as builder
 import echo.configuration as config
 import echo.echo_optimiser as optimiser
 import echo.utils as utils
+import pyomo.environ as en
 
 
 
