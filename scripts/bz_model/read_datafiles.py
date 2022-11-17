@@ -3,18 +3,30 @@ from collections import defaultdict
 
 
 
-kambri_central = {'151': ['156-1', '156-2', '156', '155', '154', '153', '152', '15']}
+kambri_central = {'151': ['156', '155', '154', '153', '152', '15']}
 central_plant = {'135': ['46', '48', '141', '134', '136', '137', '138', '122']}
+
+kambri_gas_sp = 'gm_005'
+central_gas_sp = '20514434'
+
+
+
 
 # List of buildings with extra gas meters for a domestic gas supply: hot water, cooking, steam generation
 extra_gas_supply = ['46', '141', '134', '136', '137', '138', '15']
-bl_with_meters = pd.read_excel('/home/anna/GitBSGIP/bz_data/processed_data/buildings_with_meters.xlsx', dtype={'gas_meter': str,
-                                                                                                             'ID': str,
-                                                                                                               'substation': str})
+bl_with_meters = pd.read_excel('/home/anna/repos/bz_data/processed_data/buildings_with_meters.xlsx',
+                               dtype={'gas_meter': str,
+                                      'ID': str,
+                                      'substation': str})
+
+#### Currently exluding domestic gas usage and only accounting for gas consumption for heating
+bl_with_meters.loc[bl_with_meters.ID.isin(central_plant['135']), 'gas_meter'] = central_gas_sp
+bl_with_meters.loc[bl_with_meters.ID.isin(kambri_central['151']), 'gas_meter'] = kambri_gas_sp
+
 bld_to_model = set(bl_with_meters[bl_with_meters.include_in_model.isin(['Y'])].ID)
 
 
-heatpump_cop = pd.read_csv('/home/anna/GitBSGIP/bz_data/source_data/heatpump_cop.csv')
+heatpump_cop = pd.read_csv('/home/anna/repos/bz_data/source_data/heatpump_cop.csv')
 
 source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8],
                    'bl_el_demand_net': [7, 8, 10, 8, 11],

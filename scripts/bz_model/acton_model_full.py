@@ -21,19 +21,15 @@ from tariffs_and_costs import *
 from collections import defaultdict
 
 
+from model_validation import check_port_names_unique, ports_dict
+
+
 
 ### Use 'flat' model for Kambri and Central Plants (can attach thermal and electrical demand to account for losses)
-
-central_sp = bl_gas_sp[next(iter(central_plant))][0]
-kambri_sp = bl_gas_sp[next(iter(kambri_central))][0]
 
 kambri_id = '151'
 central_id = '135'
 zero_demand = {kambri_id, central_id}
-
-gas_supply_points_dict[kambri_sp].extend(kambri_central[kambri_id])
-gas_supply_points_dict[central_sp].extend(central_plant[central_id])
-
 
 ## Initialise system
 system = models.OptimisationGraph()
@@ -44,7 +40,7 @@ gas_grid = models.FlexNodeWithEmissions(node_name='GasGrid',
                                         emitting_port='gas_grid',
                                         emitting_port_units=config.Units.JPS,
                                         carbon_port='bulk_gas_emissions',
-                                        emissions_factor= emission_factor)
+                                        emissions_factor=emission_factor)
 
 carbon_aggregation = models.CarbonAggregation(node_name='BulkEmissions',
                                               ports={'bulk_gas_emissions': models.CarbonPort()})
@@ -209,6 +205,7 @@ for bl_id, sub_list in bl_substations.items():
 
 
 
+
 # Plot system Graph colored by commodity
 
 commodity_colors = {'KW': 'green',
@@ -222,7 +219,7 @@ commodity_colors = {'KW': 'green',
                    'NA': 'grey'}
 ## plot_echo_graph_with_colors(system, commodity_colors=commodity_colors)
 
-
+ports = ports_dict(system)
 optimiser_object = optimiser.EchoOptimiser(interval_duration=interval_duration,
                           number_of_intervals=time_periods,
                           number_of_expansion_intervals=expansion_periods,
@@ -231,11 +228,23 @@ optimiser_object = optimiser.EchoOptimiser(interval_duration=interval_duration,
                           objective_set=None,
                           profile=source_df)
 
+unconnected_ports = {'port_03c8ba16-0602-47c5-8e5c-8f9e9a80bfbc', 'port_2cc64cfe-748f-42d5-b277-781c97841812',
+ 'port_4d408b15-02ff-489c-9050-fffd82f939ec', 'port_a1f819c9-88c6-4c08-9026-f52146b0fa4f',
+ 'port_b1515cff-1ca0-44e9-a3e1-e57463cdb05a', 'port_d7ca2fab-9582-4cd9-a897-452fca6c5cd0',
+ 'port_8f1b42f7-fab5-4119-82e8-a0e1537f0d7f', 'port_5e086552-97b5-4cab-adb5-51013b7b0784',
+ 'port_d6898f44-55b7-46f3-b673-223b844b483e', 'port_6d454a45-8da2-460f-8f1b-57b767092679'}
 
 
-
-
-
+# {'node': 'SP_20514434', 'port_key': '138_gas_supply'}
+# {'node': 'SP_M992378', 'port_key': '21_gas_supply'}
+# {'node': 'SP_gm_005', 'port_key': '156-1_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '141_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '136_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '48_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '137_gas_supply'}
+# {'node': 'SP_gm_005', 'port_key': '156-2_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '46_gas_supply'}
+# {'node': 'SP_20514434', 'port_key': '134_gas_supply'}
 
 
 ######################
