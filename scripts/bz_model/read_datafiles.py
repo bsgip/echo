@@ -28,11 +28,11 @@ bld_to_model = set(bl_with_meters[bl_with_meters.include_in_model.isin(['Y'])].I
 
 heatpump_cop = pd.read_csv('/home/anna/repos/bz_data/source_data/heatpump_cop.csv')
 
-source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8],
-                   'bl_el_demand_net': [7, 8, 10, 8, 11],
-                   'ambient_temp': [18, 19, 19, 21, 21],
-                   'bl_heating_demand': [283, 255, 264, 263, 276],
-                   'bl_cooling_demand': [387.4, 437.5, 481.0, 549.1, 569.3]})
+source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8]*876,
+                   'bl_el_demand_net': [7, 8, 10, 8, 11]*876,
+                   'ambient_temp': [18, 19, 19, 21, 21]*876,
+                   'bl_heating_demand': [283, 255, 264, 263, 276]*876,
+                   'bl_cooling_demand': [387.4, 437.5, 481.0, 549.1, 569.3]*876})
 
 source_df = source_df.merge(heatpump_cop, how='left', left_on='ambient_temp', right_on='ambient_temp')
 source_df['zero_demand']=0.0
