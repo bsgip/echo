@@ -119,7 +119,7 @@ class Port(BaseModel):
         if slack is not None:
             self.slack = slack
 
-    def process_initial_value(self, initial_val, expansion_periods: int=1, time_periods: int=None ):
+    def process_initial_value(self, initial_val, expansion_periods: int = 1, time_periods: int = None):
         if isinstance(initial_val, dict):
             self.add_initial_value(initial_val)
         elif isinstance(initial_val, str):
@@ -253,12 +253,21 @@ class Port(BaseModel):
 
             def only_pos_or_neg_one(model, p, t):
                 return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
+                # return getattr(model, self.is_pos)[p, t] * \
+                #        (getattr(model, self.pos)[p, t] + getattr(model, self.neg)[p, t]) >= \
+                #        getattr(model, self.pos)[p, t]
 
             setattr(model, f"pos_neg_con1_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one))
 
             def only_pos_or_neg_two(model, p, t):
                 return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
+                # return (1 - getattr(model, self.is_pos)[p, t]) * \
+                #        (getattr(model, self.pos)[p, t] + getattr(model, self.neg)[p, t]) <= \
+                #        getattr(model, self.neg)[p, t]
+
+                # return getattr(model, self.pos)[p, t] * getattr(model, self.is_pos)[p, t] >= \
+                #        getattr(model, self.is_pos)[p, t]
 
             setattr(model, f"pos_neg_con2_{self.port_name}",
                     en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_two))

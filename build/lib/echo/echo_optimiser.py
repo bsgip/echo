@@ -25,7 +25,8 @@ class EchoOptimiser(object):
         self.number_of_intervals = number_of_intervals
         # Check consistency with profile if specified
         if profile is not None:
-            assert self.number_of_intervals == len(profile), 'Profile length does not match number of intervals specified.'
+            assert self.number_of_intervals == len(
+                profile), 'Profile length does not match number of intervals specified.'
         self.number_of_expansion_intervals = number_of_expansion_intervals
         self.ES = ES
         self.objective_set = objective_set
@@ -153,6 +154,8 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
+        opt.options["MIPFocus"] = 1
+        # opt.options["TimeLimit"] = 60
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 
@@ -197,7 +200,6 @@ class EchoOptimiser(object):
 
         df = pd.DataFrame(dct)
         return df
-
 
     def values(self, variable_name, expansion=0):
         """ Returns the value of a single specified variable during a single specified expansion period."""
@@ -253,4 +255,3 @@ class EchoOptimiser(object):
             if obj.component == port_obj:
                 total += obj.get_objective_total(optimiser=self)
         return total
-
