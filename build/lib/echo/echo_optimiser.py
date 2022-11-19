@@ -154,8 +154,9 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
+        print("Has cutoff time, MIP Focus 1")
         opt.options["MIPFocus"] = 1
-        # opt.options["TimeLimit"] = 60
+        opt.options["TimeLimit"] = 60 * 2
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 
