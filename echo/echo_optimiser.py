@@ -141,7 +141,7 @@ class EchoOptimiser(object):
             path_obj.add_objective(self.model)
             self.objective += path_obj.objective
 
-    def optimise(self, tee=False, logfile=None, time_limit=60):
+    def optimise(self, tee=False, logfile=None, time_limit=60, mip_focus=None):
         def objective_function(model):
             return self.objective
 
@@ -156,7 +156,8 @@ class EchoOptimiser(object):
         # Solve the optimisation
         # print(f"Cutoff time: {cutoff_time}s")
         # f"MIP Focus: 1")
-        # opt.options["MIPFocus"] = 1
+        if mip_focus is not None:
+            opt.options["MIPFocus"] = mip_focus
         if time_limit is not None:
             opt.options["TimeLimit"] = time_limit
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
