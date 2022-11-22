@@ -12,6 +12,11 @@ all_building_nodes = [n for n in system.node_obj.values() if isinstance(n, Multi
 all_heating_demand = [n for n in system.node_obj.values() if 'HeatingDemand' in n.node_name]
 bl_with_gas = [n for n in all_building_nodes if any(['gas_supply' in port_key for port_key in n.ports])]
 
+el_grid_port = electrical_grid.ports['electrical_grid'].port_name
+all_el_demand = [n for n in system.node_obj.values() if 'ElectricalLoad' in n.node_name]
+all_el_demand_ports = [p.port_name for n in all_el_demand for p in n.ports.values()]
+
+
 ## Gas flow out of gas grid must equal to inflow of gas distribution
 -results_df[gas_grid_port].sum() == results_df[gas_distribution.ports['gas_grid'].port_name].sum()
 
@@ -60,3 +65,9 @@ for sp_id, bl_list in gas_supply_points_dict.items():
     total_gas_received = sum([results_df[_p].sum() for _p in bl_gas_ports])
     if round(total_gas_supplied+total_gas_received,5)!=0:
           print(f'sp {sp_id} total supplied {total_gas_supplied}, total received {total_gas_received}')
+
+
+
+
+print(f'Individual electrical demand sum up to total electricity supplied from ELectrical Grid: '
+      f'{round(results_df[el_grid_port].sum()+sum([results_df[el_port].sum() for el_port in all_el_demand_ports]), 5) ==0}')
