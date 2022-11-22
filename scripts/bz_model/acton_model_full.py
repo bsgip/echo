@@ -14,6 +14,7 @@ import pyomo.environ as en
 from read_datafiles import bl_with_meters, kambri_central, central_plant, source_df, extra_gas_supply
 from read_datafiles import gas_supply_points_dict, bld_to_model, electrical_feeders, \
     bl_substations, bld_not_included, substations_bl, substations_feeders, bl_gas_sp
+from read_datafiles import time_periods, interval_duration, expansion_periods, discount_rate
 from bz_model_constants import *
 from custom_classes import MultiCommodityTellegenNodeManual, MultiCommodityTellegenNode
 from graph_plotting_utils import *
@@ -65,7 +66,7 @@ system.connect_ports_and_create_edge(gas_grid.ports['bulk_gas_emissions'], carbo
 start_system_size = len(system.node_obj)
 ## Add gas supply points nodes with ports for all buildings downstream, connect all gas supply points to Gas distribution
 for sp_id, bl_list in gas_supply_points_dict.items():
-    if sp_id=='no_gas':
+    if sp_id == 'no_gas':
         continue
     ports = {f'{bl_id}_gas_supply': models.FlexSource(units=config.Units.JPS) for bl_id in bl_list}
     ports['gas_distribution'] = models.FlexSink(units=config.Units.JPS)

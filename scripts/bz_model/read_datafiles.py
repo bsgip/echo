@@ -1,8 +1,12 @@
 import pandas as pd
 from collections import defaultdict
 
+time_periods = 24*5 ## 30 days equivalent
+interval_duration = 60 ## in minutes
+expansion_periods = 1
+discount_rate = 0
 
-
+df_multiplier = int(time_periods/5)
 kambri_central = {'151': ['156', '155', '154', '153', '152', '15']}
 central_plant = {'135': ['46', '48', '141', '134', '136', '137', '138', '122']}
 
@@ -26,22 +30,22 @@ bl_with_meters.loc[bl_with_meters.ID.isin(kambri_central['151']), 'gas_meter'] =
 bld_to_model = set(bl_with_meters[bl_with_meters.include_in_model.isin(['Y'])].ID)
 
 
-heatpump_cop = pd.read_csv('/home/anna/repos/bz_data/source_data/heatpump_cop.csv')
+heatpump_cop = pd.read_excel('/home/anna/repos/bz_data/source_data/heatpump_cop.xlsx')
 
-source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8]*876,
-                   'bl_el_demand_net': [7, 8, 10, 8, 11]*876,
-                   'ambient_temp': [18, 19, 19, 21, 21]*876,
-                   'bl_heating_demand': [283, 255, 264, 263, 276]*876,
-                   'bl_cooling_demand': [387.4, 437.5, 481.0, 549.1, 569.3]*876})
+source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8]*df_multiplier,
+                   'bl_el_demand_net': [7, 8, 10, 8, 11]*df_multiplier,
+                   'ambient_temp': [18, 19, 19, 21, 21]*df_multiplier,
+                   'bl_heating_demand': [283, 255, 264, 263, 276]*df_multiplier,
+                   'bl_cooling_demand': [387.4, 437.5, 481.0, 549.1, 569.3]*df_multiplier})
 
 source_df = source_df.merge(heatpump_cop, how='left', left_on='ambient_temp', right_on='ambient_temp')
-source_df['zero_demand']=0.0
+source_df['zero_demand'] = 0.0
 
 
 ## Dictionaries with gas and electrical topologies
 
 gas_supply_points_dict = dict()
-for gas_meter, group in bl_with_meters[
+for gas_meter, group in bl_with_meters[~bl_with_meters.Feeder.isnull()&
     ~bl_with_meters.gas_meter.isnull() & bl_with_meters.include_in_model.isin(['Y'])].groupby('gas_meter'):
     gas_supply_points_dict[gas_meter] = list(group.ID)
 
