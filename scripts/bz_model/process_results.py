@@ -1,5 +1,5 @@
 import pandas as pd
-from acton_model_full import *
+from acton_model_bau import *
 
 gas_grid_port = gas_grid.ports['gas_grid'].port_name
 co2_aggregation_port = carbon_aggregation.ports['bulk_gas_emissions'].port_name

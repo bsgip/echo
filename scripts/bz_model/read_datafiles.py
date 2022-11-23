@@ -14,11 +14,12 @@ kambri_gas_sp = 'gm_005'
 central_gas_sp = '20514434'
 
 
-
+repo_dir = '/home/anna/GitBSGIP/'
+#repo_dir = '/home/anna/repos/'
 
 # List of buildings with extra gas meters for a domestic gas supply: hot water, cooking, steam generation
 extra_gas_supply = ['46', '141', '134', '136', '137', '138', '15']
-bl_with_meters = pd.read_excel('/home/anna/repos/bz_data/processed_data/buildings_with_meters.xlsx',
+bl_with_meters = pd.read_excel(f'{repo_dir}bz_data/processed_data/buildings_with_meters.xlsx',
                                dtype={'gas_meter': str,
                                       'ID': str,
                                       'substation': str})
@@ -30,7 +31,7 @@ bl_with_meters.loc[bl_with_meters.ID.isin(kambri_central['151']), 'gas_meter'] =
 bld_to_model = set(bl_with_meters[bl_with_meters.include_in_model.isin(['Y'])].ID)
 
 
-heatpump_cop = pd.read_excel('/home/anna/repos/bz_data/source_data/heatpump_cop.xlsx')
+heatpump_cop = pd.read_excel(f'{repo_dir}bz_data/source_data/heatpump_cop.xlsx')
 
 source_df = pd.DataFrame({'bl_gas_demand': [0.4, 0.5, 0.6, 1.1, 0.8]*df_multiplier,
                    'bl_el_demand_net': [7, 8, 10, 8, 11]*df_multiplier,
