@@ -1,3 +1,9 @@
+"""
+This script essentially runs formluation compraison 1 with increasing data lengths to plot results showing
+how the two approaches scale
+
+"""
+
 # some imports
 import pandas as pd
 import pyomo.environ as pyo

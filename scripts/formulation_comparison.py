@@ -1,3 +1,21 @@
+"""
+Compares mixed integer formulation and the LP formulation
+
+Considers a behind the meter optimisation where the import and export tariffs are different
+
+Both formulatiosn should give the same result for the optimised cost, or very very close to (otherwise something is
+going
+wrong)
+
+Change num_days to get an idea of how the different approaches scale with increasing data length. For very small
+problems they will be similar
+
+Interesting point to note. In this particular case 'forgetting' to include the big M constraints
+will still provide the correct answer for the first formulation, however, it is still slower than
+the LP reformulation
+
+"""
+
 # some imports
 import pandas as pd
 import pyomo.environ as pyo
@@ -7,7 +25,7 @@ from pyomo.opt import SolverFactory
 import time
 
 # some options
-num_days = 30
+num_days = 20
 
 
 np.random.seed(seed=15)
@@ -41,6 +59,11 @@ load_profile = np.hstack([load_profile]*num_days)
 
 # adding a little randomness to the load
 load_profile *= (0.8+0.2*np.random.random(import_tariff_array.size))
+
+"""
+This is the 'standard' mixed integer formulation where the positive and negative power flows are 
+split using the big M constraint approach
+"""
 
 ## standard formulation splitting charging into postiive and negative
 num_times = len(load_profile)
@@ -78,6 +101,11 @@ r = results['Problem'][0]
 print('time to solve with first formulation was ', t2-t1, 's')
 print('Achieved cost was ', r['Lower bound'])
 
+
+""" 
+Now the LP reformulation where an auxilliary variable is introduced as the cost and 
+constrained below by the original cost function
+"""
 
 ## solving with second formulation
 assert all(import_tariff_array >= export_tariff_array), 'Import tariff must always be greater or equal to export tariff for second formulation'

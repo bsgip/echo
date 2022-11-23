@@ -1,3 +1,23 @@
+
+"""
+Compares mixed integer formulation and the LP formulation
+
+Considers a behind the meter optimisation where the import and export tariffs are different
+
+Also considers battery charge and discharge efficiency. This means that battery power as well as grid power
+have a piecewise linear function acting on them
+
+Both formulatiosn should give the same result for the optimised cost, or very very close to (otherwise something is
+going wrong)
+
+Change num_days to get an idea of how the different approaches scale with increasing data length. For very small
+problems they will be similar
+
+The difference in time to solve is even more noticeable now that there are two variables that need to be split
+for the Mixed integer approach.
+
+"""
+
 # some imports
 import pandas as pd
 import pyomo.environ as pyo
@@ -44,7 +64,15 @@ load_profile = np.hstack([load_profile]*num_days)
 load_profile *= (0.8+0.2*np.random.random(import_tariff_array.size))
 
 
-## standard formulation splitting charging into postiive and negative
+"""
+This is the 'standard' mixed integer formulation where the positive and negative power flows are 
+split using the big M constraint approach
+
+both the grid power and the battery power are split since now there is the piecewise cost function and also 
+the piecewise function for amount of charge done
+"""
+
+
 num_times = len(import_tariff_array)
 model = pyo.ConcreteModel()
 model.T = range(num_times)
@@ -52,8 +80,8 @@ model.pos_agg = pyo.Var(model.T, domain=pyo.Reals, bounds=(0, None))
 model.neg_agg = pyo.Var(model.T, domain=pyo.Reals, bounds=(None, 0))
 model.pos = pyo.Var(model.T, domain=pyo.Reals, bounds=(0, battery_charge))                # positive kwh to battery
 model.neg = pyo.Var(model.T, domain=pyo.Reals, bounds=(battery_discharge, 0))                # negative kwh from battery
-# model.b = pyo.Var(model.T, domain=pyo.Binary)
-# model.b_agg = pyo.Var(model.T, domain=pyo.Binary)
+model.b = pyo.Var(model.T, domain=pyo.Binary)
+model.b_agg = pyo.Var(model.T, domain=pyo.Binary)
 
 model.obj = pyo.Objective(expr=sum(import_tariff_array[t]*model.pos_agg[t]+export_tariff_array[t]*model.neg_agg[t] for t in model.T),
                           sense=pyo.minimize)
@@ -65,10 +93,10 @@ model.pos_agg_con = pyo.ConstraintList()
 model.neg_agg_con = pyo.ConstraintList()
 model.agg_con = pyo.ConstraintList()
 for t in model.T:
-    # model.pos_con.add(model.pos[t] <= model.b[t] * 1000)
-    # model.neg_con.add(model.neg[t] >= (model.b[t]-1)*1000)
-    # model.pos_agg_con.add(model.pos_agg[t] <= model.b_agg[t] * 1000)
-    # model.neg_agg_con.add(model.neg_agg[t] >= (model.b_agg[t]-1)*1000)
+    model.pos_con.add(model.pos[t] <= model.b[t] * 1000)
+    model.neg_con.add(model.neg[t] >= (model.b[t]-1)*1000)
+    model.pos_agg_con.add(model.pos_agg[t] <= model.b_agg[t] * 1000)
+    model.neg_agg_con.add(model.neg_agg[t] >= (model.b_agg[t]-1)*1000)
     model.agg_con.add(model.pos_agg[t] + model.neg_agg[t] == load_profile[t] + model.pos[t]+model.neg[t])
 
 # battery max and min capacity constraints
@@ -102,8 +130,14 @@ assert any((pos_array>0) + (neg_array<0)), 'positive and negative was not split 
 # plt.plot(pos_array[:100])
 # plt.show()
 
+""" 
+Now the LP reformulation where an auxilliary variable is introduced as the cost and 
+constrained below by the original cost function.
 
-## solving with second formulation
+A second auxilliary variable is introduced to represent the change in battery charge. 
+This is then upper bounded by the piecewise function made up of applying the charge and discharge efficiency 
+to the battery power
+"""
 assert all(import_tariff_array >= export_tariff_array), 'Import tariff must always be greater or equal to export tariff for second formulation'
 assert 1/eta_discharge >= eta_charge, '1/eta_discharge must be greater than eta_charge'
 
