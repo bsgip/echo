@@ -16,6 +16,10 @@ problems they will be similar
 The difference in time to solve is even more noticeable now that there are two variables that need to be split
 for the Mixed integer approach.
 
+Interesting point to note. In this particular case 'forgetting' to include the big M constraints
+will still provide the correct answer for the first formulation, however, it is still slower than
+the LP reformulation
+
 """
 
 # some imports

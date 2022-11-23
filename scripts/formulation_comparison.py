@@ -10,9 +10,6 @@ wrong)
 Change num_days to get an idea of how the different approaches scale with increasing data length. For very small
 problems they will be similar
 
-Interesting point to note. In this particular case 'forgetting' to include the big M constraints
-will still provide the correct answer for the first formulation, however, it is still slower than
-the LP reformulation
 
 """
 
