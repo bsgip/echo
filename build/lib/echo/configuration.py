@@ -9,15 +9,15 @@ from enum import Enum
 class Units(Enum):
     """ The units in which the optimisation is undertaken. """
 
-    NA = 0      # Used for initialisation but optimisation will fail if units not set prior to execution.
-    KW = 1      # Instantaneous electrical power
-    CO2 = 2     # Instantaneous CO2e emissions (in kg)
-    KWT = 3     # Instantaneous thermal power
-    JPS = 4     # Joules per second
-    KWh = 5     # kWh
-    kVA = 6     # kVA - apparent power
-    kVAR = 7    # reactive power
-    LPS = 8     # diesel/petrol in Litres/second
+    NA = 0  # Used for initialisation but optimisation will fail if units not set prior to execution.
+    KW = 1  # Instantaneous electrical power
+    CO2 = 2  # Instantaneous CO2e emissions (in kg)
+    KWT = 3  # Instantaneous thermal power
+    JPS = 4  # Joules per second
+    KWh = 5  # kWh
+    kVA = 6  # kVA - apparent power
+    kVAR = 7  # reactive power
+    LPS = 8  # diesel/petrol in Litres/second
 
 
 class Flows(Enum):
@@ -48,6 +48,7 @@ class NodeRule(Enum):
     Tellegen = 1  # The node sums all ports to 0.
     Custom = 2  # The node has some custom transformation
     Transform = 3  # The node has a transformation defined with a Transform object
+    Aggregation = 4
 
 
 class TransformRule(Enum):
@@ -62,6 +63,7 @@ class ExpansionType(Enum):
     Storage = 1
     Generation = 2
     Edge = 3
+
 
 class NodeType(object):
     ElectricalFlex = 'electrical_flex'
@@ -86,12 +88,14 @@ class NodeType(object):
     HeatPump = 'heatpump'
     FlexWithEmissions = 'flex_with_emissions'
 
+
 class Resource:
     """ Resources/commodities """
     Electricity = 0
     Gas = 1
     Thermal = 2
     CO2 = 3
+
 
 class TariffType:
     """ Tariff types"""
@@ -106,6 +110,7 @@ class TariffType:
     ContingencyPositive = 'contingency positive'
     ContingencyNegative = 'contingency negative'
 
+
 class Resets:
     """ How often something resets """
     minute = 'minute'
@@ -119,4 +124,3 @@ class EVChargeMode:
     V0G = 'V0G'
     V1G = 'V1G'
     V2G = 'V2G'
-
