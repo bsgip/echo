@@ -63,7 +63,7 @@ class EchoOptimiser(object):
 
         self.ES.verify_graph()
 
-    def build_model(self):
+    def build_model(self, skip_node_verification=False):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
         self.model.interval_duration = self.interval_duration
@@ -141,7 +141,7 @@ class EchoOptimiser(object):
             path_obj.add_objective(self.model)
             self.objective += path_obj.objective
 
-    def optimise(self, tee=False, logfile=None):
+    def optimise(self, tee=False, logfile=None, time_limit=60, mip_focus=None):
         def objective_function(model):
             return self.objective
 
@@ -154,9 +154,12 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.optimiser_engine)
 
         # Solve the optimisation
-        print("Has cutoff time, MIP Focus 1")
-        opt.options["MIPFocus"] = 1
-        opt.options["TimeLimit"] = 60 * 2
+        # print(f"Cutoff time: {cutoff_time}s")
+        # f"MIP Focus: 1")
+        if mip_focus is not None:
+            opt.options["MIPFocus"] = mip_focus
+        if time_limit is not None:
+            opt.options["TimeLimit"] = time_limit
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
         self.opt_status = results['Solver'][0]
 

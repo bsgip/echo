@@ -153,7 +153,7 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame, upper_bound=None, lower_bound=None):
         """ Creates pyomo vars, params, and constraints for the port. """
 
         time_periods = len(model.Time)
@@ -164,12 +164,22 @@ class Port(BaseModel):
             domain = en.NonPositiveReals
         elif self.flows is Flows.Import:
             domain = en.NonNegativeReals
+        elif upper_bound is not None and lower_bound is not None:
+            domain = (lower_bound, upper_bound)
 
         if self.initial_value_ref is not None:
             initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods)
         else:
             initial_val = self.initial_value
+
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
+
+        # if self.opt_type is OptimisationType.Variable:
+        #     setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
+        # elif self.opt_type is OptimisationType.Parameter:
+        #     setattr(model, self.port_name, en.Param(model.Expansion, model.Time, initialize=initial_val, domain=domain))
+        # else:
+        #     raise "Please select an optimisation type. "
 
         if self.opt_type is OptimisationType.Parameter:
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
@@ -457,12 +467,19 @@ class Node(BaseModel):
         if self.node_rule == NodeRule.Tellegen:
             assert len(self.ports) >= 2, 'A tellegen node must have at least two ports.'
 
-    def initialise_node(self, model, profile):
+    def initialise_node(self, model, profile, skip_port_verification=False):
         for port in self.ports.values():
-            port.verify_port()
+            if not skip_port_verification:
+                port.verify_port()
             port.initialise_port(model, profile)
 
     def apply_node_constraints(self, model):
+
+        # def aggregation(mode, p, t):
+        #     a = 0
+        #     for _, port in node_ports.items():
+        #         a += getattr(model, port.port_name)[p, t]
+        #     return a
 
         def reliability(model, p, t):  # Tellegen node rule
             a = 0
@@ -1152,8 +1169,10 @@ class Storage(Port):
     """ Same as old storage but without all the EV attributes"""
     flows = Flows.Both
     opt_type = OptimisationType.Variable
-    import_constraint = FlowConstraint.Fixed
-    export_constraint = FlowConstraint.Fixed
+    # import_constraint = FlowConstraint.Fixed
+    # export_constraint = FlowConstraint.Fixed
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
     max_capacity: float
     depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
     min_soc: float = 0

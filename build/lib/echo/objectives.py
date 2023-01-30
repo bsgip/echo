@@ -122,6 +122,34 @@ class Tariff(Objective):
         return vals
 
 
+class BidirectionalTariff(Tariff):
+    """ The BidirectionalTariff objective applies a price per kWh of energy imported and exported at a defined port."""
+    component: Port
+    bidirectional_tariff_dict: Optional[dict]
+
+    @property
+    def bidirectional_tariff(self):
+        return 'bidirectional_tariff_' + self.name
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.bidirectional_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
+
+    def create_params(self, model, df):
+        setattr(model, self.bidirectional_tariff, en.Param(model.Expansion, model.Time,
+                                                           initialize=self.bidirectional_tariff_dict))
+
+    def apply_constraints(self, model):
+        if hasattr(model, self.component.pos) is False:
+            self.component.constrain_pos_neg(model)
+
+    def objective_expr(self, model):
+        return self.weight * sum(
+            (getattr(model, self.component.pos)[p, t] + getattr(model, self.component.neg)[p, t]) *
+            getattr(model, self.bidirectional_tariff)[p, t] * model.interval_duration / 60 * getattr(model, model.dr)[p]
+            for p in model.Expansion for t in model.Time)
+
+
 class ImportTariff(Tariff):
     """ The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
     component: Port
@@ -396,7 +424,8 @@ class ContingencyNegative(Contingency):
 
     def create_vars(self, model):
         setattr(model, self.contingency_neg,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+                # en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveIntegers))
 
     def apply_constraints(self, model):
 
@@ -445,7 +474,8 @@ class ContingencyPositive(Contingency):
 
     def create_vars(self, model):
         setattr(model, self.contingency_pos,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+                # en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+                en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeIntegers))
 
     def apply_constraints(self, model):
 

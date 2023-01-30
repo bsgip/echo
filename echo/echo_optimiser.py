@@ -19,7 +19,8 @@ class EchoOptimiser(object):
                  ES,
                  objective_set,
                  optimiser_engine=None,
-                 profile=None):
+                 profile=None,
+                 skip_validation=False):
 
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
@@ -46,7 +47,8 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
-        self.validate_network_graph()
+        if not skip_validation:
+            self.validate_network_graph()
         self.build_model()
         self.apply_constraints()
         self.build_objective()
