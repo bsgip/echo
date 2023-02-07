@@ -109,6 +109,7 @@ class TariffType:
     QuadraticPower = 'quadratic power'
     ContingencyPositive = 'contingency positive'
     ContingencyNegative = 'contingency negative'
+    StepTariff = "step tariff"
 
 
 class Resets:
