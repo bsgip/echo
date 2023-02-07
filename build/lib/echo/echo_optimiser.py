@@ -19,7 +19,8 @@ class EchoOptimiser(object):
                  ES,
                  objective_set,
                  optimiser_engine=None,
-                 profile=None):
+                 profile=None,
+                 skip_validation=False):
 
         self.interval_duration = interval_duration  # The duration (in minutes) of each of the intervals being optimised over
         self.number_of_intervals = number_of_intervals
@@ -46,7 +47,8 @@ class EchoOptimiser(object):
         self.smallM = 0.0001
         self.discount_rate = discount_rate
 
-        self.validate_network_graph()
+        if not skip_validation:
+            self.validate_network_graph()
         self.build_model()
         self.apply_constraints()
         self.build_objective()
@@ -63,7 +65,7 @@ class EchoOptimiser(object):
 
         self.ES.verify_graph()
 
-    def build_model(self, skip_node_verification=False):
+    def build_model(self):
         # Set up the Pyomo model
         self.model = en.ConcreteModel()
         self.model.interval_duration = self.interval_duration
@@ -141,7 +143,7 @@ class EchoOptimiser(object):
             path_obj.add_objective(self.model)
             self.objective += path_obj.objective
 
-    def optimise(self, tee=False, logfile=None, time_limit=60, mip_focus=None):
+    def optimise(self, tee=False, logfile=None, time_limit=120, mip_focus=None):
         def objective_function(model):
             return self.objective
 
