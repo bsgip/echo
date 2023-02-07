@@ -868,8 +868,10 @@ class OptimisationGraph(BaseModel):
         ports_on_nodes = self.get_port_names_from_edges()
         diff = ports_on_edges - ports_on_nodes  # check overlap
         if len(diff) != 0:
-            print(f'Ports {diff} are defined on nodes but are not part of an edge. '
-                  f'This may cause erroneous optimisation results.')
+            # print(f'Ports {diff} are defined on nodes but are not part of an edge. '
+            #       f'This may cause erroneous optimisation results.')
+            warnings.warn(f'Ports {diff} are defined on nodes but are not part of an edge. '
+                          f'This may cause erroneous optimisation results.')
 
     def split_graph_on_edge(self, node1: str, node2: str):
         """ Splits a graph between node1 and node 2, and returns two echo optimisation graphs.
