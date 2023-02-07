@@ -82,7 +82,7 @@ class PeakPositivePower(Objective):
                 en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
-        return getattr(model, self.max_pos)
+        return getattr(model, self.max_pos) * self.weight
 
 
 class PeakNegativePower(Objective):
@@ -107,7 +107,7 @@ class PeakNegativePower(Objective):
                 en.Constraint(model.Expansion, model.Time, rule=max_value_rule))
 
     def objective_expr(self, model):
-        return getattr(model, self.max_neg) * -1
+        return getattr(model, self.max_neg) * -1 * self.weight
 
 
 class Tariff(Objective):
