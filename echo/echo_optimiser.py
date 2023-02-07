@@ -143,7 +143,7 @@ class EchoOptimiser(object):
             path_obj.add_objective(self.model)
             self.objective += path_obj.objective
 
-    def optimise(self, tee=False, logfile=None, time_limit=60, mip_focus=None):
+    def optimise(self, tee=False, logfile=None, time_limit=120, mip_focus=None):
         def objective_function(model):
             return self.objective
 
