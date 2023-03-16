@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../../echo/'))
 sys.path.append(os.path.abspath('../..'))
-sys.path.append(os.path.abspath('/home/anna/anaconda3/pkgs/'))
+sys.path.append(os.path.abspath('~/anaconda3/pkgs/'))
 
 # -- Project information -----------------------------------------------------
 
