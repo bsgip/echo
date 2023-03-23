@@ -1716,7 +1716,8 @@ class FlexNode(Node):
                  port_unit: int,
                  **data):
         super().__init__(**data)
-        self.ports[port_name] = FlexPort(units=port_unit)
+        self.ports[port_name] = FlexPort(port_name=port_name,
+                                         units=port_unit)
 
 
 class FlexElectricalNode(Node):
@@ -1725,7 +1726,8 @@ class FlexElectricalNode(Node):
                  port_name: str,
                  **data):
         super().__init__(**data)
-        self.ports[port_name] = FlexPort(units=Units.KW)
+        self.ports[port_name] = FlexPort(port_name=port_name,
+                                         units=Units.KW)
 
 
 class NewInverter(Inverter):
@@ -1749,7 +1751,8 @@ class FlexNodeWithEmissions(Node):
                  Union[float, ArrayType],
                  **data):
         super().__init__(**data)
-        self.ports[emitting_port] = FlexPort(units=emitting_port_units)
+        self.ports[emitting_port] = FlexPort(port_name=emitting_port,
+                                             units=emitting_port_units)
         self.ports[carbon_port] = CarbonSource()
         self.add_emission_transformation(emitting_port=self.ports[emitting_port],
                                          carbon_port=self.ports[carbon_port],
