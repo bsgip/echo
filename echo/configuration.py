@@ -56,7 +56,6 @@ class TransformRule(Enum):
     Pos = 2  # " " applies to only the positive component of the port variable
     Neg = 3  # "" applies to only the negative component of the port variable
 
-
 class ExpansionType(Enum):
     NA = 0
     Storage = 1

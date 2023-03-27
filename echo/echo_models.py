@@ -1550,7 +1550,7 @@ class Inverter(Node):
     node_rule = NodeRule.Custom
 
     def add_dc_port(self, port_name):
-        p = ElectricalPort()
+        p = ElectricalPort(port_name = port_name)
         self.dc_port_names.append(port_name)
         self.ports[port_name] = p
 
@@ -1667,7 +1667,8 @@ class Battery(Node):
                  regularise: bool = False,
                  **data):
         super().__init__(**data)
-        self.ports[port_name] = ElectricalStorage(max_capacity=max_capacity,
+        self.ports[port_name] = ElectricalStorage(port_name=port_name,
+                                                  max_capacity=max_capacity,
                                                   depth_of_discharge_limit=depth_of_discharge_limit,
                                                   charging_power_limit=charging_power_limit,
                                                   discharging_power_limit=discharging_power_limit,
