@@ -15,7 +15,7 @@ install_requires = [
     'tqdm>=4.63',
     'pyarrow>=7.0',
     'scikit-learn>=1.1',
-    'orjson'
+    'orjson>=3.8'
 ]
 tests_require = [
     "pytest",
