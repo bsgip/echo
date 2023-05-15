@@ -42,6 +42,7 @@ class Port(BaseModel):
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = 0.
     initial_value_ref: Optional[str]  # string ref to df column
+    initial_value_scaling: Optional[int] # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     port_name: Optional[str] = None
@@ -158,6 +159,7 @@ class Port(BaseModel):
 
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
+        initial_value_scaling = self.initial_value_scaling or 1
 
         domain = en.Reals
         if self.flows is Flows.Export:
@@ -166,8 +168,10 @@ class Port(BaseModel):
             domain = en.NonNegativeReals
 
         if self.initial_value_ref is not None:
-            initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods)
+            initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods,
+                                            scaling=initial_value_scaling)
         else:
+            # TODO: add scaling for explicit initial value
             initial_val = self.initial_value
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
 

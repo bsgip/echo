@@ -311,10 +311,10 @@ def tile_array_over_expansion_periods(array, expansion_periods):
     return output
 
 
-def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int):
+def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int, scaling: int = 1):
     if profile is None:
         raise ValueError('No profile dataframe defined. Check that you added the profile to the optimiser.')
-    values = profile[key].values
+    values = profile[key].values * scaling
     assert len(values) == time_periods, 'Initial values are wrong length.'
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
     d = dict(zip(keys, values))
