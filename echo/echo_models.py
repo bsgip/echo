@@ -1698,6 +1698,20 @@ class Solar(Node):
             self.ports[port_name].add_initial_value_from_array(profile)
 
 
+class NewSolar(Node):
+    """New Solar Node using Solar size for scaling of initial value ref"""
+    def __init__(self,
+                 port_name: str,
+                 solar_size: float,
+                 initial_value_ref: str,
+                 curtailable: bool = False,
+                 **data):
+        super().__init__(**data)
+        self.ports[port_name] = ElectricalGeneration(curtailable=curtailable,
+                                                     initial_value_ref=initial_value_ref,
+                                                     initial_value_scaling=solar_size)
+
+
 class Load(Node):
 
     def __init__(self,
