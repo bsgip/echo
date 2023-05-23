@@ -95,7 +95,6 @@ class TransformRule(Enum):
     Neg = 3
     """The transformation applies to only the negative component of the port variable"""
 
-
 class ExpansionType(Enum):
     """ Enumeration object defining the type of Expansion"""
     NA = 0

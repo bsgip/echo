@@ -293,6 +293,7 @@ class Port(BaseModel):
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = 0.
     initial_value_ref: Optional[str]  # string ref to df column
+    initial_value_scaling: Optional[int] # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     port_name: Optional[str] = None
@@ -409,6 +410,7 @@ class Port(BaseModel):
 
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
+        initial_value_scaling = self.initial_value_scaling or 1
 
         domain = en.Reals
         if self.flows is Flows.Export:
@@ -417,8 +419,10 @@ class Port(BaseModel):
             domain = en.NonNegativeReals
 
         if self.initial_value_ref is not None:
-            initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods)
+            initial_val = to_initial_values(profile, self.initial_value_ref, time_periods, exp_periods,
+                                            scaling=initial_value_scaling)
         else:
+            # TODO: add scaling for explicit initial value
             initial_val = self.initial_value
         setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
 
@@ -2011,6 +2015,20 @@ class Solar(Node):
             self.ports[port_name].add_initial_value_from_array(profile)
 
 
+class NewSolar(Node):
+    """New Solar Node using Solar size for scaling of initial value ref"""
+    def __init__(self,
+                 port_name: str,
+                 solar_size: float,
+                 initial_value_ref: str,
+                 curtailable: bool = False,
+                 **data):
+        super().__init__(**data)
+        self.ports[port_name] = ElectricalGeneration(curtailable=curtailable,
+                                                     initial_value_ref=initial_value_ref,
+                                                     initial_value_scaling=solar_size)
+
+
 class Load(Node):
 
     def __init__(self,
@@ -2033,7 +2051,8 @@ class FlexNode(Node):
                  port_unit: int,
                  **data):
         super().__init__(**data)
-        self.ports[port_name] = FlexPort(units=port_unit)
+        self.ports[port_name] = FlexPort(port_name=port_name,
+                                         units=port_unit)
 
 
 class FlexElectricalNode(Node):
@@ -2042,7 +2061,8 @@ class FlexElectricalNode(Node):
                  port_name: str,
                  **data):
         super().__init__(**data)
-        self.ports[port_name] = FlexPort(units=Units.KW)
+        self.ports[port_name] = FlexPort(port_name=port_name,
+                                         units=Units.KW)
 
 
 class NewInverter(Inverter):
@@ -2066,7 +2086,8 @@ class FlexNodeWithEmissions(Node):
                  Union[float, ArrayType],
                  **data):
         super().__init__(**data)
-        self.ports[emitting_port] = FlexPort(units=emitting_port_units)
+        self.ports[emitting_port] = FlexPort(port_name=emitting_port,
+                                             units=emitting_port_units)
         self.ports[carbon_port] = CarbonSource()
         self.add_emission_transformation(emitting_port=self.ports[emitting_port],
                                          carbon_port=self.ports[carbon_port],

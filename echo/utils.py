@@ -311,10 +311,10 @@ def tile_array_over_expansion_periods(array, expansion_periods):
     return output
 
 
-def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int):
+def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int, scaling: int = 1):
     if profile is None:
         raise ValueError('No profile dataframe defined. Check that you added the profile to the optimiser.')
-    values = profile[key].values
+    values = profile[key].values * scaling
     assert len(values) == time_periods, 'Initial values are wrong length.'
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
     d = dict(zip(keys, values))
@@ -337,3 +337,27 @@ def orjson_dumps(v, *, default):
 def process_time_series_data(array: np.ndarray, time_periods: int, expansion_periods: int = 1):
     x = ArrayWrap(array)
     x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
+
+
+def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion_periods: int = 1):
+    """
+    Generates a dict suitable for initializing a pyomo var or param.
+    The dict keys are a tuple (expansion period, time period)
+    """
+    d = {}
+    assert hasattr(array, '__iter__'), 'Please enter an iterable array'
+    if (len(array) != time_periods) or (len(array) != time_periods*expansion_periods):
+        raise ValueError('Array constraint length is not consistent with combination of time/expansion periods.')
+    if len(array) == time_periods:
+        print('Repeating array across {} expansion period(s).'.format(expansion_periods))
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = array[t]
+    elif len(array) == time_periods*expansion_periods:
+        print('Dividing array between {} expansion period(s).'.format(expansion_periods))
+        i = 0
+        for p in range(expansion_periods):
+            for t in range(time_periods):
+                d[(p, t)] = array[i]
+                i += 1
+    return d
