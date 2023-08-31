@@ -1,6 +1,7 @@
 import pickle
 import uuid
 import warnings
+from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -14,7 +15,6 @@ from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.echo_models import FlexPort, Transform
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
-from echo.models.pyomo import EchoConcreteModel
 from echo.utils import ArrayWrap, generate_array_constraint, set_var_bounds_from_dict, to_initial_values
 
 
@@ -30,10 +30,42 @@ class BaseModel(PydanticBaseModel):
         extra = "ignore"  # If 'allow', extra attributes can be added after instantiation, if 'ignore', extra attributes are ignored, if 'forbid', extra attributes are not allowed.
 
 
+class AbstractPort(ABC):
+    """The abstract base Port that defines the initialise method signature"""
+
+    @abstractmethod
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
+        ...
+
+
+class AbstractNode(ABC):
+    """The abstract base Node that defines the initialise method signature"""
+
+    @abstractmethod
+    def initialise_node(self, model: en.ConcreteModel, profile: pd.DataFrame):
+        ...
+
+
+class AbstractEdge(ABC):
+    """The abstract base Edge that defines the initialise method signature"""
+
+    @abstractmethod
+    def initialise_edge(self, model: en.ConcreteModel):
+        ...
+
+
+class AbstractPath(ABC):
+    """The abstract base Path that defines the initialise method signature"""
+
+    @abstractmethod
+    def initialise_path(self, model: en.ConcreteModel):
+        ...
+
+
 ConstraintValueType = Union[ArrayType, float]
 
 
-class Port(BaseModel):
+class Port(BaseModel, AbstractPort):
     # Pydantic attribute declaration follows this format:
     # attribute_name: type = default_value
 
@@ -163,7 +195,7 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
+    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
         """Creates pyomo vars, params, and constraints for the port."""
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
@@ -424,7 +456,7 @@ class Port(BaseModel):
         vals = x.dict()
         self.active_periods = vals
 
-    def add_objective(self, model: EchoConcreteModel):
+    def add_objective(self, model: en.ConcreteModel):
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
@@ -450,7 +482,7 @@ class Port(BaseModel):
         self.objective += total
 
 
-class Node(BaseModel):
+class Node(BaseModel, AbstractNode):
     """
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
@@ -593,7 +625,7 @@ class Node(BaseModel):
         return len(self.ports)
 
 
-class Edge(BaseModel):
+class Edge(BaseModel, AbstractEdge):
     """
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
@@ -627,7 +659,7 @@ class Edge(BaseModel):
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
             raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
 
-    def initialise_edge(self, model: EchoConcreteModel):
+    def initialise_edge(self, model: en.ConcreteModel):
         """Applies edge constraint: port1 = -1 *port2
         Args:
             model: pyomo concrete model
@@ -664,7 +696,7 @@ class Edge(BaseModel):
         return max_flow
 
 
-class Path(BaseModel):
+class Path(BaseModel, AbstractPath):
     """A path is a sequence of distinct vertices (nodes)."""
 
     edge_ports: list[tuple] = []  # list of edge name tuples
@@ -692,14 +724,14 @@ class Path(BaseModel):
             vertex_list = [i.node_name for i in vertex_list]
         self.vertices = vertex_list
 
-    def initialise_path(self, model: EchoConcreteModel):
+    def initialise_path(self, model: en.ConcreteModel):
         setattr(
             model,
             self.flow_value,
             en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
         )
 
-    def add_objective(self, model: EchoConcreteModel):
+    def add_objective(self, model: en.ConcreteModel):
         total = 0
 
         if self.regularise is True:
@@ -716,8 +748,8 @@ class Path(BaseModel):
 
 
 class OptimisationGraph(BaseModel):
-    node_obj: dict
-    edge_obj: dict
+    node_obj: dict[str, Node]
+    edge_obj: dict[tuple[str, str], Edge]
     paths: dict[tuple, Path]
 
     def __init__(self, **data):
@@ -752,7 +784,7 @@ class OptimisationGraph(BaseModel):
         else:
             print(f"Node {node_name} not found.")
 
-    def delete_edge(self, edge_nodes: Tuple[str, str]):
+    def delete_edge(self, edge_nodes: tuple[str, str]):
         if self.get_edge(edge_nodes) is not None:
             del self.edge_obj[edge_nodes]
         else:
@@ -806,7 +838,7 @@ class OptimisationGraph(BaseModel):
 
         self.edge_obj[(node1_name, node2_name)] = edge_obj
 
-    def add_edge_obj(self, edge: Union[list, Edge]):
+    def add_edge_obj(self, edge: Union[list[Edge], Edge]):
         # todo phase out this method
         if type(edge) is list:
             for e in edge:
@@ -921,7 +953,7 @@ class OptimisationGraph(BaseModel):
             p.edge_ports.append(edge_ports)
         return p
 
-    def apply_path_constraints(self, model: EchoConcreteModel):
+    def apply_path_constraints(self, model: en.ConcreteModel):
         """Applies path tracing constraints to model"""
 
         def path_flow_rule(model, p, t):
