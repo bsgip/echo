@@ -1,10 +1,13 @@
+from collections.abc import Sequence
+
 import numpy as np
-from echo.echo_validators import *
-from sklearn import linear_model
+import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
-from collections.abc import Sequence
-import orjson as orjson
+from sklearn import linear_model
+
+from echo.echo_validators import *
+
 
 def _to_values(profile, key):
     if isinstance(profile, dict):
@@ -13,12 +16,12 @@ def _to_values(profile, key):
 
 
 class ArrayWrap(Sequence):
-    def __init__(self, var):            # scalar, 1d list, 2d list,
+    def __init__(self, var):  # scalar, 1d list, 2d list,
         self.var = var
         if not hasattr(var, "__len__"):
             self.get_func = self.get_scalar
             self.is_scalar = True
-        elif (len(var)==1) and (not hasattr(var[0], "__len__")) :
+        elif (len(var) == 1) and (not hasattr(var[0], "__len__")):
             self.get_func = self.get_scalar
             self.is_scalar = True
             self.var = var[0]
@@ -31,37 +34,38 @@ class ArrayWrap(Sequence):
 
         super().__init__()
 
-
     def dict(self):
-        """ For converting array wrap to a dict"""
-        assert self.tp_set is True, 'Set time periods before converting to dict'
+        """For converting array wrap to a dict"""
+        assert self.tp_set is True, "Set time periods before converting to dict"
         keys = [(x, i) for x in range(self.expansion_periods) for i in range(self.time_periods)]
         if not self.is_scalar:
-            vals = np.reshape(self.var, self.expansion_periods*self.time_periods)
+            vals = np.reshape(self.var, self.expansion_periods * self.time_periods)
         else:
-            vals = self.var * np.ones(self.expansion_periods*self.time_periods)
+            vals = self.var * np.ones(self.expansion_periods * self.time_periods)
         d = dict(zip(keys, vals))
         return d
 
-    def set_periods(self, expansion_periods: int, time_periods: int)->None:
+    def set_periods(self, expansion_periods: int, time_periods: int) -> None:
         self.time_periods = time_periods
         self.expansion_periods = expansion_periods
         self.tp_set = True
         if not self.is_scalar:
             self.get_func = self.get_array
             var_array = np.array(self.var).flatten()
-            if len(var_array) == time_periods:   # tile across expansion periods
-                self.var = np.vstack([var_array]*expansion_periods)
-            elif len(var_array) == time_periods*expansion_periods:
+            if len(var_array) == time_periods:  # tile across expansion periods
+                self.var = np.vstack([var_array] * expansion_periods)
+            elif len(var_array) == time_periods * expansion_periods:
                 self.var = np.reshape(var_array, (expansion_periods, time_periods))
             else:
-                raise Exception("must have shape of scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)")
+                raise Exception(
+                    "must have shape of scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"
+                )
 
     def __getitem__(self, i):
         return self.get_func(i)
 
     def get_scalar(self, i):
-        #todo this will return valid numbers even if the index is out of range
+        # todo this will return valid numbers even if the index is out of range
         return self.var
 
     def get_dummy(self, i):
@@ -70,11 +74,11 @@ class ArrayWrap(Sequence):
 
     def get_array(self, i):
         return self.var[i]
+
     #
     # def get_non_scalar(self, i):
     #     if isinstance(i, tuple):
     #         p = i[0], t=i[1]
-
 
     def __len__(self):
         return len(self.var)
@@ -90,7 +94,8 @@ class ArrayWrap(Sequence):
         if isinstance(v, (float, int, list, np.ndarray)):
             return cls(v)
         else:
-            raise TypeError('requires float, int, list or arraylike')
+            raise TypeError("requires float, int, list or arraylike")
+
 
 def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or None) -> None:
     """
@@ -109,6 +114,7 @@ def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or N
     if ub is not None:
         v.setub(ub)
 
+
 def set_var_bounds_from_dict(var, ub: dict or None, lb: dict or None) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
@@ -126,6 +132,7 @@ def set_var_bounds_from_dict(var, ub: dict or None, lb: dict or None) -> None:
         for k, i in ub.items():
             var[k].setub(i)
 
+
 def generate_array_constraint(constraint, time_periods: int, expansion_periods: int) -> dict:
     """
     Args:
@@ -138,16 +145,16 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
         for p in range(expansion_periods):
             for t in range(time_periods):
                 d[(p, t)] = constraint
-    elif hasattr(constraint, '__iter__'):
+    elif hasattr(constraint, "__iter__"):
         # Check length
-        if (len(constraint) != time_periods) or (len(constraint) != time_periods*expansion_periods):
-            raise ValueError('Array constraint length is not consistent with time periods/expansion periods.')
+        if (len(constraint) != time_periods) or (len(constraint) != time_periods * expansion_periods):
+            raise ValueError("Array constraint length is not consistent with time periods/expansion periods.")
         if len(constraint) == time_periods:
             # Can tile across expansion periods
             for p in range(expansion_periods):
                 for t in range(time_periods):
                     d[(p, t)] = constraint[t]
-        if len(constraint) == time_periods*expansion_periods:
+        if len(constraint) == time_periods * expansion_periods:
             # No tiling
             i = 0
             for p in range(expansion_periods):
@@ -155,6 +162,7 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
                     d[(p, t)] = constraint[i]
                     i += 1
     return d
+
 
 # class PretendArray:
 #     def __init__(self, var):
@@ -232,7 +240,7 @@ def do_multivariate_regression(X, y):
 
 
 def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, time_periods):
-    """ Generates a set of output (y) points based on two coefficient arrays,
+    """Generates a set of output (y) points based on two coefficient arrays,
     one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
     Args:
         temp_coef: list of coefficients, right to left in increasing order
@@ -245,7 +253,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
         x: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
         y: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
 
-        """
+    """
 
     # todo generalise this further to take an arbitrary number of arrays (eg temp array) + corresponding coeff array, so we can do arbitrary number of variables
     x = {}
@@ -281,7 +289,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
 
 
 def populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods):
-    """ Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
+    """Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
     Eg for inputs:
         values = 10
         time_periods = 4
@@ -302,36 +310,38 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
 
 
 def create_named_constraint_with_rule(model, con_name, rule):
-    """ Util function for creating pyomo constraints from a rule."""
+    """Util function for creating pyomo constraints from a rule."""
     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
 
+
 def tile_array_over_expansion_periods(array, expansion_periods):
-    """ Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
+    """Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
     output = np.tile(np.array(array), expansion_periods)
     return output
 
 
 def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int, scaling: int = 1):
     if profile is None:
-        raise ValueError('No profile dataframe defined. Check that you added the profile to the optimiser.')
+        raise ValueError("No profile dataframe defined. Check that you added the profile to the optimiser.")
     values = profile[key].values * scaling
-    assert len(values) == time_periods, 'Initial values are wrong length.'
+    assert len(values) == time_periods, "Initial values are wrong length."
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
     d = dict(zip(keys, values))
     return d
 
+
 def orjson_dumps(v, *, default):
     # orjson.dumps returns bytes, to match standard json.dumps we need to decode
     return orjson.dumps(v, default=default).decode()
+
 
 def orjson_dumps(v, *, default):
     for key, value in v.items():
         if isinstance(value, dict):
-            v[key] = ':'.join(value)
+            v[key] = ":".join(value)
 
     # orjson.dumps returns bytes, to match standard json.dumps we need to decode
     return orjson.dumps(v, default=default).decode()
-
 
 
 def process_time_series_data(array: np.ndarray, time_periods: int, expansion_periods: int = 1):
@@ -345,16 +355,16 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
     The dict keys are a tuple (expansion period, time period)
     """
     d = {}
-    assert hasattr(array, '__iter__'), 'Please enter an iterable array'
-    if (len(array) != time_periods) or (len(array) != time_periods*expansion_periods):
-        raise ValueError('Array constraint length is not consistent with combination of time/expansion periods.')
+    assert hasattr(array, "__iter__"), "Please enter an iterable array"
+    if (len(array) != time_periods) or (len(array) != time_periods * expansion_periods):
+        raise ValueError("Array constraint length is not consistent with combination of time/expansion periods.")
     if len(array) == time_periods:
-        print('Repeating array across {} expansion period(s).'.format(expansion_periods))
+        print("Repeating array across {} expansion period(s).".format(expansion_periods))
         for p in range(expansion_periods):
             for t in range(time_periods):
                 d[(p, t)] = array[t]
-    elif len(array) == time_periods*expansion_periods:
-        print('Dividing array between {} expansion period(s).'.format(expansion_periods))
+    elif len(array) == time_periods * expansion_periods:
+        print("Dividing array between {} expansion period(s).".format(expansion_periods))
         i = 0
         for p in range(expansion_periods):
             for t in range(time_periods):

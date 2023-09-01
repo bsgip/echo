@@ -1,7 +1,7 @@
 import pickle
 import uuid
 import warnings
-from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -13,8 +13,8 @@ from pydantic import Field, validator
 
 from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
 from echo.constants import negative_variable_component, positive_variable_component
-from echo.echo_models import FlexPort, Transform
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
+from echo.models.pyomo import EchoConcreteModel
 from echo.utils import ArrayWrap, generate_array_constraint, set_var_bounds_from_dict, to_initial_values
 
 
@@ -30,42 +30,10 @@ class BaseModel(PydanticBaseModel):
         extra = "ignore"  # If 'allow', extra attributes can be added after instantiation, if 'ignore', extra attributes are ignored, if 'forbid', extra attributes are not allowed.
 
 
-class AbstractPort(ABC):
-    """The abstract base Port that defines the initialise method signature"""
-
-    @abstractmethod
-    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
-        ...
-
-
-class AbstractNode(ABC):
-    """The abstract base Node that defines the initialise method signature"""
-
-    @abstractmethod
-    def initialise_node(self, model: en.ConcreteModel, profile: pd.DataFrame):
-        ...
-
-
-class AbstractEdge(ABC):
-    """The abstract base Edge that defines the initialise method signature"""
-
-    @abstractmethod
-    def initialise_edge(self, model: en.ConcreteModel):
-        ...
-
-
-class AbstractPath(ABC):
-    """The abstract base Path that defines the initialise method signature"""
-
-    @abstractmethod
-    def initialise_path(self, model: en.ConcreteModel):
-        ...
-
-
 ConstraintValueType = Union[ArrayType, float]
 
 
-class Port(BaseModel, AbstractPort):
+class Port(BaseModel):
     # Pydantic attribute declaration follows this format:
     # attribute_name: type = default_value
 
@@ -84,7 +52,7 @@ class Port(BaseModel, AbstractPort):
     export_constraint_value: Optional[ConstraintValueType] = None
     active_periods: Optional[dict]
     slack: bool = False
-    objective: Optional[Any] = 0  # this will eventually be a pyomo expression
+    objective: float = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -195,7 +163,7 @@ class Port(BaseModel, AbstractPort):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
+    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
         """Creates pyomo vars, params, and constraints for the port."""
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
@@ -356,7 +324,7 @@ class Port(BaseModel, AbstractPort):
                 en.Constraint(model.Expansion, model.Time, rule=on_off_rule2),
             )
 
-    def constrain_pos_neg(self, model):
+    def constrain_pos_neg(self, model: EchoConcreteModel):
         """Applies a mixed integer constraint that splits a port var into positive and negative components"""
         if hasattr(model, self.pos) is False:
             setattr(
@@ -428,10 +396,11 @@ class Port(BaseModel, AbstractPort):
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array, expansion_periods: int = 1, time_periods: Optional[int] = None):
+    def add_initial_value_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Adds initial port value which is used to initialise the pyomo var/param
         Args:
-            array: array, list of initial values. Should have length = time_periods, or length = time_periods*expansion_periods
+            array: array, list of initial values. Should have either:
+                   length = time_periods, or length = time_periods*expansion_periods
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
@@ -443,7 +412,7 @@ class Port(BaseModel, AbstractPort):
         vals = x.dict()
         self.add_initial_value(vals)
 
-    def add_active_periods_from_array(self, array, expansion_periods: int = 1, time_periods: Optional[int] = None):
+    def add_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Adds port active periods
         Args:
             array: array, list of active periods as bool values
@@ -456,7 +425,7 @@ class Port(BaseModel, AbstractPort):
         vals = x.dict()
         self.active_periods = vals
 
-    def add_objective(self, model: en.ConcreteModel):
+    def add_objective(self, model: EchoConcreteModel):
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
@@ -482,7 +451,44 @@ class Port(BaseModel, AbstractPort):
         self.objective += total
 
 
-class Node(BaseModel, AbstractNode):
+@dataclass
+class TransformTerm:
+    var: Port
+    rule: TransformRule
+    weight: ArrayWrap
+
+
+class Transform(BaseModel):
+    """An object for carrying a generic linear node transformation."""
+
+    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    transform_name: Optional[str] = None
+    lhs: list[TransformTerm]
+    rhs = 0
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.lhs = []
+        if self.transform_name is None:
+            self.transform_name = "transform_" + str(self.uid)
+
+    def add_lhs_term(self, var: Port, rule: TransformRule, weight: ArrayWrap):
+        """Adds a left-hand side (LHS) term to the transform"""
+        if isinstance(weight, ArrayWrap) is False:
+            weight = ArrayWrap(weight)
+        term = TransformTerm(var, rule, weight)
+        self.lhs.append(term)
+
+    def initialise_transform(self, model: EchoConcreteModel):
+        # Check if we need to create pos/neg components, and initialise the weights
+        for term in self.lhs:
+            term.weight.set_periods(len(model.Expansion), len(model.Time))
+            if term.rule is not TransformRule.Both:
+                var = term.var
+                var.constrain_pos_neg(model)
+
+
+class Node(BaseModel):
     """
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
@@ -490,10 +496,10 @@ class Node(BaseModel, AbstractNode):
 
     node_name: Optional[str]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    ports: dict = {}
+    ports: dict
     node_rule: NodeRule = NodeRule.NA
-    transformations: dict = {}
-    objective: Optional[Any] = 0  # For adding any node objectives
+    transformations: dict[uuid.UUID, Transform]
+    objective: float = 0  # For adding any node objectives
 
     @property
     def inflow(self):
@@ -501,6 +507,8 @@ class Node(BaseModel, AbstractNode):
 
     def __init__(self, **data):
         super().__init__(**data)
+        self.transformations = {}
+        self.ports = {}
         if self.node_name is None:
             self.node_name = "node_" + str(self.uid)
 
@@ -593,15 +601,15 @@ class Node(BaseModel, AbstractNode):
         def transform(model, p, t):  # Generic transformation node
             lhs = 0
             for term in current_transform.lhs:
-                weight = term["weight"]
-                var = term["var"]
-                rule = term["rule"]
+                weight = term.weight
+                var = term.var
+                rule = term.rule
                 if rule is TransformRule.Both:
-                    var = term["var"].port_name
+                    var = term.var.port_name
                 elif rule is TransformRule.Pos:
-                    var = term["var"].pos
+                    var = term.var.pos
                 elif rule is TransformRule.Neg:
-                    var = term["var"].neg
+                    var = term.var.neg
                 lhs += getattr(model, var)[p, t] * weight[p, t]
             return lhs == current_transform.rhs
 
@@ -625,7 +633,7 @@ class Node(BaseModel, AbstractNode):
         return len(self.ports)
 
 
-class Edge(BaseModel, AbstractEdge):
+class Edge(BaseModel):
     """
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
@@ -659,7 +667,7 @@ class Edge(BaseModel, AbstractEdge):
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
             raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
 
-    def initialise_edge(self, model: en.ConcreteModel):
+    def initialise_edge(self, model: EchoConcreteModel):
         """Applies edge constraint: port1 = -1 *port2
         Args:
             model: pyomo concrete model
@@ -696,7 +704,7 @@ class Edge(BaseModel, AbstractEdge):
         return max_flow
 
 
-class Path(BaseModel, AbstractPath):
+class Path(BaseModel):
     """A path is a sequence of distinct vertices (nodes)."""
 
     edge_ports: list[tuple] = []  # list of edge name tuples
@@ -705,7 +713,7 @@ class Path(BaseModel, AbstractPath):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
-    objective: Optional[Any] = 0
+    objective: float = 0
 
     flow_value: Optional[str]
     contingency_neg: Optional[str]
@@ -724,14 +732,14 @@ class Path(BaseModel, AbstractPath):
             vertex_list = [i.node_name for i in vertex_list]
         self.vertices = vertex_list
 
-    def initialise_path(self, model: en.ConcreteModel):
+    def initialise_path(self, model: EchoConcreteModel):
         setattr(
             model,
             self.flow_value,
             en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
         )
 
-    def add_objective(self, model: en.ConcreteModel):
+    def add_objective(self, model: EchoConcreteModel):
         total = 0
 
         if self.regularise is True:
@@ -953,7 +961,7 @@ class OptimisationGraph(BaseModel):
             p.edge_ports.append(edge_ports)
         return p
 
-    def apply_path_constraints(self, model: en.ConcreteModel):
+    def apply_path_constraints(self, model: EchoConcreteModel):
         """Applies path tracing constraints to model"""
 
         def path_flow_rule(model, p, t):
