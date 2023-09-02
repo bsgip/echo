@@ -1,16 +1,17 @@
-import numpy as np
-
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
-from echo.objectives import *
-
 import os
 
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
+import numpy as np
+
+from echo.configuration import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.objectives import *
+
+SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
 SOLVER_EXECUTABLE = None
 
 N_INTERVALS = 48
+
 
 def test_solar_generation_limited_by_inverter_size():
     expansion_periods = 1
@@ -21,22 +22,22 @@ def test_solar_generation_limited_by_inverter_size():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
     pv1.curtailable = True
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
-    inverter.add_electrical_ports_from_list(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
+    inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -44,16 +45,17 @@ def test_solar_generation_limited_by_inverter_size():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=None
+        objective_set=None,
     )
 
-    optimiser.objective = sum(getattr(optimiser.model, pv1.port_name)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time)
+    optimiser.objective = sum(
+        getattr(optimiser.model, pv1.port_name)[p, t] for p in optimiser.model.Expansion for t in optimiser.model.Time
+    )
 
     optimiser.optimise()
 
     sol_p = optimiser.values(pv1.port_name, 0)
-    inv_p = optimiser.values(inverter.ports['cp'].port_name,0)
+    inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], max(-i, -5.0))
@@ -69,22 +71,22 @@ def test_non_curtailable_system_not_curtailed():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-5.0] * N_INTERVALS, expansion_periods)
     pv1.curtailable = False
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
-    inverter.add_electrical_ports_from_list(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
+    inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -92,18 +94,21 @@ def test_non_curtailable_system_not_curtailed():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=None
+        objective_set=None,
     )
 
-    grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time)
+    grid.ports["grid"].constrain_pos_neg(optimiser.model)
+    optimiser.objective = -sum(
+        getattr(optimiser.model, grid.ports["grid"].neg)[p, t]
+        for p in optimiser.model.Expansion
+        for t in optimiser.model.Time
+    )
 
     optimiser.optimise()
 
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
+    inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
-    root_p = optimiser.values(grid.ports['grid'].port_name, 0)
+    root_p = optimiser.values(grid.ports["grid"].port_name, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], -5.0)
@@ -120,22 +125,22 @@ def test_curtailable_system_curtailed():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-5.0] * N_INTERVALS, expansion_periods)
     pv1.curtailable = True
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
-    inverter.add_electrical_ports_from_list(['cp', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
+    inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -143,18 +148,21 @@ def test_curtailable_system_curtailed():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=None
+        objective_set=None,
     )
 
-    grid.ports['grid'].constrain_pos_neg(optimiser.model)
-    optimiser.objective = -sum(getattr(optimiser.model, grid.ports['grid'].neg)[p, t]
-                              for p in optimiser.model.Expansion for t in optimiser.model.Time)
+    grid.ports["grid"].constrain_pos_neg(optimiser.model)
+    optimiser.objective = -sum(
+        getattr(optimiser.model, grid.ports["grid"].neg)[p, t]
+        for p in optimiser.model.Expansion
+        for t in optimiser.model.Time
+    )
 
     optimiser.optimise()
 
-    inv_p = optimiser.values(inverter.ports['cp'].port_name, 0)
+    inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
-    root_p = optimiser.values(grid.ports['grid'].neg, 0)
+    root_p = optimiser.values(grid.ports["grid"].neg, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], 0.0)

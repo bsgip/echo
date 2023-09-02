@@ -1,10 +1,13 @@
 import os
-
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
 from datetime import datetime
 
+from echo.configuration import Units
+from echo.echo_optimiser import EchoOptimiser
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
+from echo.objectives import *
+
+# fmt: off
 SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
 SOLVER_EXECUTABLE = None
 
@@ -18,7 +21,7 @@ interval_duration = 30
 system = OptimisationGraph()
 
 grid = Node()
-grid.add_electrical_ports_from_list(['grid'])
+grid.add_port('grid', FlexPort(units=Units.KW))
 
 battery1 = Node()
 b1 = ElectricalStorage(max_capacity=15.0,
@@ -37,7 +40,7 @@ l1.add_demand_profile_from_array([10]*time_periods, expansion_periods)
 load1.ports['demand'] = l1
 
 site1 = TellegenNode()
-site1.add_electrical_ports_from_list(['cp', 'load', 'bess'])
+site1.add_ports_from_list(['cp', 'load', 'bess'], FlexPort, units=Units.KW)
 cp1 = site1.ports['cp']
 
 system.add_node_obj([grid, battery1, load1, site1])

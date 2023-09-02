@@ -3,10 +3,13 @@ from __future__ import division
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
+from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
 from echo.objectives import *
-from echo.echo_models import *
 
+# fmt: off
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
     'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
@@ -61,10 +64,10 @@ system = OptimisationGraph()
 
 # Create assets
 grid = Node()
-grid.add_electrical_ports_from_list(['grid'])
+grid.add_port('grid', FlexPort(units=Units.KW))
 
 connection_point = TellegenNode()
-connection_point.add_electrical_ports_from_list(['load', 'bess', 'pv', 'grid'])
+connection_point.add_ports_from_list(['load', 'bess', 'pv', 'grid'], FlexPort, units=Units.KW)
 
 load = Node()
 l1 = ElectricalDemand()

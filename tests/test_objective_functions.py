@@ -1,18 +1,18 @@
 from __future__ import division
-import pytest
 
 import pprint
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pytest
 import seaborn as sns
+from networkx import Graph, draw
 from pyomo.util.infeasible import log_infeasible_constraints
 
+from echo.configuration import *
 from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
 from echo.objectives import *
-from networkx import Graph, draw
 
 
 def test_objectives_sum_correctly():
@@ -23,68 +23,70 @@ def test_objectives_sum_correctly():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     battery = Node()
-    b1 = ElectricalStorage(max_capacity=48,
-                           depth_of_discharge_limit=0,
-                           charging_power_limit=5.0,
-                           discharging_power_limit=-5.0,
-                           charging_efficiency=1,
-                           discharging_efficiency=1,
-                           initial_state_of_charge=48.0)
-    battery.ports['battery_asset'] = b1
+    b1 = ElectricalStorage(
+        max_capacity=48,
+        depth_of_discharge_limit=0,
+        charging_power_limit=5.0,
+        discharging_power_limit=-5.0,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=48.0,
+    )
+    battery.ports["battery_asset"] = b1
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-4] * time_periods, expansion_periods)
     pv1.curtailable = True
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=0.9, ac_dc_efficiency=1)
-    inverter.add_ac_port('cp')
-    inverter.add_dc_port('bess')
-    inverter.add_dc_port('pv')
+    inverter.add_ac_port("cp")
+    inverter.add_dc_port("bess")
+    inverter.add_dc_port("pv")
 
     cp = TellegenNode()
-    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
+    cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
 
     load = Node()
     l1 = ElectricalDemand()
     l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
-    load.ports['load'] = l1
+    load.ports["load"] = l1
 
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['bess'], b1)
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(cp.ports['load'], l1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
-    system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(cp.ports["load"], l1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inv"])
+    system.connect_ports_and_create_edge(cp.ports["grid"], grid.ports["grid"])
 
     # Define a set of objectives
     tp_cost = ThroughputCost(component=b1, rate=0.1)
 
-    import_t = ImportTariff(component=cp.ports['grid'],
-                            tariff_array=[0.1] * 24 + [0.4] * 24)
+    import_t = ImportTariff(component=cp.ports["grid"], tariff_array=[0.1] * 24 + [0.4] * 24)
 
-    export_t = ExportTariff(component=cp.ports['grid'],
-                            tariff_array=[0.0] * 24 + [0.1] * 24)
+    export_t = ExportTariff(component=cp.ports["grid"], tariff_array=[0.0] * 24 + [0.1] * 24)
     # peak usage
-    peak_charge = ImportDemandCharge(rate=2.0,
-                                     window_array=[0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8,
-                                     min_demand=0.0,
-                                     reset_periods=[time_periods])
+    peak_charge = ImportDemandCharge(
+        rate=2.0,
+        window_array=[0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8,
+        min_demand=0.0,
+        reset_periods=[time_periods],
+    )
 
     # shoulder usage
-    shoulder_charge = ImportDemandCharge(rate=1.6,
-                                         window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
-                                         min_demand=0.0,
-                                         reset_periods=[time_periods])
+    shoulder_charge = ImportDemandCharge(
+        rate=1.6,
+        window_array=[0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4,
+        min_demand=0.0,
+        reset_periods=[time_periods],
+    )
 
-    demand_tariff = DemandTariffObjective(component=cp.ports['grid'],
-                                          demand_charges=[peak_charge,
-                                                          shoulder_charge])
+    demand_tariff = DemandTariffObjective(component=cp.ports["grid"], demand_charges=[peak_charge, shoulder_charge])
 
     obj_set = ObjectiveSet(objective_list=[tp_cost, import_t, export_t, demand_tariff])
 
@@ -94,7 +96,7 @@ def test_objectives_sum_correctly():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=obj_set
+        objective_set=obj_set,
     )
 
     optimiser.optimise()

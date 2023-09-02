@@ -3,9 +3,11 @@ from __future__ import division
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
+from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
 from echo.objectives import *
-from echo.echo_models import *
 
 """ 
             Example of optimising a behind operation of a stand alone power system
@@ -19,6 +21,7 @@ from echo.echo_models import *
 
 """
 
+# fmt: off
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
     'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
@@ -60,13 +63,12 @@ system = OptimisationGraph()
 
 # Create assets
 # grid = Node(node_name='grid')                                   # create node representing upstream grid
-# grid.add_electrical_ports_from_list(['grid'])  # create a port which will be used to connect this with the connection_point
+# grid.add_ports('grid', FlexPort(units=Units.KW))  # create a port which will be used to connect this with the connection_point
 
 
 
 connection_point = TellegenNode(node_name='cp')  # create the connection point
-connection_point.add_electrical_ports_from_list(
-    ['load', 'inv', 'diesel_gen'])  # create ports to connect to the grid, the load, and the inverter
+connection_point.add_ports_from_list(['load', 'inv', 'diesel_gen'], FlexPort, units=Units.KW)  # create ports to connect to the grid, the load, and the inverter
 # connection_point.ports['grid'].set_flow_constraints(max_import=0,max_export=-0, slack=True)
 
 
@@ -177,5 +179,3 @@ ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
 ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
 plt.show()
-
-

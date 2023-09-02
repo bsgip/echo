@@ -2,7 +2,7 @@ import pickle
 import uuid
 import warnings
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Iterable, Optional, Type, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -496,7 +496,7 @@ class Node(BaseModel):
 
     node_name: Optional[str]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    ports: dict
+    ports: dict[str, Port]
     node_rule: NodeRule = NodeRule.NA
     transformations: dict[uuid.UUID, Transform]
     objective: float = 0  # For adding any node objectives
@@ -518,30 +518,15 @@ class Node(BaseModel):
         else:
             print(f"Port with name {name} is already defined on node {self.node_name}")
 
+    def add_ports_from_list(self, names: Iterable[str], port_type: Type[Port], **kwargs):
+        """Creates a set of ports (using port_type) and adds them to this Node. The ports will be constructed
+        using port_type and the supplied kwargs"""
+        for name in names:
+            self.add_port(name, port_type(**kwargs))
+
     def get_port(self, port_name: str):
         if self.ports.get(port_name) is not None:
             return self.ports.get(port_name)
-
-    def add_flex_port(self, name, unit=Units.NA):
-        """Adds named port of specified type to node.
-        Args:
-            name: port name as string
-            unit: Unit
-        """
-        self.ports[name] = FlexPort()
-        if unit is not Units.NA:
-            self.ports[name].units = unit
-
-    def add_electrical_port(self, port_name: str):
-        self.add_flex_port(port_name, unit=Units.KW)
-
-    def add_electrical_ports_from_list(self, name_list: list):
-        for name in name_list:
-            self.add_electrical_port(port_name=name)
-
-    def add_flex_ports_from_list(self, name_list: list, unit=Units.NA):
-        for name in name_list:
-            self.add_flex_port(name, unit)
 
     def add_transformation(self, transformation_obj: Transform):
         """Adds a transformation object to a node.

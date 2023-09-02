@@ -4,10 +4,14 @@ import pandas as pd
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
+from echo.configuration import Units
+from echo.echo_models import ElectricalStorage, FixedElectricalPort
 from echo.echo_optimiser import EchoOptimiser
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
 from echo.objectives import *
-from echo.echo_models import *
 
+# fmt: off
 # set up seaborn the way you like
 sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
     'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
@@ -63,10 +67,10 @@ system = OptimisationGraph()
 
 # Create assets
 grid = Node(node_name='grid')
-grid.add_electrical_ports_from_list(['grid'])
+grid.add_port('grid', FlexPort(units=Units.KW))
 
 connection_point = TellegenNode(node_name='cp')
-connection_point.add_electrical_ports_from_list(['load', 'bess', 'pv', 'grid'])
+connection_point.add_ports_from_list(['load', 'bess', 'pv', 'grid'], FlexPort, units=Units.KW)
 
 load = Node(node_name='load')
 l1 = FixedElectricalPort()

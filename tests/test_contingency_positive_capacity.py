@@ -1,16 +1,17 @@
-import numpy as np
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
-from echo.objectives import *
-
 import os
 
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
+import numpy as np
+
+from echo.configuration import *
+from echo.echo_models import *
+from echo.echo_optimiser import EchoOptimiser
+from echo.objectives import *
+
+SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
 SOLVER_EXECUTABLE = None
 
-def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
 
+def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -18,39 +19,40 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     battery = Node()
-    b1 = ElectricalStorage(max_capacity=48,
-                           depth_of_discharge_limit=0,
-                           charging_power_limit=5.0,
-                           discharging_power_limit=-5.0,
-                           charging_efficiency=0.9,
-                           discharging_efficiency=1,
-                           initial_state_of_charge=0.0)
-    battery.ports['battery_asset'] = b1
+    b1 = ElectricalStorage(
+        max_capacity=48,
+        depth_of_discharge_limit=0,
+        charging_power_limit=5.0,
+        discharging_power_limit=-5.0,
+        charging_efficiency=0.9,
+        discharging_efficiency=1,
+        initial_state_of_charge=0.0,
+    )
+    battery.ports["battery_asset"] = b1
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-4] * 24 + [0] * 24, expansion_periods)
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
-    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
+    inverter.add_ports_from_list(["cp", "bess", "pv"], FlexPort, units=Units.KW)
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['bess'], b1)
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
     system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery, solar])
 
     bess_to_g = system.get_path([battery, inverter, grid])
 
-    contingency_obj = ContingencyPositive(component=bess_to_g,
-                                          duration=10.0)
+    contingency_obj = ContingencyPositive(component=bess_to_g, duration=10.0)
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
@@ -60,7 +62,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=objective_set
+        objective_set=objective_set,
     )
 
     optimiser.optimise()
@@ -72,7 +74,6 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
 
 
 def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingency_():
-
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -81,39 +82,40 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     battery = Node()
-    b1 = ElectricalStorage(max_capacity=48,
-                           depth_of_discharge_limit=0,
-                           charging_power_limit=2.0,
-                           discharging_power_limit=-2.0,
-                           charging_efficiency=1,
-                           discharging_efficiency=1,
-                           initial_state_of_charge=48.0)
-    battery.ports['battery_asset'] = b1
+    b1 = ElectricalStorage(
+        max_capacity=48,
+        depth_of_discharge_limit=0,
+        charging_power_limit=2.0,
+        discharging_power_limit=-2.0,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=48.0,
+    )
+    battery.ports["battery_asset"] = b1
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-5] * 24 + [0] * 24, expansion_periods)
     pv1.curtailable = True
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
-    inverter.add_electrical_ports_from_list(['cp', 'bess', 'pv'])
-    inverter.ports['cp'].set_flow_constraints(max_export=-5.0, max_import=5.0)
+    inverter.add_ports_from_list(["cp", "bess", "pv"], FlexPort, units=Units.KW)
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
     system.add_node_obj([grid, battery, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['bess'], b1)
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
     system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery, solar])
 
     bess_to_g = system.get_path([battery, inverter, grid])
-    contingency_obj = ContingencyPositive(component=bess_to_g,
-                                          duration=10.0)
+    contingency_obj = ContingencyPositive(component=bess_to_g, duration=10.0)
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
@@ -123,7 +125,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=objective_set
+        objective_set=objective_set,
     )
 
     optimiser.optimise()
@@ -141,7 +143,6 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     # for i in range(N_INTERVALS // 2, N_INTERVALS):
     #     assert cont_pos_p[i] == 4.0
     #     assert sol_p[i] == 0.0
-
 
     #
     #
@@ -192,8 +193,8 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     #     assert cont_pos_p[i] == 4.0
     #     assert sol_p[i] == 0.0
 
-def test_positive_contingency_calculation_with_storage_full():
 
+def test_positive_contingency_calculation_with_storage_full():
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -202,50 +203,51 @@ def test_positive_contingency_calculation_with_storage_full():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     battery = Node()
-    b1 = ElectricalStorage(max_capacity=48,
-                           depth_of_discharge_limit=0,
-                           charging_power_limit=5.0,
-                           discharging_power_limit=-0.0,
-                           charging_efficiency=1,
-                           discharging_efficiency=1,
-                           initial_state_of_charge=48.0)
-    battery.ports['battery_asset'] = b1
+    b1 = ElectricalStorage(
+        max_capacity=48,
+        depth_of_discharge_limit=0,
+        charging_power_limit=5.0,
+        discharging_power_limit=-0.0,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=48.0,
+    )
+    battery.ports["battery_asset"] = b1
 
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-4] * time_periods, expansion_periods)
-    solar.ports['solar'] = pv1
+    solar.ports["solar"] = pv1
 
     inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port('cp')
-    inverter.add_dc_port('bess')
-    inverter.add_dc_port('pv')
+    inverter.add_ac_port("cp")
+    inverter.add_dc_port("bess")
+    inverter.add_dc_port("pv")
 
     cp = Node()
-    cp.add_electrical_ports_from_list(['load', 'inv', 'grid'])
+    cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
     cp.node_rule = NodeRule.Tellegen
 
     load = Node()
     l1 = ElectricalDemand()
     l1.add_demand_profile_from_array([6.0] * time_periods, expansion_periods)
-    load.ports['load'] = l1
+    load.ports["load"] = l1
 
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
 
-    system.connect_ports_and_create_edge(inverter.ports['bess'], b1)
-    system.connect_ports_and_create_edge(inverter.ports['pv'], pv1)
-    system.connect_ports_and_create_edge(cp.ports['load'], l1)
-    system.connect_ports_and_create_edge(inverter.ports['cp'], cp.ports['inv'])
-    system.connect_ports_and_create_edge(cp.ports['grid'], grid.ports['grid'])
+    system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
+    system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
+    system.connect_ports_and_create_edge(cp.ports["load"], l1)
+    system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inv"])
+    system.connect_ports_and_create_edge(cp.ports["grid"], grid.ports["grid"])
 
     system.create_path_objects(sources=[grid, battery, load, solar], sinks=[grid, battery, load, solar])
 
     bess_to_g = system.get_path([battery, inverter, cp, grid])
-    contingency_obj = ContingencyPositive(component=bess_to_g,
-                                          duration=10.0)
+    contingency_obj = ContingencyPositive(component=bess_to_g, duration=10.0)
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
@@ -255,7 +257,7 @@ def test_positive_contingency_calculation_with_storage_full():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=objective_set
+        objective_set=objective_set,
     )
 
     optimiser.optimise()
@@ -263,6 +265,4 @@ def test_positive_contingency_calculation_with_storage_full():
     cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
 
     for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(cont_pos_p[i], 0.0, 5)  #Had to update to 5dp
-
-
+        np.testing.assert_almost_equal(cont_pos_p[i], 0.0, 5)  # Had to update to 5dp
