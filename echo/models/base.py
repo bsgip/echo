@@ -402,7 +402,9 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
+    def add_initial_value_from_array(
+        self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
+    ):
         """Adds initial port value which is used to initialise the pyomo var/param
         Args:
             array: array, list of initial values. Should have either:
@@ -413,7 +415,7 @@ class Port(BaseModel):
 
         x = ArrayWrap(array)
         if time_periods is None:
-            time_periods = len(array)
+            time_periods = len(x)
         x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
         vals = x.dict()
         self.add_initial_value(vals)

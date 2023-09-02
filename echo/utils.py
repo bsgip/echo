@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Sized, Union
+from typing import Optional, Sized, Union
 
 import numpy as np
 import orjson as orjson
@@ -101,7 +101,7 @@ class ArrayWrap(Sequence):
             raise TypeError("requires float, int, list or arraylike")
 
 
-def set_float_var_bounds(model, var_name: str, ub: float or None, lb: float or None) -> None:
+def set_float_var_bounds(model, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
     """
     Updates the bounds on a pyomo variable. Only floats can be used as bounds.
     Args:

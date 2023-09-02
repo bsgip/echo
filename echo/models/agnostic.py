@@ -1,37 +1,27 @@
-import pickle
-import uuid
-import warnings
-from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Type, Union
+from typing import Optional, Union
 
-import matplotlib.pyplot as plt
-import networkx as nx
 import pandas as pd
 import pyomo.environ as en
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, PositiveFloat, root_validator, validator
 
-from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
-from echo.constants import negative_variable_component, positive_variable_component
+from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, Units
 from echo.echo_validators import (
     ArrayType,
     check_bound_order,
     dod_checks,
-    export_cons_check,
-    import_cons_check,
     node_unit_validator,
     nonnegative_costs,
     nonnegative_load,
     nonpositive_generation,
 )
-from echo.models.base import Edge, Node, Port
+from echo.models.base import Node, Port
 from echo.models.pyomo import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
+    ArrayWrappableType,
     generate_array_constraint,
     set_float_var_bounds,
     set_var_bounds_from_dict,
-    to_initial_values,
 )
 
 """
@@ -92,7 +82,7 @@ class Source(Port):
     def add_source_profile(self, source_values: dict):
         self.add_initial_value(source_values)
 
-    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: int = None):
+    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
         self.add_initial_value_from_array(source_values, expansion_periods, time_periods)
 
 
@@ -110,7 +100,7 @@ class Sink(Port):
     def add_sink_profile(self, sink_values: dict):
         self.add_initial_value(sink_values)
 
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int = None):
+    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
         self.add_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )
@@ -120,24 +110,28 @@ class Demand(Sink):
     def add_demand_profile(self, demand: dict):
         self.add_initial_value(demand)
 
-    def add_demand_profile_from_array(self, demand, expansion_periods=1, time_periods: int = None):
+    def add_demand_profile_from_array(
+        self, demand: ArrayWrappableType, expansion_periods=1, time_periods: Optional[int] = None
+    ):
         self.add_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
 class ControlledLoadOrGen(FlexPort):
     """
     A controlled load or generation has a max/min power, as well as a max/min utilisation.
-    Min utilisation is the ratio between the minimum energy consumed/generated, and the maxinimum energy that could be consumed/generated if the load operated at max power.
-    Max utilisation is the ratio between the maximum energy consumed/generated, and the maximum energy that could be consumed/generated if the load operated at max power.
+    Min utilisation is the ratio between the minimum energy consumed/generated,
+        and the maximum energy that could be consumed/generated if the load operated at max power.
+    Max utilisation is the ratio between the maximum energy consumed/generated,
+        and the maximum energy that could be consumed/generated if the load operated at max power.
     """
 
     min_utilisation: Union[float, None] = None
-    max_utilisation: float = None
-    max_power: float = None
-    min_power: float = None
+    max_utilisation: Optional[float] = None
+    max_power: Optional[float] = None
+    min_power: Optional[float] = None
     units: Units = Units.KW
 
-    def initialise_port(self, model: en.ConcreteModel, profile: pd.DataFrame):
+    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(ControlledLoadOrGen, self).initialise_port(model, profile)
 
         # Set bounds using min and max power
@@ -145,7 +139,7 @@ class ControlledLoadOrGen(FlexPort):
 
         if self.min_utilisation is not None:
 
-            def sum_of_energy_must_be_greater_than_min(model):
+            def sum_of_energy_must_be_greater_than_min(model: EchoConcreteModel):
                 return (
                     sum(
                         getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0

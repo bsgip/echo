@@ -1,11 +1,15 @@
 from typing import Optional, Union
 
-from pydantic import PositiveFloat
+import pyomo.environ as en
+from pydantic import NonNegativeFloat, PositiveFloat
 
-from echo.configuration import Units
+from echo.configuration import NodeRule, Units
 from echo.echo_validators import ArrayType
-from echo.models.agnostic import Demand, FlexPort
+from echo.models.agnostic import Demand, FlexPort, FlexSink, OffOrConstrainedPort
 from echo.models.base import Node
+from echo.models.carbon import CarbonSource
+from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.pyomo import EchoConcreteModel
 
 
 class Battery(Node):
@@ -106,3 +110,66 @@ class FlexNodeWithEmissions(Node):
             carbon_port=self.ports[carbon_port],
             emission_factor=emissions_factor,
         )
+
+
+class InputOutputNode(Node):
+    """
+    An input-output node has one input port and one output port.
+    A custom transformation can be defined between input and output.
+    """
+
+    input_port_unit: Units
+    output_port_unit: Units
+    # Optional parameters for controlling input/output port flows
+    max_output: Optional[float]  # output might be neg or pos, leave it open
+    min_output: Optional[float]
+    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
+    min_input: Optional[NonNegativeFloat]
+    node_rule = NodeRule.Custom
+
+
+class DieselGenerator(InputOutputNode):
+    """
+    A diesel generator node. Converts diesel into electricity at a fixed rate of cop which is in units of
+    kW/liters per second
+    """
+
+    input_port_unit = Units.LPS
+    output_port_unit = Units.KW
+    cop: NonNegativeFloat = 0.4 * 3600  # kW / litres per second
+    startup_efficiency: NonNegativeFloat = (
+        0.5  # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
+    )
+    C02Intensity: NonNegativeFloat = 2.7  # emissions intensity kg per sec / litre per sec = kg/litre
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        # add an input and output node, and create appropriate transformations
+        self.ports["output"] = OffOrConstrainedPort(
+            upper_bound=self.min_output, lower_bound=self.max_output, units=self.output_port_unit
+        )
+
+        self.ports["input"] = FlexSink(units=self.input_port_unit)  # the node is importing through this port
+        self.ports["co2"] = CarbonSource()
+        # todo: add some validators :-)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        super(DieselGenerator, self).apply_node_constraints(model)
+
+        def node_constraint(model: EchoConcreteModel, p, t):
+            p_in = getattr(model, self.ports["input"].port_name)
+            p_out = getattr(model, self.ports["output"].port_name)
+
+            if (p == 0) and (t == 0):
+                out = p_in[p, t] * self.startup_efficiency * self.cop
+            else:
+                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t - 1] * (1 - self.startup_efficiency)) * self.cop
+            return p_out[p, t] == -out
+
+        def carbon_rule(model, p, t):
+            p_in = getattr(model, self.ports["input"].port_name)
+            c_out = getattr(model, self.ports["co2"].port_name)
+            return c_out[p, t] == -p_in[p, t]
+
+        setattr(model, "node_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
+        setattr(model, "node_con_co2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=carbon_rule))
