@@ -2,7 +2,7 @@ import pickle
 import uuid
 import warnings
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Type, Union
+from typing import Any, Iterable, Optional, Type, Union, cast
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -15,7 +15,13 @@ from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
 from echo.models.pyomo import EchoConcreteModel
-from echo.utils import ArrayWrap, generate_array_constraint, set_var_bounds_from_dict, to_initial_values
+from echo.utils import (
+    ArrayWrap,
+    ArrayWrappableType,
+    generate_array_constraint,
+    set_var_bounds_from_dict,
+    to_initial_values,
+)
 
 
 class ConfigurationError(Exception):
@@ -472,9 +478,9 @@ class Transform(BaseModel):
         if self.transform_name is None:
             self.transform_name = "transform_" + str(self.uid)
 
-    def add_lhs_term(self, var: Port, rule: TransformRule, weight: ArrayWrap):
+    def add_lhs_term(self, var: Port, rule: TransformRule, weight: Union[ArrayWrap, ArrayWrappableType]):
         """Adds a left-hand side (LHS) term to the transform"""
-        if isinstance(weight, ArrayWrap) is False:
+        if not isinstance(weight, ArrayWrap):
             weight = ArrayWrap(weight)
         term = TransformTerm(var, rule, weight)
         self.lhs.append(term)
@@ -494,7 +500,7 @@ class Node(BaseModel):
     this allows transformations to be implemented.
     """
 
-    node_name: Optional[str]
+    node_name: str
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     ports: dict[str, Port]
     node_rule: NodeRule = NodeRule.NA
@@ -692,7 +698,7 @@ class Edge(BaseModel):
 class Path(BaseModel):
     """A path is a sequence of distinct vertices (nodes)."""
 
-    edge_ports: list[tuple] = []  # list of edge name tuples
+    edge_ports: list[tuple[Port, Port]]  # list of edge name tuples
     vertices: list  # list of node names
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     path_name: Optional[str] = None
@@ -700,7 +706,7 @@ class Path(BaseModel):
     regularise: bool = False
     objective: float = 0
 
-    flow_value: Optional[str]
+    flow_value: str
     contingency_neg: Optional[str]
     contingency_pos: Optional[str]
     path_tariff: Optional[str]
@@ -711,6 +717,7 @@ class Path(BaseModel):
         if self.path_name is None:
             self.path_name = "path_" + str(self.uid)
         self.flow_value = "flow_value_" + self.path_name
+        self.edge_ports = []
 
     def add_vertices(self, vertex_list: list):
         if hasattr(vertex_list[0], "node_name"):
@@ -761,7 +768,8 @@ class OptimisationGraph(BaseModel):
         return list(self.edge_obj.keys())
 
     def convert_to_nx(self) -> nx.Graph:
-        """Converts the OptimisationGraph to a networkx graph, where nx nodes are echo node names and nx edges are nx node pairs"""
+        """Converts the OptimisationGraph to a networkx graph, where nx nodes are echo node names and nx edges are
+        nx node pairs"""
         g = nx.Graph()
         g.add_nodes_from(self.node_obj.keys())
         g.add_edges_from(self.edge_obj.keys())
@@ -786,7 +794,7 @@ class OptimisationGraph(BaseModel):
     def add_node_obj(self, node: Union[list, Node]):
         """Adds either a single node or list of nodes to graph"""
         # todo phase out this method
-        if type(node) is list:
+        if isinstance(node, list):
             for n in node:
                 self._add_single_node(n)
         else:
@@ -809,8 +817,11 @@ class OptimisationGraph(BaseModel):
         """Retrieves the edge that connects a tuple of nodes, if an edge exists."""
         if self.edge_obj.get(nodes) is not None:
             return self.edge_obj.get(nodes)
-        elif self.edge_obj.get(reversed(nodes)) is not None:
-            return self.edge_obj.get(reversed(nodes))
+
+        reversed_nodes = (nodes[1], nodes[0])
+        edge = self.edge_obj.get(reversed_nodes)
+        if edge is not None:
+            return edge
         elif warn:
             print("Edge between {} and {} does not exist".format(nodes[0], nodes[1]))
 
@@ -833,7 +844,7 @@ class OptimisationGraph(BaseModel):
 
     def add_edge_obj(self, edge: Union[list[Edge], Edge]):
         # todo phase out this method
-        if type(edge) is list:
+        if isinstance(edge, list):
             for e in edge:
                 self._add_single_edge(e)
         else:
@@ -847,7 +858,12 @@ class OptimisationGraph(BaseModel):
         self._add_single_edge(edge)
 
     def connect_ports_and_create_edge(
-        self, port1: Port, port2: Port, edge_name: str = None, nodes: tuple[str] = None, warn: bool = False
+        self,
+        port1: Port,
+        port2: Port,
+        edge_name: Optional[str] = None,
+        nodes: Optional[tuple[str]] = None,
+        warn: bool = False,
     ):
         """Creates an edge between port1 and port2 and adds it to the graph"""
         if nodes is None and warn is True:
@@ -863,7 +879,7 @@ class OptimisationGraph(BaseModel):
                     return node_name
         raise ConfigurationError(f"Port {port.port_name} is not part of any node, or node has not been added to graph.")
 
-    def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> tuple[Port, Port]:
+    def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> Optional[tuple[Port, Port]]:
         """Returns the ports that are on the edge from node1 to node2."""
         connecting_edge = self.edge_obj.get((node1, node2))
         if connecting_edge:
@@ -877,6 +893,8 @@ class OptimisationGraph(BaseModel):
                 node2_port = connecting_edge.vertices[0]
                 return node1_port, node2_port
 
+        return None
+
     def get_sources_and_sinks(self):
         """Returns a set that contains all source and sink nodes."""
         assert bool(self.paths) is True, "Create paths before retrieving sources and sinks."
@@ -886,10 +904,10 @@ class OptimisationGraph(BaseModel):
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
 
-    def get_path(self, path_vertices: list[str]):
+    def get_path(self, path_vertices: Union[list[Node], list[str]]):
         """Looks up a path using a list of path vertices (nodes, or node names)."""
-        if hasattr(path_vertices[0], "node_name"):
-            name_key = [node.node_name for node in path_vertices]
+        if isinstance(path_vertices[0], Node):
+            name_key = [cast(Node, node).node_name for node in path_vertices]
             return self.paths[tuple(name_key)]
         else:
             if self.paths.get(tuple(path_vertices)) is not None:
@@ -908,18 +926,23 @@ class OptimisationGraph(BaseModel):
                     raise ConfigurationError("Source/sink node is being treated as a tellegen node.")
 
     def create_path_objects(
-        self, sources: list[str], sinks: list[str], path_unit: Units = Units.KW, regularise: bool = False
+        self,
+        sources: Union[list[Node], list[str]],
+        sinks: Union[list[Node], list[str]],
+        path_unit: Units = Units.KW,
+        regularise: bool = False,
     ):
         """Creates path objects according to source/sink lists provided."""
         warnings.warn(
-            "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider whether you can convert these tariffs to point/port tariffs."
+            "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider "
+            + "whether you can convert these tariffs to point/port tariffs."
         )
         all_paths = {}
         graph = self.convert_to_nx()
-        if hasattr(sources[0], "node_name"):
-            sources = [i.node_name for i in sources]
-        if hasattr(sinks[0], "node_name"):
-            sinks = [i.node_name for i in sinks]
+        if isinstance(sources[0], Node):
+            sources = [cast(Node, i).node_name for i in sources]
+        if isinstance(sinks[0], Node):
+            sinks = [cast(Node, i).node_name for i in sinks]
 
         tellegen_node_set = set()  # create a set to store list of nodes that are treated as tellegen nodes
         source_sink_set = set(sources + sinks)  # create a set of nodes that are treated as sinks/sources
@@ -938,11 +961,12 @@ class OptimisationGraph(BaseModel):
         assert len(intersec) == 0, f"Nodes '{intersec}' are being treated as both tellegen and source/sink."
         self.paths = all_paths
 
-    def _create_path_object(self, vertex_list: list, edge_list: list, regularise: bool, path_unit: int):
+    def _create_path_object(self, vertex_list: list, edge_list: list, regularise: bool, path_unit: Units):
         """Creates a path object"""
         p = Path(vertices=vertex_list, regularise=regularise, units=path_unit)  # Create path object
         for edge in edge_list:
             edge_ports = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
+            assert edge_ports is not None, f"get_ports_on_edge_from_nodes return None for edges {edge[0]}, {edge[1]}"
             p.edge_ports.append(edge_ports)
         return p
 
@@ -1032,7 +1056,8 @@ class OptimisationGraph(BaseModel):
         return output
 
     def verify_graph(self):
-        """Checks that the graph is connected (all nodes have at least one edge), and warns if there are unconnected ports"""
+        """Checks that the graph is connected (all nodes have at least one edge), and warns if there
+        are unconnected ports"""
         assert nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected."
         # Check graph for ports that are not connected
         ports_on_edges = self.get_port_names_from_nodes()

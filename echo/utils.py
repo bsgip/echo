@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Sized, Union
 
 import numpy as np
 import orjson as orjson
@@ -15,8 +16,11 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
+ArrayWrappableType = Union[Sized, int, float]
+
+
 class ArrayWrap(Sequence):
-    def __init__(self, var):  # scalar, 1d list, 2d list,
+    def __init__(self, var: ArrayWrappableType):  # scalar, 1d list, 2d list,
         self.var = var
         if not hasattr(var, "__len__"):
             self.get_func = self.get_scalar
