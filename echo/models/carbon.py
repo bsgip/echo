@@ -3,6 +3,7 @@ import pyomo.environ as en
 from echo.configuration import Flows, NodeRule, Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node
+from echo.models.pyomo import EchoConcreteModel
 
 
 class CarbonPort(FlexPort):
@@ -35,13 +36,13 @@ class CarbonAggregation(Node):
     def verify_node(self):
         super(CarbonAggregation, self).verify_node()
 
-    def initialise_node(self, model, profile):
+    def initialise_node(self, model: EchoConcreteModel, profile):
         super(CarbonAggregation, self).initialise_node(model, profile)
         # Create a variable for the total CO2
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
-    def apply_node_constraints(self, model):
-        def sum_rule(model, p, t):
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        def sum_rule(model: EchoConcreteModel, p, t):
             a = 0
             for _, port in self.ports.items():
                 a += getattr(model, port.port_name)[p, t]

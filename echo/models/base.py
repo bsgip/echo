@@ -33,7 +33,7 @@ class BaseModel(PydanticBaseModel):
 
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
-        extra = "ignore"  # If 'allow', extra attributes can be added after instantiation, if 'ignore', extra attributes are ignored, if 'forbid', extra attributes are not allowed.
+        extra = "ignore"  # extra attributes are ignored
 
 
 ConstraintValueType = Union[ArrayType, float]
@@ -202,22 +202,22 @@ class Port(BaseModel):
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
 
         # Import/export capacity constraint with slack rules
-        def import_cap_rule_slack(model, p, t):
+        def import_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
                 getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t]
                 <= getattr(model, self.import_con_val)[p, t]
             )
 
-        def export_cap_rule_slack(model, p, t):
+        def export_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
                 getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t]
                 >= getattr(model, self.export_con_val)[p, t]
             )
 
-        def export_cap_slack_max_rule(model, p, t):
+        def export_cap_slack_max_rule(model: EchoConcreteModel, p, t):
             return getattr(model, self.export_slack)[p, t] <= getattr(model, self.export_slack_max)
 
-        def import_cap_slack_max_rule(model, p, t):
+        def import_cap_slack_max_rule(model: EchoConcreteModel, p, t):
             return getattr(model, self.import_slack)[p, t] >= getattr(model, self.import_slack_max)
 
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
@@ -313,10 +313,10 @@ class Port(BaseModel):
 
         if self.active_periods is not None:
 
-            def on_off_rule1(model, p, t):
+            def on_off_rule1(model: EchoConcreteModel, p, t):
                 return getattr(model, self.port_name)[p, t] <= self.active_periods[p, t] * model.bigM
 
-            def on_off_rule2(model, p, t):
+            def on_off_rule2(model: EchoConcreteModel, p, t):
                 return getattr(model, self.port_name)[p, t] >= -self.active_periods[p, t] * model.bigM
 
             setattr(
@@ -367,7 +367,7 @@ class Port(BaseModel):
                 en.Constraint(model.Expansion, model.Time, rule=con_rule),
             )
 
-            def only_pos_or_neg_one(model, p, t):
+            def only_pos_or_neg_one(model: EchoConcreteModel, p, t):
                 return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
 
             setattr(
@@ -376,7 +376,7 @@ class Port(BaseModel):
                 en.Constraint(model.Expansion, model.Time, rule=only_pos_or_neg_one),
             )
 
-            def only_pos_or_neg_two(model, p, t):
+            def only_pos_or_neg_two(model: EchoConcreteModel, p, t):
                 return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
 
             setattr(
@@ -387,7 +387,7 @@ class Port(BaseModel):
 
     @staticmethod
     def factory_pos_neg_flows(var_name, pos_name, neg_name):
-        def constraint(model, expansion_interval, time_interval):
+        def constraint(model: EchoConcreteModel, expansion_interval, time_interval):
             return getattr(model, var_name)[expansion_interval, time_interval] == (
                 getattr(model, pos_name)[expansion_interval, time_interval]
                 + getattr(model, neg_name)[expansion_interval, time_interval]
@@ -579,19 +579,19 @@ class Node(BaseModel):
         if self.node_rule == NodeRule.Tellegen:
             assert len(self.ports) >= 2, "A tellegen node must have at least two ports."
 
-    def initialise_node(self, model, profile):
+    def initialise_node(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
             port.verify_port()
             port.initialise_port(model, profile)
 
-    def apply_node_constraints(self, model):
-        def reliability(model, p, t):  # Tellegen node rule
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
             a = 0
             for _, port in node_ports.items():
                 a += getattr(model, port.port_name)[p, t]
             return a == 0
 
-        def transform(model, p, t):  # Generic transformation node
+        def transform(model: EchoConcreteModel, p, t):  # Generic transformation node
             lhs = 0
             for term in current_transform.lhs:
                 weight = term.weight
@@ -617,7 +617,7 @@ class Node(BaseModel):
             con_name = "reliability_con_" + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
 
-    def add_objective(self, model):
+    def add_objective(self, model: EchoConcreteModel):
         total = 0
 
         self.objective += total
@@ -669,7 +669,7 @@ class Edge(BaseModel):
         port1 = self.vertices[0]
         port2 = self.vertices[1]
 
-        def edge_constraint_rule(model, p, t):
+        def edge_constraint_rule(model: EchoConcreteModel, p, t):
             return getattr(model, port1.port_name)[p, t] + getattr(model, port2.port_name)[p, t] == 0
 
         con_name = "edge_con_" + port1.port_name + "_" + port2.port_name
@@ -975,7 +975,7 @@ class OptimisationGraph(BaseModel):
     def apply_path_constraints(self, model: EchoConcreteModel):
         """Applies path tracing constraints to model"""
 
-        def path_flow_rule(model, p, t):
+        def path_flow_rule(model: EchoConcreteModel, p, t):
             a = 0
             for _, path in self.paths.items():  # Iterate through all paths in the model
                 if path.vertices[0] is current_node_name:  # If the path starts at the current node
@@ -984,7 +984,7 @@ class OptimisationGraph(BaseModel):
                     a -= getattr(model, path.flow_value)[p, t]  # Subtract the flow value
             return a == getattr(model, current_port.port_name)[p, t] * -1  # Flows out - flows in = -1 * port
 
-        def only_inflow_or_outflow1(model, p, t):
+        def only_inflow_or_outflow1(model: EchoConcreteModel, p, t):
             a = 0
             for _, path in self.paths.items():
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
@@ -993,7 +993,7 @@ class OptimisationGraph(BaseModel):
                 a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM
             )  # Incoming paths can only be non-zero if inflow=1
 
-        def only_inflow_or_outflow2(model, p, t):
+        def only_inflow_or_outflow2(model: EchoConcreteModel, p, t):
             a = 0
             for _, path in self.paths.items():
                 if path.vertices[0] is current_node_name:  # If the path starts at the node

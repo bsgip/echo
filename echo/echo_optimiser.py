@@ -3,17 +3,11 @@ import os
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-import pyomo.network
 from pyomo.opt import SolverFactory
 
-from echo.configuration import ExpansionType, FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
-from echo.constants import minutes_per_hour
-from echo.echo_models import ConfigurationError, Path
-from echo.models.base import OptimisationGraph
+from echo.models.base import ConfigurationError, OptimisationGraph
+from echo.models.pyomo import EchoConcreteModel
 from echo.objectives import ObjectiveSet
-
-## export OPTIMISER_ENGINE_EXECUTABLE=/home/anna/IBM/ILOG/CPLEX_Studio221/cplex/bin/x86-64_linux/cplex
-## export OPTIMISER_ENGINE='cplex'
 
 
 class EchoOptimiser(object):
@@ -67,10 +61,10 @@ class EchoOptimiser(object):
         if optimiser_engine:
             self.optimiser_engine = optimiser_engine
         else:
-            self.optimiser_engine = (
-                "cplex" if not os.environ.get("OPTIMISER_ENGINE") else os.environ.get("OPTIMISER_ENGINE")
+            self.optimiser_engine = os.environ.get(
+                "OPTIMISER_ENGINE", "cplex"
             )  # Default to cplex, as we seem to want quadratic costs
-        self.optimiser_engine_executable = os.environ.get("OPTIMISER_ENGINE_EXECUTABLE")
+        self.optimiser_engine_executable = os.environ.get("OPTIMISER_ENGINE_EXECUTABLE", "")
 
         # These values have been arbitrarily chosen
         # A better understanding of the sensitivity of these values may be advantageous
@@ -98,14 +92,14 @@ class EchoOptimiser(object):
 
     def build_model(self):
         # Set up the Pyomo model
-        self.model = en.ConcreteModel()
+        self.model = EchoConcreteModel()
         self.model.interval_duration = self.interval_duration
         self.model.number_of_intervals = self.number_of_intervals
         self.model.paths = (
             self.ES.paths
         )  # Todo better way of making all path variables available for constructing objectives
 
-        #### Bias Values ####
+        # Bias Values
 
         # A small fudge factor for reducing the size of the solution set and
         # achieving a unique optimisation solution
@@ -177,7 +171,7 @@ class EchoOptimiser(object):
             self.objective += path_obj.objective
 
     def optimise(self, tee=False, logfile=None):
-        def objective_function(model):
+        def objective_function(model: EchoConcreteModel):
             return self.objective
 
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)

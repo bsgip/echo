@@ -1,11 +1,10 @@
 from typing import TypeVar
 
-from pydantic import BaseModel, Field
 import numpy as np
+from pydantic import Field
 
+DataFrame = TypeVar("pandas.core.frame.DataFrame")
 
-
-DataFrame = TypeVar('pandas.core.frame.DataFrame')
 
 class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
@@ -14,15 +13,16 @@ class ArrayType(np.ndarray):
     def __get_validators__(cls):
         yield cls.validate
 
-    #todo actually validate this type
+    # todo actually validate this type
     @classmethod
     def validate(cls, v):
         if type(v) is str:
-            raise ValueError('Array Type cannot be a string.')
+            raise ValueError("Array Type cannot be a string.")
         return v
 
     class Config:
         arbitrary_types_allowed = True
+
 
 def var_in_range(var1, range_min, range_max):
     if var1 < range_min or var1 > range_max:
@@ -31,7 +31,7 @@ def var_in_range(var1, range_min, range_max):
 
 def is_non_negative(v, err_msg):
     if v is not None:
-        if hasattr(v, '__iter__'):
+        if hasattr(v, "__iter__"):
             if isinstance(v, dict):
                 for i in v.values():
                     if i < 0:
@@ -48,7 +48,7 @@ def is_non_negative(v, err_msg):
 
 def is_non_positive(v, err_msg):
     if v is not None:
-        if hasattr(v, '__iter__'):
+        if hasattr(v, "__iter__"):
             if type(v) is dict:
                 for i in v.values():
                     if i > 0:
@@ -62,32 +62,38 @@ def is_non_positive(v, err_msg):
                 raise ValueError(err_msg)
     return v
 
+
 def import_cons_check(v):
-    v = is_non_negative(v, 'Import constraint should be positive, following positive load convention')
+    v = is_non_negative(v, "Import constraint should be positive, following positive load convention")
     return v
+
 
 def export_cons_check(v):
-    v = is_non_positive(v, 'Export constraint should be negative following positive load convention.')
+    v = is_non_positive(v, "Export constraint should be negative following positive load convention.")
     return v
+
 
 def nonnegative_load(v):
-    v = is_non_negative(v, 'Load array entries should all be non negative.')
+    v = is_non_negative(v, "Load array entries should all be non negative.")
     return v
+
 
 def nonpositive_generation(v):
-    v = is_non_positive(v, 'Generation array entries should all be non positive.')
+    v = is_non_positive(v, "Generation array entries should all be non positive.")
     return v
+
 
 def nonnegative_costs(v):
-    v = is_non_negative(v, 'Costs should be positive')
+    v = is_non_negative(v, "Costs should be positive")
     return v
 
+
 def dod_checks(cls, values):
-    """ Validator for depth of discharge."""
+    """Validator for depth of discharge."""
     # Check which dod representation we have
-    dod_lim = values.get('depth_of_discharge_limit')
-    max_cap = values.get('max_capacity')
-    init_soc = values.get('initial_state_of_charge')
+    dod_lim = values.get("depth_of_discharge_limit")
+    max_cap = values.get("max_capacity")
+    init_soc = values.get("initial_state_of_charge")
     # Check dod representation
     if 0 <= dod_lim <= 1:
         # Assume decimal representation
@@ -96,89 +102,88 @@ def dod_checks(cls, values):
         # Assume percentage representation
         min_soc = max_cap * dod_lim / 100.0
     else:
-        raise ValueError('DoD must be entered as decimal fraction or percentage of max capacity')
+        raise ValueError("DoD must be entered as decimal fraction or percentage of max capacity")
     # Check initial soc is within bounds
     if (init_soc < min_soc) or (init_soc > max_cap):
         raise ValueError(
-            'Initial state of charge, {}, must be between min soc, {}, and max capacity, {}'.format(init_soc,
-                                                                                                    min_soc,
-                                                                                                    max_cap))
-    values['min_soc'] = min_soc
+            "Initial state of charge, {}, must be between min soc, {}, and max capacity, {}".format(
+                init_soc, min_soc, max_cap
+            )
+        )
+    values["min_soc"] = min_soc
     return values
 
 
 def check_bound_order(cls, values):
-    """ Checks that lower bound is smaller than upper bound."""
-    lb = values.get('lower_bound')
-    ub = values.get('upper_bound')
+    """Checks that lower bound is smaller than upper bound."""
+    lb = values.get("lower_bound")
+    ub = values.get("upper_bound")
     if (lb is not None) and (ub is not None):
-        if hasattr(lb, '__iter__'):
-            assert len(lb) == len(ub), 'Lower bound and upper bound are mismatched lengths.'
+        if hasattr(lb, "__iter__"):
+            assert len(lb) == len(ub), "Lower bound and upper bound are mismatched lengths."
             for i in range(len(lb)):
                 if lb[i] >= ub[i]:
-                    raise ValueError('Lower bound should be less than upper bound.')
+                    raise ValueError("Lower bound should be less than upper bound.")
         else:
             if lb >= ub:
-                raise ValueError('Lower bound should be less than upper bound.')
+                raise ValueError("Lower bound should be less than upper bound.")
     return values
 
 
 def node_unit_validator(cls, values):
-    """ Checks that a tellegen node's ports all have the same units."""
-    ports = values.get('ports')
+    """Checks that a tellegen node's ports all have the same units."""
+    ports = values.get("ports")
     u = None
     if ports is not None:
         for p in ports.values():
             if u is not None:
-                assert p.units == u, 'Tellegen node ports must have the same units.'
+                assert p.units == u, "Tellegen node ports must have the same units."
             else:
                 u = p.units
 
     return values
 
+
 def validate_piecewise_arrays(cls, values):
-    input_pts = values.get('input_pts')
-    output_pts = values.get('output_pts')
+    input_pts = values.get("input_pts")
+    output_pts = values.get("output_pts")
     if input_pts is not None and output_pts is not None:
-        assert len(input_pts) == len(output_pts), 'Mismatched indices for input and output dictionaries.'
+        assert len(input_pts) == len(output_pts), "Mismatched indices for input and output dictionaries."
         for k, _ in input_pts.items():
-            assert len(input_pts[k]) == len(output_pts[k]), 'Input and output arrays are not equal lengths for index {}'.format(k)
+            assert len(input_pts[k]) == len(
+                output_pts[k]
+            ), "Input and output arrays are not equal lengths for index {}".format(k)
 
     return values
 
 
 def set_bounds_from_piecewise_pts(cls, values):
-    input_pts = values.get('input_pts')
-    output_pts = values.get('output_pts')
+    input_pts = values.get("input_pts")
+    output_pts = values.get("output_pts")
     if input_pts is not None and output_pts is not None:
-        values['input_ub'] = max(max(input_pts.values()))
-        values['input_lb'] = min(min(input_pts.values()))
-        values['output_ub'] = max(max(output_pts.values()))
-        values['output_lb'] = min(min(output_pts.values()))
+        values["input_ub"] = max(max(input_pts.values()))
+        values["input_lb"] = min(min(input_pts.values()))
+        values["output_ub"] = max(max(output_pts.values()))
+        values["output_lb"] = min(min(output_pts.values()))
     return values
 
 
 def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values):
-    cop = values.get('cop')
-    eta = values.get('startup_cop')
-    max_in = values.get('max_input')
-    min_in = values.get('min_input')
-    values['max_output'] = max_in * cop * -1
+    cop = values.get("cop")
+    eta = values.get("startup_cop")
+    max_in = values.get("max_input")
+    min_in = values.get("min_input")
+    values["max_output"] = max_in * cop * -1
     if eta is not None:
-        values['min_output'] = min_in * eta * -1
+        values["min_output"] = min_in * eta * -1
     else:
-        values['min_output'] = min_in * cop * -1
+        values["min_output"] = min_in * cop * -1
     return values
 
 
 def validate_startup_efficiency(cls, values):
-    cop = values.get('cop')
-    eta = values.get('startup_cop')
+    cop = values.get("cop")
+    eta = values.get("startup_cop")
     if eta is not None:
-        assert cop >= eta, 'Startup efficiency should be less than coefficient of performance (cop)'
+        assert cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)"
     return values
-
-
-def check_temp_bounds(cls, values):
-    ub = values.get('temp_ub')
-    lb = values.get('temp_lb')

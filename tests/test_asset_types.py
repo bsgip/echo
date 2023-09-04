@@ -5,9 +5,12 @@ import pytest
 
 from echo.configuration import *
 from echo.echo_optimiser import EchoOptimiser
-from echo.echo_thermal_models import FixedThermalPort, FlexHeatSink, GasBoilerFixedCOP, GasPort, HeatSink, SimpleChiller
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
+from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
+from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
+from echo.models.gas import GasBoilerFixedCOP, GasPort
+from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives import *
 
 SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")

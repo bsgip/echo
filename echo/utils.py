@@ -7,7 +7,8 @@ import pandas as pd
 import pyomo.environ as en
 from sklearn import linear_model
 
-from echo.echo_validators import *
+from echo.echo_validators import ArrayType
+from echo.models.pyomo import EchoConcreteModel
 
 
 def _to_values(profile, key):
@@ -20,6 +21,11 @@ ArrayWrappableType = Union[Sized, int, float]
 
 
 class ArrayWrap(Sequence):
+    time_periods: Optional[int]
+    expansion_periods: Optional[int]
+    tp_set: bool
+    is_scalar: bool
+
     def __init__(self, var: ArrayWrappableType):  # scalar, 1d list, 2d list,
         self.var = var
         if not hasattr(var, "__len__"):
@@ -98,10 +104,10 @@ class ArrayWrap(Sequence):
         if isinstance(v, (float, int, list, np.ndarray)):
             return cls(v)
         else:
-            raise TypeError("requires float, int, list or arraylike")
+            raise TypeError("requires float, int, list or array like")
 
 
-def set_float_var_bounds(model, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
+def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
     """
     Updates the bounds on a pyomo variable. Only floats can be used as bounds.
     Args:
@@ -119,7 +125,7 @@ def set_float_var_bounds(model, var_name: str, ub: Optional[float], lb: Optional
         v.setub(ub)
 
 
-def set_var_bounds_from_dict(var, ub: dict or None, lb: dict or None) -> None:
+def set_var_bounds_from_dict(var, ub: Optional[dict], lb: Optional[dict]) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
     Args:
@@ -175,7 +181,7 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
 #     # initialisation check
 
 
-def fix_port_variable(model, var_name: str, new_values: ArrayType, expansion_periods=1):
+def fix_port_variable(model: EchoConcreteModel, var_name: str, new_values: ArrayType, expansion_periods=1):
     """
     Updates existing pyomo variable to have fixed values.
     Args:
@@ -254,8 +260,10 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
         time_periods: number of optimisation time periods
 
     Returns:
-        x: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
-        y: a dict of lists, where keys are the index set, defining the set of domain breakpoints for the piecewise linear function.
+        x: a dict of lists, where keys are the index set, defining the set of domain breakpoints for
+           the piecewise linear function.
+        y: a dict of lists, where keys are the index set, defining the set of domain breakpoints for
+           the piecewise linear function.
 
     """
 
@@ -313,7 +321,7 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
     return output
 
 
-def create_named_constraint_with_rule(model, con_name, rule):
+def create_named_constraint_with_rule(model: EchoConcreteModel, con_name: str, rule):
     """Util function for creating pyomo constraints from a rule."""
     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
 
@@ -332,11 +340,6 @@ def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expans
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
     d = dict(zip(keys, values))
     return d
-
-
-def orjson_dumps(v, *, default):
-    # orjson.dumps returns bytes, to match standard json.dumps we need to decode
-    return orjson.dumps(v, default=default).decode()
 
 
 def orjson_dumps(v, *, default):

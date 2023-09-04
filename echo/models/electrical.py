@@ -177,7 +177,7 @@ class EV(Node):
             ), "Add available periods to EV connection pt port"
         assert self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added."
 
-    def initialise_node(self, model, profile):
+    def initialise_node(self, model: EchoConcreteModel, profile):
         super(EV, self).initialise_node(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
@@ -235,14 +235,14 @@ class Inverter(Node):
         named_ports = [self.ac_port_name] + self.dc_port_names
         assert set(all_port_names) == set(named_ports), "All ports on inverter must be ac or dc."
 
-    def initialise_node(self, model, profile):
+    def initialise_node(self, model: EchoConcreteModel, profile):
         super(Inverter, self).initialise_node(model, profile)
 
         ac_port = self.ports[self.ac_port_name]
         # Split ac port into pos/neg, so we can apply the correct efficiencies
         ac_port.constrain_pos_neg(model)
 
-        def inverter_ac_output_must_track_efficiency(model, p, t):  # Apply efficiency constraints
+        def inverter_ac_output_must_track_efficiency(model: EchoConcreteModel, p, t):  # Apply efficiency constraints
             dc_total = 0
             for dc_port_name in self.dc_port_names:
                 dc_port = self.ports[dc_port_name]

@@ -3,7 +3,6 @@ import os
 import numpy as np
 
 from echo.configuration import *
-from echo.echo_models import *
 from echo.echo_optimiser import EchoOptimiser
 from echo.objectives import *
 

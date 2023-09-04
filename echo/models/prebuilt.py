@@ -3,9 +3,9 @@ from typing import Optional, Union
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
-from echo.configuration import NodeRule, Units
+from echo.configuration import Units
 from echo.echo_validators import ArrayType
-from echo.models.agnostic import Demand, FlexPort, FlexSink, OffOrConstrainedPort
+from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, OffOrConstrainedPort
 from echo.models.base import Node
 from echo.models.carbon import CarbonSource
 from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
@@ -64,7 +64,7 @@ class NewSolar(Node):
 
 
 class Load(Node):
-    def __init__(self, port_name: str, port_unit: int, profile: Union[dict, ArrayType, list], **data):
+    def __init__(self, port_name: str, port_unit: Units, profile: Union[dict, ArrayType, list], **data):
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)
         if type(profile) is dict:
@@ -74,7 +74,7 @@ class Load(Node):
 
 
 class FlexNode(Node):
-    def __init__(self, port_name: str, port_unit: int, **data):
+    def __init__(self, port_name: str, port_unit: Units, **data):
         super().__init__(**data)
         self.ports[port_name] = FlexPort(port_name=port_name, units=port_unit)
 
@@ -97,7 +97,7 @@ class FlexNodeWithEmissions(Node):
     def __init__(
         self,
         emitting_port: str,
-        emitting_port_units: int,
+        emitting_port_units: Units,
         carbon_port: str,
         emissions_factor: Union[float, ArrayType],
         **data,
@@ -110,22 +110,6 @@ class FlexNodeWithEmissions(Node):
             carbon_port=self.ports[carbon_port],
             emission_factor=emissions_factor,
         )
-
-
-class InputOutputNode(Node):
-    """
-    An input-output node has one input port and one output port.
-    A custom transformation can be defined between input and output.
-    """
-
-    input_port_unit: Units
-    output_port_unit: Units
-    # Optional parameters for controlling input/output port flows
-    max_output: Optional[float]  # output might be neg or pos, leave it open
-    min_output: Optional[float]
-    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
-    min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
 
 
 class DieselGenerator(InputOutputNode):
@@ -166,7 +150,7 @@ class DieselGenerator(InputOutputNode):
                 out = (p_in[p, t] * self.startup_efficiency + p_in[p, t - 1] * (1 - self.startup_efficiency)) * self.cop
             return p_out[p, t] == -out
 
-        def carbon_rule(model, p, t):
+        def carbon_rule(model: EchoConcreteModel, p, t):
             p_in = getattr(model, self.ports["input"].port_name)
             c_out = getattr(model, self.ports["co2"].port_name)
             return c_out[p, t] == -p_in[p, t]
