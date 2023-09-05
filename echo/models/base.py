@@ -34,6 +34,7 @@ class BaseModel(PydanticBaseModel):
     class Config:
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
         extra = "ignore"  # extra attributes are ignored
+        arbitrary_types_allowed = True
 
 
 ConstraintValueType = Union[ArrayType, float]
@@ -44,12 +45,12 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict
+    initial_value: dict = {}
     initial_value_ref: Optional[str]  # string ref to df column
     initial_value_scaling: Optional[int]  # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
-    port_name: str
+    port_name: str = ""
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
     import_constraint: FlowConstraint = FlowConstraint.NA
@@ -58,7 +59,7 @@ class Port(BaseModel):
     export_constraint_value: Optional[ConstraintValueType] = None
     active_periods: Optional[dict]
     slack: bool = False
-    objective: float = 0  # this will eventually be a pyomo expression
+    objective: Any = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -102,7 +103,7 @@ class Port(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.port_name is None:  # if no name is provided, give it a default name using the uid
+        if not self.port_name:  # if no name is provided, give it a default name using the uid
             self.port_name = "port_" + str(self.uid)
 
     def set_flow_constraints(
@@ -471,12 +472,11 @@ class Transform(BaseModel):
 
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
     transform_name: Optional[str] = None
-    lhs: list[TransformTerm]
+    lhs: list[TransformTerm] = []
     rhs = 0
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.lhs = []
         if self.transform_name is None:
             self.transform_name = "transform_" + str(self.uid)
 
@@ -502,11 +502,11 @@ class Node(BaseModel):
     this allows transformations to be implemented.
     """
 
-    node_name: str
+    node_name: str = ""
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
-    ports: dict[str, Port]
+    ports: dict[str, Port] = {}
     node_rule: NodeRule = NodeRule.NA
-    transformations: dict[uuid.UUID, Transform]
+    transformations: dict[uuid.UUID, Transform] = {}
     objective: float = 0  # For adding any node objectives
 
     @property
@@ -515,9 +515,7 @@ class Node(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.transformations = {}
-        self.ports = {}
-        if self.node_name is None:
+        if not self.node_name:
             self.node_name = "node_" + str(self.uid)
 
     def add_port(self, name: str, port: Port):
@@ -700,7 +698,7 @@ class Edge(BaseModel):
 class Path(BaseModel):
     """A path is a sequence of distinct vertices (nodes)."""
 
-    edge_ports: list[tuple[Port, Port]]  # list of edge name tuples
+    edge_ports: list[tuple[Port, Port]] = []  # list of edge name tuples
     vertices: list  # list of node names
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
     path_name: Optional[str] = None
@@ -708,7 +706,7 @@ class Path(BaseModel):
     regularise: bool = False
     objective: float = 0
 
-    flow_value: str
+    flow_value: str = ""
     contingency_neg: Optional[str]
     contingency_pos: Optional[str]
     path_tariff: Optional[str]
@@ -719,7 +717,6 @@ class Path(BaseModel):
         if self.path_name is None:
             self.path_name = "path_" + str(self.uid)
         self.flow_value = "flow_value_" + self.path_name
-        self.edge_ports = []
 
     def add_vertices(self, vertex_list: list):
         if hasattr(vertex_list[0], "node_name"):
@@ -750,15 +747,12 @@ class Path(BaseModel):
 
 
 class OptimisationGraph(BaseModel):
-    node_obj: dict[str, Node]
-    edge_obj: dict[tuple[str, str], Edge]
-    paths: dict[tuple, Path]
+    node_obj: dict[str, Node] = {}
+    edge_obj: dict[tuple[str, str], Edge] = {}
+    paths: dict[tuple, Path] = {}
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.node_obj = {}
-        self.edge_obj = {}
-        self.paths = {}
 
     def pickle(self):
         return pickle.dumps(self)

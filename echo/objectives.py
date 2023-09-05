@@ -1,7 +1,7 @@
 import uuid
 from datetime import time
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -10,19 +10,19 @@ from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, P
 
 from echo.echo_validators import ArrayType
 from echo.models.agnostic import Storage
-from echo.models.base import BaseModel as echoBaseModel
+from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.pyomo import EchoConcreteModel
 
 
-class Objective(echoBaseModel):
+class Objective(EchoBaseModel):
     component: Union[Port, Path, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
-    name: str
+    name: str = ""
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.name is None:
+        if not self.name:
             self.name = "obj_" + str(self.uid)
 
     def verify_objective(self, model: EchoConcreteModel, df):
@@ -42,7 +42,7 @@ class Objective(echoBaseModel):
         return en.value(obj_expr)  # Return the value of the summed expression
 
 
-class ObjectiveSet(echoBaseModel):
+class ObjectiveSet(EchoBaseModel):
     """Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
 
     objective_list: list
@@ -205,7 +205,7 @@ class BlockTariff(Objective):
     component: Port
     blocks: list  # list of consumption blocks/steps (cumulative) as tuple ranges
     rates: list  # list of rates per tuple
-    reset_periods: list
+    reset_periods: list = []
     reset_index: en.RangeSet
 
     @property
@@ -577,7 +577,7 @@ class Day(Enum):
     holiday = "holiday"
 
 
-class TimePeriod(echoBaseModel):
+class TimePeriod(EchoBaseModel):
     start_time: time
     end_time: time
     day_type: list[Day]
@@ -645,7 +645,7 @@ class TimePeriod(echoBaseModel):
         return False
 
 
-class Window(echoBaseModel):
+class Window(EchoBaseModel):
     """Class for specifying window over which a tariff is calculated using datetimes"""
 
     time_periods: list[TimePeriod]
@@ -724,11 +724,11 @@ class Window(echoBaseModel):
         return _find_rollover(df, interval_duration)
 
 
-class DemandCharge(echoBaseModel):
+class DemandCharge(EchoBaseModel):
     """A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
 
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)
-    name: Optional[str] = None
+    uid: uuid.UUID
+    name: str
     rate: NonNegativeFloat
     min_demand: float = 0.0
     window_array: Union[ArrayType, List]
@@ -736,7 +736,7 @@ class DemandCharge(echoBaseModel):
     import_demand: bool = False
     export_demand: bool = False
 
-    num_reset_periods: int
+    num_reset_periods: int = 0
     reset_index: en.RangeSet  # index for separating different reset periods
 
     @property
@@ -747,7 +747,7 @@ class DemandCharge(echoBaseModel):
     def window_active(self):
         return "window_active_" + self.name
 
-    @root_validator
+    @root_validator(pre=True)
     def check_reset_periods(cls, values):
         rp = values.get("reset_periods")
         window_array = values.get("window_array")
@@ -773,10 +773,14 @@ class DemandCharge(echoBaseModel):
         )
         return values
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.name is None:
-            self.name = "dc_" + str(self.uid)
+    @root_validator(pre=True)
+    def check_name(cls, values):
+        if not values.get("uid"):
+            values["uid"] = uuid.uuid4()
+
+        if not values.get("name"):
+            values["name"] = "dc_" + str(values["uid"])
+        return values
 
     @staticmethod
     def _get_active_periods(window_bool, reset_periods):  # todo only works for single expansion period

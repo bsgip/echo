@@ -52,18 +52,14 @@ class Network(EchoBaseModel):
     """A class for holding our network dict and making it easier to add nodes/edges in the correct format."""
 
     name: str = "default_name"  # name for our network
-    components: dict[str, ComponentData]  # network components (nodes)
-    edges: dict[str, EdgeData]  # network edges, representing connectivity
-    objectives: dict[str, ObjectiveData]  # any objectives we want to define
-    profile: dict  # any static time series data
+    components: dict[str, ComponentData] = {}  # network components (nodes)
+    edges: dict[str, EdgeData] = {}  # network edges, representing connectivity
+    objectives: dict[str, ObjectiveData] = {}  # any objectives we want to define
+    profile: dict = {}  # any static time series data
 
     def __init__(self, **data):
         super().__init__(**data)
         self.name = "default_name"
-        self.components = {}
-        self.edges = {}
-        self.objectives = {}
-        self.profile = {}
 
     def add_node_to_components(
         self, n_id: str, n_type: NodeType, ports: Any = None, params: Optional[dict] = None, data: Any = None

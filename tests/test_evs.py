@@ -2,8 +2,9 @@ from __future__ import division
 
 import numpy as np
 
+from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.models.agnostic import TellegenNode
+from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import EV
 
@@ -20,15 +21,13 @@ def test_v0g():
 
     # Create assets
     grid = Node()  # create node representing upstream grid
-    grid.add_electrical_ports_from_list(
-        ["grid"]
+    grid.add_port(
+        "grid", FlexPort(units=Units.KW)
     )  # create a port which will be used to connect this with the connection_point
 
     # create the connection point (where we will sum everything up)
     connection_point = TellegenNode()
-    connection_point.add_electrical_ports_from_list(
-        ["ev", "grid"]
-    )  # create ports to connect to the grid, the load, and the inverter
+    connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
 
