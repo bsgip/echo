@@ -1,16 +1,9 @@
-import os
-
-import numpy as np
-import pytest
-
-from echo.configuration import *
-from echo.echo_models import *
+from echo.configuration import OptimisationType, Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
-
-SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
-SOLVER_EXECUTABLE = None
-
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
+from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
+from echo.objectives import ObjectiveSet, PeakNegativePower, PeakPositivePower
 
 N_INTERVALS = 48
 

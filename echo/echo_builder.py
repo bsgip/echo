@@ -57,8 +57,8 @@ class Network(EchoBaseModel):
     objectives: dict[str, ObjectiveData]  # any objectives we want to define
     profile: dict  # any static time series data
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **data):
+        super().__init__(**data)
         self.name = "default_name"
         self.components = {}
         self.edges = {}

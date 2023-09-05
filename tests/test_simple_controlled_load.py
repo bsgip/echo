@@ -1,14 +1,9 @@
-import os
-
 import numpy as np
 
-from echo.configuration import *
-from echo.echo_models import *
+from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
-
-SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
-SOLVER_EXECUTABLE = None
+from echo.models.agnostic import ControlledLoad, FlexPort
+from echo.models.base import Edge, Node, OptimisationGraph
 
 
 def test_simple_controlled_load_does_minimum_energy_action():

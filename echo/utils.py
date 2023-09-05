@@ -267,7 +267,8 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
 
     """
 
-    # todo generalise this further to take an arbitrary number of arrays (eg temp array) + corresponding coeff array, so we can do arbitrary number of variables
+    # todo generalise this further to take an arbitrary number of arrays (eg temp array) + corresponding
+    # coeff array, so we can do arbitrary number of variables
     x = {}
     y = {}
     num_temp_cols = len(temp_coef)

@@ -1,16 +1,10 @@
-import os
-
-import numpy as np
 import pytest
 
-from echo.configuration import *
-from echo.echo_models import *
+from echo.configuration import NodeRule, TransformRule, Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.echo_thermal_models import *
-from echo.objectives import *
-
-SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
-SOLVER_EXECUTABLE = None
+from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
+from echo.models.base import Node, OptimisationGraph, Transform
+from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 
 
 def test_simple_bounded_load():

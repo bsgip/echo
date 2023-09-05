@@ -1,9 +1,5 @@
-from typing import TypeVar
-
 import numpy as np
 from pydantic import Field
-
-DataFrame = TypeVar("pandas.core.frame.DataFrame")
 
 
 class ArrayType(np.ndarray):

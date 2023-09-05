@@ -8,12 +8,16 @@ from __future__ import division
 
 import pprint
 
+import matplotlib.pyplot as plt
+import numpy as np
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
+from echo.models.electrical import EV
+from echo.models.prebuilt import FlexElectricalNode
 
 ## Set up hyper params
 time_periods = 48  # number of time periods to run the optimisation for

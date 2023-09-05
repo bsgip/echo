@@ -2,6 +2,8 @@ from __future__ import division
 
 import time
 
+import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
@@ -9,7 +11,8 @@ from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.objectives import *
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.objectives import ExportTariff, ImportTariff, ObjectiveSet, PeakNegativePower, ThroughputCost
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location

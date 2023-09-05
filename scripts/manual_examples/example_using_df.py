@@ -1,20 +1,18 @@
 from __future__ import division
 
 import pandas as pd
-import seaborn as sns
-from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.objectives import *
+from echo.models.electrical import ElectricalGeneration, FixedElectricalPort
 
 time_periods = 48
 
 df = pd.DataFrame({"load": [5] * time_periods, "solar": [-2] * time_periods})
 
-## Set up hyper params
+# Set up hyper params
 
 interval_duration = 30
 expansion_periods = 1

@@ -1,25 +1,21 @@
 import random
 import time as time_
-import timeit
-import numpy as np
-from matplotlib.pyplot import figure
 
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
-from echo.objectives import *
 import networkx as nx
+import numpy as np
 
-import os
-
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
-SOLVER_EXECUTABLE = None
+from echo.echo_optimiser import EchoOptimiser
+from echo.models.agnostic import TellegenNode
+from echo.models.base import OptimisationGraph
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalPort, ElectricalStorage
+from echo.models.prebuilt import FlexElectricalNode
+from echo.objectives import ImportTariff, ObjectiveSet, PeakNegativePower
 
 N_INTERVALS = 48
 
-def test_many_node_system_no_objective():
 
-    ## Set params
+def test_many_node_system_no_objective():
+    # Set params
     num_gen = 40
     num_loads = 30
     num_storage = 100
@@ -37,7 +33,7 @@ def test_many_node_system_no_objective():
 
     tellegen_node_set = set(range(num_tellegen_nodes))
 
-    ###### Create graph
+    # Create graph
     system = OptimisationGraph()
 
     # Generate a random tree using all the tellegen nodes
@@ -65,10 +61,10 @@ def test_many_node_system_no_objective():
         sel_node = node_name_map[str(x[0])]
 
         # Create load node with random demand profile
-        load = ElectricalNode()
+        load = FlexElectricalNode()
         lp = ElectricalDemand()
         lp.add_demand_profile_from_array(np.random.randint(min_demand, max_demand, time_periods), expansion_periods)
-        name = 'load_' + str(i)
+        name = "load_" + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
         system.add_nodes_from(load)
@@ -81,11 +77,11 @@ def test_many_node_system_no_objective():
         sel_node = node_name_map[str(x[0])]
 
         # Create generation node with random generation profile
-        gen = ElectricalNode()
+        gen = FlexElectricalNode()
         gp = ElectricalGeneration()
         gp.curtailable = False
         gp.add_generation_profile_from_array(np.random.randint(max_gen, min_gen, time_periods), expansion_periods)
-        name = 'gen_' + str(i)
+        name = "gen_" + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
         system.add_nodes_from(gen)
@@ -98,15 +94,17 @@ def test_many_node_system_no_objective():
         sel_node = node_name_map[str(x[0])]
 
         # Create storage node
-        bess = ElectricalNode()
-        b1 = ElectricalStorage(max_capacity=48,
-                               depth_of_discharge_limit=0,
-                               charging_power_limit=5.0,
-                               discharging_power_limit=-5.0,
-                               charging_efficiency=1,
-                               discharging_efficiency=1,
-                               initial_state_of_charge=48.0)
-        name = 'bess_' + str(i)
+        bess = FlexElectricalNode()
+        b1 = ElectricalStorage(
+            max_capacity=48,
+            depth_of_discharge_limit=0,
+            charging_power_limit=5.0,
+            discharging_power_limit=-5.0,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=48.0,
+        )
+        name = "bess_" + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
         system.add_nodes_from(bess)
@@ -116,10 +114,10 @@ def test_many_node_system_no_objective():
     x = random.sample(tellegen_node_set, 1)
     sel_node = node_name_map[str(x[0])]
 
-    grid = ElectricalNode()
+    grid = FlexElectricalNode()
     g = ElectricalPort()
-    grid.ports['grid'] = g
-    node_name_map['grid'] = grid
+    grid.ports["grid"] = g
+    node_name_map["grid"] = grid
     system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
@@ -132,20 +130,18 @@ def test_many_node_system_no_objective():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=None
+        objective_set=None,
     )
 
     optimiser.optimise()
 
     end = time_.time()
-    print('Total nodes: ', system.number_of_nodes())
-    print('Time taken to construct echo optimiser and optimise: ', end-start)
-
+    print("Total nodes: ", system.number_of_nodes())
+    print("Time taken to construct echo optimiser and optimise: ", end - start)
 
 
 def test_many_node_system_with_objectives():
-
-    ## Set params
+    # Set params
 
     expansion_periods = 1
     time_periods = 48
@@ -157,7 +153,7 @@ def test_many_node_system_with_objectives():
     max_gen = -10
     min_gen = 0
 
-    ###### Create graph
+    # Create graph
 
     num_gen = 40
     num_loads = 30
@@ -166,7 +162,7 @@ def test_many_node_system_with_objectives():
 
     tellegen_node_set = set(range(num_tellegen_nodes))
 
-    ###### Create graph
+    # Create graph
     system = OptimisationGraph()
 
     # Generate a random tree using all the tellegen nodes
@@ -194,10 +190,10 @@ def test_many_node_system_with_objectives():
         sel_node = node_name_map[str(x[0])]
 
         # Create load node with random demand profile
-        load = ElectricalNode()
+        load = FlexElectricalNode()
         lp = ElectricalDemand()
         lp.add_demand_profile_from_array(np.random.randint(min_demand, max_demand, time_periods), expansion_periods)
-        name = 'load_' + str(i)
+        name = "load_" + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
         system.add_nodes_from(load)
@@ -210,11 +206,11 @@ def test_many_node_system_with_objectives():
         sel_node = node_name_map[str(x[0])]
 
         # Create generation node with random generation profile
-        gen = ElectricalNode()
+        gen = FlexElectricalNode()
         gp = ElectricalGeneration()
         gp.curtailable = False
         gp.add_generation_profile_from_array(np.random.randint(max_gen, min_gen, time_periods), expansion_periods)
-        name = 'gen_' + str(i)
+        name = "gen_" + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
         system.add_nodes_from(gen)
@@ -227,15 +223,17 @@ def test_many_node_system_with_objectives():
         sel_node = node_name_map[str(x[0])]
 
         # Create storage node
-        bess = ElectricalNode()
-        b1 = ElectricalStorage(max_capacity=48,
-                               depth_of_discharge_limit=0,
-                               charging_power_limit=5.0,
-                               discharging_power_limit=-5.0,
-                               charging_efficiency=1,
-                               discharging_efficiency=1,
-                               initial_state_of_charge=48.0)
-        name = 'bess_' + str(i)
+        bess = FlexElectricalNode()
+        b1 = ElectricalStorage(
+            max_capacity=48,
+            depth_of_discharge_limit=0,
+            charging_power_limit=5.0,
+            discharging_power_limit=-5.0,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=48.0,
+        )
+        name = "bess_" + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
         system.add_nodes_from(bess)
@@ -245,19 +243,21 @@ def test_many_node_system_with_objectives():
     x = random.sample(tellegen_node_set, 1)
     sel_node = node_name_map[str(x[0])]
 
-    grid = ElectricalNode()
+    grid = FlexElectricalNode()
     g = ElectricalPort()
-    grid.ports['grid'] = g
-    node_name_map['grid'] = grid
+    grid.ports["grid"] = g
+    node_name_map["grid"] = grid
     system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
     # nx.draw(system, with_labels=True)
 
-    objective_set = ObjectiveSet(objective_list=[
-        PeakNegativePower(component=g),
-        ImportTariff(component=g, tariff_array=[0.1] * 24 + [0.2] * 24, expansion_periods=expansion_periods)
-    ])
+    objective_set = ObjectiveSet(
+        objective_list=[
+            PeakNegativePower(component=g),
+            ImportTariff(component=g, tariff_array=[0.1] * 24 + [0.2] * 24, expansion_periods=expansion_periods),
+        ]
+    )
 
     start = time_.time()
 
@@ -267,19 +267,18 @@ def test_many_node_system_with_objectives():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=objective_set
+        objective_set=objective_set,
     )
 
     optimiser.optimise()
 
     end = time_.time()
-    print('Total nodes: ', system.number_of_nodes())
-    print('Time taken to construct echo optimiser and optimise: ', end-start)
+    print("Total nodes: ", system.number_of_nodes())
+    print("Time taken to construct echo optimiser and optimise: ", end - start)
 
 
 def test_many_node_system_with_path_tracing():
-
-    ## Set params
+    # Set params
 
     expansion_periods = 1
     time_periods = 48
@@ -291,7 +290,7 @@ def test_many_node_system_with_path_tracing():
     max_gen = -10
     min_gen = 0
 
-    ###### Create graph
+    # Create graph
 
     num_gen = 4
     num_loads = 4
@@ -301,7 +300,7 @@ def test_many_node_system_with_path_tracing():
 
     system = OptimisationGraph()
 
-    ###### Create graph
+    # Create graph
     system = OptimisationGraph()
 
     # Generate a random tree using all the tellegen nodes
@@ -329,10 +328,10 @@ def test_many_node_system_with_path_tracing():
         sel_node = node_name_map[str(x[0])]
 
         # Create load node with random demand profile
-        load = ElectricalNode()
+        load = FlexElectricalNode()
         lp = ElectricalDemand()
         lp.add_demand_profile_from_array(np.random.randint(min_demand, max_demand, time_periods), expansion_periods)
-        name = 'load_' + str(i)
+        name = "load_" + str(i)
         node_name_map[name] = load
         load.ports[name] = lp
         system.add_nodes_from(load)
@@ -345,11 +344,11 @@ def test_many_node_system_with_path_tracing():
         sel_node = node_name_map[str(x[0])]
 
         # Create generation node with random generation profile
-        gen = ElectricalNode()
+        gen = FlexElectricalNode()
         gp = ElectricalGeneration()
         gp.curtailable = False
         gp.add_generation_profile_from_array(np.random.randint(max_gen, min_gen, time_periods), expansion_periods)
-        name = 'gen_' + str(i)
+        name = "gen_" + str(i)
         node_name_map[name] = gen
         gen.ports[name] = gp
         system.add_nodes_from(gen)
@@ -362,15 +361,17 @@ def test_many_node_system_with_path_tracing():
         sel_node = node_name_map[str(x[0])]
 
         # Create storage node
-        bess = ElectricalNode()
-        b1 = ElectricalStorage(max_capacity=48,
-                               depth_of_discharge_limit=0,
-                               charging_power_limit=5.0,
-                               discharging_power_limit=-5.0,
-                               charging_efficiency=1,
-                               discharging_efficiency=1,
-                               initial_state_of_charge=48.0)
-        name = 'bess_' + str(i)
+        bess = FlexElectricalNode()
+        b1 = ElectricalStorage(
+            max_capacity=48,
+            depth_of_discharge_limit=0,
+            charging_power_limit=5.0,
+            discharging_power_limit=-5.0,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=48.0,
+        )
+        name = "bess_" + str(i)
         node_name_map[name] = bess
         bess.ports[name] = b1
         system.add_nodes_from(bess)
@@ -380,27 +381,26 @@ def test_many_node_system_with_path_tracing():
     x = random.sample(tellegen_node_set, 1)
     sel_node = node_name_map[str(x[0])]
 
-    grid = ElectricalNode()
+    grid = FlexElectricalNode()
     g = ElectricalPort()
-    grid.ports['grid'] = g
-    node_name_map['grid'] = grid
+    grid.ports["grid"] = g
+    node_name_map["grid"] = grid
     system.add_nodes_from(grid)
     system.connect_port_to_node_create_edges_create_port(g, sel_node)
 
     # nx.draw(system, with_labels=True)
 
-    #Generate list of source/sink nodes
+    # Generate list of source/sink nodes
 
     sources = []
     sinks = []
     for k, v in node_name_map.items():
-        if ('load' in k) or ('sto' in k) or ('grid' in k):
+        if ("load" in k) or ("sto" in k) or ("grid" in k):
             sinks.append(v)
-        if ('gen' in k) or ('sto' in k) or ('grid' in k):
+        if ("gen" in k) or ("sto" in k) or ("grid" in k):
             sources.append(v)
 
     system.create_all_path_objects(sources=sources, sinks=sinks)
-
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -408,14 +408,13 @@ def test_many_node_system_with_path_tracing():
         number_of_expansion_intervals=expansion_periods,
         discount_rate=0,
         ES=system,
-        objective_set=None
+        objective_set=None,
     )
 
     start = time_.time()
     optimiser.optimise()
 
     end = time_.time()
-    print('Total nodes: ', system.number_of_nodes())
-    print('Total paths: ', len(system.paths))
-    print('Time taken to optimise: ', end-start)
-
+    print("Total nodes: ", system.number_of_nodes())
+    print("Total paths: ", len(system.paths))
+    print("Time taken to optimise: ", end - start)

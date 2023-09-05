@@ -679,7 +679,10 @@ class Window(echoBaseModel):
 
             def perform_rollover_calc(diff_array):
                 _reset_periods = []
-                total = 1  # initialise a total to count how many intervals per reset period. =1 because the diff array has length n-1
+                # initialise a total to count how many intervals per reset period.
+                # =1 because the diff array has length n-1
+                total = 1
+
                 for i in diff_array:
                     if i != 0:  # this indicates we have rolled over - add our total # intervals
                         _reset_periods.append(total)

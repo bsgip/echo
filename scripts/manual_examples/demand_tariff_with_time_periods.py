@@ -1,19 +1,27 @@
-import os
-from datetime import datetime
+from datetime import datetime, time
+
+import pandas as pd
 
 from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.objectives import *
-
-# fmt: off
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
-SOLVER_EXECUTABLE = None
+from echo.models.electrical import ElectricalDemand, ElectricalStorage
+from echo.objectives import (
+    Day,
+    DemandTariffObjective,
+    ImportDemandCharge,
+    ObjectiveSet,
+    ResetPeriod,
+    ThroughputCost,
+    TimePeriod,
+    Window,
+)
 
 expansion_periods = 1
 profile = pd.DataFrame(
-    index=pd.date_range(start=datetime(2021, 1, 4), end=datetime(2021, 1, 11), freq='30min', closed='left'))
+    index=pd.date_range(start=datetime(2021, 1, 4), end=datetime(2021, 1, 11), freq="30min", closed="left")
+)
 
 time_periods = len(profile)
 interval_duration = 30
@@ -21,53 +29,52 @@ interval_duration = 30
 system = OptimisationGraph()
 
 grid = Node()
-grid.add_port('grid', FlexPort(units=Units.KW))
+grid.add_port("grid", FlexPort(units=Units.KW))
 
 battery1 = Node()
-b1 = ElectricalStorage(max_capacity=15.0,
-                       depth_of_discharge_limit=0,
-                       charging_power_limit=2.0,
-                       discharging_power_limit=-2.0,
-                       charging_efficiency=1,
-                       discharging_efficiency=1,
-                       initial_state_of_charge=0.0)
-battery1.ports['battery'] = b1
+b1 = ElectricalStorage(
+    max_capacity=15.0,
+    depth_of_discharge_limit=0,
+    charging_power_limit=2.0,
+    discharging_power_limit=-2.0,
+    charging_efficiency=1,
+    discharging_efficiency=1,
+    initial_state_of_charge=0.0,
+)
+battery1.ports["battery"] = b1
 
 load1 = Node()
 l1 = ElectricalDemand()
 
-l1.add_demand_profile_from_array([10]*time_periods, expansion_periods)
-load1.ports['demand'] = l1
+l1.add_demand_profile_from_array([10] * time_periods, expansion_periods)
+load1.ports["demand"] = l1
 
 site1 = TellegenNode()
-site1.add_ports_from_list(['cp', 'load', 'bess'], FlexPort, units=Units.KW)
-cp1 = site1.ports['cp']
+site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
+cp1 = site1.ports["cp"]
 
 system.add_node_obj([grid, battery1, load1, site1])
 
-system.connect_ports_and_create_edge(grid.ports['grid'], cp1)
-system.connect_ports_and_create_edge(site1.ports['bess'], b1)
-system.connect_ports_and_create_edge(site1.ports['load'], l1)
+system.connect_ports_and_create_edge(grid.ports["grid"], cp1)
+system.connect_ports_and_create_edge(site1.ports["bess"], b1)
+system.connect_ports_and_create_edge(site1.ports["load"], l1)
 
 
 # peak usage
 peak_window_new = Window(
-    time_periods=[
-        TimePeriod(start_time=time(18, 0),
-                   end_time=time(21, 0),
-                   day_type=[Day.weekday, Day.weekend]
-                   )],
-    reset_periods=ResetPeriod.day
+    time_periods=[TimePeriod(start_time=time(18, 0), end_time=time(21, 0), day_type=[Day.weekday, Day.weekend])],
+    reset_periods=ResetPeriod.day,
 )
 
-peak_charge = ImportDemandCharge(name='peak',
-                                 rate=10.0,
-                                 window_array=peak_window_new.to_bool_periods(profile),
-                                 min_demand=0.0,
-                                 reset_periods=peak_window_new.get_reset_period_array(profile))
+peak_charge = ImportDemandCharge(
+    name="peak",
+    rate=10.0,
+    window_array=peak_window_new.to_bool_periods(profile),
+    min_demand=0.0,
+    reset_periods=peak_window_new.get_reset_period_array(profile),
+)
 
-demand_tariff = DemandTariffObjective(component=cp1,
-                                      demand_charges=[peak_charge])
+demand_tariff = DemandTariffObjective(component=cp1, demand_charges=[peak_charge])
 
 throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
@@ -80,7 +87,7 @@ optimiser = EchoOptimiser(
     discount_rate=0,
     ES=system,
     objective_set=objective_set,
-    profile=profile
+    profile=profile,
 )
 
 optimiser.optimise()
