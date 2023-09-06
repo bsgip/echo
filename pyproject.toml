@@ -1,2 +1,48 @@
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
+testpaths = "tests"
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.flake8]
+max-line-length = 120
+max-complexity = 20
+
+[tool.isort]
+profile = "black"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+
+[tool.mypy]
+exclude = []
+
+[build-system]
+requires = ["setuptools >= 40.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "echo"
+version = "2.0.0"
+dependencies = [
+    "pyomo>=3.5",
+    "numpy>=1.21",
+    "pandas>=1.4",
+    "networkx>=2.7",
+    "seaborn>=0.11",
+    "typing-extensions>=4.1",
+    "pydantic>=1.9,<2",
+    "tqdm>=4.63",
+    "pyarrow>=7.0",
+    "scikit-learn>=1.1",
+    "orjson>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["bandit", "flake8", "mypy", "black"]
+test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
+
+[tool.setuptools.package-data]
+"echo" = ["py.typed"]

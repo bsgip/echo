@@ -3,9 +3,9 @@
 """
 from enum import Enum
 
+
 class Units(Enum):
-    """ Enumeration object containing units in which the optimisation is undertaken.
-    """
+    """Enumeration object containing units in which the optimisation is undertaken."""
 
     NA = 0
     """Used for initialisation but optimisation will fail if units not set prior to execution."""
@@ -27,8 +27,7 @@ class Units(Enum):
 
 
 class Flows(Enum):
-    """ Enumeration object defining the direction of commodity flow supported by the Port.
-    """
+    """Enumeration object defining the direction of commodity flow supported by the Port."""
 
     NA = 0
     """flow direction for the port is not defined"""
@@ -41,8 +40,7 @@ class Flows(Enum):
 
 
 class FlowConstraint(Enum):
-    """ Enumeration object defining the type (format) of constraint at the Port.
-    """
+    """Enumeration object defining the type (format) of constraint at the Port."""
 
     NA = 0
     """Constraint type is not specified for this port"""
@@ -56,10 +54,8 @@ class FlowConstraint(Enum):
     """A lower bound constraint and upper bound constraint exist at this port"""
 
 
-
 class OptimisationType(Enum):
-    """ Enumeration object defining the type Port value variable in optimisation context.
-    """
+    """Enumeration object defining the type Port value variable in optimisation context."""
 
     NA = 0
     """Value type is not specified for this port"""
@@ -70,8 +66,7 @@ class OptimisationType(Enum):
 
 
 class NodeRule(Enum):
-    """ Enumeration object defining the type Transformation for the Node object.
-    """
+    """Enumeration object defining the type Transformation for the Node object."""
 
     NA = 0
     """Transformation type is not specified for this Node"""
@@ -84,8 +79,8 @@ class NodeRule(Enum):
 
 
 class TransformRule(Enum):
-    """ Enumeration object defining to which component of the Port value the Transformation Rule applies
-    """
+    """Enumeration object defining to which component of the Port value the Transformation Rule applies"""
+
     NA = 0
     """Not specified for this Port"""
     Both = 1
@@ -95,8 +90,10 @@ class TransformRule(Enum):
     Neg = 3
     """The transformation applies to only the negative component of the port variable"""
 
+
 class ExpansionType(Enum):
-    """ Enumeration object defining the type of Expansion"""
+    """Enumeration object defining the type of Expansion"""
+
     NA = 0
     """Not specified"""
     Storage = 1
@@ -106,36 +103,38 @@ class ExpansionType(Enum):
     Edge = 3
     """Energy throughput (Edge capacity) expansion"""
 
+
 class NodeType(Enum):
-    ElectricalFlex = 'electrical_flex'
-    ElectricalTellegen = 'elec_tellegen'
-    MultiCommodityTellegen = 'multi_commodity_tellegen'
-    Battery = 'battery'
-    ElectricalLoad = 'load'
-    ElectricalGeneration = 'elec_gen'
-    Solar = 'solar'
+    ElectricalFlex = "electrical_flex"
+    ElectricalTellegen = "elec_tellegen"
+    MultiCommodityTellegen = "multi_commodity_tellegen"
+    Battery = "battery"
+    ElectricalLoad = "load"
+    ElectricalGeneration = "elec_gen"
+    Solar = "solar"
     """Solar generator (PV) Node"""
-    EV = 'ev'
-    V0GEV = 'v0g_ev'
-    V1GEV = 'v1g_ev'
-    V2GEV = 'v2g_ev'
-    Inverter = 'inverter'
+    EV = "ev"
+    V0GEV = "v0g_ev"
+    V1GEV = "v1g_ev"
+    V2GEV = "v2g_ev"
+    Inverter = "inverter"
     """DC/AC inverter Node"""
-    Chiller = 'chiller'
-    GasBoiler = 'gas_boiler'
-    ControlledElectricalLoad = 'cload_elec'
-    ControlledElectricalGen = 'cgen_elec'
-    FixedElectrical = 'fixed_elec'
-    FixedGas = 'fixed_gas'
-    CarbonAggregation = 'carbon_agg'
+    Chiller = "chiller"
+    GasBoiler = "gas_boiler"
+    ControlledElectricalLoad = "cload_elec"
+    ControlledElectricalGen = "cgen_elec"
+    FixedElectrical = "fixed_elec"
+    FixedGas = "fixed_gas"
+    CarbonAggregation = "carbon_agg"
     """CO2 aggregation Node"""
-    HeatPump = 'heatpump'
+    HeatPump = "heatpump"
     """Heat water pump Node"""
-    FlexWithEmissions = 'flex_with_emissions'
+    FlexWithEmissions = "flex_with_emissions"
+
 
 class Resource(Enum):
-    """ Enumeration object defining the types of Energy Resources (Commodities)
-    """
+    """Enumeration object defining the types of Energy Resources (Commodities)"""
+
     Electricity = 0
     """Electricity"""
     Gas = 1
@@ -145,31 +144,33 @@ class Resource(Enum):
     CO2 = 3
     """CO2 (emissions)"""
 
+
 class TariffType(Enum):
-    """ Tariff types"""
-    ImportTariff = 'import tariff'
-    ExportTariff = 'export tariff'
-    ImportDemandTariff = 'import demand tariff'
-    ExportDemandTariff = 'export demand tariff'
-    ThroughputCost = 'throughput cost'
-    PeakPosPower = 'peak positive power'
-    PeakNegPower = 'peak negative power'
-    QuadraticPower = 'quadratic power'
-    ContingencyPositive = 'contingency positive'
-    ContingencyNegative = 'contingency negative'
+    """Tariff types"""
+
+    ImportTariff = "import tariff"
+    ExportTariff = "export tariff"
+    ImportDemandTariff = "import demand tariff"
+    ExportDemandTariff = "export demand tariff"
+    ThroughputCost = "throughput cost"
+    PeakPosPower = "peak positive power"
+    PeakNegPower = "peak negative power"
+    QuadraticPower = "quadratic power"
+    ContingencyPositive = "contingency positive"
+    ContingencyNegative = "contingency negative"
 
 
 class Resets(Enum):
-    """ How often something resets """
-    minute = 'minute'
-    hourly = 'hourly'
-    daily = 'daily'
-    weekly = 'weekly'
-    yearly = 'annually'
+    """How often something resets"""
+
+    minute = "minute"
+    hourly = "hourly"
+    daily = "daily"
+    weekly = "weekly"
+    yearly = "annually"
 
 
 class EVChargeMode(Enum):
-    V0G = 'V0G'
-    V1G = 'V1G'
-    V2G = 'V2G'
-
+    V0G = "V0G"
+    V1G = "V1G"
+    V2G = "V2G"

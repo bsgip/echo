@@ -20,7 +20,14 @@ from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.carbon import CarbonAggregation
 from echo.models.electrical import EV, ElectricalStorage, MobileElectricalStorage
-from echo.models.prebuilt import Battery, FlexNode, FlexNodeWithEmissions, Load, NewInverter, Solar
+from echo.models.prebuilt import (
+    Battery,
+    FlexNode,
+    FlexNodeWithEmissions,
+    Load,
+    NewInverter,
+    Solar,
+)
 
 
 @dataclass
