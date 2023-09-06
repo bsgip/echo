@@ -90,8 +90,8 @@ class TempControlledBoiler(InputOutputNode):
 
     # pyomo vars
     is_on: Optional[str]
-    return_t: Optional[str]
-    exit_t: Optional[str]
+    return_t: str = ""
+    exit_t: str = ""
 
     check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
     set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)

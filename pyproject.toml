@@ -6,10 +6,6 @@ pythonpath = ["src/"]
 testpaths = "tests"
 filterwarnings = ["error::DeprecationWarning"]
 
-[tool.flake8]
-max-line-length = 120
-max-complexity = 20
-
 [tool.isort]
 profile = "black"
 
@@ -17,7 +13,7 @@ profile = "black"
 exclude_dirs = ["tests"]
 
 [tool.mypy]
-exclude = []
+exclude = ["docs/", "scripts/"]
 
 [build-system]
 requires = ["setuptools >= 40.9.0", "wheel"]
@@ -41,7 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["bandit", "flake8", "mypy", "black"]
+dev = ["bandit", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
 
 [tool.setuptools.package-data]

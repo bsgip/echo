@@ -11,7 +11,14 @@ import pyomo.environ as en
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
+from echo.configuration import (
+    FlowConstraint,
+    Flows,
+    NodeRule,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
 from echo.models.scenario import EchoConcreteModel
@@ -57,7 +64,7 @@ class Port(BaseModel):
     import_constraint_value: Optional[ConstraintValueType] = None
     export_constraint: FlowConstraint = FlowConstraint.NA
     export_constraint_value: Optional[ConstraintValueType] = None
-    active_periods: Optional[dict]
+    active_periods: Optional[dict[tuple[int, int], Any]]
     slack: bool = False
     objective: Union[float, en.numeric_expr.NumericExpression] = 0  # this will eventually be a pyomo expression
 
@@ -313,12 +320,13 @@ class Port(BaseModel):
                 set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
 
         if self.active_periods is not None:
+            port_active_periods = self.active_periods
 
             def on_off_rule1(model: EchoConcreteModel, p, t):
-                return getattr(model, self.port_name)[p, t] <= self.active_periods[p, t] * model.bigM
+                return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.bigM
 
             def on_off_rule2(model: EchoConcreteModel, p, t):
-                return getattr(model, self.port_name)[p, t] >= -self.active_periods[p, t] * model.bigM
+                return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
 
             setattr(
                 model,
@@ -593,15 +601,16 @@ class Node(BaseModel):
             lhs = 0
             for term in current_transform.lhs:
                 weight = term.weight
-                var = term.var
                 rule = term.rule
                 if rule is TransformRule.Both:
-                    var = term.var.port_name
+                    var_name = term.var.port_name
                 elif rule is TransformRule.Pos:
-                    var = term.var.pos
+                    var_name = term.var.pos
                 elif rule is TransformRule.Neg:
-                    var = term.var.neg
-                lhs += getattr(model, var)[p, t] * weight[p, t]
+                    var_name = term.var.neg
+                else:
+                    raise Exception(f"Unsupported transform rule {rule} for term {term}")
+                lhs += getattr(model, var_name)[p, t] * weight[p, t]
             return lhs == current_transform.rhs
 
         if self.node_rule == NodeRule.Transform:

@@ -358,7 +358,7 @@ def convert_network_to_echo(netw: Network, df: Optional[pd.DataFrame] = None, ve
     return convert_dict_to_echo(netw=netw.dict(), df=df, verbose=verbose)
 
 
-def convert_dict_to_echo(netw: dict, df: pd.DataFrame, verbose: bool = True):
+def convert_dict_to_echo(netw: dict, df: Optional[pd.DataFrame], verbose: bool = True):
     """Converts dict directly to echo optimisation graph."""
     if verbose:
         start_time = time.time()
@@ -445,7 +445,9 @@ def construct_echo_edge(system: OptimisationGraph, edge_name: str, edge_dict: di
     system.connect_ports_and_create_edge(p1, p2)
 
 
-def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: pd.DataFrame):
+def construct_echo_node(
+    system: OptimisationGraph, node_name_dict: dict, node, node_dict: dict, df: Optional[pd.DataFrame]
+):
     """
     Works out which type of echo node to build. Builds it, adds it to the graph, and updates the node_name dict.
     Args:
@@ -464,31 +466,34 @@ def construct_echo_node(system: OptimisationGraph, node_name_dict: dict, node, n
         system.add_node_obj(new_node)
         node_name_dict[node] = new_node.node_name
 
-    if node_dict["type"] == NodeType.Battery:
+    node_type = node_dict["type"]
+    if node_type == NodeType.Battery:
         new_node = create_battery_node(node_dict)
 
-    elif node_dict["type"] == NodeType.ElectricalTellegen:
+    elif node_type == NodeType.ElectricalTellegen:
         new_node = create_tellegen_node(node_dict, Units.KW)
 
-    elif node_dict["type"] == NodeType.ElectricalFlex:
+    elif node_type == NodeType.ElectricalFlex:
         new_node = create_flex_node(node_dict, Units.KW)
 
-    elif node_dict["type"] == NodeType.ElectricalLoad:
+    elif node_type == NodeType.ElectricalLoad:
         new_node = create_load_node(node_dict, Units.KW, df)
 
-    elif node_dict["type"] == NodeType.EV:
+    elif node_type == NodeType.EV:
+        assert df is not None, f"Supplied DataFrame cannot be null for NodeType {node_type}"
         new_node = create_ev(node_dict, df)
 
-    elif node_dict["type"] == NodeType.Inverter:
+    elif node_type == NodeType.Inverter:
         new_node = create_inverter_node(node_dict)
 
-    elif node_dict["type"] == NodeType.Solar:
+    elif node_type == NodeType.Solar:
+        assert df is not None, f"Supplied DataFrame cannot be null for NodeType {node_type}"
         new_node = create_solar_node(node_dict, df)
 
-    elif node_dict["type"] == NodeType.CarbonAggregation:
+    elif node_type == NodeType.CarbonAggregation:
         new_node = create_carbon_aggregation_node(node_dict)
 
-    elif node_dict["type"] == NodeType.FlexWithEmissions:
+    elif node_type == NodeType.FlexWithEmissions:
         new_node = create_flex_node_with_emissions(node_dict, units=Units.KW)
 
     else:
@@ -573,7 +578,7 @@ def create_flex_node(node_dict: dict, unit: Units) -> Node:
     return node
 
 
-def create_load_node(node_dict: dict, unit: Units, df: pd.DataFrame) -> Node:
+def create_load_node(node_dict: dict, unit: Units, df: Optional[pd.DataFrame]) -> Node:
     """Creates a node with a demand (import only) port."""
     port_name = check_node_has_only_one_port(node_dict)
     load_profile = process_field(node_dict["data"], df)

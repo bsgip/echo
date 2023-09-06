@@ -140,7 +140,9 @@ class ControlledLoadOrGen(FlexPort):
         # Set bounds using min and max power
         set_float_var_bounds(model=model, var_name=self.port_name, ub=self.max_power, lb=self.min_power)
 
-        if self.min_utilisation is not None:
+        if self.min_utilisation is not None and self.max_power is not None:
+            min_utilisation: float = self.min_utilisation
+            max_power: float = self.max_power
 
             def sum_of_energy_must_be_greater_than_min(model: EchoConcreteModel):
                 return (
@@ -149,8 +151,8 @@ class ControlledLoadOrGen(FlexPort):
                         for p in model.Expansion
                         for i in model.Time
                     )
-                    >= self.min_utilisation
-                    * self.max_power
+                    >= min_utilisation
+                    * max_power
                     * model.scenario_settings.interval_duration
                     * model.scenario_settings.number_of_intervals
                     / 60.0
@@ -162,7 +164,9 @@ class ControlledLoadOrGen(FlexPort):
                 en.Constraint(rule=sum_of_energy_must_be_greater_than_min),
             )
 
-        if self.max_utilisation is not None:
+        if self.max_utilisation is not None and self.max_power is not None:
+            max_utilisation: float = self.max_utilisation
+            max_power = self.max_power
 
             def sum_of_energy_must_be_less_than_max(model: EchoConcreteModel):
                 return (
@@ -171,8 +175,8 @@ class ControlledLoadOrGen(FlexPort):
                         for p in model.Expansion
                         for i in model.Time
                     )
-                    <= self.max_utilisation
-                    * self.max_power
+                    <= max_utilisation
+                    * max_power
                     * model.scenario_settings.interval_duration
                     * model.scenario_settings.number_of_intervals
                     / 60.0
