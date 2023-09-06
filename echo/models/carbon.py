@@ -3,7 +3,7 @@ import pyomo.environ as en
 from echo.configuration import Flows, NodeRule, Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 
 
 class CarbonPort(FlexPort):

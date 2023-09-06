@@ -9,7 +9,7 @@ from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
 from echo.echo_validators import ArrayType
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import ConfigurationError, Node, Transform
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
 
 

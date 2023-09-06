@@ -16,7 +16,7 @@ from echo.models.agnostic import (
     TimeVaryingPiecewiseIONode,
 )
 from echo.models.base import Node
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict
 
 

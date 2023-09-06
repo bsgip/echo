@@ -12,7 +12,7 @@ from echo.echo_validators import ArrayType
 from echo.models.agnostic import Storage
 from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel, ScenarioSettings
 
 
 class Objective(EchoBaseModel):
@@ -37,6 +37,9 @@ class Objective(EchoBaseModel):
     def objective_expr(self, model: EchoConcreteModel):
         pass
 
+    def apply_constraints(self, model: EchoConcreteModel):
+        pass
+
     def get_objective_total(self, optimiser):
         obj_expr = self.objective_expr(optimiser.model)  # Retrieve the objective expression
         return en.value(obj_expr)  # Return the value of the summed expression
@@ -45,9 +48,9 @@ class Objective(EchoBaseModel):
 class ObjectiveSet(EchoBaseModel):
     """Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
 
-    objective_list: list
+    objective_list: list[Objective]
 
-    def initialise_objective(self, model: EchoConcreteModel, df=None):
+    def initialise_objective(self, model: EchoConcreteModel, df: Optional[pd.DataFrame] = None):
         for obj in self.objective_list:
             obj.verify_objective(model, df)
             obj.create_params(model, df)
@@ -156,7 +159,7 @@ class ImportTariff(Tariff):
         return sum(
             getattr(model, self.component.pos)[p, t]
             * getattr(model, self.import_tariff)[p, t]
-            * model.interval_duration
+            * model.scenario_settings.interval_duration
             / 60
             * getattr(model, model.dr)[p]
             for p in model.Expansion
@@ -190,7 +193,7 @@ class ExportTariff(Tariff):
         return sum(
             getattr(model, self.component.neg)[p, t]
             * getattr(model, self.export_tariff)[p, t]
-            * model.interval_duration
+            * model.scenario_settings.interval_duration
             / 60
             * getattr(model, model.dr)[p]
             for p in model.Expansion
@@ -867,7 +870,7 @@ class DemandTariffObjective(Objective):
                 else:
                     prev_length = len(dc.window_array)
                 assert (
-                    prev_length == model.number_of_intervals
+                    prev_length == model.scenario_settings.number_of_intervals
                 ), f"Demand charge {dc} windows do not match optimiser time periods."
 
         verify_non_overlapping()

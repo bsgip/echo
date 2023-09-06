@@ -10,7 +10,7 @@ from echo.echo_validators import (
     validate_startup_efficiency,
 )
 from echo.models.agnostic import FlexPort, InputOutputNode, OffOrConstrainedPort
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 
 
 class GasPort(FlexPort):

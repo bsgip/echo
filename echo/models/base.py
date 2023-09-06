@@ -14,7 +14,7 @@ from pydantic import Field, validator
 from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
     ArrayWrappableType,

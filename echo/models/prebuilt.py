@@ -9,7 +9,7 @@ from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, Of
 from echo.models.base import Node
 from echo.models.carbon import CarbonSource
 from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 
 
 class Battery(Node):

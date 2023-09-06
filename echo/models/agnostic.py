@@ -17,7 +17,7 @@ from echo.echo_validators import (
     validate_piecewise_arrays,
 )
 from echo.models.base import Node, Port
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
     ArrayWrappableType,
@@ -145,14 +145,14 @@ class ControlledLoadOrGen(FlexPort):
             def sum_of_energy_must_be_greater_than_min(model: EchoConcreteModel):
                 return (
                     sum(
-                        getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
+                        getattr(model, self.port_name)[p, i] * model.scenario_settings.interval_duration / 60.0
                         for p in model.Expansion
                         for i in model.Time
                     )
                     >= self.min_utilisation
                     * self.max_power
-                    * model.interval_duration
-                    * model.number_of_intervals
+                    * model.scenario_settings.interval_duration
+                    * model.scenario_settings.number_of_intervals
                     / 60.0
                 )
 
@@ -167,14 +167,14 @@ class ControlledLoadOrGen(FlexPort):
             def sum_of_energy_must_be_less_than_max(model: EchoConcreteModel):
                 return (
                     sum(
-                        getattr(model, self.port_name)[p, i] * model.interval_duration / 60.0
+                        getattr(model, self.port_name)[p, i] * model.scenario_settings.interval_duration / 60.0
                         for p in model.Expansion
                         for i in model.Time
                     )
                     <= self.max_utilisation
                     * self.max_power
-                    * model.interval_duration
-                    * model.number_of_intervals
+                    * model.scenario_settings.interval_duration
+                    * model.scenario_settings.number_of_intervals
                     / 60.0
                 )
 
@@ -324,7 +324,7 @@ class Storage(Port):
     def apply_soc_constraints(self, model: EchoConcreteModel):
         # Extract some variables to make constraints easier to write
         max_t = len(model.Time)  # maximum time interval t
-        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
+        kw_to_kWh = model.scenario_settings.interval_duration / 60  # conversion from kW to kWh
         soc = getattr(model, self.soc_value)
         power = getattr(model, self.port_name)
 
@@ -456,7 +456,7 @@ class MobileStorage(Storage):
     def apply_modified_soc_constraints(self, model: EchoConcreteModel):
         # Get some variables to make constraints easier to write
         max_t = len(model.Time)  # maximum time interval t
-        kw_to_kWh = model.interval_duration / 60  # conversion from kW to kWh
+        kw_to_kWh = model.scenario_settings.interval_duration / 60  # conversion from kW to kWh
         soc = getattr(model, self.soc_value)
         power = getattr(model, self.port_name)
 

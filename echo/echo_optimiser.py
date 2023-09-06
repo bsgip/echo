@@ -6,7 +6,7 @@ import pyomo.environ as en
 from pyomo.opt import SolverFactory
 
 from echo.models.base import ConfigurationError, OptimisationGraph
-from echo.models.pyomo import EchoConcreteModel
+from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives import ObjectiveSet
 
 
@@ -24,13 +24,10 @@ class EchoOptimiser(object):
         profile
     """
 
-    interval_duration: int
-    number_of_intervals: int
-    number_of_expansion_intervals: int
+    scenario_settings: ScenarioSettings
+    engine_settings: EngineSettings
     ES: OptimisationGraph
     objective_set: ObjectiveSet
-    optimiser_engine: str
-    optimiser_engine_executable: str
 
     def __init__(
         self,
@@ -43,34 +40,35 @@ class EchoOptimiser(object):
         optimiser_engine=None,
         profile=None,
     ):
-        self.interval_duration = (
-            interval_duration  # The duration (in minutes) of each of the intervals being optimised over
+        self.scenario_settings = ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=number_of_intervals,
+            number_of_expansion_intervals=number_of_expansion_intervals,
+            discount_rate=discount_rate,
         )
-        self.number_of_intervals = number_of_intervals
+
         # Check consistency with profile if specified
         if profile is not None:
-            assert self.number_of_intervals == len(
+            assert self.scenario_settings.number_of_intervals == len(
                 profile
             ), "Profile length does not match number of intervals specified."
-        self.number_of_expansion_intervals = number_of_expansion_intervals
+
         self.ES = ES
         self.objective_set = objective_set
         self.profile = profile
 
         # Configure the optimiser through setting appropriate environmental variables.
-        if optimiser_engine:
-            self.optimiser_engine = optimiser_engine
-        else:
-            self.optimiser_engine = os.environ.get(
+        if not optimiser_engine:
+            optimiser_engine = os.environ.get(
                 "OPTIMISER_ENGINE", "cplex"
             )  # Default to cplex, as we seem to want quadratic costs
-        self.optimiser_engine_executable = os.environ.get("OPTIMISER_ENGINE_EXECUTABLE", "")
 
-        # These values have been arbitrarily chosen
-        # A better understanding of the sensitivity of these values may be advantageous
-        self.bigM = 5000000
-        self.smallM = 0.0001
-        self.discount_rate = discount_rate
+        self.engine_settings = EngineSettings(
+            engine=optimiser_engine,
+            engine_executable=os.environ.get("OPTIMISER_ENGINE_EXECUTABLE", ""),
+            bigM=5000000,  # This value has been arbitrarily chosen
+            smallM=0.0001,  # This value has been arbitrarily chosen
+        )
 
         self.validate_network_graph()
         self.build_model()
@@ -93,33 +91,29 @@ class EchoOptimiser(object):
     def build_model(self):
         # Set up the Pyomo model
         self.model = EchoConcreteModel()
-        self.model.interval_duration = self.interval_duration
-        self.model.number_of_intervals = self.number_of_intervals
-        self.model.paths = (
-            self.ES.paths
-        )  # Todo better way of making all path variables available for constructing objectives
+        self.model.scenario_settings = self.scenario_settings
 
         # Bias Values
 
         # A small fudge factor for reducing the size of the solution set and
         # achieving a unique optimisation solution
-        self.model.smallM = en.Param(initialize=self.smallM)
+        self.model.smallM = en.Param(initialize=self.engine_settings.smallM)
         # A bigM value for integer optimisation
-        self.model.bigM = en.Param(initialize=self.bigM)
+        self.model.bigM = en.Param(initialize=self.engine_settings.bigM)
 
         # We use RangeSet to create a index for each of the time
         # periods that we will optimise within.
-        self.model.Time = en.RangeSet(0, self.number_of_intervals - 1)
+        self.model.Time = en.RangeSet(0, self.scenario_settings.number_of_intervals - 1)
         # Create index for expansion periods
-        if self.number_of_expansion_intervals == 0:
+        if self.scenario_settings.number_of_expansion_intervals == 0:
             self.model.Expansion = en.RangeSet(0, 0)
         else:
-            self.model.Expansion = en.RangeSet(0, self.number_of_expansion_intervals - 1)
+            self.model.Expansion = en.RangeSet(0, self.scenario_settings.number_of_expansion_intervals - 1)
 
         # Setup discounting
         dr = {}
-        for ep in range(0, self.number_of_expansion_intervals):
-            dr[ep] = 1 / ((1 + self.discount_rate) ** ep)
+        for ep in range(0, self.scenario_settings.number_of_expansion_intervals):
+            dr[ep] = 1 / ((1 + self.scenario_settings.discount_rate) ** ep)
 
         self.model.dr = "discount_rates"
         setattr(self.model, self.model.dr, en.Param(self.model.Expansion, initialize=dr))
@@ -177,10 +171,10 @@ class EchoOptimiser(object):
         self.model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
 
         # Set the path to the solver
-        if self.optimiser_engine_executable:
-            opt = SolverFactory(self.optimiser_engine, executable=self.optimiser_engine_executable)
+        if self.engine_settings.engine_executable:
+            opt = SolverFactory(self.engine_settings.engine, executable=self.engine_settings.engine_executable)
         else:
-            opt = SolverFactory(self.optimiser_engine)
+            opt = SolverFactory(self.engine_settings.engine)
 
         # Solve the optimisation
         results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
@@ -234,7 +228,7 @@ class EchoOptimiser(object):
         var_obj = getattr(self.model, variable_name)
         if var_obj.dim() == 2:
             # the variable/param has two indices - we assume these are expansion and time
-            output = np.zeros(self.number_of_intervals)
+            output = np.zeros(self.scenario_settings.number_of_intervals)
             max_planning_period = 0
             for index in var_obj:
                 if index[0] == expansion:
