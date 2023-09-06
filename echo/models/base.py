@@ -59,7 +59,7 @@ class Port(BaseModel):
     export_constraint_value: Optional[ConstraintValueType] = None
     active_periods: Optional[dict]
     slack: bool = False
-    objective: Any = 0  # this will eventually be a pyomo expression
+    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -704,7 +704,7 @@ class Path(BaseModel):
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False
-    objective: float = 0
+    objective: Union[float, en.numeric_expr.NumericExpression] = 0
 
     flow_value: str = ""
     contingency_neg: Optional[str]

@@ -217,7 +217,7 @@ class BlockTariff(Objective):
         assert len(values.get("blocks")) + 1 == len(values.get("rates")), "Enter one more rate than num blocks"
         return values
 
-    @root_validator
+    @root_validator(pre=True)
     def set_reset_index(cls, values):
         rp = values.get("reset_periods")
         if rp is not None:
