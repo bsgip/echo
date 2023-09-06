@@ -1,7 +1,7 @@
 import uuid
 from datetime import time
 from enum import Enum
-from typing import List, Optional, TypeVar, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from echo.echo_validators import ArrayType
 from echo.models.agnostic import Storage
 from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
-from echo.models.scenario import EchoConcreteModel, ScenarioSettings
+from echo.models.scenario import EchoConcreteModel
 
 
 class Objective(EchoBaseModel):
@@ -232,7 +232,9 @@ class BlockTariff(Objective):
     def get_block_var_name(self, i):
         return "block_" + str(i)
 
-    def _get_active_periods(self, time_periods):  # todo only works for single expansion period
+    def _get_active_periods(
+        self, time_periods: int
+    ) -> dict[tuple[int, int, int], np.ndarray]:  # todo only works for single expansion period
         """
         Creates a dict for initialising the window_active pyomo var
         Args:
@@ -241,7 +243,7 @@ class BlockTariff(Objective):
         Returns:
             initial_window_val: triple indexed dict (expansion, reset index, time) for initialising demand charge var
         """
-        initial_window_val = {}
+        initial_window_val: dict[tuple[int, int, int], np.ndarray] = {}
         if self.reset_periods is None:
             self.reset_periods = [time_periods]
         else:
@@ -538,7 +540,7 @@ class ContingencyPositive(Contingency):
 
         # Meet SOC constraint on contingency providing asset, if applicable
         initial_port = self.component.edge_ports[0][0]
-        if hasattr(initial_port, "soc_value"):
+        if isinstance(initial_port, Storage):
 
             def contingency_energy_limited_soc(model: EchoConcreteModel, p, t):
                 return (
