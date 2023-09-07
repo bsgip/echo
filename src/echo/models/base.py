@@ -833,7 +833,7 @@ class OptimisationGraph(BaseModel):
     def _add_single_edge(self, edge_obj: Edge):
         port1 = edge_obj.vertices[0]
         port2 = edge_obj.vertices[1]
-        assert port1.units == port2.units, "Ports on edge must have matching units."
+        assert port1.units == port2.units, f"Ports on edge must have matching units. {port1.units} != {port2.units}"
         if edge_obj.nodes is None:
             # Want to avoid doing this lookup - very slow
             node1_name = self.lookup_node_names_from_port(port1)

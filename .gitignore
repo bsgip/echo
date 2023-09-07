@@ -9,3 +9,4 @@ echo.egg-info
 /build/lib/
 /build/lib/echo/
 .hypothesis
+.vscode

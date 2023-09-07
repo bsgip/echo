@@ -6,10 +6,15 @@ import seaborn as sns
 
 from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.models.agnostic import Fl, TellegenNode
+from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
 from echo.models.prebuilt import Battery, FlexNode, Load
-from echo.objectives import DemandTariffObjective, ImportDemandCharge, ObjectiveSet, ThroughputCost
+from echo.objectives import (
+    DemandTariffObjective,
+    ImportDemandCharge,
+    ObjectiveSet,
+    ThroughputCost,
+)
 
 SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
 SOLVER_EXECUTABLE = None
@@ -41,7 +46,7 @@ battery = Battery(
 load = Load(node_name="load", port_name="load", port_unit=Units.KW, profile=[2] * time_periods)
 
 site = TellegenNode()
-site.add_ports_from_list(["cp", "load", "battery"])
+site.add_ports_from_list(["cp", "load", "battery"], FlexPort, units=Units.KW)
 
 system.add_node_obj([grid, battery, load, site])
 
