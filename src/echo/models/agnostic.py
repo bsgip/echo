@@ -435,7 +435,7 @@ class MobileStorage(Storage):
         def soc_conservative_rule(
             model: EchoConcreteModel, p, t
         ):  # a rule for enforcing conservativeness while plugged in
-            if self.soc_conserv and self.available and self.available[t]:
+            if self.soc_conserv and self.available is not None and self.available[t]:
                 return (
                     getattr(model, self.soc_value)[p, t]
                     + getattr(model, self.cons_slack)[p, t]

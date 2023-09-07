@@ -66,7 +66,6 @@ class Network(EchoBaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.name = "default_name"
 
     def add_node_to_components(
         self, n_id: str, n_type: NodeType, ports: Any = None, params: Optional[dict] = None, data: Any = None
