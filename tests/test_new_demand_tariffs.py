@@ -1,13 +1,16 @@
-import os
-
 import numpy as np
 
-from echo.configuration import NodeRule, Units
+from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.objectives import DemandTariffObjective, ExportDemandCharge, ImportDemandCharge, ObjectiveSet
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import (
+    DemandTariffObjective,
+    ExportDemandCharge,
+    ImportDemandCharge,
+)
 
 
 def test_system_import_demand_tariff():

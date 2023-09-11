@@ -7,7 +7,7 @@ from pyomo.opt import SolverFactory
 
 from echo.models.base import ConfigurationError, OptimisationGraph
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
-from echo.objectives import ObjectiveSet
+from echo.objectives.base import Objective, ObjectiveSet
 
 
 class EchoOptimiser(object):
@@ -115,8 +115,7 @@ class EchoOptimiser(object):
         for ep in range(0, self.scenario_settings.number_of_expansion_intervals):
             dr[ep] = 1 / ((1 + self.scenario_settings.discount_rate) ** ep)
 
-        self.model.dr = "discount_rates"
-        setattr(self.model, self.model.dr, en.Param(self.model.Expansion, initialize=dr))
+        self.model.discount_rates = en.Param(self.model.Expansion, initialize=dr)
 
         # Initialise node variables/params and add node constraints
         for _, node_obj in self.ES.node_obj.items():
@@ -259,7 +258,7 @@ class EchoOptimiser(object):
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_single_objective_total_value(self, objective_obj):
+    def get_single_objective_total_value(self, objective_obj: Objective):
         """Returns the value of a single objective."""
         assert self.objective_set is not None, "No objectives defined for this optimiser."
         return objective_obj.get_objective_total(optimiser=self)

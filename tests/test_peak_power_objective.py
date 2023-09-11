@@ -4,7 +4,8 @@ from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Node, OptimisationGraph
-from echo.objectives import ObjectiveSet, QuadraticPower
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.power import QuadraticPower
 
 N_INTERVALS = 48
 

@@ -8,8 +8,13 @@ from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage
-from echo.objectives import ObjectiveSet, PathTariff, ThroughputCost
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+)
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import PathTariff, ThroughputCost
 
 # set up seaborn the way you like
 sns.set_style(

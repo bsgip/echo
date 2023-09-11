@@ -11,7 +11,8 @@ from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalStorage, FixedElectricalPort
-from echo.objectives import ObjectiveSet, ThroughputCost
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import ThroughputCost
 
 # set up seaborn the way you like
 sns.set_style(

@@ -10,12 +10,12 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.prebuilt import FlexNode, Load
-from echo.objectives import (
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import (
     BlockImportTariff,
     DemandTariffObjective,
     ImportDemandCharge,
     ImportTariff,
-    ObjectiveSet,
     PathTariff,
     ThroughputCost,
 )

@@ -9,10 +9,10 @@ from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
 from echo.models.prebuilt import Battery, FlexNode, Load
-from echo.objectives import (
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import (
     DemandTariffObjective,
     ImportDemandCharge,
-    ObjectiveSet,
     ThroughputCost,
 )
 

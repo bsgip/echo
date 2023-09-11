@@ -6,120 +6,20 @@ from typing import List, Optional, Union
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from pydantic import (
+    NonNegativeFloat,
+    NonPositiveFloat,
+    PositiveFloat,
+    PositiveInt,
+    root_validator,
+    validator,
+)
 
 from echo.echo_validators import ArrayType
-from echo.models.agnostic import Storage
 from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.scenario import EchoConcreteModel
-
-
-class Objective(EchoBaseModel):
-    component: Union[Port, Path, None]
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)
-    name: str = ""
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        if not self.name:
-            self.name = "obj_" + str(self.uid)
-
-    def verify_objective(self, model: EchoConcreteModel, df):
-        pass
-
-    def create_params(self, model: EchoConcreteModel, df):
-        pass
-
-    def create_vars(self, model: EchoConcreteModel):
-        pass
-
-    def objective_expr(self, model: EchoConcreteModel):
-        pass
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        pass
-
-    def get_objective_total(self, optimiser):
-        obj_expr = self.objective_expr(optimiser.model)  # Retrieve the objective expression
-        return en.value(obj_expr)  # Return the value of the summed expression
-
-
-class ObjectiveSet(EchoBaseModel):
-    """Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
-
-    objective_list: list[Objective]
-
-    def initialise_objective(self, model: EchoConcreteModel, df: Optional[pd.DataFrame] = None):
-        for obj in self.objective_list:
-            obj.verify_objective(model, df)
-            obj.create_params(model, df)
-            obj.create_vars(model)
-            obj.apply_constraints(model)
-
-    def set_objective(self, model: EchoConcreteModel, optimiser):
-        def objective_rule(model: EchoConcreteModel):
-            return sum(obj.objective_expr(model) for obj in self.objective_list)
-
-        optimiser.objective += objective_rule(model)
-
-
-class PeakPositivePower(Objective):
-    """The PeakPositivePower objective minimises the peak positive (imported) power at the specified port."""
-
-    component: Port
-
-    @property
-    def max_pos(self):
-        return "max_pos_" + self.name
-
-    def create_vars(self, model: EchoConcreteModel):
-        setattr(model, self.max_pos, en.Var(initialize=0, domain=en.NonNegativeReals))
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        def max_value_rule(model: EchoConcreteModel, p, t):
-            return getattr(model, self.max_pos) >= getattr(model, self.component.pos)[p, t]
-
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
-
-        setattr(
-            model,
-            f"max_pos_con_{self.component.port_name}",
-            en.Constraint(model.Expansion, model.Time, rule=max_value_rule),
-        )
-
-    def objective_expr(self, model: EchoConcreteModel):
-        return getattr(model, self.max_pos)
-
-
-class PeakNegativePower(Objective):
-    """The PeakNegativePower objective minimises the peak negative (exported) power at the specified port."""
-
-    component: Port
-
-    @property
-    def max_neg(self):
-        return "max_neg_" + self.name
-
-    def create_vars(self, model: EchoConcreteModel):
-        setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
-
-        def max_value_rule(model: EchoConcreteModel, p, t):
-            return getattr(model, self.max_neg) <= getattr(model, self.component.neg)[p, t]
-
-        setattr(
-            model,
-            f"max_neg_con_{self.component.port_name}",
-            en.Constraint(model.Expansion, model.Time, rule=max_value_rule),
-        )
-
-    def objective_expr(self, model: EchoConcreteModel):
-        return getattr(model, self.max_neg) * -1
+from echo.objectives.base import Objective
 
 
 class Tariff(Objective):
@@ -161,7 +61,7 @@ class ImportTariff(Tariff):
             * getattr(model, self.import_tariff)[p, t]
             * model.scenario_settings.interval_duration
             / 60
-            * getattr(model, model.dr)[p]
+            * model.discount_rates[p]
             for p in model.Expansion
             for t in model.Time
         )
@@ -195,7 +95,7 @@ class ExportTariff(Tariff):
             * getattr(model, self.export_tariff)[p, t]
             * model.scenario_settings.interval_duration
             / 60
-            * getattr(model, model.dr)[p]
+            * model.discount_rates[p]
             for p in model.Expansion
             for t in model.Time
         )
@@ -330,7 +230,7 @@ class PathTariff(Tariff):
         return sum(
             getattr(model, self.component.flow_value)[p, t]
             * getattr(model, self.path_tariff)[p, t]
-            * getattr(model, model.dr)[p]
+            * model.discount_rates[p]
             for p in model.Expansion
             for t in model.Time
         )
@@ -350,222 +250,13 @@ class ThroughputCost(Objective):
         obj = (
             sum(
                 (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t])
-                * getattr(model, model.dr)[p]
+                * model.discount_rates[p]
                 for p in model.Expansion
                 for t in model.Time
             )
             * self.rate
         )
         return obj
-
-
-class FinalChargeObjective(Objective):
-    """A cost on the final state of charge of a storage asset being below full."""
-
-    component: Storage
-    rate: PositiveFloat
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        pass
-        # if hasattr(model, self.component.pos) is False:
-        #     self.component.constrain_pos_neg(model)
-
-    def objective_expr(self, model: EchoConcreteModel):
-        obj = sum(
-            (self.component.max_capacity - getattr(model, self.component.soc_value)[p, model.Time.at(-1)]) * self.rate
-            for p in model.Expansion
-        )
-        return obj
-
-
-class NotFullyChargedPenalty(Objective):
-    """A penalty objective for penalising a storage asset for not being fulling charged."""
-
-    component: Storage
-    rate: Optional[PositiveFloat]
-    rate_array: list
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
-
-    def objective_expr(self, model: EchoConcreteModel):
-        if self.rate_array is None:
-            self.rate_array = [self.rate] * len(model.Time)
-        obj = sum(
-            (self.component.max_capacity - getattr(model, self.component.soc_value)[p, t])
-            * self.rate_array[t]
-            * getattr(model, model.dr)[p]
-            for p in model.Expansion
-            for t in model.Time
-        )
-        return obj
-
-
-class QuadraticPower(Objective):
-    """The QuadraticPower objective minimises flow^2 at a specified port."""
-
-    component: Port
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        if hasattr(model, self.component.pos) is False:
-            self.component.constrain_pos_neg(model)
-
-    def objective_expr(self, model: EchoConcreteModel):
-        return sum(
-            (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t])
-            * getattr(model, model.dr)[p]
-            for p in model.Expansion
-            for t in model.Time
-        )
-
-
-class Contingency(Objective):
-    component: Path
-
-
-class ContingencyNegative(Contingency):
-
-    """FCAS Raise"""
-
-    duration: PositiveFloat  # todo this should just be the interval duration ?
-
-    @property
-    def contingency_neg(self):
-        return "cont_neg_" + self.name
-
-    def create_vars(self, model: EchoConcreteModel):
-        setattr(
-            model, self.contingency_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals)
-        )
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        def export_flow_con(model: EchoConcreteModel, p, t):
-            return getattr(model, self.contingency_neg)[p, t] >= (
-                port.export_constraint_value - getattr(model, port.port_name)[p, t]
-            )
-
-        def import_flow_con(model: EchoConcreteModel, p, t):
-            return (
-                getattr(model, self.contingency_neg)[p, t]
-                >= (port.import_constraint_value - getattr(model, port.port_name)[p, t]) * -1
-            )
-
-        # Iterate through vertices on path to pick up any port constraints along path
-        for i in range(0, len(self.component.vertices) - 1):
-            port = self.component.edge_ports[i][0]  # exporting port
-            if port.export_constraint_value is not None:
-                setattr(
-                    model,
-                    f"cont_neg_con_{port.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=export_flow_con),
-                )
-
-            port = self.component.edge_ports[i][1]  # importing port
-            if port.import_constraint_value is not None:
-                setattr(
-                    model,
-                    f"cont_neg_con_{port.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=import_flow_con),
-                )
-
-        # Meet SOC constraint on contingency providing asset, if applicable
-        initial_port = self.component.edge_ports[0][0]
-        if hasattr(initial_port, "soc_value"):
-
-            def contingency_energy_limited_soc(model: EchoConcreteModel, p, t):
-                return (
-                    getattr(model, self.contingency_neg)[p, t] * self.duration / 60
-                    >= getattr(model, initial_port.soc_value)[p, t] * -1
-                )
-
-            setattr(
-                model,
-                f"cont_neg_soc_lim_{self.component.path_name}",
-                en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc),
-            )
-
-    def objective_expr(self, model: EchoConcreteModel):
-        return sum(
-            getattr(model, self.contingency_neg)[p, t] * getattr(model, model.dr)[p]
-            for p in model.Expansion
-            for t in model.Time
-        )
-
-
-class ContingencyPositive(Contingency):
-
-    """FCAS Lower"""
-
-    duration: PositiveFloat
-
-    @property
-    def contingency_pos(self):
-        return "cont_pos_" + self.name
-
-    def create_vars(self, model: EchoConcreteModel):
-        setattr(
-            model, self.contingency_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
-        )
-
-    def apply_constraints(self, model: EchoConcreteModel):
-        def export_flow_con(model: EchoConcreteModel, p, t):
-            return (
-                getattr(model, self.contingency_pos)[p, t]
-                <= (port.export_constraint_value - getattr(model, port.port_name)[p, t]) * -1
-            )
-
-        def import_flow_con(model: EchoConcreteModel, p, t):
-            return getattr(model, self.contingency_pos)[p, t] <= (
-                port.import_constraint_value - getattr(model, port.port_name)[p, t]
-            )
-
-        # Iterate through vertices on path to pick up any port constraints along path
-        for i in range(0, len(self.component.vertices) - 1):
-            port = self.component.edge_ports[i][1]  # exporting port
-            if port.export_constraint_value is not None:
-                setattr(
-                    model,
-                    f"cont_pos_con_{port.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=export_flow_con),
-                )
-
-            port = self.component.edge_ports[i][0]  # importing port
-            if port.import_constraint_value is not None:
-                setattr(
-                    model,
-                    f"cont_pos_con_{port.port_name}",
-                    en.Constraint(model.Expansion, model.Time, rule=import_flow_con),
-                )
-
-        # Meet SOC constraint on contingency providing asset, if applicable
-        initial_port = self.component.edge_ports[0][0]
-        if isinstance(initial_port, Storage):
-
-            def contingency_energy_limited_soc(model: EchoConcreteModel, p, t):
-                return (
-                    getattr(model, self.contingency_pos)[p, t] * self.duration / 60
-                    <= initial_port.max_capacity - getattr(model, initial_port.soc_value)[p, t]
-                )
-
-            setattr(
-                model,
-                f"cont_pos_soc_lim_{self.component.path_name}",
-                en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc),
-            )
-
-    def objective_expr(self, model: EchoConcreteModel):
-        return (
-            sum(
-                getattr(model, self.contingency_pos)[p, t] * getattr(model, model.dr)[p]
-                for p in model.Expansion
-                for t in model.Time
-            )
-            * -1
-        )
-
-
-""" Demand tariffs """
 
 
 class ResetPeriod(Enum):

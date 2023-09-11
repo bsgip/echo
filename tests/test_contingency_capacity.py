@@ -4,8 +4,14 @@ from echo.configuration import NodeRule, Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.objectives import ContingencyNegative, ObjectiveSet
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.contingency import ContingencyNegative
 
 
 def test_negative_contingency_respects_hybrid_inverter_constraints():

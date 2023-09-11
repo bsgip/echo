@@ -8,7 +8,8 @@ from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import GasBoilerFixedCOP, GasPort
 from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
-from echo.objectives import ImportTariff, ObjectiveSet
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import ImportTariff
 
 N_INTERVALS = 48
 

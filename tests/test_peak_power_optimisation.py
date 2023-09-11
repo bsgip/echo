@@ -3,7 +3,8 @@ from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
-from echo.objectives import ObjectiveSet, PeakNegativePower, PeakPositivePower
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.power import PeakNegativePower, PeakPositivePower
 
 N_INTERVALS = 48
 

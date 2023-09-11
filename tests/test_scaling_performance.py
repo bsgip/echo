@@ -7,9 +7,16 @@ import numpy as np
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import TellegenNode
 from echo.models.base import OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalPort, ElectricalStorage
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalPort,
+    ElectricalStorage,
+)
 from echo.models.prebuilt import FlexElectricalNode
-from echo.objectives import ImportTariff, ObjectiveSet, PeakNegativePower
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.power import PeakNegativePower
+from echo.objectives.tariff import ImportTariff
 
 N_INTERVALS = 48
 

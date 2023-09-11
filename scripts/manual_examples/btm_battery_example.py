@@ -17,13 +17,9 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
-from echo.objectives import (
-    ExportTariff,
-    ImportTariff,
-    ObjectiveSet,
-    PeakNegativePower,
-    ThroughputCost,
-)
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.power import PeakNegativePower
+from echo.objectives.tariff import ExportTariff, ImportTariff, ThroughputCost
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location
