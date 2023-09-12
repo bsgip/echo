@@ -35,8 +35,8 @@ class Objective(EchoBaseModel):
     def apply_constraints(self, model: EchoConcreteModel):
         pass
 
-    def get_objective_total(self, optimiser):
-        obj_expr = self.objective_expr(optimiser.model)  # Retrieve the objective expression
+    def get_objective_total(self, model: EchoConcreteModel):
+        obj_expr = self.objective_expr(model)  # Retrieve the objective expression
         return en.value(obj_expr)  # Return the value of the summed expression
 
 
@@ -52,8 +52,5 @@ class ObjectiveSet(EchoBaseModel):
             obj.create_vars(model)
             obj.apply_constraints(model)
 
-    def set_objective(self, model: EchoConcreteModel, optimiser):
-        def objective_rule(model: EchoConcreteModel):
-            return sum(obj.objective_expr(model) for obj in self.objective_list)
-
-        optimiser.objective += objective_rule(model)
+    def get_objective_total(self, model: EchoConcreteModel):
+        return sum(obj.objective_expr(model) for obj in self.objective_list)

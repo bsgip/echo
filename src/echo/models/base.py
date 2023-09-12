@@ -515,7 +515,7 @@ class Node(BaseModel):
     ports: dict[str, Port] = {}
     node_rule: NodeRule = NodeRule.NA
     transformations: dict[uuid.UUID, Transform] = {}
-    objective: float = 0  # For adding any node objectives
+    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
 
     @property
     def inflow(self):

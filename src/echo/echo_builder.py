@@ -13,7 +13,6 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
 import echo.echo_optimiser as eo
-import echo.objectives as eobj
 from echo.configuration import NodeType, TariffType, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import BaseModel as EchoBaseModel
@@ -27,6 +26,15 @@ from echo.models.prebuilt import (
     Load,
     NewInverter,
     Solar,
+)
+from echo.objectives.base import Objective, ObjectiveSet
+from echo.objectives.power import PeakNegativePower, PeakPositivePower, QuadraticPower
+from echo.objectives.tariff import (
+    DemandCharge,
+    DemandTariffObjective,
+    ExportTariff,
+    ImportTariff,
+    ThroughputCost,
 )
 
 
@@ -383,18 +391,16 @@ def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, ob
     """Converts all the objectives defined in an objective set to echo objectives,
     and returns an echo objective set."""
 
-    objective_list = []
+    objective_list: list[Objective] = []
     for obj_name, obj_dict in objective_dict.items():
         # Get the component the tariff applies to:
         component_obj = get_tariff_component_from_node_port_name(obj_dict, node_name_dict, system)
 
         if obj_dict["type"] == TariffType.ImportTariff:
-            new_obj: eobj.Objective = eobj.ImportTariff(
-                name=obj_name, component=component_obj, tariff_array=obj_dict["prices"]
-            )
+            new_obj: Objective = ImportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict["prices"])
 
         elif obj_dict["type"] == TariffType.ExportTariff:
-            new_obj = eobj.ExportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict["prices"])
+            new_obj = ExportTariff(name=obj_name, component=component_obj, tariff_array=obj_dict["prices"])
 
         elif obj_dict["type"] == TariffType.ImportDemandTariff:
             new_obj = create_demand_tariff(obj_dict, component_obj)
@@ -403,23 +409,23 @@ def construct_echo_objective(system: OptimisationGraph, node_name_dict: dict, ob
             new_obj = create_demand_tariff(obj_dict, component_obj)
 
         elif obj_dict["type"] == TariffType.ThroughputCost:
-            new_obj = eobj.ThroughputCost(name=obj_name, component=component_obj, rate=obj_dict["rate"])
+            new_obj = ThroughputCost(name=obj_name, component=component_obj, rate=obj_dict["rate"])
 
         elif obj_dict["type"] == TariffType.PeakPosPower:
-            new_obj = eobj.PeakPositivePower(name=obj_name, component=component_obj)
+            new_obj = PeakPositivePower(name=obj_name, component=component_obj)
 
         elif obj_dict["type"] == TariffType.PeakNegPower:
-            new_obj = eobj.PeakNegativePower(name=obj_name, component=component_obj)
+            new_obj = PeakNegativePower(name=obj_name, component=component_obj)
 
         elif obj_dict["type"] == TariffType.QuadraticPower:
-            new_obj = eobj.QuadraticPower(name=obj_name, component=component_obj)
+            new_obj = QuadraticPower(name=obj_name, component=component_obj)
         else:
             raise ValueError(
                 'Objective type "{}" is not recognised and does not have a builder function'.format(obj_dict["type"])
             )
         objective_list.append(new_obj)
 
-    obj_set = eobj.ObjectiveSet(objective_list=objective_list)
+    obj_set = ObjectiveSet(objective_list=objective_list)
     return obj_set
 
 
@@ -647,17 +653,17 @@ def create_demand_tariff(tariff_dict: dict, component_obj: Port):
             min_demand = 0
         # todo allow demand tariffs to be specific with start/end times
         if tariff_dict["type"] == TariffType.ImportDemandTariff:
-            c = eobj.DemandCharge(
+            c = DemandCharge(
                 rate=rate, min_demand=min_demand, window_array=window, import_demand=True, export_demand=False
             )
         if tariff_dict["type"] == TariffType.ExportDemandTariff:
-            c = eobj.DemandCharge(
+            c = DemandCharge(
                 rate=rate, min_demand=min_demand, window_array=window, import_demand=False, export_demand=True
             )
 
         echo_charge_list.append(c)
 
-    demand_tariff = eobj.DemandTariffObjective(
+    demand_tariff = DemandTariffObjective(
         name=tariff_dict["name"], component=component_obj, demand_charges=echo_charge_list
     )
     return demand_tariff

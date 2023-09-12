@@ -1,11 +1,12 @@
 import os
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
 from pyomo.opt import SolverFactory
 
-from echo.models.base import ConfigurationError, OptimisationGraph
+from echo.models.base import ConfigurationError, Node, OptimisationGraph, Port
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives.base import Objective, ObjectiveSet
 
@@ -27,7 +28,8 @@ class EchoOptimiser(object):
     scenario_settings: ScenarioSettings
     engine_settings: EngineSettings
     ES: OptimisationGraph
-    objective_set: ObjectiveSet
+    objective_set: Optional[ObjectiveSet]
+    objective: Union[float, en.numeric_expr.NumericExpression]
 
     def __init__(
         self,
@@ -36,7 +38,7 @@ class EchoOptimiser(object):
         number_of_expansion_intervals: int,
         discount_rate: int,
         ES: OptimisationGraph,
-        objective_set: ObjectiveSet,
+        objective_set: Optional[ObjectiveSet],
         optimiser_engine=None,
         profile=None,
     ):
@@ -146,10 +148,9 @@ class EchoOptimiser(object):
     def build_objective(self):
         self.objective = 0
         # Add objectives defined in the objective set
-        if hasattr(self, "objective_set"):
-            if self.objective_set is not None:
-                self.objective_set.initialise_objective(self.model, self.profile)
-                self.objective_set.set_objective(self.model, self)
+        if self.objective_set is not None:
+            self.objective_set.initialise_objective(self.model, self.profile)
+            self.objective += self.objective_set.get_objective_total(self.model)
 
         # Add any other costs that are defined on graph nodes/ports/paths
         for _, node_obj in self.ES.node_obj.items():
@@ -251,7 +252,7 @@ class EchoOptimiser(object):
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj, expansion_period=0):
+    def node_values(self, node_obj: Node, expansion_period=0):
         """Returns all values of all ports in a specified node for a single specified expansion period."""
         outputs = {}
         for name, var_obj in node_obj.ports.items():
@@ -261,17 +262,18 @@ class EchoOptimiser(object):
     def get_single_objective_total_value(self, objective_obj: Objective):
         """Returns the value of a single objective."""
         assert self.objective_set is not None, "No objectives defined for this optimiser."
-        return objective_obj.get_objective_total(optimiser=self)
+        return objective_obj.get_objective_total(model=self.model)
 
     def get_total_objective_value(self):
         """Returns the value of the objective function."""
         assert self.objective_set is not None, "No objectives defined for this optimiser."
         return en.value(self.objective)
 
-    def get_total_objective_at_port(self, port_obj):
+    def get_total_objective_at_port(self, port_obj: Port):
         """Sums all objectives that take the defined port as their component."""
         total = 0
-        for obj in self.objective_set.objective_list:
-            if obj.component == port_obj:
-                total += obj.get_objective_total(optimiser=self)
+        if self.objective_set:
+            for obj in self.objective_set.objective_list:
+                if obj.component == port_obj:
+                    total += obj.get_objective_total(model=self.model)
         return total

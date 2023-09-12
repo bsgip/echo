@@ -524,8 +524,8 @@ class DemandCharge(EchoBaseModel):
             objective += sum(getattr(model, self.max_demand_val)[r] * self.rate * -1 for r in self.reset_index)
         return objective
 
-    def get_objective_total(self, optimiser):
-        expr = en.value(self.objective_expr(optimiser.model))
+    def get_objective_total(self, model: EchoConcreteModel):
+        expr = en.value(self.objective_expr(model))
         return expr
 
 

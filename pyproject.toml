@@ -14,6 +14,7 @@ exclude_dirs = ["tests"]
 
 [tool.mypy]
 exclude = ["docs/", "scripts/"]
+check_untyped_defs = true
 
 [build-system]
 requires = ["setuptools >= 40.9.0", "wheel"]
