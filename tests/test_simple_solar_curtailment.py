@@ -2,7 +2,7 @@ import numpy as np
 
 from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
-from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.agnostic import FlexPort, FlexSink, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration
 
@@ -17,23 +17,30 @@ def test_solar_generation_limited_by_inverter_size():
 
     system = OptimisationGraph()
 
-    grid = Node()
-    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
+    # Receives the power via inverter
+    cp = Node()
+    cp.add_ports_from_list(["inverter"], FlexPort, units=Units.KW)
 
+    # Fixed generation ramping up over time
     solar = Node()
-    pv1 = ElectricalGeneration()
+    pv1 = ElectricalGeneration(port_name="electrical_generation_port")
     pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
-    pv1.curtailable = True
+    pv1.curtailable = False
     solar.ports["solar"] = pv1
 
+    # This just receives the curtailed power
+    ground = Node()
+    ground.add_ports_from_list(["inverter"], FlexSink, units=Units.KW)
+
     inverter = TellegenNode()
-    inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
+    inverter.add_ports_from_list(["cp", "pv", "ground"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_node_obj([cp, solar, inverter, ground])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
-    system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
+    system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inverter"])
+    system.connect_ports_and_create_edge(inverter.ports["ground"], ground.ports["inverter"])
 
     optimiser = EchoOptimiser(
         interval_duration=interval_duration,
@@ -45,17 +52,22 @@ def test_solar_generation_limited_by_inverter_size():
     )
 
     optimiser.objective = sum(
-        getattr(optimiser.model, pv1.port_name)[p, t] for p in optimiser.model.Expansion for t in optimiser.model.Time
+        getattr(optimiser.model, inverter.ports["cp"].port_name)[p, t]
+        for p in optimiser.model.Expansion
+        for t in optimiser.model.Time
     )
 
-    optimiser.optimise()
+    optimiser.optimise(tee=True)
 
     sol_p = optimiser.values(pv1.port_name, 0)
     inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
+    cp_p = optimiser.values(cp.ports["inverter"].port_name, 0)
+    ground_p = optimiser.values(inverter.ports["ground"].port_name, 0)
 
     for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(sol_p[i], max(-i, -5.0))
-        np.testing.assert_almost_equal(inv_p[i], max(-i, -5.0))
+        np.testing.assert_almost_equal(inv_p[i], max(-i, -5.0))  # Our outgoing power should ramp up and then curtail
+        np.testing.assert_almost_equal(inv_p[i] + ground_p[i], sol_p[i])  # The curtailed power goes to ground
+        np.testing.assert_almost_equal(cp_p[i], min(i, 5.0))
 
 
 def test_non_curtailable_system_not_curtailed():
@@ -159,6 +171,10 @@ def test_curtailable_system_curtailed():
     inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
     root_p = optimiser.values(grid.ports["grid"].neg, 0)
+
+    print(inv_p)
+    print(sol_p)
+    print(root_p)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(sol_p[i], 0.0)

@@ -1,14 +1,24 @@
 import os
-from typing import Optional, Union
+from typing import Collection, Optional, Union
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverResults, SolverStatus, TerminationCondition
 
-from echo.models.base import ConfigurationError, Node, OptimisationGraph, Port
+from echo.exceptions import ConfigurationError, OptimiserResultError
+from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives.base import Objective, ObjectiveSet
+
+DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = set(
+    [
+        TerminationCondition.feasible,
+        TerminationCondition.globallyOptimal,
+        TerminationCondition.locallyOptimal,
+        TerminationCondition.optimal,
+    ]
+)
 
 
 class EchoOptimiser(object):
@@ -164,7 +174,12 @@ class EchoOptimiser(object):
             path_obj.add_objective(self.model)
             self.objective += path_obj.objective
 
-    def optimise(self, tee=False, logfile=None):
+    def optimise(
+        self,
+        tee=False,
+        logfile=None,
+        acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
+    ):
         def objective_function(model: EchoConcreteModel):
             return self.objective
 
@@ -177,7 +192,19 @@ class EchoOptimiser(object):
             opt = SolverFactory(self.engine_settings.engine)
 
         # Solve the optimisation
-        results = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
+        results: SolverResults = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
+
+        # Extract the optimisation result
+        termination_condition: TerminationCondition = results.solver.termination_condition
+        solver_status: SolverStatus = results.solver.status
+
+        if solver_status != SolverStatus.ok:
+            raise OptimiserResultError(f"Solver status returned as {solver_status}")
+
+        if termination_condition not in acceptable_conditions:
+            raise OptimiserResultError(
+                f"Termination condition '{termination_condition}' is not in acceptable set  of {acceptable_conditions}"
+            )
         self.opt_status = results["Solver"][0]
 
     def df(self):

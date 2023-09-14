@@ -21,6 +21,7 @@ from echo.configuration import (
 )
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
+from echo.exceptions import ConfigurationError
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
@@ -29,10 +30,6 @@ from echo.utils import (
     set_var_bounds_from_dict,
     to_initial_values,
 )
-
-
-class ConfigurationError(Exception):
-    pass
 
 
 class BaseModel(PydanticBaseModel):
@@ -52,7 +49,7 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict = {}
+    initial_value: dict = 0
     initial_value_ref: Optional[str]  # string ref to df column
     initial_value_scaling: Optional[int]  # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
@@ -530,7 +527,7 @@ class Node(BaseModel):
         if self.ports.get(name) is None:
             self.ports[name] = port
         else:
-            print(f"Port with name {name} is already defined on node {self.node_name}")
+            raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
     def add_ports_from_list(self, names: Iterable[str], port_type: Type[Port], **kwargs):
         """Creates a set of ports (using port_type) and adds them to this Node. The ports will be constructed
