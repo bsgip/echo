@@ -90,7 +90,7 @@ optimiser = EchoOptimiser(
     objective_set=objective_set,
 )
 
-optimiser.optimise(tee=True)
+optimiser.optimise(verbose=True)
 
 # Retrieve some useful port objects
 b = battery.ports["battery"]

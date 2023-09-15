@@ -57,4 +57,4 @@ optimiser = EchoOptimiser(
     profile=df,
 )
 
-optimiser.optimise(tee=True)
+optimiser.optimise(verbose=True)

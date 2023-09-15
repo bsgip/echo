@@ -184,7 +184,7 @@ optimiser = EchoOptimiser(
 )
 
 t1 = time.time()
-optimiser.optimise(tee=True)
+optimiser.optimise(verbose=True)
 t2 = time.time()
 print("optimisation time = ", t2 - t1)
 

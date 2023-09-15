@@ -57,7 +57,7 @@ def test_solar_generation_limited_by_inverter_size():
         for t in optimiser.model.Time
     )
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise()
 
     sol_p = optimiser.values(pv1.port_name, 0)
     inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
@@ -133,14 +133,16 @@ def test_curtailable_system_curtailed():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
+    grid.add_port("grid", FlexPort(units=Units.KW))
 
+    # Solar will generate 16 but we expect the inverter to cause it to curtail to 5
     solar = Node()
     pv1 = ElectricalGeneration()
-    pv1.add_generation_profile_from_array([-5.0] * N_INTERVALS, expansion_periods)
+    pv1.add_generation_profile_from_array([-16.0] * N_INTERVALS, expansion_periods)
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
+    # Inverter has a flow constraint that should trigger the solar to curtail
     inverter = TellegenNode()
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
@@ -159,24 +161,19 @@ def test_curtailable_system_curtailed():
         objective_set=None,
     )
 
-    grid.ports["grid"].constrain_pos_neg(optimiser.model)
     optimiser.objective = -sum(
-        getattr(optimiser.model, grid.ports["grid"].neg)[p, t]
+        getattr(optimiser.model, grid.ports["grid"].port_name)[p, t]
         for p in optimiser.model.Expansion
         for t in optimiser.model.Time
     )
 
-    optimiser.optimise()
+    optimiser.optimise(verbose=True)
 
     inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
     sol_p = optimiser.values(pv1.port_name, 0)
-    root_p = optimiser.values(grid.ports["grid"].neg, 0)
-
-    print(inv_p)
-    print(sol_p)
-    print(root_p)
+    root_p = optimiser.values(grid.ports["grid"].port_name, 0)
 
     for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(sol_p[i], 0.0)
-        np.testing.assert_almost_equal(inv_p[i], 0.0)
-        np.testing.assert_almost_equal(root_p[i], 0.0)
+        np.testing.assert_almost_equal(sol_p[i], -5.0)  # Solar should be curtailed
+        np.testing.assert_almost_equal(inv_p[i], -5.0)  # To meet the inverter limit
+        np.testing.assert_almost_equal(root_p[i], 5.0)  # And the grid will receive that power

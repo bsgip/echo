@@ -176,7 +176,7 @@ class EchoOptimiser(object):
 
     def optimise(
         self,
-        tee=False,
+        verbose=False,
         logfile=None,
         acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
     ):
@@ -191,8 +191,12 @@ class EchoOptimiser(object):
         else:
             opt = SolverFactory(self.engine_settings.engine)
 
+
+        if verbose:
+            self.model.pprint(verbose=True)
+
         # Solve the optimisation
-        results: SolverResults = opt.solve(self.model, tee=tee, symbolic_solver_labels=True, logfile=logfile)
+        results: SolverResults = opt.solve(self.model, tee=verbose, symbolic_solver_labels=True, logfile=logfile)
 
         # Extract the optimisation result
         termination_condition: TerminationCondition = results.solver.termination_condition

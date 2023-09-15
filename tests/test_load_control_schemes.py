@@ -4,7 +4,11 @@ from echo.configuration import NodeRule, TransformRule, Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform
-from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
+from echo.models.electrical import (
+    BoundedElectricalLoad,
+    ElectricalDemand,
+    ElectricalPort,
+)
 
 
 def test_simple_bounded_load():
@@ -39,7 +43,7 @@ def test_simple_bounded_load():
         getattr(optimiser.model, l1.port_name)[p, i] for p in optimiser.model.Expansion for i in optimiser.model.Time
     )
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
     print(optimiser.opt_status)
     load_import = optimiser.values(l1.port_name, 0)
 
@@ -84,7 +88,7 @@ def test_time_delay_node(time_delay):
     # optimiser.objective = sum(getattr(optimiser.model, l1.port_name)[p, i]
     #                for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
     print(optimiser.opt_status)
     grid = optimiser.values(grid.ports["grid"].port_name)
     td_input = optimiser.values(td.ports["input"].port_name)
@@ -154,7 +158,7 @@ def test_feedback_loop():
     # optimiser.objective = sum(getattr(optimiser.model, cp.ports['supply'].port_name)[p, i]
     #                for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
     print(optimiser.opt_status)
     cp = optimiser.values(cp.ports["supply"].port_name)
     td_input = optimiser.values(td.ports["input"].port_name)

@@ -4,7 +4,12 @@ from echo.configuration import Units
 from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 
 
 def test_partitioning_regions_for_path_flow():
@@ -70,7 +75,7 @@ def test_partitioning_regions_for_path_flow():
         objective_set=None,
     )
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
 
     grid_to_inverter = system.get_path([grid, cp, inverter])
     grid_to_load = system.get_path([grid, cp, load])
@@ -136,7 +141,7 @@ def test_regularisation_of_path_flows():
         objective_set=None,
     )
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
     print(optimiser.opt_status)
 
     s1_to_l1 = optimiser.values(system.get_path([source1, cp, load1]).flow_value, 0) * -1

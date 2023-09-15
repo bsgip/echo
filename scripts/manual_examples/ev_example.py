@@ -127,7 +127,7 @@ optimiser = EchoOptimiser(
     objective_set=None,
 )
 
-optimiser.optimise(tee=True)
+optimiser.optimise(verbose=True)
 
 log_infeasible_constraints(optimiser.model)
 

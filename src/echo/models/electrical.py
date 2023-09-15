@@ -5,7 +5,13 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field
 
-from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
+from echo.configuration import (
+    EVChargeMode,
+    NodeRule,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.echo_validators import ArrayType
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (
@@ -48,6 +54,7 @@ class ElectricalGeneration(Source):
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
             # Constrain solar gen to be within initial value (max value)
+            getattr(model, self.port_name).unfix()
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
 
 

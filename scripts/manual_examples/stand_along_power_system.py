@@ -169,7 +169,7 @@ optimiser = EchoOptimiser(
     optimiser_engine="cplex",
 )
 
-optimiser.optimise(tee=True)
+optimiser.optimise(verbose=True)
 
 log_infeasible_constraints(optimiser.model)
 

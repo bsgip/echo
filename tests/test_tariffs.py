@@ -432,6 +432,6 @@ def test_block_tariff():
         ES=system,
         objective_set=objective_set,
     )
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
 
     print()

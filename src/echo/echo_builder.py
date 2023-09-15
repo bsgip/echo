@@ -545,7 +545,7 @@ def run_echo_optimiser(
         optimiser_engine=optimiser_engine,
     )
 
-    optimiser.optimise(tee=opt_display, logfile=logfile)
+    optimiser.optimise(verbose=opt_display, logfile=logfile)
     log_infeasible_constraints(optimiser.model)
 
     return optimiser

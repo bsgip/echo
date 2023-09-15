@@ -69,7 +69,7 @@ def test_v0g():
         objective_set=None,
     )
 
-    optimiser.optimise(tee=True)
+    optimiser.optimise(verbose=True)
 
 
 def test_v2g_soc_conserv():
