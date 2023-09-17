@@ -1,5 +1,6 @@
 from __future__ import division
 
+import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
@@ -224,3 +225,4 @@ ax3 = fig.add_subplot(3, 1, 3)
 ax3.set_xlim([0, len(test_load) / 4])
 ax3.set_xlabel("hour"), ax3.set_ylabel("Battery action")
 ax3.legend([line1, line2], ["Charging action (kW)", "SOC (kWh)"])
+plt.show()
