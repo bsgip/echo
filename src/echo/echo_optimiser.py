@@ -191,7 +191,6 @@ class EchoOptimiser(object):
         else:
             opt = SolverFactory(self.engine_settings.engine)
 
-
         if verbose:
             self.model.pprint(verbose=True)
 
@@ -232,9 +231,9 @@ class EchoOptimiser(object):
     def df_by_node(self):
         """Returns a df of results by node, using the port names given in each nodes 'ports' dict"""
         dct = {}
-        for nname, node in self.ES.node_obj.items():
-            for pname, p in node.ports.items():
-                dct[nname + "-" + pname] = getattr(self.model, p.port_name).extract_values()
+        for node_name, node in self.ES.node_obj.items():
+            for port_name, p in node.ports.items():
+                dct[node_name + "-" + port_name] = getattr(self.model, p.port_name).extract_values()
 
         df = pd.DataFrame(dct)
         return df
@@ -242,13 +241,13 @@ class EchoOptimiser(object):
     def df_by_port(self):
         """Returns a df of results by port, using port names given in each nodes 'ports' dict"""
         dct = {}
-        for nname, node in self.ES.node_obj.items():
-            for pname, p in node.ports.items():
-                if dct.get(pname) is not None:
+        for node_name, node in self.ES.node_obj.items():
+            for port_name, p in node.ports.items():
+                if dct.get(port_name) is not None:
                     # We have an existing key - make a new name using the node name
-                    dct[pname + "_node_" + nname] = getattr(self.model, p.port_name).extract_values()
+                    dct[port_name + "_node_" + node_name] = getattr(self.model, p.port_name).extract_values()
                 else:
-                    dct[pname] = getattr(self.model, p.port_name).extract_values()
+                    dct[port_name] = getattr(self.model, p.port_name).extract_values()
 
         df = pd.DataFrame(dct)
         return df

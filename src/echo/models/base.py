@@ -753,7 +753,7 @@ class Path(BaseModel):
 
 
 class OptimisationGraph(BaseModel):
-    node_obj: dict[str, Node] = {}
+    node_obj: dict[str, Node] = {}  # Nodes keyed by their node_name
     edge_obj: dict[tuple[str, str], Edge] = {}
     paths: dict[tuple, Path] = {}
 
@@ -959,8 +959,8 @@ class OptimisationGraph(BaseModel):
                         p = self._create_path_object(vertex_list, edge_list, regularise, path_unit)  # create path
                         all_paths[tuple(vertex_list)] = p
 
-        intersec = source_sink_set.intersection(tellegen_node_set)  # check overlap of tellegen and source/sink nodes
-        assert len(intersec) == 0, f"Nodes '{intersec}' are being treated as both tellegen and source/sink."
+        intersection = source_sink_set.intersection(tellegen_node_set)  # check overlap of tellegen and src/sink nodes
+        assert len(intersection) == 0, f"Nodes '{intersection}' are being treated as both tellegen and source/sink."
         self.paths = all_paths
 
     def _create_path_object(self, vertex_list: list, edge_list: list, regularise: bool, path_unit: Units):
