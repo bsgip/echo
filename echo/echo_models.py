@@ -544,8 +544,8 @@ class Port(BaseModel):
 
         x = ArrayWrap(array)
         if time_periods is None:
-            time_period = len(array)
-        x.set_periods(time_periods=time_period, expansion_periods=expansion_periods)
+            time_periods = len(array)
+        x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
         vals = x.dict()
         self.add_initial_value(vals)
 
@@ -557,7 +557,7 @@ class Port(BaseModel):
         """
         x = ArrayWrap(array)
         if time_periods is None:
-            time_period = len(array)
+            time_periods = len(array)
         x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
         vals = x.dict()
         self.active_periods = vals
