@@ -1,10 +1,12 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet, TotalFlow
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
@@ -37,22 +39,18 @@ def test_export_slack_var_is_minimised():
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"], minimise=False)]),
     )
 
-    optimiser.objective += sum(
-        getattr(optimiser.model, pv1.port_name)[p, t] for p in optimiser.model.Expansion for t in optimiser.model.Time
-    )
-
-    optimiser.optimise()
-
-    inv_export_slack = optimiser.values(inverter.ports["cp"].export_slack, 0)
+    inv_export_slack = optimise_results.values(inverter.ports["cp"].export_slack, 0)
 
     np.testing.assert_almost_equal(inv_export_slack, 0)
 
@@ -83,23 +81,19 @@ def test_import_slack_var_is_minimised():
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=ObjectiveSet(objective_list=[TotalFlow(component=pv1, minimise=False)]),
     )
 
-    optimiser.objective += sum(
-        getattr(optimiser.model, pv1.port_name)[p, t] for p in optimiser.model.Expansion for t in optimiser.model.Time
-    )
-
-    optimiser.optimise()
-
-    g_import_slack = optimiser.values(grid.ports["grid"].import_slack, 0)
-    g = optimiser.values(grid.ports["grid"].port_name, 0)
+    g_import_slack = optimise_results.values(grid.ports["grid"].import_slack, 0)
+    g = optimise_results.values(grid.ports["grid"].port_name, 0)
 
     np.testing.assert_almost_equal(g_import_slack, 0)
 
@@ -130,19 +124,18 @@ def test_slack_vars_take_up_slack_when_forced_to():
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    optimiser.optimise()
-
-    inv_export_slack = optimiser.values(inverter.ports["cp"].export_slack, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    inv_export_slack = optimise_results.values(inverter.ports["cp"].export_slack, 0)
+    sol_p = optimise_results.values(pv1.port_name, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(inv_export_slack, max(0, -1 * sol_p[i] - 5))

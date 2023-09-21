@@ -8,7 +8,6 @@ import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -17,9 +16,11 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower
 from echo.objectives.tariff import ExportTariff, ImportTariff, ThroughputCost
+from echo.optimiser import optimise
 
 """ 
             Example of optimising a behind the meter battery where there is also a load and pv at the location
@@ -173,28 +174,28 @@ objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_powe
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=discount_rate,
-    ES=system,
-    objective_set=objective_set,
-    optimiser_engine="cplex",
-)
-
 t1 = time.time()
-optimiser.optimise(verbose=True)
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    objective_set=objective_set,
+)
 t2 = time.time()
 print("optimisation time = ", t2 - t1)
 
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(optimise_results.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports["grid"].port_name, 0)
+storage_energy_delta = optimise_results.values(b.port_name, 0)
+storage_energy_soc = optimise_results.values(b.soc_value, 0)
+optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4

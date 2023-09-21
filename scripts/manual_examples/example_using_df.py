@@ -3,10 +3,11 @@ from __future__ import division
 import pandas as pd
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration, FixedElectricalPort
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.optimiser import optimise
 
 time_periods = 48
 
@@ -47,14 +48,15 @@ system.connect_ports_and_create_edge(pv, connection_point.get_port("pv"))
 system.connect_ports_and_create_edge(l1, connection_point.get_port("load"))
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=discount_rate,
-    ES=system,
-    objective_set=None,
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
     profile=df,
+    graph=system,
+    verbose=True,
 )
-
-optimiser.optimise(verbose=True)

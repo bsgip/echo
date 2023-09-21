@@ -1,16 +1,17 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     DemandTariffObjective,
     ExportDemandCharge,
     ImportDemandCharge,
 )
+from echo.optimiser import optimise
 
 
 def test_system_import_demand_tariff():
@@ -47,18 +48,18 @@ def test_system_import_demand_tariff():
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    max_demand = optimiser.values(demand_tariff.demand_charges[0].max_demand_val, 0)
+    max_demand = optimise_results.values(demand_tariff.demand_charges[0].max_demand_val, 0)
     max_in_window = max(np.multiply(demand, dc_window))
     np.testing.assert_array_almost_equal(max_demand, max_in_window - minimum_demand)
 
@@ -97,18 +98,18 @@ def test_system_export_demand_tariff():
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    max_demand = optimiser.values(demand_tariff.demand_charges[0].max_demand_val, 0)
+    max_demand = optimise_results.values(demand_tariff.demand_charges[0].max_demand_val, 0)
     max_in_window = min(np.multiply(gen_array, dc_window))
     np.testing.assert_array_almost_equal(max_demand, max_in_window - minimum_demand)
 
@@ -147,18 +148,18 @@ def test_system_import_demand_tariff_two_resets():
 
     objective_set = ObjectiveSet(objective_list=[demand_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    max_demand = optimiser.values(demand_tariff.demand_charges[0].max_demand_val, 0)
+    max_demand = optimise_results.values(demand_tariff.demand_charges[0].max_demand_val, 0)
 
     np.testing.assert_array_almost_equal(max_demand[0], 10 - minimum_demand)
     np.testing.assert_array_almost_equal(max_demand[1], 20 - minimum_demand)

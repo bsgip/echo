@@ -12,7 +12,6 @@ import pandas as pd
 from pyomo.util.infeasible import log_infeasible_constraints
 from tqdm import tqdm
 
-import echo.echo_optimiser as eo
 from echo.configuration import NodeType, TariffType, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import BaseModel as EchoBaseModel
@@ -27,6 +26,7 @@ from echo.models.prebuilt import (
     NewInverter,
     Solar,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import Objective, ObjectiveSet
 from echo.objectives.power import PeakNegativePower, PeakPositivePower, QuadraticPower
 from echo.objectives.tariff import (
@@ -36,6 +36,7 @@ from echo.objectives.tariff import (
     ImportTariff,
     ThroughputCost,
 )
+from echo.optimiser import optimise
 
 
 @dataclass
@@ -535,20 +536,19 @@ def run_echo_optimiser(
                 scalar_ok=True,
             )
 
-    optimiser = eo.EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=discount_rate,
-        ES=echo_graph,
+    return optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(optimiser_engine),
         objective_set=objective_set,
-        optimiser_engine=optimiser_engine,
+        graph=echo_graph,
+        verbose=True,
+        logfile=logfile,
     )
-
-    optimiser.optimise(verbose=opt_display, logfile=logfile)
-    log_infeasible_constraints(optimiser.model)
-
-    return optimiser
 
 
 def create_battery_node(node_dict: dict):

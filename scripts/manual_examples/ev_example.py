@@ -13,11 +13,12 @@ import numpy as np
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
 from echo.models.electrical import EV
 from echo.models.prebuilt import FlexElectricalNode
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.optimiser import optimise
 
 ## Set up hyper params
 time_periods = 48  # number of time periods to run the optimisation for
@@ -118,18 +119,18 @@ system.connect_ports_and_create_edge(connection_point.ports["ev_v2g"], ev_v2g.po
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=discount_rate,
-    ES=system,
-    objective_set=None,
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
 )
 
-optimiser.optimise(verbose=True)
-
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(optimise_results.model)
 
 ############################ Analyse the Optimisation ########################################
 ev_cp = ev_v0g
@@ -137,13 +138,13 @@ ev_cp = ev_v0g
 print("EV V0G NODE ATTRIBUTES:")
 pprint.pprint(vars(ev_cp))
 print("\n OPTIMISATION RESULTS: ")
-print(optimiser.node_values(ev_cp, 0))
-print("EV soc: ", optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-print("Infeasibility: ", optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+print(optimise_results.node_values(ev_cp, 0))
+print("EV soc: ", optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+print("Infeasibility: ", optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 
 plt.plot(usage)
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 plt.legend(["Usage", "EV soc", "infeasibility"])
 plt.xlim([0, 47])
 plt.show()
@@ -153,13 +154,13 @@ ev_cp = ev_v1g
 print("EV V1G NODE ATTRIBUTES:")
 pprint.pprint(vars(ev_cp))
 print("\n OPTIMISATION RESULTS: ")
-print(optimiser.node_values(ev_cp, 0))
-print("EV soc: ", optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-print("Infeasibility: ", optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+print(optimise_results.node_values(ev_cp, 0))
+print("EV soc: ", optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+print("Infeasibility: ", optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 
 plt.plot(usage)
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 plt.legend(["Usage", "EV soc", "infeasibility"])
 plt.xlim([0, 47])
 plt.show()
@@ -169,13 +170,13 @@ ev_cp = ev_v2g
 print("EV V2G NODE ATTRIBUTES:")
 pprint.pprint(vars(ev_cp))
 print("\n OPTIMISATION RESULTS: ")
-print(optimiser.node_values(ev_cp, 0))
-print("EV soc: ", optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-print("Infeasibility: ", optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+print(optimise_results.node_values(ev_cp, 0))
+print("EV soc: ", optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+print("Infeasibility: ", optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 
 plt.plot(usage)
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].soc_value, 0))
-plt.plot(optimiser.values(ev_cp.ports["vehicle"].trip_slack, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0))
+plt.plot(optimise_results.values(ev_cp.ports["vehicle"].trip_slack, 0))
 plt.legend(["Usage", "EV soc", "infeasibility"])
 plt.xlim([0, 47])
 plt.show()

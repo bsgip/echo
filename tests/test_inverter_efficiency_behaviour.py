@@ -1,10 +1,17 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet, TotalImportFlow
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
@@ -58,34 +65,24 @@ def test_hybrid_inverter_dc_ac_efficiency():
     system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inv"])
     system.connect_ports_and_create_edge(cp.ports["grid"], grid.ports["grid"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
-    )
-
     # Minimise import
-    grid.ports["grid"].constrain_pos_neg(optimiser.model)
-    optimiser.objective = (
-        sum(
-            getattr(optimiser.model, grid.ports["grid"].neg)[p, t]
-            for p in optimiser.model.Expansion
-            for t in optimiser.model.Time
-        )
-        * -1
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"])]),
     )
 
-    optimiser.optimise()
-
-    root_p = optimiser.values(grid.ports["grid"].port_name, 0) * -1
-    inv_p = optimiser.values(inverter.ports["cp"].port_name, 0)
-    cp_p = optimiser.values(cp.ports["grid"].port_name, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
-    sto_p = optimiser.values(b1.port_name, 0)
-    sto_soc = optimiser.values(b1.soc_value, 0)
+    root_p = optimise_results.values(grid.ports["grid"].port_name, 0) * -1
+    inv_p = optimise_results.values(inverter.ports["cp"].port_name, 0)
+    cp_p = optimise_results.values(cp.ports["grid"].port_name, 0)
+    sol_p = optimise_results.values(pv1.port_name, 0)
+    sto_p = optimise_results.values(b1.port_name, 0)
+    sto_soc = optimise_results.values(b1.soc_value, 0)
     # With the chosen objective, it doesn't matter if the energy is sourced from solar or battery,
     # but each interval should be importing at 1.0
     # TODO Test for preferencing solar gen vs storage
@@ -146,31 +143,21 @@ def test_hybrid_inverter_dc_dc_efficiency():
     system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inv"])
     system.connect_ports_and_create_edge(cp.ports["grid"], grid.ports["grid"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
-    )
-
     # Minimise import
-    grid.ports["grid"].constrain_pos_neg(optimiser.model)
-    optimiser.objective = (
-        sum(
-            getattr(optimiser.model, grid.ports["grid"].neg)[p, t]
-            for p in optimiser.model.Expansion
-            for t in optimiser.model.Time
-        )
-        * -1
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"])]),
     )
 
-    optimiser.optimise()
-
-    root_p = optimiser.values(grid.ports["grid"].neg, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
-    sto_p = optimiser.values(b1.port_name, 0)
+    root_p = optimise_results.values(grid.ports["grid"].neg, 0)
+    sol_p = optimise_results.values(pv1.port_name, 0)
+    sto_p = optimise_results.values(b1.port_name, 0)
 
     for i in range(N_INTERVALS // 2):
         np.testing.assert_almost_equal(root_p[i], 0.0, 5)  # Had to add 5dp

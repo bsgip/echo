@@ -6,12 +6,13 @@ import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalStorage, FixedElectricalPort
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import PathTariff, ThroughputCost
+from echo.optimiser import optimise
 
 # set up seaborn the way you like
 sns.set_style(
@@ -161,28 +162,29 @@ objective_set = ObjectiveSet(objective_list=cws + cstorage + rnetwork + [through
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=discount_rate,
-    ES=system,
-    objective_set=objective_set,
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    verbose=True,
 )
 
-optimiser.optimise()
-
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(optimise_results.model)
 
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports["grid"].port_name, 0)
+storage_energy_delta = optimise_results.values(b.port_name, 0)
+storage_energy_soc = optimise_results.values(b.soc_value, 0)
+optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
 
-optimiser.get_single_objective_total_value(rnetwork[0])
-optimiser.get_single_objective_total_value(throughput_cost)
+optimise_results.get_single_objective_total_value(rnetwork[0])
+optimise_results.get_single_objective_total_value(throughput_cost)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4

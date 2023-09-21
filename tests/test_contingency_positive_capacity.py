@@ -1,7 +1,6 @@
 import numpy as np
 
 from echo.configuration import NodeRule, Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -10,8 +9,10 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.contingency import ContingencyPositive
+from echo.optimiser import optimise
 
 
 def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
@@ -59,18 +60,17 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
-
-    optimiser.optimise()
-
-    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
+    cont_pos_p = optimise_results.values(contingency_obj.contingency_pos, 0)
 
     for i in range(time_periods):
         assert cont_pos_p[i] == 5.0
@@ -122,19 +122,19 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    cont_pos_p = optimise_results.values(contingency_obj.contingency_pos, 0)
+    sol_p = optimise_results.values(pv1.port_name, 0)
 
     # for i in range(0, 1):
     #     assert cont_pos_p[i] == pytest.approx(2.0, rel=utils.RELATIVE_TOLERANCE,
@@ -254,18 +254,18 @@ def test_positive_contingency_calculation_with_storage_full():
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    cont_pos_p = optimiser.values(contingency_obj.contingency_pos, 0)
+    cont_pos_p = optimise_results.values(contingency_obj.contingency_pos, 0)
 
     for i in range(N_INTERVALS):
         np.testing.assert_almost_equal(cont_pos_p[i], 0.0, 5)  # Had to update to 5dp

@@ -1,7 +1,6 @@
 import pytest
 
 from echo.configuration import NodeRule, TransformRule, Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform
 from echo.models.electrical import (
@@ -9,6 +8,9 @@ from echo.models.electrical import (
     ElectricalDemand,
     ElectricalPort,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
+from echo.optimiser import optimise
 
 
 def test_simple_bounded_load():
@@ -30,28 +32,24 @@ def test_simple_bounded_load():
     system.add_node_obj([grid, load])
     system.connect_ports_and_create_edge(grid.ports["grid"], l1)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
-    )
-    # minimise imports
-    optimiser.objective = sum(
-        getattr(optimiser.model, l1.port_name)[p, i] for p in optimiser.model.Expansion for i in optimiser.model.Time
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"])]),
     )
 
-    optimiser.optimise(verbose=True)
-    print(optimiser.opt_status)
-    load_import = optimiser.values(l1.port_name, 0)
+    print(optimise_results.opt_status)
+    load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
         assert load_import[i] == min(ub[i], lb[i])
 
 
-@pytest.mark.solver("milp")
 @pytest.mark.parametrize("time_delay", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
 def test_time_delay_node(time_delay):
     expansion_periods = 1
@@ -76,24 +74,21 @@ def test_time_delay_node(time_delay):
     system.connect_ports_and_create_edge(grid.ports["grid"], td.ports["input"])
     system.connect_ports_and_create_edge(td.ports["output"], l1)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    # optimiser.objective = sum(getattr(optimiser.model, l1.port_name)[p, i]
-    #                for p in optimiser.model.Expansion for i in optimiser.model.Time)
-
-    optimiser.optimise(verbose=True)
-    print(optimiser.opt_status)
-    grid = optimiser.values(grid.ports["grid"].port_name)
-    td_input = optimiser.values(td.ports["input"].port_name)
-    td_output = optimiser.values(td.ports["output"].port_name)
-    load_import = optimiser.values(l1.port_name, 0)
+    print(optimise_results.opt_status)
+    grid = optimise_results.values(grid.ports["grid"].port_name)
+    td_input = optimise_results.values(td.ports["input"].port_name)
+    td_output = optimise_results.values(td.ports["output"].port_name)
+    load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
         if i < td.time_delay:
@@ -146,24 +141,24 @@ def test_feedback_loop():
     system.connect_ports_and_create_edge(excess, td.ports["input"])
     system.connect_ports_and_create_edge(td.ports["output"], cp.ports["feedback"])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
     # optimiser.objective = sum(getattr(optimiser.model, cp.ports['supply'].port_name)[p, i]
     #                for p in optimiser.model.Expansion for i in optimiser.model.Time)
 
-    optimiser.optimise(verbose=True)
-    print(optimiser.opt_status)
-    cp = optimiser.values(cp.ports["supply"].port_name)
-    td_input = optimiser.values(td.ports["input"].port_name)
-    td_output = optimiser.values(td.ports["output"].port_name)
-    load_import = optimiser.values(l1.port_name, 0)
+    print(optimise_results.opt_status)
+    cp = optimise_results.values(cp.ports["supply"].port_name)
+    td_input = optimise_results.values(td.ports["input"].port_name)
+    td_output = optimise_results.values(td.ports["output"].port_name)
+    load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
         if i < td.time_delay:

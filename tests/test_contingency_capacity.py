@@ -1,7 +1,6 @@
 import numpy as np
 
 from echo.configuration import NodeRule, Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -10,8 +9,10 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.contingency import ContingencyNegative
+from echo.optimiser import optimise
 
 
 def test_negative_contingency_respects_hybrid_inverter_constraints():
@@ -68,18 +69,18 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
 
     objective_set = ObjectiveSet(objective_list=[contingency_neg])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
+    cont_neg_p = optimise_results.values(contingency_neg.contingency_neg, 0)
 
     for i in range(time_periods // 2):
         np.testing.assert_almost_equal(cont_neg_p[i], -1.0)
@@ -143,19 +144,19 @@ def test_negative_contingency_maximisation_curtails_solar():
 
     objective_set = ObjectiveSet(objective_list=[contingency_neg])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
-    sol_p = optimiser.values(pv1.port_name, 0)
+    cont_neg_p = optimise_results.values(contingency_neg.contingency_neg, 0)
+    sol_p = optimise_results.values(pv1.port_name, 0)
 
     for i in range(time_periods // 2):
         np.testing.assert_almost_equal(cont_neg_p[i], -5.0)
@@ -222,18 +223,18 @@ def test_negative_contingency_calculation_with_no_available_energy():
 
     objective_set = ObjectiveSet(objective_list=[contingency_neg])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    cont_neg_p = optimiser.values(contingency_neg.contingency_neg, 0)
+    cont_neg_p = optimise_results.values(contingency_neg.contingency_neg, 0)
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(cont_neg_p[i], 0.0, 5)  # Had to update to 5dp

@@ -1,7 +1,6 @@
 from __future__ import division
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -10,6 +9,7 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     DemandTariffObjective,
@@ -18,6 +18,7 @@ from echo.objectives.tariff import (
     ImportTariff,
     ThroughputCost,
 )
+from echo.optimiser import optimise
 
 
 def test_objectives_sum_correctly():
@@ -95,23 +96,23 @@ def test_objectives_sum_correctly():
 
     obj_set = ObjectiveSet(objective_list=[tp_cost, import_t, export_t, demand_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=obj_set,
     )
 
-    optimiser.optimise()
-
     # get back each tariff component
-    sc = optimiser.get_single_objective_total_value(shoulder_charge)
-    tp = optimiser.get_single_objective_total_value(tp_cost)
-    it = optimiser.get_single_objective_total_value(import_t)
-    et = optimiser.get_single_objective_total_value(export_t)
-    dt = optimiser.get_single_objective_total_value(demand_tariff)
-    total = optimiser.get_total_objective_value()
+    sc = optimise_results.get_single_objective_total_value(shoulder_charge)
+    tp = optimise_results.get_single_objective_total_value(tp_cost)
+    it = optimise_results.get_single_objective_total_value(import_t)
+    et = optimise_results.get_single_objective_total_value(export_t)
+    dt = optimise_results.get_single_objective_total_value(demand_tariff)
+    total = optimise_results.get_total_objective_value()
 
     assert tp + it + et + dt == total

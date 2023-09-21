@@ -1,7 +1,6 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -10,6 +9,8 @@ from echo.models.electrical import (
     ElectricalStorage,
     Inverter,
 )
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.optimiser import optimise
 
 
 def test_partitioning_regions_for_path_flow():
@@ -66,16 +67,15 @@ def test_partitioning_regions_for_path_flow():
     # system.paths = {}
     # system.paths[(grid.node_name, cp.node_name, load.node_name)] = example_path
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
-
-    optimiser.optimise(verbose=True)
 
     grid_to_inverter = system.get_path([grid, cp, inverter])
     grid_to_load = system.get_path([grid, cp, load])
@@ -84,13 +84,15 @@ def test_partitioning_regions_for_path_flow():
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(
-            optimiser.values(grid_to_load.flow_value, 0)[i] + optimiser.values(grid_to_inverter.flow_value, 0)[i],
-            optimiser.values(grid.ports["grid"].port_name, 0)[i] * -1,
+            optimise_results.values(grid_to_load.flow_value, 0)[i]
+            + optimise_results.values(grid_to_inverter.flow_value, 0)[i],
+            optimise_results.values(grid.ports["grid"].port_name, 0)[i] * -1,
         )
 
         np.testing.assert_almost_equal(
-            optimiser.values(inverter_to_grid.flow_value, 0)[i] + optimiser.values(inverter_to_load.flow_value, 0)[i],
-            optimiser.values(inverter.ports["cp"].port_name, 0)[i] * -1,
+            optimise_results.values(inverter_to_grid.flow_value, 0)[i]
+            + optimise_results.values(inverter_to_load.flow_value, 0)[i],
+            optimise_results.values(inverter.ports["cp"].port_name, 0)[i] * -1,
         )
 
 
@@ -132,25 +134,25 @@ def test_regularisation_of_path_flows():
 
     system.create_path_objects(sources=[source1, source2], sinks=[load1, load2], regularise=True)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    optimiser.optimise(verbose=True)
-    print(optimiser.opt_status)
+    print(optimise_results.opt_status)
 
-    s1_to_l1 = optimiser.values(system.get_path([source1, cp, load1]).flow_value, 0) * -1
-    s1_to_l2 = optimiser.values(system.get_path([source1, cp, load2]).flow_value, 0) * -1
-    s2_to_l1 = optimiser.values(system.get_path([source2, cp, load1]).flow_value, 0) * -1
-    s2_to_l2 = optimiser.values(system.get_path([source2, cp, load2]).flow_value, 0) * -1
+    s1_to_l1 = optimise_results.values(system.get_path([source1, cp, load1]).flow_value, 0) * -1
+    s1_to_l2 = optimise_results.values(system.get_path([source1, cp, load2]).flow_value, 0) * -1
+    s2_to_l1 = optimise_results.values(system.get_path([source2, cp, load1]).flow_value, 0) * -1
+    s2_to_l2 = optimise_results.values(system.get_path([source2, cp, load2]).flow_value, 0) * -1
 
     for i in range(time_periods):
-        np.testing.assert_almost_equal(s1_to_l1[i], optimiser.values(s1.port_name, 0)[i] / 2)
-        np.testing.assert_almost_equal(s1_to_l2[i], optimiser.values(s1.port_name, 0)[i] / 2)
-        np.testing.assert_almost_equal(s2_to_l1[i], optimiser.values(s2.port_name, 0)[i] / 2)
-        np.testing.assert_almost_equal(s2_to_l2[i], optimiser.values(s2.port_name, 0)[i] / 2)
+        np.testing.assert_almost_equal(s1_to_l1[i], optimise_results.values(s1.port_name, 0)[i] / 2)
+        np.testing.assert_almost_equal(s1_to_l2[i], optimise_results.values(s1.port_name, 0)[i] / 2)
+        np.testing.assert_almost_equal(s2_to_l1[i], optimise_results.values(s2.port_name, 0)[i] / 2)
+        np.testing.assert_almost_equal(s2_to_l2[i], optimise_results.values(s2.port_name, 0)[i] / 2)

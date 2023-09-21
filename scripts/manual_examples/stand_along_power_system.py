@@ -6,7 +6,6 @@ import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import (
@@ -16,8 +15,10 @@ from echo.models.electrical import (
     Inverter,
 )
 from echo.models.prebuilt import DieselGenerator
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
+from echo.optimiser import optimise
 
 """ 
             Example of optimising a behind operation of a stand alone power system
@@ -159,29 +160,29 @@ objective_set = ObjectiveSet(objective_list=[diesel_cost])
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=discount_rate,
-    ES=system,
-    objective_set=objective_set,
-    optimiser_engine="cplex",
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    verbose=True,
 )
 
-optimiser.optimise(verbose=True)
-
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(optimise_results.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
+storage_energy_delta = optimise_results.values(b.port_name, 0)
+storage_energy_soc = optimise_results.values(b.soc_value, 0)
 # grid_supply = optimiser.values(connection_point.ports['grid'].port_name, 0)
-diesel_power = optimiser.values(connection_point.ports["diesel_gen"].port_name, 0)
-curtailed_solar = optimiser.values(solar.ports["pv"].port_name, 0)
-diesel_use_lps = optimiser.values(diesel_gen.ports["input"].port_name, 0)
-# optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
+diesel_power = optimise_results.values(connection_point.ports["diesel_gen"].port_name, 0)
+curtailed_solar = optimise_results.values(solar.ports["pv"].port_name, 0)
+diesel_use_lps = optimise_results.values(diesel_gen.ports["input"].port_name, 0)
+# optimised_connection_point_load = optimise_results.values(connection_point.ports['grid'].port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4

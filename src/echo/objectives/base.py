@@ -54,3 +54,44 @@ class ObjectiveSet(EchoBaseModel):
 
     def get_objective_total(self, model: EchoConcreteModel):
         return sum(obj.objective_expr(model) for obj in self.objective_list)
+
+
+class TotalFlow(Objective):
+    """Minimises flow at a specified port across all time periods/expansions."""
+
+    component: Port
+    minimise: bool = True
+
+    def objective_expr(self, model: EchoConcreteModel):
+        sign = -1 if self.minimise else 1
+        return sign * sum(getattr(model, self.component.port_name)[p, t] for p in model.Expansion for t in model.Time)
+
+
+class TotalImportFlow(Objective):
+    """Minimises import at a specified port across all time periods/expansions."""
+
+    component: Port
+    minimise: bool = True
+
+    def apply_constraints(self, model: EchoConcreteModel):
+        if hasattr(model, self.component.neg) is False:
+            self.component.constrain_pos_neg(model)
+
+    def objective_expr(self, model: EchoConcreteModel):
+        sign = -1 if self.minimise else 1
+        return sign * sum(getattr(model, self.component.neg)[p, t] for p in model.Expansion for t in model.Time)
+
+
+class TotalExportFlow(Objective):
+    """Minimises export at a specified port across all time periods/expansions."""
+
+    component: Port
+    minimise: bool = True
+
+    def apply_constraints(self, model: EchoConcreteModel):
+        if hasattr(model, self.component.pos) is False:
+            self.component.constrain_pos_neg(model)
+
+    def objective_expr(self, model: EchoConcreteModel):
+        sign = -1 if self.minimise else 1
+        return sign * sum(getattr(model, self.component.pos)[p, t] for p in model.Expansion for t in model.Time)

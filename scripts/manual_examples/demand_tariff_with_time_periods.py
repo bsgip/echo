@@ -3,10 +3,10 @@ from datetime import datetime, time
 import pandas as pd
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalStorage
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     Day,
@@ -17,6 +17,7 @@ from echo.objectives.tariff import (
     TimePeriod,
     Window,
 )
+from echo.optimiser import optimise
 
 expansion_periods = 1
 profile = pd.DataFrame(
@@ -80,20 +81,21 @@ throughput_cost = ThroughputCost(component=b1, rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
 
 
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=0,
-    ES=system,
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
     objective_set=objective_set,
-    profile=profile,
+    verbose=True,
 )
 
-optimiser.optimise()
-print(optimiser.opt_status)
+print(optimise_results.opt_status)
 
-print(optimiser.values(peak_charge.max_demand_val))
+print(optimise_results.values(peak_charge.max_demand_val))
 
 # print(optimiser.values(b1.port_name))
 #

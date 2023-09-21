@@ -1,15 +1,16 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import GasBoilerFixedCOP, GasPort
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
@@ -35,23 +36,22 @@ def test_gas_boiler_fixed_cop():
     system.connect_ports_and_create_edge(gas_mains.ports["mains"], boiler.ports["input"])
     system.connect_ports_and_create_edge(boiler.ports["output"], hl)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    optimiser.optimise()
-
-    print("mains gas: ", optimiser.values(gas_mains.ports["mains"].port_name, 0))
-    print("boiler input (gas): ", optimiser.values(boiler.ports["input"].port_name, 0))
-    print("boiler output (heat): ", optimiser.values(boiler.ports["output"].port_name, 0))
+    print("mains gas: ", optimise_results.values(gas_mains.ports["mains"].port_name, 0))
+    print("boiler input (gas): ", optimise_results.values(boiler.ports["input"].port_name, 0))
+    print("boiler output (heat): ", optimise_results.values(boiler.ports["output"].port_name, 0))
     print("heating load: ", hl.initial_value.values())
 
-    gas_mains = optimiser.values(gas_mains.ports["mains"].port_name, 0)
+    gas_mains = optimise_results.values(gas_mains.ports["mains"].port_name, 0)
     hl_p = hl.initial_value
 
     for i in range(time_periods):
@@ -79,19 +79,18 @@ def test_modulating_gas_boiler():
     system.connect_ports_and_create_edge(gas_mains.ports["mains"], boiler.ports["input"])
     system.connect_ports_and_create_edge(boiler.ports["output"], hl)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    optimiser.optimise()
-
-    boiler_input = optimiser.values(boiler.ports["input"].port_name, 0)
-    boiler_output = optimiser.values(boiler.ports["output"].port_name, 0)
+    boiler_input = optimise_results.values(boiler.ports["input"].port_name, 0)
+    boiler_output = optimise_results.values(boiler.ports["output"].port_name, 0)
 
     for i in range(time_periods):
         assert boiler_input[i] * boiler.cop == -1 * boiler_output[i]
@@ -123,34 +122,33 @@ def test_chiller_operation():
     system.connect_ports_and_create_edge(grid.ports["grid"], chiller.ports["input"])
     system.connect_ports_and_create_edge(chiller.ports["output"], cl)
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=None,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
 
-    optimiser.optimise()
-
-    print("mains gas: ", optimiser.values(grid.ports["grid"].port_name, 0))
-    print("chiller input (elec): ", optimiser.values(chiller.ports["input"].port_name, 0))
-    print("chiller output (cooling): ", optimiser.values(chiller.ports["output"].port_name, 0))
+    print("mains gas: ", optimise_results.values(grid.ports["grid"].port_name, 0))
+    print("chiller input (elec): ", optimise_results.values(chiller.ports["input"].port_name, 0))
+    print("chiller output (cooling): ", optimise_results.values(chiller.ports["output"].port_name, 0))
     print("cooling load: ", cl.initial_value.values())
     print(
         "cop: ",
         np.divide(
-            optimiser.values(chiller.ports["output"].port_name, 0),
-            optimiser.values(chiller.ports["input"].port_name, 0),
+            optimise_results.values(chiller.ports["output"].port_name, 0),
+            optimise_results.values(chiller.ports["input"].port_name, 0),
         ),
     )
 
-    chiller_input = optimiser.values(chiller.ports["input"].port_name, 0)
-    # chiller_output = optimiser.values(chiller.ports['output'].port_name, 0)
-    # grid_import = optimiser.values(grid.ports['grid'].port_name, 0)
+    chiller_input = optimise_results.values(chiller.ports["input"].port_name, 0)
+    # chiller_output = optimise_results.values(chiller.ports['output'].port_name, 0)
+    # grid_import = optimise_results.values(grid.ports['grid'].port_name, 0)
     # cl_p = cl.initial_value
-    # cop = np.divide(optimiser.values(chiller.ports['output'].port_name, 0), optimiser.values(chiller.ports['input'].port_name, 0))
+    # cop = np.divide(optimise_results.values(chiller.ports['output'].port_name, 0), optimise_results.values(chiller.ports['input'].port_name, 0))
 
     for i in range(time_periods):
         assert chiller_input[i] == 3
@@ -206,20 +204,21 @@ def test_carbon_aggregation():
         tariff_array=np.array(([0.1] * 24 + [0.3] * 24)),
         expansion_periods=expansion_periods,
     )
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=ObjectiveSet(objective_list=[import_tariff]),
     )
 
-    optimiser.optimise()
-
-    grid_emissions = optimiser.values(grid.ports["CO2"].port_name, 0)
-    bess_emissions = optimiser.values(battery1.ports["CO2"].port_name, 0)
-    aggr = optimiser.values(carbon_aggr.total, 0)
+    grid_emissions = optimise_results.values(grid.ports["CO2"].port_name, 0)
+    bess_emissions = optimise_results.values(battery1.ports["CO2"].port_name, 0)
+    aggr = optimise_results.values(carbon_aggr.total, 0)
 
     for i in range(time_periods):
         assert aggr[i] * -1 == grid_emissions[i] + bess_emissions[i]

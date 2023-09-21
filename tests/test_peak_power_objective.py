@@ -1,11 +1,12 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Node, OptimisationGraph
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import QuadraticPower
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
@@ -30,19 +31,19 @@ def test_controlled_load_with_peak_power_objective():
     quad_power = QuadraticPower(component=grid.ports["grid"])
     objective_set = ObjectiveSet(objective_list=[quad_power])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    root_p = optimiser.values(grid.ports["grid"].port_name, 0) * -1
-    cl_p = optimiser.values(cl.port_name, 0)
+    root_p = optimise_results.values(grid.ports["grid"].port_name, 0) * -1
+    cl_p = optimise_results.values(cl.port_name, 0)
 
     np.testing.assert_array_almost_equal(list(cl_p), [2 * 10.0 / N_INTERVALS] * 48)
 

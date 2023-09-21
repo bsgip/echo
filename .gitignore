@@ -10,3 +10,4 @@ echo.egg-info
 /build/lib/echo/
 .hypothesis
 .vscode
+cplex.log

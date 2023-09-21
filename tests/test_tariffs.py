@@ -5,11 +5,11 @@ from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
 
 from echo.configuration import FlowConstraint, Flows, Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.prebuilt import FlexNode, Load
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     BlockImportTariff,
@@ -19,9 +19,9 @@ from echo.objectives.tariff import (
     PathTariff,
     ThroughputCost,
 )
+from echo.optimiser import optimise
 
 
-@pytest.mark.solver("milp")
 @pytest.mark.parametrize(
     "minimum_demand,demand",
     [
@@ -91,28 +91,27 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     throughput_cost = ThroughputCost(component=b1, rate=0.0001)
     objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
     np.testing.assert_array_almost_equal(
-        optimiser.values(cp1.pos, 0)[24:36],
+        optimise_results.values(cp1.pos, 0)[24:36],
         np.ones(12) * max(demand - battery_capacity / 6, min(minimum_demand, demand)),
     )
     np.testing.assert_array_almost_equal(
-        optimiser.values(b1.neg, 0)[24:36], np.ones(12) * max(-battery_capacity / 6, min(minimum_demand - demand, 0.0))
+        optimise_results.values(b1.neg, 0)[24:36],
+        np.ones(12) * max(-battery_capacity / 6, min(minimum_demand - demand, 0.0)),
     )
 
 
-@pytest.mark.solver("milp")
-@pytest.mark.slow
 @settings(deadline=3000)
 @given(arrays(float, 12, elements=floats(1, 100)))
 def test_demand_charge_minimised_given_random_demand_in_period(demand_period_demand):
@@ -183,16 +182,16 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
 
     objective_set = ObjectiveSet(objective_list=[import_tariff, demand_tariff, throughput_cost])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
-
-    optimiser.optimise()
 
     # Check that we reduce minimum demand appropriately during the demand period
     max_gross_demand = max(demand_period_demand)
@@ -201,8 +200,8 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     expected_import = np.maximum(np.subtract(demand_period_demand, battery_power), max_net_demand)
     expected_import = np.minimum(expected_import, demand_period_demand)
     expected_discharge = expected_import - demand_period_demand
-    np.testing.assert_array_almost_equal(optimiser.values(cp1.pos, 0)[24:36], expected_import, 3)
-    np.testing.assert_array_almost_equal(optimiser.values(b1.neg, 0)[24:36], expected_discharge, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(cp1.pos, 0)[24:36], expected_import, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(b1.neg, 0)[24:36], expected_discharge, 3)
 
 
 def test_system_path_flows_adjust_to_path_tariffs():
@@ -256,20 +255,20 @@ def test_system_path_flows_adjust_to_path_tariffs():
 
     objective_set = ObjectiveSet(objective_list=[path_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
     # Check that grid to load flow is minimised in period of path tariff > 0
     net_load = demand - battery_power
-    grid_to_load_vals = optimiser.values(grid_to_load.flow_value, 0)
+    grid_to_load_vals = optimise_results.values(grid_to_load.flow_value, 0)
     np.testing.assert_array_almost_equal(grid_to_load_vals[24:36], np.ones(12) * net_load)
 
 
@@ -325,16 +324,16 @@ def test_path_flows_respect_port_constraints():
 
     objective_set = ObjectiveSet(objective_list=[tp_cost])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
-
-    optimiser.optimise()
 
     # Check solar flows are zero
     solar_to_bess = system.paths[(solar.node_name, site.node_name, battery.node_name)]
@@ -345,13 +344,13 @@ def test_path_flows_respect_port_constraints():
     load_to_solar = system.paths[(load.node_name, site.node_name, solar.node_name)]
     grid_to_solar = system.paths[(battery.node_name, site.node_name, solar.node_name)]
 
-    np.testing.assert_array_almost_equal(optimiser.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimiser.values(solar_to_load.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimiser.values(solar_to_grid.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_load.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_grid.flow_value, 0), [0] * time_periods, 3)
 
-    np.testing.assert_array_almost_equal(optimiser.values(bess_to_solar.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimiser.values(load_to_solar.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimiser.values(grid_to_solar.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(bess_to_solar.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(load_to_solar.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(optimise_results.values(grid_to_solar.flow_value, 0), [0] * time_periods, 3)
 
 
 def test_demand_tariff_reset_periods():
@@ -384,18 +383,18 @@ def test_demand_tariff_reset_periods():
 
     objective_set = ObjectiveSet(objective_list=[dt])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    max_demand = optimiser.values(import_charge.max_demand_val)
+    max_demand = optimise_results.values(import_charge.max_demand_val)
     demand_filtered = demand * np.array(tariff_array_day * num_days)
     reset_periods.insert(0, 0)
     val = np.cumsum(reset_periods)
@@ -424,14 +423,15 @@ def test_block_tariff():
 
     objective_set = ObjectiveSet(objective_list=[block_tariff])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
-    optimiser.optimise(verbose=True)
 
     print()

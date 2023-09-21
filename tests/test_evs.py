@@ -3,10 +3,11 @@ from __future__ import division
 import numpy as np
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import EV
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.optimiser import optimise
 
 
 def test_v0g():
@@ -60,16 +61,16 @@ def test_v0g():
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
 
     # Invoke the optimiser and optimise
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=discount_rate,
-        ES=system,
-        objective_set=None,
+    optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
-
-    optimiser.optimise(verbose=True)
 
 
 def test_v2g_soc_conserv():

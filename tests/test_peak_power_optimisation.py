@@ -1,10 +1,11 @@
 from echo.configuration import OptimisationType, Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower, PeakPositivePower
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
@@ -48,18 +49,18 @@ def test_peak_positive_power_objective():
     peak_pos_power = PeakPositivePower(component=cp1)
     objective_set = ObjectiveSet(objective_list=[peak_pos_power])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    sto_p = optimiser.values(b1.port_name, 0)
+    sto_p = optimise_results.values(b1.port_name, 0)
 
     # Check that battery minimises peak pos power (import) by discharging when load is > 0
     for i in range(6, N_INTERVALS):
@@ -106,18 +107,18 @@ def test_peak_negative_power_objective():
     peak_neg_power = PeakNegativePower(component=cp1)
     objective_set = ObjectiveSet(objective_list=[peak_neg_power])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
         objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    sto_p = optimiser.values(b1.port_name, 0)
+    sto_p = optimise_results.values(b1.port_name, 0)
 
     # Check that battery absorbs negative load to minimise peak negative power
     assert sum(sto_p[0:6]) == 2 * 6

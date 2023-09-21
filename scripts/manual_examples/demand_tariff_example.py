@@ -5,16 +5,17 @@ import numpy as np
 import seaborn as sns
 
 from echo.configuration import Units
-from echo.echo_optimiser import EchoOptimiser
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
 from echo.models.prebuilt import Battery, FlexNode, Load
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     DemandTariffObjective,
     ImportDemandCharge,
     ThroughputCost,
 )
+from echo.optimiser import optimise
 
 SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
 SOLVER_EXECUTABLE = None
@@ -81,25 +82,26 @@ demand_tariff = DemandTariffObjective(
 throughput_cost = ThroughputCost(component=battery.ports["battery"], rate=0.0001)
 objective_set = ObjectiveSet(objective_list=[demand_tariff, throughput_cost])
 
-optimiser = EchoOptimiser(
-    interval_duration=interval_duration,
-    number_of_intervals=time_periods,
-    number_of_expansion_intervals=expansion_periods,
-    discount_rate=0,
-    ES=system,
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
     objective_set=objective_set,
+    verbose=True,
 )
-
-optimiser.optimise(verbose=True)
 
 # Retrieve some useful port objects
 b = battery.ports["battery"]
 cp = site.ports["cp"]
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-max_demand_peak = optimiser.values(peak_charge.max_demand_val, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(cp.port_name, 0)
+storage_energy_delta = optimise_results.values(b.port_name, 0)
+max_demand_peak = optimise_results.values(peak_charge.max_demand_val, 0)
+storage_energy_soc = optimise_results.values(b.soc_value, 0)
+optimised_connection_point_load = optimise_results.values(cp.port_name, 0)
 
 colors = sns.color_palette()
 hrs = np.arange(0, 48) / 2
