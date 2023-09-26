@@ -15,6 +15,7 @@ from pydantic import (
     validator,
 )
 
+from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.scenario import EchoConcreteModel
@@ -117,7 +118,7 @@ class BlockTariff(Objective):
 
     @root_validator
     def check_block_rates(cls, values):
-        assert len(values.get("blocks")) + 1 == len(values.get("rates")), "Enter one more rate than num blocks"
+        validate(len(values.get("blocks")) + 1 == len(values.get("rates")), "Enter one more rate than num blocks")
         return values
 
     @root_validator(pre=True)
@@ -147,7 +148,7 @@ class BlockTariff(Objective):
         if self.reset_periods is None:
             self.reset_periods = [time_periods]
         else:
-            assert sum(self.reset_periods) == time_periods, "Total reset intervals doesn't match time periods."
+            validate(sum(self.reset_periods) == time_periods, "Total reset intervals doesn't match time periods.")
         window_bool = np.ones(time_periods)
         num_resets = len(self.reset_periods)
         blank = np.zeros([num_resets, time_periods])  # Create template blank array that we will populate with 1s
@@ -396,24 +397,28 @@ class Window(EchoBaseModel):
             if self.reset_periods is None:
                 reset_periods = [total_intervals]
             elif self.reset_periods == ResetPeriod.day:
-                assert (
-                    interval_duration <= 60 * 24
-                ), "Reset period cannot be a day if interval duration is greater than a day."
+                validate(
+                    interval_duration <= 60 * 24,
+                    "Reset period cannot be a day if interval duration is greater than a day.",
+                )
                 reset_periods = perform_rollover_calc(np.diff(df.index.day))
             elif self.reset_periods == ResetPeriod.week:
-                assert (
-                    interval_duration <= 60 * 24 * 7
-                ), "Reset period cannot be a week if interval duration is greater than a week."
+                validate(
+                    interval_duration <= 60 * 24 * 7,
+                    "Reset period cannot be a week if interval duration is greater than a week.",
+                )
                 reset_periods = perform_rollover_calc(np.diff(df.index.week))
             elif self.reset_periods == ResetPeriod.month:
-                assert (
-                    interval_duration <= 60 * 8760 // 12
-                ), "Reset period cannot be a month if interval duration is greater than a month."
+                validate(
+                    interval_duration <= 60 * 8760 // 12,
+                    "Reset period cannot be a month if interval duration is greater than a month.",
+                )
                 reset_periods = perform_rollover_calc(np.diff(df.index.month))
             elif self.reset_periods == ResetPeriod.year:
-                assert (
-                    interval_duration <= 60 * 8760
-                ), "Reset period cannot be a year if interval duration is greater than a year."
+                validate(
+                    interval_duration <= 60 * 8760,
+                    "Reset period cannot be a year if interval duration is greater than a year.",
+                )
                 reset_periods = perform_rollover_calc(np.diff(df.index.year))
             return reset_periods
 
@@ -448,10 +453,11 @@ class DemandCharge(EchoBaseModel):
         rp = values.get("reset_periods")
         window_array = values.get("window_array")
         if rp is not None:
-            assert sum(rp) == len(
-                window_array
-            ), "Sum of reset period lengths ({}) is not equal to window array length ({}).".format(
-                sum(rp), len(window_array)
+            validate(
+                sum(rp) == len(window_array),
+                "Sum of reset period lengths ({}) is not equal to window array length ({}).".format(
+                    sum(rp), len(window_array)
+                ),
             )
             values["num_reset_periods"] = len(rp)
         else:
@@ -462,10 +468,13 @@ class DemandCharge(EchoBaseModel):
 
     @root_validator
     def check_import_or_export(cls, values):
-        assert (values.get("import_demand") is True) or (values.get("export_demand") is True), (
-            "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
-            " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
-            "the demand charge to the demand tariff objective."
+        validate(
+            values.get("import_demand") is True or values.get("export_demand") is True,
+            str(
+                "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
+                " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
+                "the demand charge to the demand tariff objective."
+            ),
         )
         return values
 
@@ -558,13 +567,14 @@ class DemandTariffObjective(Objective):
             prev_length = None
             for dc in self.demand_charges:
                 if prev_length is not None:
-                    assert len(dc.window_array) == prev_length, "Demand charge windows are not all the same length"
+                    validate(len(dc.window_array) == prev_length, "Demand charge windows are not all the same length")
                     prev_length = len(dc.window_array)
                 else:
                     prev_length = len(dc.window_array)
-                assert (
-                    prev_length == model.scenario_settings.number_of_intervals
-                ), f"Demand charge {dc} windows do not match optimiser time periods."
+                validate(
+                    prev_length == model.scenario_settings.number_of_intervals,
+                    f"Demand charge {dc} windows do not match optimiser time periods.",
+                )
 
         verify_non_overlapping()
         verify_same_length_windows()

@@ -1,4 +1,3 @@
-import pickle
 import uuid
 import warnings
 from dataclasses import dataclass
@@ -20,7 +19,7 @@ from echo.configuration import (
     Units,
 )
 from echo.constants import negative_variable_component, positive_variable_component
-from echo.exceptions import ConfigurationError
+from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
@@ -580,7 +579,7 @@ class Node(BaseModel):
                 )
 
         if self.node_rule == NodeRule.Tellegen:
-            assert len(self.ports) >= 2, "A tellegen node must have at least two ports."
+            validate(len(self.ports) >= 2, "A tellegen node must have at least two ports.")
 
     def initialise_node(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
@@ -760,9 +759,6 @@ class OptimisationGraph(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
 
-    def pickle(self):
-        return pickle.dumps(self)
-
     def node_name_list(self):
         return list(self.node_obj.keys())
 
@@ -778,7 +774,7 @@ class OptimisationGraph(BaseModel):
         return g
 
     def _add_single_node(self, node_obj: Node):
-        assert node_obj.node_name not in self.node_obj, "Node '{}' already defined".format(node_obj.node_name)
+        validate(node_obj.node_name not in self.node_obj, "Node '{}' already defined".format(node_obj.node_name))
         self.node_obj[node_obj.node_name] = node_obj
 
     def delete_node(self, node_name: str):
@@ -830,7 +826,7 @@ class OptimisationGraph(BaseModel):
     def _add_single_edge(self, edge_obj: Edge):
         port1 = edge_obj.vertices[0]
         port2 = edge_obj.vertices[1]
-        assert port1.units == port2.units, f"Ports on edge must have matching units. {port1.units} != {port2.units}"
+        validate(port1.units == port2.units, f"Ports on edge must have matching units. {port1.units} != {port2.units}")
         if edge_obj.nodes is None:
             # Want to avoid doing this lookup - very slow
             node1_name = self.lookup_node_names_from_port(port1)
@@ -899,7 +895,7 @@ class OptimisationGraph(BaseModel):
 
     def get_sources_and_sinks(self):
         """Returns a set that contains all source and sink nodes."""
-        assert bool(self.paths) is True, "Create paths before retrieving sources and sinks."
+        validate(bool(self.paths) is True, "Create paths before retrieving sources and sinks.")
         sources_or_sinks = set()
         for _, path in self.paths.items():
             sources_or_sinks.add(path.vertices[0])
@@ -960,7 +956,7 @@ class OptimisationGraph(BaseModel):
                         all_paths[tuple(vertex_list)] = p
 
         intersection = source_sink_set.intersection(tellegen_node_set)  # check overlap of tellegen and src/sink nodes
-        assert len(intersection) == 0, f"Nodes '{intersection}' are being treated as both tellegen and source/sink."
+        validate(len(intersection) == 0, f"Nodes '{intersection}' are being treated as both tellegen and source/sink.")
         self.paths = all_paths
 
     def _create_path_object(self, vertex_list: list, edge_list: list, regularise: bool, path_unit: Units):
@@ -968,7 +964,7 @@ class OptimisationGraph(BaseModel):
         p = Path(vertices=vertex_list, regularise=regularise, units=path_unit)  # Create path object
         for edge in edge_list:
             edge_ports = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
-            assert edge_ports is not None, f"get_ports_on_edge_from_nodes return None for edges {edge[0]}, {edge[1]}"
+            validate(edge_ports is not None, f"get_ports_on_edge_from_nodes return None for edges {edge[0]}, {edge[1]}")
             p.edge_ports.append(edge_ports)
         return p
 
@@ -1060,7 +1056,7 @@ class OptimisationGraph(BaseModel):
     def verify_graph(self):
         """Checks that the graph is connected (all nodes have at least one edge), and warns if there
         are unconnected ports"""
-        assert nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected."
+        validate(nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected.")
         # Check graph for ports that are not connected
         ports_on_edges = self.get_port_names_from_nodes()
         ports_on_nodes = self.get_port_names_from_edges()

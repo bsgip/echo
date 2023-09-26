@@ -4,6 +4,7 @@ import numpy as np
 import pyomo.environ as en
 
 from echo.configuration import Flows, NodeRule, Units
+from echo.exceptions import validate
 from echo.models.agnostic import (
     FixedPort,
     FlexPort,
@@ -56,8 +57,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def __init__(self, **data):
         super().__init__(**data)
         if self.external_temp is not None:
-            assert self.input_coefficients is not None, "If temp data is provided, temp coefficients are required."
-            assert self.temp_coefficients is not None, "If temp data is provided, input coefficients are required."
+            validate(self.input_coefficients is not None, "If temp data is provided, temp coefficients are required.")
+            validate(self.temp_coefficients is not None, "If temp data is provided, input coefficients are required.")
             self.generate_input_output_pts_from_coefficients()
 
     def generate_input_output_pts_from_coefficients(self):

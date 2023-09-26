@@ -7,6 +7,7 @@ import pandas as pd
 import pyomo.environ as en
 from sklearn import linear_model
 
+from echo.exceptions import validate
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
@@ -46,7 +47,7 @@ class ArrayWrap(Sequence):
 
     def dict(self):
         """For converting array wrap to a dict"""
-        assert self.tp_set is True, "Set time periods before converting to dict"
+        validate(self.tp_set is True, "Set time periods before converting to dict")
         keys = [(x, i) for x in range(self.expansion_periods) for i in range(self.time_periods)]
         if not self.is_scalar:
             vals = np.reshape(self.var, self.expansion_periods * self.time_periods)
@@ -79,7 +80,7 @@ class ArrayWrap(Sequence):
         return self.var
 
     def get_dummy(self, i):
-        assert self.tp_set, "for non scalar values must set time and expansion periods of ArrayWrap"
+        validate(self.tp_set, "for non scalar values must set time and expansion periods of ArrayWrap")
         return None
 
     def get_array(self, i):
@@ -337,7 +338,7 @@ def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expans
     if profile is None:
         raise ValueError("No profile dataframe defined. Check that you added the profile to the optimiser.")
     values = profile[key].values * scaling
-    assert len(values) == time_periods, "Initial values are wrong length."
+    validate(len(values) == time_periods, "Initial values are wrong length.")
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
     d = dict(zip(keys, values))
     return d
@@ -363,7 +364,7 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
     The dict keys are a tuple (expansion period, time period)
     """
     d = {}
-    assert hasattr(array, "__iter__"), "Please enter an iterable array"
+    validate(hasattr(array, "__iter__"), "Please enter an iterable array")
     if (len(array) != time_periods) or (len(array) != time_periods * expansion_periods):
         raise ValueError("Array constraint length is not consistent with combination of time/expansion periods.")
     if len(array) == time_periods:

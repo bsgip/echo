@@ -1,6 +1,8 @@
 import numpy as np
 from pydantic import Field
 
+from echo.exceptions import validate
+
 
 class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
@@ -116,7 +118,7 @@ def check_bound_order(cls, values):
     ub = values.get("upper_bound")
     if (lb is not None) and (ub is not None):
         if hasattr(lb, "__iter__"):
-            assert len(lb) == len(ub), "Lower bound and upper bound are mismatched lengths."
+            validate(len(lb) == len(ub), "Lower bound and upper bound are mismatched lengths.")
             for i in range(len(lb)):
                 if lb[i] >= ub[i]:
                     raise ValueError("Lower bound should be less than upper bound.")
@@ -133,7 +135,7 @@ def node_unit_validator(cls, values):
     if ports is not None:
         for p in ports.values():
             if u is not None:
-                assert p.units == u, "Tellegen node ports must have the same units."
+                validate(p.units == u, "Tellegen node ports must have the same units.")
             else:
                 u = p.units
 
@@ -144,11 +146,12 @@ def validate_piecewise_arrays(cls, values):
     input_pts = values.get("input_pts")
     output_pts = values.get("output_pts")
     if input_pts is not None and output_pts is not None:
-        assert len(input_pts) == len(output_pts), "Mismatched indices for input and output dictionaries."
+        validate(len(input_pts) == len(output_pts), "Mismatched indices for input and output dictionaries.")
         for k, _ in input_pts.items():
-            assert len(input_pts[k]) == len(
-                output_pts[k]
-            ), "Input and output arrays are not equal lengths for index {}".format(k)
+            validate(
+                len(input_pts[k]) == len(output_pts[k]),
+                "Input and output arrays are not equal lengths for index {}".format(k),
+            )
 
     return values
 
@@ -181,5 +184,5 @@ def validate_startup_efficiency(cls, values):
     cop = values.get("cop")
     eta = values.get("startup_cop")
     if eta is not None:
-        assert cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)"
+        validate(cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)")
     return values

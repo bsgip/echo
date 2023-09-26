@@ -6,7 +6,7 @@ import pyomo.environ as en
 from pydantic import Field
 
 from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
-from echo.exceptions import ConfigurationError
+from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import (
     BoundedLoad,
     Demand,
@@ -178,14 +178,16 @@ class EV(Node):
     def verify_node(self):
         super(EV, self).verify_node()
         if self.charge_mode == EVChargeMode.V0G:
-            assert (
-                self.ports[self.connection_port_name].initial_value != 0
-            ), "V0G connection pt port needs demand profile added."
+            validate(
+                self.ports[self.connection_port_name].initial_value != 0,
+                "V0G connection pt port needs demand profile added.",
+            )
         else:
-            assert (
-                self.ports[self.connection_port_name].active_periods is not None
-            ), "Add available periods to EV connection pt port"
-        assert self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added."
+            validate(
+                self.ports[self.connection_port_name].active_periods is not None,
+                "Add available periods to EV connection pt port",
+            )
+        validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
 
     def initialise_node(self, model: EchoConcreteModel, profile):
         super(EV, self).initialise_node(model, profile)
@@ -238,12 +240,12 @@ class Inverter(Node):
 
     def verify_node(self):
         # Check that we have at least one ac and one dc port
-        assert self.ac_port_name is not None, "Define at least one ac port on inverter."
-        assert self.dc_port_names is not None, "Define at least one dc port on inverter."
+        validate(self.ac_port_name is not None, "Define at least one ac port on inverter.")
+        validate(self.dc_port_names is not None, "Define at least one dc port on inverter.")
         # Check that all ports are either ac or dc
         all_port_names = [x for x in self.ports.keys()]
         named_ports = [self.ac_port_name] + self.dc_port_names
-        assert set(all_port_names) == set(named_ports), "All ports on inverter must be ac or dc."
+        validate(set(all_port_names) == set(named_ports), "All ports on inverter must be ac or dc.")
 
     def initialise_node(self, model: EchoConcreteModel, profile):
         super(Inverter, self).initialise_node(model, profile)

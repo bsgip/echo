@@ -5,6 +5,7 @@ import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, Units
+from echo.exceptions import validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -421,8 +422,8 @@ class MobileStorage(Storage):
         soc_conserv_cost = values.get("soc_conserv_cost")
         available = values.get("available")
         if soc_conserv is not None:
-            assert soc_conserv_cost is not None, "soc_conserv requires soc_conserv_cost"
-            assert available is not None, "soc_conserve requires available"
+            validate(soc_conserv_cost is not None, "soc_conserv requires soc_conserv_cost")
+            validate(available is not None, "soc_conserve requires available")
         return values
 
     def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
@@ -581,8 +582,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         self.ports["output"] = FlexPort(units=self.output_port_unit)
 
     def verify_node(self):
-        assert self.input_pts is not None, "No input points defined"
-        assert self.output_pts is not None, "No output points defined"
+        validate(self.input_pts is not None, "No input points defined")
+        validate(self.output_pts is not None, "No output points defined")
 
     def initialise_node(self, model: EchoConcreteModel, profile):
         super(TimeVaryingPiecewiseIONode, self).initialise_node(model, profile)
