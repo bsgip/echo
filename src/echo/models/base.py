@@ -1068,7 +1068,7 @@ class OptimisationGraph(BaseModel):
         if len(diff) != 0:
             warnings.warn(
                 f"Ports {diff} are defined on nodes but are not part of an edge. "
-                f"This may cause erroneous optimisation results."
+                "This may cause erroneous optimisation results."
             )
 
     def split_graph_on_edge(self, node1: str, node2: str):

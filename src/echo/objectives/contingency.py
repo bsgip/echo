@@ -12,7 +12,6 @@ class Contingency(Objective):
 
 
 class ContingencyNegative(Contingency):
-
     """FCAS Raise"""
 
     duration: PositiveFloat  # todo this should just be the interval duration ?
@@ -81,7 +80,6 @@ class ContingencyNegative(Contingency):
 
 
 class ContingencyPositive(Contingency):
-
     """FCAS Lower"""
 
     duration: PositiveFloat
