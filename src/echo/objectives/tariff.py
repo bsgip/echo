@@ -153,7 +153,7 @@ class BlockTariff(Objective):
         blank = np.zeros([num_resets, time_periods])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
         for i in range(num_resets):
-            blank[i, index : index + self.reset_periods[i]] = 1.0  # put the right number of 1s in
+            blank[i, index : index + self.reset_periods[i]] = 1.0  # put the right number of 1s in # noqa E203
             index += self.reset_periods[i]
             new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(time_periods):
@@ -494,7 +494,7 @@ class DemandCharge(EchoBaseModel):
         blank = np.zeros([num_resets, n_intervals])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
         for i in range(num_resets):
-            blank[i, index : index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in
+            blank[i, index : index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in # noqa E203
             index += reset_periods[i] - 1
             new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(n_intervals):

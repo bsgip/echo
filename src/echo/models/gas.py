@@ -85,7 +85,7 @@ class TempControlledBoiler(InputOutputNode):
     exit_temp_bounds: tuple = (75, 80)
     return_temp_bounds: tuple = (50, 80)
     deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
-    cop: float  # coefficient of performance, which determines how much of the input energy is delivered as heating energy
+    cop: float  # coefficient of performance - determines how much of the input energy is delivered as heating energy
     startup_cop: Optional[float]
 
     # pyomo vars

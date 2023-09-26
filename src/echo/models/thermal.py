@@ -17,7 +17,10 @@ from echo.models.agnostic import (
 )
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict
+from echo.utils import (
+    create_input_output_pts_from_coefficients,
+    set_var_bounds_from_dict,
+)
 
 
 class SimpleChiller(SinglePiecewiseIONode):
@@ -83,8 +86,8 @@ class ThermalNode(Node):
     """
 
     node_rule = NodeRule.Custom
-    temp_ub: dict  # Upper bound of acceptable temperature for each time interval, formatted as dict with expansion-time keys
-    temp_lb: dict  # Lower bound of acceptable temperature for each time interval, formatted as dict with expansion-time keys
+    temp_ub: dict  # Upper bound of acceptable temperature for each time interval: dict with expansion-time keys
+    temp_lb: dict  # Lower bound of acceptable temperature for each time interval: dict with expansion-time keys
     external_temp: dict  # External (ambient) temp, formatted as dict with expansion-time keys
     loss_factor: float = 0  # Losses due to ambient temp being lower than internal temp
     gain_factor: float = 0  # Free gains due to ambient temp being higher than internal temp
@@ -215,7 +218,8 @@ class HeatPump(Node):
     """
     A heat pump is input output node, where input is an electrical port, and either one or two output thermal ports.
     It can only do heating or cooling, it cannot do both simultaneously.
-    The conversion of input electrical energy to heating or cooling output depends on provided coefficients of performance (cop) time series data.
+    The conversion of input electrical energy to heating or cooling output depends on provided coefficients of
+    performance (cop) time series data.
     """
 
     node_rule = NodeRule.Custom

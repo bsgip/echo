@@ -68,7 +68,7 @@ class ArrayWrap(Sequence):
                 self.var = np.reshape(var_array, (expansion_periods, time_periods))
             else:
                 raise Exception(
-                    "must have shape of scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"
+                    "expecting shape of a scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"  # noqa E501
                 )
 
     def __getitem__(self, i):

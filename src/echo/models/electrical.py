@@ -5,13 +5,7 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field
 
-from echo.configuration import (
-    EVChargeMode,
-    NodeRule,
-    OptimisationType,
-    TransformRule,
-    Units,
-)
+from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
 from echo.echo_validators import ArrayType
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (

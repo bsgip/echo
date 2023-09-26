@@ -21,7 +21,7 @@ class EngineSettings:
 
     engine: str
     engine_executable: str
-    smallM: float  # A small fudge factor for reducing the size of the solution set and achieving a unique optimisation solution
+    smallM: float  # A small fudge factor for reducing the size of the solution set and achieving a unique solution
     bigM: int  # A bigM value for integer optimisation
 
 
