@@ -4,7 +4,6 @@ import numpy as np
 import pyomo.environ as en
 
 from echo.configuration import Flows, NodeRule, Units
-from echo.echo_validators import ArrayType
 from echo.models.agnostic import (
     FixedPort,
     FlexPort,
@@ -21,6 +20,7 @@ from echo.utils import (
     create_input_output_pts_from_coefficients,
     set_var_bounds_from_dict,
 )
+from echo.validators import ArrayType
 
 
 class SimpleChiller(SinglePiecewiseIONode):

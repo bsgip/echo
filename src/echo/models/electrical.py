@@ -6,7 +6,6 @@ import pyomo.environ as en
 from pydantic import Field
 
 from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
-from echo.echo_validators import ArrayType
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (
     BoundedLoad,
@@ -20,6 +19,7 @@ from echo.models.agnostic import (
 from echo.models.base import Node, Transform
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
+from echo.validators import ArrayType
 
 
 class ElectricalDemand(Demand):

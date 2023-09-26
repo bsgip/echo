@@ -7,8 +7,8 @@ import pandas as pd
 import pyomo.environ as en
 from sklearn import linear_model
 
-from echo.echo_validators import ArrayType
 from echo.models.scenario import EchoConcreteModel
+from echo.validators import ArrayType
 
 
 def _to_values(profile, key):

@@ -4,12 +4,18 @@ import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
 from echo.configuration import Units
-from echo.echo_validators import ArrayType
-from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, OffOrConstrainedPort
+from echo.models.agnostic import (
+    Demand,
+    FlexPort,
+    FlexSink,
+    InputOutputNode,
+    OffOrConstrainedPort,
+)
 from echo.models.base import Node
 from echo.models.carbon import CarbonSource
 from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import EchoConcreteModel
+from echo.validators import ArrayType
 
 
 class Battery(Node):

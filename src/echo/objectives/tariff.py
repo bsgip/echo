@@ -15,11 +15,11 @@ from pydantic import (
     validator,
 )
 
-from echo.echo_validators import ArrayType
 from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.objectives.base import Objective
+from echo.validators import ArrayType
 
 
 class Tariff(Objective):

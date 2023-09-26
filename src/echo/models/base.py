@@ -20,7 +20,6 @@ from echo.configuration import (
     Units,
 )
 from echo.constants import negative_variable_component, positive_variable_component
-from echo.echo_validators import ArrayType, export_cons_check, import_cons_check
 from echo.exceptions import ConfigurationError
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -30,6 +29,7 @@ from echo.utils import (
     set_var_bounds_from_dict,
     to_initial_values,
 )
+from echo.validators import ArrayType, export_cons_check, import_cons_check
 
 
 class BaseModel(PydanticBaseModel):

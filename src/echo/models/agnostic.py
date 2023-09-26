@@ -5,17 +5,6 @@ import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, Units
-from echo.echo_validators import (
-    ArrayType,
-    check_bound_order,
-    dod_checks,
-    node_unit_validator,
-    nonnegative_costs,
-    nonnegative_load,
-    nonpositive_generation,
-    set_bounds_from_piecewise_pts,
-    validate_piecewise_arrays,
-)
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -25,6 +14,17 @@ from echo.utils import (
     populate_values_across_time_and_expansion_indices,
     set_float_var_bounds,
     set_var_bounds_from_dict,
+)
+from echo.validators import (
+    ArrayType,
+    check_bound_order,
+    dod_checks,
+    node_unit_validator,
+    nonnegative_costs,
+    nonnegative_load,
+    nonpositive_generation,
+    set_bounds_from_piecewise_pts,
+    validate_piecewise_arrays,
 )
 
 """
