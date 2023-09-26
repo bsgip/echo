@@ -1,21 +1,39 @@
 from __future__ import division
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from echo.echo_optimiser import EchoOptimiser
-from echo.objectives import *
-from echo.echo_models import *
+from echo.configuration import Units
+from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.base import Node, OptimisationGraph
+from echo.models.electrical import ElectricalStorage, FixedElectricalPort
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import ThroughputCost
+from echo.optimiser import optimise
 
 # set up seaborn the way you like
-sns.set_style({'axes.linewidth': 1, 'axes.edgecolor': 'black', 'xtick.direction': \
-    'out', 'xtick.major.size': 4.0, 'ytick.direction': 'out', 'ytick.major.size': 4.0, \
-               'axes.facecolor': 'white', 'grid.color': '.8', 'grid.linestyle': u'-', 'grid.linewidth': 0.5})
+sns.set_style(
+    {
+        "axes.linewidth": 1,
+        "axes.edgecolor": "black",
+        "xtick.direction": "out",
+        "xtick.major.size": 4.0,
+        "ytick.direction": "out",
+        "ytick.major.size": 4.0,
+        "axes.facecolor": "white",
+        "grid.color": ".8",
+        "grid.linestyle": "-",
+        "grid.linewidth": 0.5,
+    }
+)
 
 ############################ Define an Example Optimisation Problem ########################################
 
-
+# fmt: off
 # The load and pv arrays below are in average kw consumed per 15 minutes
 test_load = np.array(
     [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 2.2, 2.15, 2.02, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
@@ -32,6 +50,7 @@ test_pv = 2 * np.array(
      5.32, 3.56, 1.75, 1.43, 1.65, 1.69, 2.3, 2.71, 2.41, 2.63, 2.6, 1.9, 0.78, 0.13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 test_pv *= -1  # convert solar generation to negative to match convention.
+# fmt: on
 
 aggregate_load = test_load + test_pv
 
@@ -62,35 +81,43 @@ discount_rate = 0
 system = OptimisationGraph()
 
 # Create assets
-grid = Node(node_name='grid')
-grid.add_electrical_ports_from_list(['grid'])
+grid = Node(node_name="grid")
+grid.add_port("grid", FlexPort(units=Units.KW))
 
-connection_point = TellegenNode(node_name='cp')
-connection_point.add_electrical_ports_from_list(['load', 'bess', 'pv', 'grid'])
+connection_point = TellegenNode(node_name="cp")
+connection_point.add_ports_from_list(["load", "bess", "pv", "grid"], FlexPort, units=Units.KW)
 
-load = Node(node_name='load')
+load = Node(node_name="load")
 l1 = FixedElectricalPort()
-df = pd.DataFrame({'load': aggregate_load})
-l1.initial_value_ref = 'load'
-load.ports['load'] = l1
+df = pd.DataFrame({"load": aggregate_load})
+l1.initial_value_ref = "load"
+load.ports["load"] = l1
 
-battery = Node(node_name='battery')
-b = ElectricalStorage(max_capacity=15.0,
-                      depth_of_discharge_limit=0,
-                      charging_power_limit=1.25,
-                      discharging_power_limit=-1.25,
-                      charging_efficiency=1,
-                      discharging_efficiency=1,
-                      initial_state_of_charge=0.0)
-battery.ports['bess'] = b
+battery = Node(node_name="battery")
+b = ElectricalStorage(
+    max_capacity=15.0,
+    depth_of_discharge_limit=0,
+    charging_power_limit=1.25,
+    discharging_power_limit=-1.25,
+    charging_efficiency=1,
+    discharging_efficiency=1,
+    initial_state_of_charge=0.0,
+)
+battery.ports["bess"] = b
 
 # Populate graph with assets (nodes)
 system.add_nodes_from([grid, battery, load, connection_point])
 
 # Add edges to graph
-system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'], nodes = (grid.node_name, connection_point.node_name))
-system.connect_ports_and_create_edge(connection_point.ports['load'], load.ports['load'], nodes = (load.node_name, connection_point.node_name))
-system.connect_ports_and_create_edge(connection_point.ports['bess'], battery.ports['bess'], nodes = (battery.node_name, connection_point.node_name))
+system.connect_ports_and_create_edge(
+    grid.ports["grid"], connection_point.ports["grid"], nodes=(grid.node_name, connection_point.node_name)
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["load"], load.ports["load"], nodes=(load.node_name, connection_point.node_name)
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["bess"], battery.ports["bess"], nodes=(battery.node_name, connection_point.node_name)
+)
 
 
 throughput_cost = ThroughputCost(component=b, rate=0.000001)
@@ -100,53 +127,57 @@ objective_set = ObjectiveSet(objective_list=[throughput_cost])
 ############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
-optimiser = EchoOptimiser(interval_duration=interval_duration,
-                          number_of_intervals=time_periods,
-                          number_of_expansion_intervals=expansion_periods,
-                          discount_rate=discount_rate,
-                          ES=system,
-                          objective_set=objective_set,
-                          profile=df)
 
-optimiser.optimise()
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=interval_duration,
+        number_of_intervals=time_periods,
+        number_of_expansion_intervals=expansion_periods,
+        discount_rate=discount_rate,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    objective_set=objective_set,
+    profile=df,
+)
 
-log_infeasible_constraints(optimiser.model)
+log_infeasible_constraints(optimise_results.model)
 
 ############################ Analyse the Optimisation ########################################
 
-storage_energy_delta = optimiser.values(b.port_name, 0)
-storage_energy_soc = optimiser.values(b.soc_value, 0)
-optimised_connection_point_load = optimiser.values(connection_point.ports['grid'].port_name, 0)
+storage_energy_delta = optimise_results.values(b.port_name, 0)
+storage_energy_soc = optimise_results.values(b.soc_value, 0)
+optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
 
-optimiser.get_single_objective_total_value(rnetwork[0])
-optimiser.get_single_objective_total_value(throughput_cost)
+optimise_results.get_single_objective_total_value(rnetwork[0])
+optimise_results.get_single_objective_total_value(throughput_cost)
 
 colors = sns.color_palette()
 hrs = np.arange(0, len(test_load)) / 4
 fig = plt.figure(figsize=(14, 7))
 ax1 = fig.add_subplot(3, 1, 1)
-line1, = ax1.plot(hrs, aggregate_load, color=colors[0])
-line3, = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
-ax1.set_xlabel('hour'), ax1.set_ylabel('kW')
-ax1.legend([line1, line3], ['Aggregate Load', 'Connection Point'], ncol=3)
+(line1,) = ax1.plot(hrs, aggregate_load, color=colors[0])
+(line3,) = ax1.plot(hrs, optimised_connection_point_load, color=colors[2])
+ax1.set_xlabel("hour"), ax1.set_ylabel("kW")
+ax1.legend([line1, line3], ["Aggregate Load", "Connection Point"], ncol=3)
 ax1.set_xlim([0, len(test_load) / 4])
 
 ax2 = fig.add_subplot(3, 1, 2)
-line1, = ax2.plot(hrs, remote_energy_tariff, color=colors[0])
-line2, = ax2.plot(hrs, remote_transport_import, color=colors[1])
-line3, = ax2.plot(hrs, remote_transport_export, color=colors[2])
-line4, = ax2.plot(hrs, local_energy_tariff, color=colors[3])
-line5, = ax2.plot(hrs, local_transport_import, color=colors[4])
-line6, = ax2.plot(hrs, local_transport_export, color=colors[5])
+(line1,) = ax2.plot(hrs, remote_energy_tariff, color=colors[0])
+(line2,) = ax2.plot(hrs, remote_transport_import, color=colors[1])
+(line3,) = ax2.plot(hrs, remote_transport_export, color=colors[2])
+(line4,) = ax2.plot(hrs, local_energy_tariff, color=colors[3])
+(line5,) = ax2.plot(hrs, local_transport_import, color=colors[4])
+(line6,) = ax2.plot(hrs, local_transport_export, color=colors[5])
 
-ax2.set_xlabel('hour'), ax2.set_ylabel('price')
-ax2.legend([line1, line2, line3, line4, line5, line6], ['re', 'rt+', 'rt-', 'le', 'lt+', 'lt-'], ncol=2)
+ax2.set_xlabel("hour"), ax2.set_ylabel("price")
+ax2.legend([line1, line2, line3, line4, line5, line6], ["re", "rt+", "rt-", "le", "lt+", "lt-"], ncol=2)
 ax2.set_xlim([0, len(test_load) / 4])
 
 ax3 = fig.add_subplot(3, 1, 3)
-line1, = ax3.plot(hrs, storage_energy_delta, color=colors[1])
-line2, = ax3.plot(hrs, storage_energy_soc, color=colors[2])
+(line1,) = ax3.plot(hrs, storage_energy_delta, color=colors[1])
+(line2,) = ax3.plot(hrs, storage_energy_soc, color=colors[2])
 ax3.set_xlim([0, len(test_load) / 4])
-ax3.set_xlabel('hour'), ax3.set_ylabel('Battery action')
-ax3.legend([line1, line2], ['Charging action (kW)', 'SOC (kWh)'])
+ax3.set_xlabel("hour"), ax3.set_ylabel("Battery action")
+ax3.legend([line1, line2], ["Charging action (kW)", "SOC (kWh)"])
 plt.show()

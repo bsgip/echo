@@ -8,3 +8,6 @@ echo.egg-info
 /build/
 /build/lib/
 /build/lib/echo/
+.hypothesis
+.vscode
+cplex.log
