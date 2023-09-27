@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 
 from echo.configuration import Units
