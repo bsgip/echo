@@ -107,7 +107,7 @@ def test_regularisation_of_path_flows():
         raise ValueError("Environment variable optimiser_engine has not been set.")
 
     if optimiser_engine == "cbc":
-        pass
+        return
 
     expansion_periods = 1
     time_periods = 48
