@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from echo.configuration import Units
@@ -12,6 +14,16 @@ N_INTERVALS = 48
 
 
 def test_controlled_load_with_peak_power_objective():
+    # This test contains non-linear optimisation, so cbc won't be able to run it. Check the environment and skip this
+    # test if cbc is the optimiser engine
+    optimiser_engine = os.environ.get("OPTIMISER_ENGINE", None)
+
+    if optimiser_engine is None:
+        raise ValueError("Environment variable optimiser_engine has not been set.")
+
+    if optimiser_engine == "cbc":
+        return
+
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
