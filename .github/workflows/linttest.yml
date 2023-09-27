@@ -97,6 +97,7 @@ jobs:
           pytest --junit-xml=.test_report.xml
         env:
             OPTIMISER_ENGINE: "cbc"
+            PYTHONPATH: ./
       - name: Upload Results
         uses: test-summary/action@v1
         with:
