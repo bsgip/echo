@@ -69,6 +69,8 @@ jobs:
           eval `ssh-agent -s`
           ssh-add - <<< '${{ secrets.ENVOY_SCHEMA_PRIVATE_KEY }}'
           pip install .[dev]
+          sudo apt-get install -y coinor-cbc coinor-libcbc-dev    
+          export OPTIMISER_ENGINE="cbc"
 
       - name: Add mypy annotator
         uses: pr-annotators/mypy-pr-annotator@v1.0.0
@@ -93,6 +95,8 @@ jobs:
           git config --global url."https://${{ secrets.BSGIP_PAT_USER }}:${{ secrets.BSGIP_PAT }}@github.com".insteadOf https://github.com
           git config --global url."https://${{ secrets.BSGIP_PAT_USER }}:${{ secrets.BSGIP_PAT }}@github.com".insteadOf ssh://git@github.com
           pip install .[test]
+          sudo apt-get install -y coinor-cbc coinor-libcbc-dev    
+          export OPTIMISER_ENGINE="cbc"
 
       - name: Run Pytest
         run: |
