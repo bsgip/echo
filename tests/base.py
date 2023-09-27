@@ -10,4 +10,3 @@ def can_optimiser_do_non_linear_optimisation() -> bool:
         return False
 
     return True
-

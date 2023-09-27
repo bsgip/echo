@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 
 from echo.configuration import Units
@@ -14,6 +12,7 @@ from echo.models.electrical import (
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise
 from tests.base import can_optimiser_do_non_linear_optimisation
+
 
 def test_partitioning_regions_for_path_flow():
     expansion_periods = 1
