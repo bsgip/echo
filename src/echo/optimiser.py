@@ -66,7 +66,7 @@ class OptimisationResult:
         return df
 
     def df_by_node(self):
-        """Returns a df of results by node, using the port names given in each nodes 'ports' dict"""
+        """Returns a df of results by node, using the port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
             for port_name, p in node.ports.items():
@@ -76,7 +76,7 @@ class OptimisationResult:
         return df
 
     def df_by_port(self):
-        """Returns a df of results by port, using port names given in each nodes 'ports' dict"""
+        """Returns a df of results by port, using port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
             for port_name, p in node.ports.items():
@@ -147,7 +147,7 @@ class OptimisationResult:
 def validate_network_graph(graph: OptimisationGraph):
     """
     Validates that a pyomo model can be built from the provided network graph. Checks for:
-    - name consistency between objects (eg node.node_name) and graph nodes
+    - name consistency between objects (e.g. node.node_name) and graph nodes
     - floating nodes that have no edge connecting them to another node
     """
     for node_name, node_obj in graph.node_obj.items():
@@ -180,7 +180,7 @@ def build_model_and_objective(
     # A bigM value for integer optimisation
     model.bigM = en.Param(initialize=engine_settings.bigM)
 
-    # We use RangeSet to create a index for each of the time
+    # We use RangeSet to create an index for each of the time
     # periods that we will optimise within.
     model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
     # Create index for expansion periods
@@ -236,7 +236,7 @@ def build_model_and_objective(
         path_obj.add_objective(model)
         objective += path_obj.objective
 
-    return (model, objective)
+    return model, objective
 
 
 def optimise(

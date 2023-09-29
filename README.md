@@ -19,7 +19,7 @@ cd echo
 
 3. With your virtual environment active install using pip
 ```
-pip install .[test,validation]`
+pip install .[test,validation]
 ```
 
 NOTE: This package is not on pypi. Doing `pip install echo` will NOT install this package. It will install a different package.
