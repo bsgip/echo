@@ -52,7 +52,7 @@ class Port(BaseModel):
     initial_value_ref: Optional[str]  # string ref to df column
     initial_value_scaling: Optional[int]  # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
-    uid: str = Field(default_factory=shortuuid.uuid)
+    uid: Optional[str] = Field(default_factory=shortuuid.uuid)
     port_name: str = ""
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
