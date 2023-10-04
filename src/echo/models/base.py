@@ -1,4 +1,3 @@
-import uuid
 import warnings
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Type, Union, cast
@@ -7,6 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
@@ -52,7 +52,7 @@ class Port(BaseModel):
     initial_value_ref: Optional[str]  # string ref to df column
     initial_value_scaling: Optional[int]  # scaling factor for initial values
     opt_type: OptimisationType = OptimisationType.NA
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    uid: Optional[str] = Field(default_factory=shortuuid.uuid)
     port_name: str = ""
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
@@ -474,7 +474,7 @@ class TransformTerm:
 class Transform(BaseModel):
     """An object for carrying a generic linear node transformation."""
 
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    uid: str = Field(default_factory=shortuuid.uuid)
     transform_name: Optional[str] = None
     lhs: list[TransformTerm] = []
     rhs = 0
@@ -507,10 +507,10 @@ class Node(BaseModel):
     """
 
     node_name: str = ""
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
     node_rule: NodeRule = NodeRule.NA
-    transformations: dict[uuid.UUID, Transform] = {}
+    transformations: dict[str, Transform] = {}
     objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
 
     @property
@@ -635,7 +635,7 @@ class Edge(BaseModel):
     the edge value is equal to the flow from x->y plus the flow from y->x.
     """
 
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID
+    uid: str = Field(default_factory=shortuuid.uuid)
     edge_name: Optional[str] = None
     vertices: tuple[Port, Port]
     nodes: Optional[tuple[str, str]]  # tuple of node names - todo make this required
@@ -705,7 +705,7 @@ class Path(BaseModel):
 
     edge_ports: list[tuple[Port, Port]] = []  # list of edge name tuples
     vertices: list  # list of node names
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)  # this dynamically sets a unique ID?
+    uid: str = Field(default_factory=shortuuid.uuid)
     path_name: Optional[str] = None
     units = Units.KW
     regularise: bool = False

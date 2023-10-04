@@ -1,4 +1,3 @@
-import uuid
 from datetime import time
 from enum import Enum
 from typing import List, Optional, Union
@@ -6,7 +5,9 @@ from typing import List, Optional, Union
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import (
+    Field,
     NonNegativeFloat,
     NonPositiveFloat,
     PositiveFloat,
@@ -428,7 +429,7 @@ class Window(EchoBaseModel):
 class DemandCharge(EchoBaseModel):
     """A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
 
-    uid: uuid.UUID
+    uid: str = Field(default_factory=shortuuid.uuid)
     name: str
     rate: NonNegativeFloat
     min_demand: float = 0.0
@@ -481,7 +482,7 @@ class DemandCharge(EchoBaseModel):
     @root_validator(pre=True)
     def check_name(cls, values):
         if not values.get("uid"):
-            values["uid"] = uuid.uuid4()
+            values["uid"] = shortuuid.uuid()
 
         if not values.get("name"):
             values["name"] = "dc_" + str(values["uid"])

@@ -51,6 +51,7 @@ dependencies = [
     "pyarrow>=7.0",
     "scikit-learn>=1.1",
     "orjson>=3.8",
+    "shortuuid>=1.0.11,<2",
 ]
 
 [project.optional-dependencies]
