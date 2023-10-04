@@ -224,12 +224,12 @@ class Inverter(Node):
     ac_port_name: Optional[str] = None  # There should generally only be one ac port
     node_rule = NodeRule.Custom
 
-    def add_dc_port(self, port_name, uid):
+    def add_dc_port(self, port_name: str, uid: Union[str, None] = None):
         p = ElectricalPort(port_name=port_name, uid=uid)
         self.dc_port_names.append(port_name)
         self.ports[port_name] = p
 
-    def add_ac_port(self, port_name, uid):
+    def add_ac_port(self, port_name: str, uid: Union[str, None] = None):
         if self.ac_port_name is not None:
             raise ConfigurationError("AC port already specified for this inverter.")
         else:
