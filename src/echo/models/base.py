@@ -1,4 +1,3 @@
-import shortuuid
 import warnings
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Type, Union, cast
@@ -7,6 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 

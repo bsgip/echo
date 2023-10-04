@@ -1,4 +1,3 @@
-import shortuuid
 from datetime import time
 from enum import Enum
 from typing import List, Optional, Union
@@ -6,6 +5,7 @@ from typing import List, Optional, Union
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import (
     Field,
     NonNegativeFloat,
