@@ -579,7 +579,10 @@ class Node(BaseModel):
                 )
 
         if self.node_rule == NodeRule.Tellegen:
-            validate(len(self.ports) >= 2, "A tellegen node must have at least two ports.")
+            validate(
+                len(self.ports) >= 2,
+                f"A tellegen node must have at least two ports. Offending node has " f"the name: {self.node_name}",
+            )
 
     def initialise_node(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
