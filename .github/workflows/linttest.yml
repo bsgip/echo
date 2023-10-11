@@ -15,7 +15,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -e .[dev]
+          pip install bandit
 
       - name: Security check - Bandit
         run: |
