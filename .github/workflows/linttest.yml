@@ -13,13 +13,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3.1.0
 
-      - name: Install Dependencies
-        run: |
-          pip install .[dev]
-
       - name: Security check - Bandit
         run: |
-          bandit -c pyproject.toml -r .
+          pip install .[dev] && bandit -c pyproject.toml -r .
 
   flake8_py311:
     runs-on: ubuntu-latest
