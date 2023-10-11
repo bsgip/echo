@@ -7,14 +7,13 @@ from echo.models.scenario import ScenarioSettings, engine_settings_from_environm
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import QuadraticPower
 from echo.optimiser import optimise
-from tests.base import can_optimiser_do_non_linear_optimisation
 
 N_INTERVALS = 48
 
 
-def test_controlled_load_with_peak_power_objective():
+def test_controlled_load_with_peak_power_objective(can_optimiser_do_non_linear_optimisation):
     # Check if the optimiser can do non-linear problems. If not, skip test.
-    if not can_optimiser_do_non_linear_optimisation():
+    if not can_optimiser_do_non_linear_optimisation:
         return
 
     expansion_periods = 1
