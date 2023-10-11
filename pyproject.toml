@@ -55,7 +55,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["bandit", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
+dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
 
 [tool.setuptools.package-data]
