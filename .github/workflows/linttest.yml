@@ -15,7 +15,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install bandit
+          pip install bandit[toml]
 
       - name: Security check - Bandit
         run: |
