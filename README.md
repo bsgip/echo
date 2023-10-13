@@ -44,7 +44,7 @@ Open source:
 
 
 ## Documentation (under creation)
-Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.markdown).
+Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.md).
 
 ## Issues
 Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issues).
