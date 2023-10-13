@@ -411,9 +411,10 @@ class Port(BaseModel):
         self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
         """Adds initial port value which is used to initialise the pyomo var/param
+
         Args:
-            array: array, list of initial values. Should have either:
-                   length = time_periods, or length = time_periods*expansion_periods
+            array: array, list of initial values. Should have either: length = time_periods,
+                or length = time_periods*expansion_periods
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
@@ -667,7 +668,8 @@ class Edge(BaseModel):
             raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
 
     def initialise_edge(self, model: EchoConcreteModel):
-        """Applies edge constraint: port1 = -1 *port2
+        """Applies edge constraint: ``port1 = -1 *port2``
+
         Args:
             model: pyomo concrete model
         """

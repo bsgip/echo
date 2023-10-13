@@ -57,23 +57,23 @@ The above constraints enforces that once :math:`installed` is 1, each :math:`por
 
 
 Costs
-^^^^^^
+^^^^^
 The user can specify an install cost in $, which is a fixed cost that is applied if the asset is installed.
 
 Capacity Expansion
---------------------
+------------------
 Some assets have a capacity which can be optimised. Currently only storage capacity is supported.
 
 The user can specify a capacity cost in $/unit capacity, which is added to the optimisation objective.
 
 
 Asset Retirement
------------------
+----------------
 Assets have a lifetime that is defined in planning period intervals (e.g., years). At the end of their lifetime, assets must either be replaced or retired. Replacement resets the lifetime of the asset to its nominal lifetime, allowing the asset to continue to be operated. Retirement means that the asset ceases to operate for all subsequent expansion periods. Appropriate costs can be applied to retirement/replacement decisions.
 
 
 Variables
-^^^^^^^^^^
+^^^^^^^^^
 The asset retirement variables belong to the node. They include:
 
 :math:`retire`, binary variable indexed by planning periods, for indicating when we retire the asset
@@ -84,11 +84,11 @@ The asset retirement variables belong to the node. They include:
 
 
 Parameters
-^^^^^^^^^^^^
+^^^^^^^^^^
 :math:`life^{nominal}`, the asset's nominal lifetime, which is also the lifetime of any replacement
 
 Constraints
-^^^^^^^^^^^^
+^^^^^^^^^^^
 
 Remaining lifetime rule:
 
@@ -108,7 +108,7 @@ Force all ports on node to be zero after retirement using a pair of big M constr
 
 
 Costs
-^^^^^^
+^^^^^
 The user can specify a replacement cost in $,  which is applied every time an asset is replaced.
 
 
