@@ -372,14 +372,17 @@ class Transform(BaseModel):
     """An object for carrying a generic linear node transformation."""
 
     uid: str = Field(default_factory=shortuuid.uuid)
-    transform_name: Optional[str] = None
     lhs: list[TransformTerm] = []
     rhs = 0
 
-    def __init__(self, **data):
+    def __init__(self, lhs_terms: list[TransformTerm] = [], **data):
         super().__init__(**data)
-        if self.transform_name is None:
-            self.transform_name = "transform_" + str(self.uid)
+        if lhs_terms:
+            self.lhs = lhs_terms
+
+    @property
+    def transform_name(self):
+        return "transform_" + str(self.uid)
 
     def add_lhs_term(self, var: Port, rule: TransformRule, weight: Union[ArrayWrap, ArrayWrappableType]):
         """Adds a left-hand side (LHS) term to the transform"""
