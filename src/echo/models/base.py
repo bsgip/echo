@@ -17,6 +17,7 @@ from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
     ArrayWrappableType,
+    expand,
     generate_array_constraint,
     set_var_bounds_from_dict,
     to_initial_values,
@@ -324,13 +325,7 @@ class Port(BaseModel):
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
-
-        x = ArrayWrap(array)
-        if time_periods is None:
-            time_periods = len(x)
-        x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
-        vals = x.dict()
-        self.add_initial_value(vals)
+        self.add_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
 
     def add_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Adds port active periods
@@ -338,12 +333,7 @@ class Port(BaseModel):
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
         """
-        x = ArrayWrap(array)
-        if time_periods is None:
-            time_periods = len(array)
-        x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
-        vals = x.dict()
-        self.active_periods = vals
+        self.active_periods = expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def add_objective(self, model: EchoConcreteModel):
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed

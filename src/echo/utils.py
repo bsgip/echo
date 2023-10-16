@@ -108,6 +108,14 @@ class ArrayWrap(Sequence):
             raise TypeError("requires float, int, list or array like")
 
 
+def expand(array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None):
+    x = ArrayWrap(array)
+    if time_periods is None:
+        time_periods = len(x)
+    x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
+    return x.dict()
+
+
 def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
     """
     Updates the bounds on a pyomo variable. Only floats can be used as bounds.
