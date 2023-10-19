@@ -2,11 +2,12 @@ import pytest
 
 from echo.configuration import NodeRule, TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
-from echo.models.base import Node, OptimisationGraph, Transform
+from echo.models.base import Node, OptimisationGraph, Transform, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
+from echo.utils import ArrayWrap
 
 
 def test_simple_bounded_load():
@@ -119,9 +120,11 @@ def test_feedback_loop():
     # excess.add_generation_profile_from_array([-1]*24)
     load.ports["load"] = l1
     load.ports["excess"] = excess
-    t = Transform()
-    t.add_lhs_term(l1, TransformRule.Both, 1)
-    t.add_lhs_term(excess, TransformRule.Both, 1)
+    lhs_terms = [
+        TransformTerm(l1, TransformRule.Both, ArrayWrap(1)),
+        TransformTerm(excess, TransformRule.Both, ArrayWrap(1)),
+    ]
+    t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)
     load.node_rule = NodeRule.Transform
 

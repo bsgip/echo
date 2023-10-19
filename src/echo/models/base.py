@@ -384,13 +384,6 @@ class Transform(BaseModel):
     def transform_name(self):
         return "transform_" + str(self.uid)
 
-    def add_lhs_term(self, var: Port, rule: TransformRule, weight: Union[ArrayWrap, ArrayWrappableType]):
-        """Adds a left-hand side (LHS) term to the transform"""
-        if not isinstance(weight, ArrayWrap):
-            weight = ArrayWrap(weight)
-        term = TransformTerm(var, rule, weight)
-        self.lhs.append(term)
-
     def initialise_transform(self, model: EchoConcreteModel):
         # Check if we need to create pos/neg components, and initialise the weights
         for term in self.lhs:
@@ -447,22 +440,25 @@ class Node(BaseModel):
         self.node_rule = NodeRule.Transform
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
-        t = Transform()
-        t.add_lhs_term(var=output_port, rule=TransformRule.Both, weight=1)
-        t.add_lhs_term(var=input_port, rule=TransformRule.Both, weight=-input_weight)
+        lhs_terms = [
+            TransformTerm(var=output_port, rule=TransformRule.Both, weight=ArrayWrap(1)),
+            TransformTerm(var=input_port, rule=TransformRule.Both, weight=ArrayWrap(-input_weight)),
+        ]
+        t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
 
-    def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor):
+    def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor: float):
         """Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
             carbon_port: port object that represents carbon flows out of the node
             emission_factor: a ratio = emissions generated/emitting unit generated (float), or an array of values
         """
-        # Create appropriate transformation
-        t = Transform()
-        t.add_lhs_term(carbon_port, TransformRule.Neg, 1)
-        t.add_lhs_term(emitting_port, TransformRule.Neg, -emission_factor)
+        lhs_terms = [
+            TransformTerm(carbon_port, TransformRule.Neg, ArrayWrap(1)),
+            TransformTerm(emitting_port, TransformRule.Neg, ArrayWrap(-emission_factor)),
+        ]
+        t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
 
     def verify_node(self):

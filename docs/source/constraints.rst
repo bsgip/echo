@@ -24,9 +24,9 @@ To create a custom transform:
     n.add_port(ElectricalPort(), 'grid')
     n.add_port(CarbonSource(), 'emissions')
 
-    t = Transform()  # initialise a transform object
-    t.add_lhs_term(var=self.ports['emissions'].port_name, weight=1)  # use .port_name so that the port variable appears in the constraint expression
-    t.add_rhs_term(var=self.ports['grid'].neg, weight=0.6)  # use.neg so that only the negative component of the port variable appears in the constraint expression
+    # Initialise a transform object
+    lhs_terms = [TransformTerm(var=self.ports['emissions'].port_name, weight=ArrayWrap(1))]
+    t = Transform(lhs_terms=lhs_terms)
     n.add_transformation(t)
 
 An arbitrary number of these transformations can be added to a node. Each transform will get 'unpacked' into a single pyomo constraint when the optimiser is initialised. The function that unpacks any transformation is shown below for completeness:
