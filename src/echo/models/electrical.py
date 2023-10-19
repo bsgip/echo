@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Union, cast
+from typing import Dict, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ from pydantic import Field
 from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
-from echo.models.base import Node, Transform
+from echo.models.base import Node, Transform, TransformTerm
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
 from echo.validators import ArrayType
@@ -157,7 +157,7 @@ class EV(Node):
                 electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
 
         # EV needs a custom transformation because of the positive load convention
-        self.create_ev_transformation()
+        self.add_transformation(self.create_ev_transformation())
 
         # Set port_dict_name_to_port_uid_map
         if len(self.port_dict_name_to_port_uid_map.keys()) == 0:
@@ -201,11 +201,12 @@ class EV(Node):
 
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
-        t = Transform()
-        t.add_lhs_term(self.ports["vehicle"], TransformRule.Both, 1)
-        t.add_lhs_term(self.ports["usage"], TransformRule.Both, 1)
-        t.add_lhs_term(self.ports[self.connection_port_name], TransformRule.Both, -1)
-        self.add_transformation(t)
+        lhs_terms = [
+            TransformTerm(self.ports["vehicle"], TransformRule.Both, ArrayWrap(1)),
+            TransformTerm(self.ports["usage"], TransformRule.Both, ArrayWrap(1)),
+            TransformTerm(self.ports[self.connection_port_name], TransformRule.Both, ArrayWrap(-1)),
+        ]
+        return Transform(lhs_terms=lhs_terms)
 
     def process_V0G_charging(self, interval_duration: float):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
