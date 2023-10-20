@@ -54,7 +54,7 @@ class Port(BaseModel):
     import_constraint_value: Optional[ConstraintValueType] = None
     export_constraint: FlowConstraint = FlowConstraint.NA
     export_constraint_value: Optional[ConstraintValueType] = None
-    active_periods: Optional[dict[tuple[int, int], Any]]
+    active_periods: Optional[dict[tuple[int, int], Any]] = None
     slack: bool = False
     objective: Union[float, en.numeric_expr.NumericExpression] = 0  # this will eventually be a pyomo expression
 
