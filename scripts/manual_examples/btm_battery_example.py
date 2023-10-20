@@ -122,10 +122,15 @@ load.ports["load"] = l1  # add the electrical demand to a port of the load node
 # Create an inverter node with some properties,
 # if the constraints are not none then they should be max_export <= 0 <= max_import
 # can also set efficiency on the dc and the ac side in the range 0-1
-inverter = Inverter(node_name="inv", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-inverter.add_ac_port("inv")  # add a port that is used to connect back to the connection_point
-inverter.add_dc_port("bess")  # add a port to connect to the battery
-inverter.add_dc_port("pv")  # add a port to connect to the pv
+inverter = Inverter(
+    node_name="inv",
+    max_import=None,
+    max_export=None,
+    dc_ac_efficiency=1,
+    ac_dc_efficiency=1,
+    ac_port_name="inv",
+    dc_port_names=["bess", "pv"],
+)
 
 # Create a node for the battery
 battery = Node(node_name="battery")

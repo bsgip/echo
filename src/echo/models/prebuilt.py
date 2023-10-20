@@ -85,14 +85,6 @@ class FlexElectricalNode(Node):
         self.ports[port_name] = FlexPort(port_name=port_name, units=Units.KW)
 
 
-class NewInverter(Inverter):
-    def __init__(self, ac_port_name: str, dc_port_names: list, **data):
-        super().__init__(**data)
-        self.add_ac_port(ac_port_name)
-        for i in dc_port_names:
-            self.add_dc_port(i)
-
-
 class FlexNodeWithEmissions(Node):
     def __init__(
         self,

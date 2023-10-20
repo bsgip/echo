@@ -3,7 +3,7 @@ from typing import Dict, Optional, Union, cast
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field
+from pydantic import Field, conlist, constr
 
 from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
 from echo.exceptions import ConfigurationError, validate
@@ -294,27 +294,31 @@ class Inverter(Node):
     """An inverter is a node with one AC port and at least one DC port.
     Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
 
-    max_import: Union[float, None]
-    max_export: Union[float, None]
+    max_import: Optional[float]
+    max_export: Optional[float]
     dc_ac_efficiency: float = Field(default=1.0, ge=0, le=1)
     ac_dc_efficiency: float = Field(default=1.0, ge=0, le=1)
-    dc_port_names: Optional[list] = []
-    ac_port_name: Optional[str] = None  # There should generally only be one ac port
-    node_rule = NodeRule.Custom
+    ac_port_name: constr(min_length=1)
+    dc_port_names: conlist(str, min_items=1)
+    node_rule: NodeRule = Field(NodeRule.Custom, const=True)
 
-    def add_dc_port(self, port_name: str, uid: Union[str, None] = None):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._add_ac_port(port_name=self.ac_port_name)
+        for port_name in self.dc_port_names:
+            self._add_port(port_name=port_name)
+
+    def _add_port(self, port_name: str, uid: Union[str, None] = None):
         p = ElectricalPort(port_name=port_name, uid=uid)
-        self.dc_port_names.append(port_name)
         self.ports[port_name] = p
 
-    def add_ac_port(self, port_name: str, uid: Union[str, None] = None):
-        if self.ac_port_name is not None:
-            raise ConfigurationError("AC port already specified for this inverter.")
-        else:
-            p = ElectricalPort(port_name=port_name, uid=uid)
-            p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
-            self.ac_port_name = port_name
-            self.ports[port_name] = p
+    def _add_ac_port(self, port_name: str, uid: Union[str, None] = None):
+        p = ElectricalPort(port_name=port_name, uid=uid)
+        p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
+        self.ports[port_name] = p
 
     def verify_node(self):
         # Check that we have at least one ac and one dc port
