@@ -220,10 +220,14 @@ def test_positive_contingency_calculation_with_storage_full():
     pv1.add_generation_profile_from_array([-4] * time_periods, expansion_periods)
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = Node()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)

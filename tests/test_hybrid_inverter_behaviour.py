@@ -37,10 +37,14 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=0.9, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=0.9,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
@@ -101,10 +105,14 @@ def test_hybrid_inverter_limits_path_flows():
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = Node()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
