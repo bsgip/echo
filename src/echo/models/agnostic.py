@@ -42,6 +42,17 @@ class TellegenNode(Node):
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
+            a = 0
+            for _, port in node_ports.items():
+                a += getattr(model, port.port_name)[p, t]
+            return a == 0
+
+        node_ports = self.ports
+        con_name = "reliability_con_" + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+
 
 class MultiCommodityTellegenNode(Node):
     """
