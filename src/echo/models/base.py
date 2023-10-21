@@ -486,12 +486,6 @@ class Node(BaseModel):
             port.initialise_port(model, profile)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
-            a = 0
-            for _, port in node_ports.items():
-                a += getattr(model, port.port_name)[p, t]
-            return a == 0
-
         def transform(model: EchoConcreteModel, p, t):  # Generic transformation node
             lhs = 0
             for term in current_transform.lhs:
@@ -508,16 +502,10 @@ class Node(BaseModel):
                 lhs += getattr(model, var_name)[p, t] * weight[p, t]
             return lhs == current_transform.rhs
 
-        if self.node_rule == NodeRule.Transform:
-            for _, current_transform in self.transformations.items():
-                current_transform.initialise_transform(model)  # make sure that all variables have been initialised
-                con_name = "transformation_con_" + self.node_name
-                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
-
-        if self.node_rule == NodeRule.Tellegen:
-            node_ports = self.ports
-            con_name = "reliability_con_" + self.node_name
-            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+        for _, current_transform in self.transformations.items():
+            current_transform.initialise_transform(model)  # make sure that all variables have been initialised
+            con_name = "transformation_con_" + self.node_name
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
 
     def add_objective(self, model: EchoConcreteModel):
         total = 0
