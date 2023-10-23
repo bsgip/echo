@@ -114,9 +114,8 @@ def test_hybrid_inverter_limits_path_flows():
         dc_port_names=["bess", "pv"],
     )
 
-    cp = Node()
+    cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
-    cp.node_rule = NodeRule.Tellegen
 
     load = Node()
     l1 = ElectricalDemand()

@@ -70,8 +70,6 @@ class NodeRule(Enum):
 
     NA = 0
     """Transformation type is not specified for this Node"""
-    Tellegen = 1
-    """The Node sums all port values to 0"""
     Custom = 2
     """The Node has a custom defined transformation rule"""
     Transform = 3

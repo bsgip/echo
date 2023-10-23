@@ -8,7 +8,7 @@ from pydantic import Field, conlist, constr
 from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
-from echo.models.base import Node, Transform, TransformTerm
+from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
 from echo.validators import ArrayType
@@ -52,7 +52,7 @@ class MobileElectricalStorage(MobileStorage):
     units = Units.KW
 
 
-class EV(Node):
+class EV(TransformNode):
     charge_mode: Optional[EVChargeMode] = None
     available: Union[ArrayType, list, str]
     usage: Union[ArrayType, list]
@@ -300,7 +300,6 @@ class Inverter(Node):
     ac_dc_efficiency: float = Field(default=1.0, ge=0, le=1)
     ac_port_name: constr(min_length=1)
     dc_port_names: conlist(str, min_items=1)
-    node_rule: NodeRule = Field(NodeRule.Custom, const=True)
 
     def __init__(
         self,

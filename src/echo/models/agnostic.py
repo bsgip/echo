@@ -38,7 +38,7 @@ from echo.validators import (
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
 
-    node_rule = NodeRule.Tellegen
+    node_rule = NodeRule.Custom
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
@@ -52,6 +52,14 @@ class TellegenNode(Node):
         node_ports = self.ports
         con_name = "reliability_con_" + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+
+    def verify_node(self):
+        super(TellegenNode, self).verify_node()
+
+        validate(
+            len(self.ports) >= 2,
+            f"A tellegen node must have at least two ports. Offending node has the name: {self.node_name}",
+        )
 
 
 class MultiCommodityTellegenNode(Node):

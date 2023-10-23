@@ -2,7 +2,7 @@ import numpy as np
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
-from echo.models.base import Node, OptimisationGraph
+from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import GasBoilerFixedCOP, GasPort
@@ -160,12 +160,12 @@ def test_carbon_aggregation():
 
     system = OptimisationGraph()
 
-    grid = Node()
+    grid = TransformNode()
     grid.ports["grid"] = ElectricalPort()
     grid.ports["CO2"] = CarbonSource()
     grid.add_emission_transformation(grid.ports["grid"], grid.ports["CO2"], 0.5)
 
-    battery1 = Node()
+    battery1 = TransformNode()
     b1 = ElectricalStorage(
         max_capacity=15,
         depth_of_discharge_limit=0,

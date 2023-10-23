@@ -206,9 +206,8 @@ def test_negative_contingency_calculation_with_no_available_energy():
         dc_port_names=["bess", "pv"],
     )
 
-    cp = Node()
+    cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
-    cp.node_rule = NodeRule.Tellegen
 
     load = Node()
     l1 = ElectricalDemand()
