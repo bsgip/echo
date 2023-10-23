@@ -65,17 +65,6 @@ class OptimisationType(Enum):
     """The port variable is variable/optimisable"""
 
 
-class NodeRule(Enum):
-    """Enumeration object defining the type Transformation for the Node object."""
-
-    NA = 0
-    """Transformation type is not specified for this Node"""
-    Custom = 2
-    """The Node has a custom defined transformation rule"""
-    Transform = 3
-    """The Node has a transformation rule defined with a Transform object"""
-
-
 class TransformRule(Enum):
     """Enumeration object defining to which component of the Port value the Transformation Rule applies"""
 

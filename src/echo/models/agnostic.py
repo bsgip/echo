@@ -4,7 +4,7 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
 
-from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, Units
+from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
@@ -37,8 +37,6 @@ from echo.validators import (
 
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
-
-    node_rule = NodeRule.Custom
 
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
@@ -603,7 +601,6 @@ class InputOutputNode(Node):
     min_output: Optional[float]
     max_input: Optional[NonNegativeFloat]  # input should generally be non negative
     min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
@@ -677,7 +674,6 @@ class TimeDelayNode(InputOutputNode):
     """A time delay node is an input-output node that implements a fixed delay between input and output."""
 
     time_delay: int  # number of time intervals delay between input and output
-    node_rule: NodeRule = NodeRule.Custom
 
     def __init__(self, **data):
         super().__init__(**data)

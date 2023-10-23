@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 import pyomo.environ as en
 
-from echo.configuration import Flows, NodeRule, Units
+from echo.configuration import Flows, Units
 from echo.exceptions import validate
 from echo.models.agnostic import (
     FixedPort,
@@ -83,7 +83,6 @@ class ThermalNode(Node):
     All the ports are related to temp by an energy balance constraint.
     """
 
-    node_rule = NodeRule.Custom
     temp_ub: dict  # Upper bound of acceptable temperature for each time interval: dict with expansion-time keys
     temp_lb: dict  # Lower bound of acceptable temperature for each time interval: dict with expansion-time keys
     external_temp: dict  # External (ambient) temp, formatted as dict with expansion-time keys
@@ -220,7 +219,6 @@ class HeatPump(Node):
     performance (cop) time series data.
     """
 
-    node_rule = NodeRule.Custom
     heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
     cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
 
