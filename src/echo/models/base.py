@@ -10,7 +10,7 @@ import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
+from echo.configuration import FlowConstraint, Flows, OptimisationType, TransformRule, Units
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
@@ -402,7 +402,6 @@ class Node(BaseModel):
     node_name: str = ""
     uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
-    node_rule: NodeRule = NodeRule.NA
     objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
 
     @property
@@ -434,9 +433,6 @@ class Node(BaseModel):
         if bool(self.ports) is False:
             raise ConfigurationError("A node must have at least one port.")
 
-        if self.node_rule is NodeRule.NA and len(self.ports) > 1:
-            raise ConfigurationError("NodeRule cannot be NA if node has more than one port.")
-
     def initialise_node(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
             port.verify_port()
@@ -458,7 +454,6 @@ class Node(BaseModel):
 class TransformNode(Node):
     """Implements node constraints using Transforms"""
 
-    node_rule: NodeRule = NodeRule.Transform
     transformations: dict[str, Transform] = {}
 
     def add_transformation(self, transformation_obj: Transform):
@@ -467,7 +462,6 @@ class TransformNode(Node):
             transformation_obj: Transform
         """
         self.transformations[transformation_obj.uid] = transformation_obj
-        self.node_rule = NodeRule.Transform
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         lhs_terms = [

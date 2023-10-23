@@ -1,6 +1,6 @@
 import numpy as np
 
-from echo.configuration import NodeRule, Units
+from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter

@@ -1,6 +1,6 @@
 import pytest
 
-from echo.configuration import NodeRule, TransformRule, Units
+from echo.configuration import TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
@@ -126,7 +126,6 @@ def test_feedback_loop():
     ]
     t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)
-    load.node_rule = NodeRule.Transform
 
     system.add_node_obj([supply, cp, td, load])
 
