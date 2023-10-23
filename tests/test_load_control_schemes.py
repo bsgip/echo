@@ -2,7 +2,7 @@ import pytest
 
 from echo.configuration import NodeRule, TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
-from echo.models.base import Node, OptimisationGraph, Transform, TransformTerm
+from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
@@ -111,7 +111,7 @@ def test_feedback_loop():
 
     td = TimeDelayNode(input_port_unit=Units.KW, output_port_unit=Units.KW, time_delay=0)
 
-    load = Node()
+    load = TransformNode()
     l1 = ElectricalDemand()
     demand = [0] * 24 + [5] * 24
     l1.add_demand_profile_from_array(demand)

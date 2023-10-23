@@ -403,7 +403,6 @@ class Node(BaseModel):
     uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
     node_rule: NodeRule = NodeRule.NA
-    transformations: dict[str, Transform] = {}
     objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
 
     @property
@@ -430,6 +429,37 @@ class Node(BaseModel):
     def get_port(self, port_name: str):
         if self.ports.get(port_name) is not None:
             return self.ports.get(port_name)
+
+    def verify_node(self):
+        if bool(self.ports) is False:
+            raise ConfigurationError("A node must have at least one port.")
+
+        if self.node_rule is NodeRule.NA and len(self.ports) > 1:
+            raise ConfigurationError("NodeRule cannot be NA if node has more than one port.")
+
+    def initialise_node(self, model: EchoConcreteModel, profile):
+        for port in self.ports.values():
+            port.verify_port()
+            port.initialise_port(model, profile)
+
+    def add_objective(self, model: EchoConcreteModel):
+        total = 0
+
+        self.objective += total
+
+    def num_ports(self):
+        return len(self.ports)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        """This should be overridden in the base class"""
+        pass
+
+
+class TransformNode(Node):
+    """Implements node constraints using Transforms"""
+
+    node_rule: NodeRule = NodeRule.Transform
+    transformations: dict[str, Transform] = {}
 
     def add_transformation(self, transformation_obj: Transform):
         """Adds a transformation object to a node.
@@ -462,28 +492,10 @@ class Node(BaseModel):
         self.add_transformation(t)
 
     def verify_node(self):
-        if bool(self.ports) is False:
-            raise ConfigurationError("A node must have at least one port.")
+        super(TransformNode, self).verify_node()
 
-        if self.node_rule is NodeRule.NA and len(self.ports) > 1:
-            raise ConfigurationError("NodeRule cannot be NA if node has more than one port.")
-
-        if self.node_rule == NodeRule.Transform:
-            if not self.transformations:
-                raise ConfigurationError(
-                    "Node has Transform rule but Transformation object(s) has not been added to node."
-                )
-
-        if self.node_rule == NodeRule.Tellegen:
-            validate(
-                len(self.ports) >= 2,
-                f"A tellegen node must have at least two ports. Offending node has " f"the name: {self.node_name}",
-            )
-
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        for port in self.ports.values():
-            port.verify_port()
-            port.initialise_port(model, profile)
+        if not self.transformations:
+            raise ConfigurationError("Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         def transform(model: EchoConcreteModel, p, t):  # Generic transformation node

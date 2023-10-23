@@ -5,7 +5,7 @@ from pydantic import NonNegativeFloat, PositiveFloat
 
 from echo.configuration import Units
 from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, OffOrConstrainedPort
-from echo.models.base import Node
+from echo.models.base import Node, TransformNode
 from echo.models.carbon import CarbonSource
 from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import EchoConcreteModel
@@ -85,7 +85,7 @@ class FlexElectricalNode(Node):
         self.ports[port_name] = FlexPort(port_name=port_name, units=Units.KW)
 
 
-class FlexNodeWithEmissions(Node):
+class FlexNodeWithEmissions(TransformNode):
     def __init__(
         self,
         emitting_port: str,
