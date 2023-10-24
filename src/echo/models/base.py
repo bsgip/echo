@@ -162,8 +162,7 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        """Creates pyomo vars, params, and constraints for the port."""
+    def _add_flow_variable_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
         initial_value_scaling = self.initial_value_scaling or 1
@@ -186,87 +185,168 @@ class Port(BaseModel):
         if self.opt_type is OptimisationType.Parameter:
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
 
-        # Import/export capacity constraint with slack rules
+    def _add_active_period_constraints_to_model(self, model: EchoConcreteModel):
+        port_active_periods = self.active_periods
+
+        def on_off_rule1(model: EchoConcreteModel, p, t):
+            return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.bigM
+
+        def on_off_rule2(model: EchoConcreteModel, p, t):
+            return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
+
+        setattr(
+            model,
+            f"active_con1_{self.port_name}",
+            en.Constraint(model.Expansion, model.Time, rule=on_off_rule1),
+        )
+        setattr(
+            model,
+            f"active_con2_{self.port_name}",
+            en.Constraint(model.Expansion, model.Time, rule=on_off_rule2),
+        )
+
+    def _add_import_constraints_to_model(self, model: EchoConcreteModel):
+        # Add import constraint parameter
+        time_periods = len(model.Time)
+        exp_periods = len(model.Expansion)
+        # Generate an array of constraints (ie indexed by time and expansion period)
+        import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
+        setattr(
+            model,
+            self.import_con_val,
+            en.Param(
+                model.Expansion,
+                model.Time,
+                initialize=import_constraint_dict,
+                domain=en.NonNegativeReals,
+            ),
+        )
+
+        if self.slack:
+            self._add_slack_import_constraints_to_model(model=model)
+        else:
+            set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
+
+    def _add_slack_import_constraints_to_model(self, model: EchoConcreteModel):
+        """Adds import capacity constraint with slack rules"""
+
+        # Add export capacity slack constraint
         def import_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
                 getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t]
                 <= getattr(model, self.import_con_val)[p, t]
             )
 
+        con_name = "import_con_" + self.port_name
+        setattr(
+            model,
+            self.import_slack,
+            en.Var(
+                model.Expansion,
+                model.Time,
+                initialize=0,
+                domain=en.NonPositiveReals,
+            ),
+        )
+        setattr(
+            model,
+            con_name,
+            en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack),
+        )
+
+        # Add import capacity slack max constraint
+        def import_cap_slack_max_rule(model: EchoConcreteModel, p, t):
+            return getattr(model, self.import_slack)[p, t] >= getattr(model, self.import_slack_max)
+
+        con_name = "import_con_max_" + self.port_name
+        setattr(
+            model,
+            self.import_slack_max,
+            en.Var(initialize=0, domain=en.NonPositiveReals),
+        )
+        setattr(
+            model,
+            con_name,
+            en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule),
+        )
+
+    def _add_export_constraints_to_model(self, model: EchoConcreteModel):
+        # Add export constraint parameter
+        time_periods = len(model.Time)
+        exp_periods = len(model.Expansion)
+        # Generate an array of constraints (ie indexed by time and expansion period)
+        export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
+        setattr(
+            model,
+            self.export_con_val,
+            en.Param(
+                model.Expansion,
+                model.Time,
+                initialize=export_constraint_dict,
+                domain=en.NonPositiveReals,
+            ),
+        )
+
+        if self.slack:
+            self._add_slack_export_constraints_to_model(model=model)
+        else:
+            set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
+
+    def _add_slack_export_constraints_to_model(self, model: EchoConcreteModel):
+        """Adds import capacity constraint with slack rules"""
+
+        # Add export capacity slack constraint
         def export_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
                 getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t]
                 >= getattr(model, self.export_con_val)[p, t]
             )
 
+        con_name = "export_con_" + self.port_name
+        setattr(
+            model,
+            self.export_slack,
+            en.Var(
+                model.Expansion,
+                model.Time,
+                initialize=0,
+                domain=en.NonNegativeReals,
+            ),
+        )
+        setattr(
+            model,
+            con_name,
+            en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack),
+        )
+
+        # Add export capacity slack max constraint
         def export_cap_slack_max_rule(model: EchoConcreteModel, p, t):
             return getattr(model, self.export_slack)[p, t] <= getattr(model, self.export_slack_max)
 
-        def import_cap_slack_max_rule(model: EchoConcreteModel, p, t):
-            return getattr(model, self.import_slack)[p, t] >= getattr(model, self.import_slack_max)
+        con_name = "export_con_max_" + self.port_name
+        setattr(
+            model,
+            self.export_slack_max,
+            en.Var(initialize=0, domain=en.NonNegativeReals),
+        )
+        setattr(
+            model,
+            con_name,
+            en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
+        )
+
+    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        """Creates pyomo vars, params, and constraints for the port."""
+        self._add_flow_variable_to_model(model=model, profile=profile)
 
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
-            con_name = "import_con_" + self.port_name
-            # Generate an array of constraints (ie indexed by time and expansion period)
-            import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
-            setattr(
-                model,
-                self.import_con_val,
-                en.Param(model.Expansion, model.Time, initialize=import_constraint_dict, domain=en.NonNegativeReals),
-            )
-
-            if self.slack is True:
-                setattr(
-                    model,
-                    self.import_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals),
-                )
-                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
-                con_name = "import_con_max_" + self.port_name
-                setattr(model, self.import_slack_max, en.Var(initialize=0, domain=en.NonPositiveReals))
-                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
-
-            else:
-                set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
+            self._add_import_constraints_to_model(model=model)
 
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
-            con_name = "export_con_" + self.port_name
-            export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
-            setattr(
-                model,
-                self.export_con_val,
-                en.Param(model.Expansion, model.Time, initialize=export_constraint_dict, domain=en.NonPositiveReals),
-            )
-
-            if self.slack is True:
-                setattr(
-                    model,
-                    self.export_slack,
-                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
-                )
-                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
-                con_name = "export_con_max_" + self.port_name
-                setattr(model, self.export_slack_max, en.Var(initialize=0, domain=en.NonNegativeReals))
-                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
-
-            else:
-                set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
+            self._add_export_constraints_to_model(model=model)
 
         if self.active_periods is not None:
-            port_active_periods = self.active_periods
-
-            def on_off_rule1(model: EchoConcreteModel, p, t):
-                return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.bigM
-
-            def on_off_rule2(model: EchoConcreteModel, p, t):
-                return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
-
-            setattr(
-                model, f"active_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1)
-            )
-            setattr(
-                model, f"active_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2)
-            )
+            self._add_active_period_constraints_to_model(model=model)
 
     def constrain_pos_neg(self, model: EchoConcreteModel):
         """Applies a mixed integer constraint that splits a port var into positive and negative components"""
