@@ -116,18 +116,18 @@ class FlexSource(FlexPort):
 class FixedPort(Port):
     """Fixed port (parameter), can either import or export."""
 
-    opt_type = OptimisationType.Parameter
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Parameter
 
 
 class Source(Port):
     """A fixed source of a commodity."""
 
     flows = Flows.Export
-    opt_type = OptimisationType.Parameter
     export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Parameter
 
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
@@ -143,8 +143,8 @@ class Sink(Port):
     """A fixed sink for a commodity."""
 
     flows = Flows.Import
-    opt_type = OptimisationType.Parameter
     import_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Parameter
 
     non_neg_check = validator("initial_value", allow_reuse=True)(
         nonnegative_load
