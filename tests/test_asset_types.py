@@ -5,7 +5,7 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
-from echo.models.gas import GasBoilerFixedCOP, GasPort
+from echo.models.gas import FlexGasPort, GasBoilerFixedCOP
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives.base import ObjectiveSet
@@ -23,7 +23,7 @@ def test_gas_boiler_fixed_cop():
     system = OptimisationGraph()
 
     gas_mains = Node()
-    gas_mains.ports["mains"] = GasPort()
+    gas_mains.ports["mains"] = FlexGasPort()
 
     boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5, startup_cop=0.5)
 
@@ -66,7 +66,7 @@ def test_modulating_gas_boiler():
     system = OptimisationGraph()
 
     gas_mains = Node()
-    gas_mains.ports["mains"] = GasPort()
+    gas_mains.ports["mains"] = FlexGasPort()
 
     boiler = GasBoilerFixedCOP(max_input=100, min_input=0, cop=0.8, startup_cop=0.8)
 
