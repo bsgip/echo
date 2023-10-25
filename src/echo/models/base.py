@@ -617,7 +617,7 @@ class Edge(BaseModel):
     nodes: Optional[tuple[str, str]]  # tuple of node names - todo make this required
     tariff: Optional[Union[list, None]]
 
-    def __int__(self, **data):
+    def __init__(self, **data):
         super().__init__(**data)
         if self.edge_name is None:
             self.edge_name = "edge_" + str(self.uid)
