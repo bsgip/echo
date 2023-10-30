@@ -4,7 +4,7 @@ from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import Inverter
 from echo.models.carbon import CarbonAggregation, CarbonPort
 
-from echo.models.prebuilt import Battery, FlexNodeWithEmissions
+from echo.models.prebuilt import Battery, FlexNodeWithEmissions, Electrolyser
 
 import pandas as pd
 
@@ -47,7 +47,8 @@ solar = Node(node_name='BulkSolar',
              ports={'solar': Source(units=Units.KW,
                                     initial_value_ref='Solar')})
 # Create electric battery Node
-battery = Battery(port_name='battery',
+battery = Battery(node_name = 'Battery',
+                  port_name='battery',
                   max_capacity=test_battery_size,
                   initial_state_of_charge=0,
                   charging_power_limit=0.5 *test_battery_size,
@@ -60,7 +61,7 @@ battery = Battery(port_name='battery',
 
 
 # Electrolyser model
-electrolyser = InputOutputNode(node_name='Electrolyser',
+electrolyser = Electrolyser(node_name='Electrolyser',
                                input_port_unit=Units.KW,
                                output_port_unit=Units.H2Kg,
                                max_input=electrolyser_max_input)

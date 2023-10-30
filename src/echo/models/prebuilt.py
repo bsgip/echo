@@ -8,6 +8,7 @@ from echo.models.agnostic import (
     Demand,
     FlexPort,
     FlexSink,
+    FlexSource,
     InputOutputNode,
     OffOrConstrainedPort,
 )
@@ -163,3 +164,39 @@ class DieselGenerator(InputOutputNode):
 
         setattr(model, "node_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
         setattr(model, "node_con_co2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=carbon_rule))
+
+
+class Electrolyser(InputOutputNode):
+    """
+    An Electrolyser converts electricity into hydrogen at a fixed rate of cop which is in units of
+    kg/kW per interval
+    """
+
+    input_port_unit = Units.KW
+    output_port_unit = Units.H2Kg
+    cop: NonNegativeFloat = 1/40
+    startup_efficiency: NonNegativeFloat = 1.0
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        # add an input and output Port, and create appropriate transformations
+        self.ports["output"] = FlexSource(units=self.output_port_unit)
+        self.ports["input"] = FlexSink(units=self.input_port_unit,
+                                       upper_bound=self.min_output,
+                                       lower_bound=self.max_output)
+
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        super(Electrolyser, self).apply_node_constraints(model)
+
+        def node_constraint(model: EchoConcreteModel, p, t):
+            p_in = getattr(model, self.ports["input"].port_name)
+            p_out = getattr(model, self.ports["output"].port_name)
+
+            if (p == 0) and (t == 0):
+                out = p_in[p, t] * self.startup_efficiency * self.cop
+            else:
+                out = (p_in[p, t] * self.startup_efficiency + p_in[p, t - 1] * (1 - self.startup_efficiency)) * self.cop
+            return p_out[p, t] == -out
+
+        setattr(model, "node_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=node_constraint))
