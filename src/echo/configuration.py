@@ -24,6 +24,8 @@ class Units(Enum):
     kVAR = 7
     """Instantaneous electrical reactive power kVAR """
     LPS = 8
+    """Kilogram of Hydrogen """
+    H2Kg = 9
 
 
 class Flows(Enum):

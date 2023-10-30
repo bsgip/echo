@@ -1,0 +1,98 @@
+from echo.configuration import Units
+from echo.models.agnostic import FlexPort, TellegenNode, Source, InputOutputNode, Demand, Storage
+from echo.models.base import Node, OptimisationGraph
+from echo.models.electrical import Inverter
+from echo.models.carbon import CarbonAggregation, CarbonPort
+
+from echo.models.prebuilt import Battery, FlexNodeWithEmissions
+
+import pandas as pd
+
+
+source_df = pd.read_csv("scripts/manual_examples/Dataframe.csv")
+source_df["Hydrogen load"] = 5*60*60  # 5kg per second
+grid_emission_factor = source_df["Carbon intensity"]
+test_battery_size = 100e3  # kWh
+electrolyser_cop = 1/39.4  # kWh of electricity to 1 kg of Hydrogen
+electrolyser_max_input = 1750162  # kW max input
+h2_storage_capacity = 10003211 # kg
+
+# Instantiate echo Optimisation Graph
+system = OptimisationGraph()
+
+# Node representing connection to Electrical Grid, per each kW of electricity flowing through 'grid' port
+# carbon port emits CO2_tonne = N_kW_ti*emissions_factor_ti
+electrical_grid = FlexNodeWithEmissions(node_name='ElectricalGrid',
+                                       emitting_port='grid',
+                                       emitting_port_units=Units.KW,
+                                       carbon_port='grid_emissions',
+                                       emissions_factor=grid_emission_factor)
+
+# Carbon aggregation Node stores all emissions produced over simulation period
+carbon_aggregation = CarbonAggregation(node_name='BulkEmissions',
+                                       ports={'bulk_grid_emissions': CarbonPort()})
+
+# Define all port for electrical connection point, omitting DC/AC Inverter model for now
+electrical_cp_ports = {'CP_grid': FlexPort(units=Units.KW),
+                       'CP_solar': FlexPort(units=Units.KW),
+                       'CP_battery': FlexPort(units=Units.KW),
+                       'CP_electrolyser': FlexPort(units=Units.KW)}
+
+
+# Electrical connection point, all flows sum to zero, no additional constraints defined
+connection_point = TellegenNode(node_name='ConnectionPoint', ports=electrical_cp_ports)
+
+# Create Solar generation node, initial_value_ref here set to the name of DataFrame column with PV output
+solar = Node(node_name='BulkSolar',
+             ports={'solar': Source(units=Units.KW,
+                                    initial_value_ref='Solar')})
+# Create electric battery Node
+battery = Battery(port_name='battery',
+                  max_capacity=test_battery_size,
+                  initial_state_of_charge=0,
+                  charging_power_limit=0.5 *test_battery_size,
+                  discharging_power_limit=-0.5 * test_battery_size,
+                  storage_capacity_cost=None,
+                  charging_efficiency=1,
+                  discharging_efficiency=1,
+                  depth_of_discharge_limit=0,
+                  fixed_storage_capacity=True)
+
+
+# Electrolyser model
+electrolyser = InputOutputNode(node_name='Electrolyser',
+                               input_port_unit=Units.KW,
+                               output_port_unit=Units.H2Kg,
+                               max_input=electrolyser_max_input)
+
+hydrogen_load = Node(node_name='H2Demand',
+                     ports={f'h2_demand': Demand(units=Units.H2Kg,
+                                                 initial_value_ref='Hydrogen load')})
+
+
+hydrogen_cp_ports = {'CP_electrolyser': FlexPort(units=Units.H2Kg),
+                    'CP_load': FlexPort(units=Units.H2Kg),
+                    'CP_storage': FlexPort(units=Units.H2Kg)}
+
+
+# Hydrogen connection point, all flows sum to zero, no additional constraints defined
+hydrogen_connection_point = TellegenNode(node_name='H2ConnectionPoint', ports=hydrogen_cp_ports)
+
+
+hydrogen_storage = Node(node_name ="H2Storage",
+                        ports = {'h2_storage_port': Storage( units = Units.H2Kg,
+                                                             max_capacity =h2_storage_capacity,
+                                                             charging_power_limit = h2_storage_capacity,
+                                                             discharging_power_limit = -1*h2_storage_capacity,
+                                                             initial_state_of_charge =0)})
+
+
+## Add all the Nodes to the Optimisation GRaph
+system.add_nodes_from([electrical_grid, carbon_aggregation, connection_point,
+                       solar, battery, electrolyser, hydrogen_load, hydrogen_connection_point, hydrogen_storage])
+
+
+
+system.connect_ports_and_create_edge(electrical_grid.ports['grid_emissions'],
+                                     carbon_aggregation.ports['bulk_grid_emissions'],
+                                     edge_name=f'{electrical_grid.node_name}_{carbon_aggregation.node_name}')
