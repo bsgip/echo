@@ -1019,6 +1019,19 @@ class OptimisationGraph(BaseModel):
         """
         nx.draw_networkx(self.convert_to_nx(), ax=axes, with_labels=with_labels, labels=labels, **kwargs)
 
+    def to_cytoscape_json(self) -> str:
+        """Converts the optimisation graph to json that can be read by cytoscape (https://js.cytoscape.org/)"""
+        import json
+
+        G = self.convert_to_nx()
+        nodes = []
+        for node in G.nodes():
+            nodes.append({"data": {"id": node}})
+        for n1, n2 in G.edges():
+            nodes.append({"data": {"id": f"{n1}_{n2}", "source": n1, "target": n2}})
+
+        return json.dumps(nodes)
+
     def print_port_names(self):
         """Prints port name-uid pairs, useful for debugging infeasible optimisation"""
         for n in self.node_obj.values():
