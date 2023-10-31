@@ -5,10 +5,12 @@ from echo.models.electrical import Inverter
 from echo.models.carbon import CarbonAggregation, CarbonPort
 
 from echo.models.prebuilt import Battery, FlexNodeWithEmissions, Electrolyser
+from echo.objectives.tariff import ImportTariff, ExportTariff
+from echo.objectives.base import ObjectiveSet
+from echo.optimiser import optimise
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 
 import pandas as pd
-
-
 source_df = pd.read_csv("scripts/manual_examples/Dataframe.csv")
 source_df["Hydrogen load"] = 5*60*60  # 5kg per second
 grid_emission_factor = source_df["Carbon intensity"]
@@ -97,3 +99,28 @@ system.add_nodes_from([electrical_grid, carbon_aggregation, connection_point,
 system.connect_ports_and_create_edge(electrical_grid.ports['grid_emissions'],
                                      carbon_aggregation.ports['bulk_grid_emissions'],
                                      edge_name=f'{electrical_grid.node_name}_{carbon_aggregation.node_name}')
+
+
+
+import_cost = ImportTariff(component=connection_point.ports['CP_grid'],
+                               tariff_array=source_df['Prices']*1e-3,
+                               expansion_periods=1)  # create the import objective cost
+export_cost = ExportTariff(component=connection_point.ports['CP_grid'],
+                               tariff_array=source_df['Prices']*1e-3,
+                               expansion_periods=1)  # create the export objective cost
+objective_set = ObjectiveSet(objective_list=[import_cost, export_cost])
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=60,
+        number_of_intervals=len(source_df.index),
+        number_of_expansion_intervals=1,
+        discount_rate=0,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    objective_set=objective_set,
+)
+
+
+
+
