@@ -2,7 +2,6 @@ import warnings
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Type, Union, cast
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 import pyomo.environ as en
@@ -997,10 +996,28 @@ class OptimisationGraph(BaseModel):
                 en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow2),
             )
 
-    def draw_echo_graph(self, with_labels=False, labels=None):
-        """Draws the network with or without node labels"""
-        nx.draw_networkx(self.convert_to_nx(), with_labels=with_labels, labels=labels)
-        plt.show()
+    def draw_on_axes(self, axes, with_labels=False, labels=None, **kwargs):
+        """Draws the network on a matplotlib plot
+
+        Args:
+            axes (matplotlib.axes.Axes): The (sub-)plot on which to draw the network
+            with_labels (bool): Set to True to draw labels on the nodes. Defaults to False.
+                Uses the node's names as the label.
+            labels (dict): Optional way of supplying node labels as a dictionary of labels (strings) keyed by node.
+                Default = None.
+            **kwargs: Optional keyword arguments for customising the drawing of the network.
+                See https://networkx.org/documentation/stable/reference/generated/networkx.drawing.nx_pylab.draw_networkx.html for more information.
+
+        Examples:
+            The following example shows how to draw an already created OptimisationGraph with the name `network`
+
+            >>> import matplotlib.pyplot as plt
+            >>> network_figure = plt.figure()
+            >>> network_axes = network_figure.add_subplot()
+            >>> network.draw_on_axes(axes=network_axes, with_labels=True)
+            >>> plt.show()
+        """
+        nx.draw_networkx(self.convert_to_nx(), ax=axes, with_labels=with_labels, labels=labels, **kwargs)
 
     def print_port_names(self):
         """Prints port name-uid pairs, useful for debugging infeasible optimisation"""
