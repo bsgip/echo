@@ -295,11 +295,7 @@ class TimePeriod(EchoBaseModel):
         if Day.holiday in self.day_type:
             raise NotImplementedError("Public holidays not currently supported in optimisation")
         return (
-            (
-                df.index.isin(
-                    df.between_time(self.start_time, self.end_time, include_start=True, include_end=False).index
-                )
-            )
+            (df.index.isin(df.between_time(self.start_time, self.end_time, inclusive="left").index))
             & (df.index.weekday <= allowed_days_of_week_end)
             & (df.index.weekday >= allowed_days_of_week_start)
         ).astype(int)
