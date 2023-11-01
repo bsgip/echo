@@ -565,6 +565,19 @@ class Node(BaseModel):
         t.add_lhs_term(emitting_port, TransformRule.Neg, -emission_factor)
         self.add_transformation(t)
 
+    def add_emission_offset(self, emitting_port: Port, carbon_port: Port, emission_factor):
+        """Creates an emission offset transformation and adds to the node.
+        Args:
+            emitting_port: port object that offsets emissions when importing (when positive)
+            carbon_port: port object that represents carbon flows out of the node
+            emission_factor: a ratio = emissions offset/emitting unit imported, or an array of values
+        """
+        # Create appropriate transformation
+        t = Transform()
+        t.add_lhs_term(carbon_port, TransformRule.Pos, 1)
+        t.add_lhs_term(emitting_port, TransformRule.Neg, emission_factor)
+        self.add_transformation(t)
+
     def verify_node(self):
         if bool(self.ports) is False:
             raise ConfigurationError("A node must have at least one port.")

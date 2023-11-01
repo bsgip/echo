@@ -30,6 +30,8 @@ electrical_grid = FlexNodeWithEmissions(node_name='ElectricalGrid',
                                        carbon_port='grid_emissions',
                                        emissions_factor=grid_emission_factor)
 
+electrical_grid.add_emission_offset(emitting_port='grid', carbon_port='grid_emissions', emissions_factor= grid_emission_factor)
+
 # Carbon aggregation Node stores all emissions produced over simulation period
 carbon_aggregation = CarbonAggregation(node_name='BulkEmissions',
                                        ports={'bulk_grid_emissions': CarbonPort()})
