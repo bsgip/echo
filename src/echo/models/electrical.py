@@ -5,7 +5,7 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field
 
-from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units
+from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units, Flows
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import (
     BoundedLoad,
@@ -18,7 +18,7 @@ from echo.models.agnostic import (
 )
 from echo.models.base import Node, Transform
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
+from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict, to_initial_values
 from echo.validators import ArrayType
 
 
@@ -30,7 +30,6 @@ class ElectricalDemand(Demand):
 
 class ElectricalGeneration(Source):
     """Electrical generation which can be fixed (non-curtailable) or variable (curtailable)"""
-
     units = Units.KW
     curtailable: bool = False
 
@@ -44,12 +43,26 @@ class ElectricalGeneration(Source):
 
     def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(ElectricalGeneration, self).initialise_port(model, profile)
+        # TODO: This is a quick fix, pending review of initial value processing
+        # Process initial value reference from DataFrame
+        if self.initial_value_ref is not None:
+            time_periods = len(model.Time)
+            exp_periods = len(model.Expansion)
+            initial_val = to_initial_values(
+                profile,
+                self.initial_value_ref,
+                time_periods,
+                exp_periods,
+                scaling=self.initial_value_scaling or 1,
+            )
+        else:
+            initial_val = self.initial_value
         if self.curtailable is False:
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:
             # Constrain solar gen to be within initial value (max value)
             getattr(model, self.port_name).unfix()
-            set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
+            set_var_bounds_from_dict(getattr(model, self.port_name), lb=initial_val, ub=None)
 
 
 class ElectricalStorage(Storage):
