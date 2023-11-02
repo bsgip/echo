@@ -30,7 +30,7 @@ class ElectricalGeneration(Source):
         self.set_initial_value(generation)
 
     def add_generation_profile_from_array(
-        self, generation: ArrayType, expansion_periods=1, time_periods: Optional[int] = None
+        self, generation: ArrayType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
         self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
