@@ -160,7 +160,6 @@ class EV(Node):
             if self.charge_mode == EVChargeMode.V1G:
                 electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
 
-
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
         t = Transform()

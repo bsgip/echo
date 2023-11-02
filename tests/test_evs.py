@@ -1,9 +1,9 @@
 from __future__ import division
 
 from typing import List, Tuple
-import pytest
 
 import numpy as np
+import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
