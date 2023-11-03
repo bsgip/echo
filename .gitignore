@@ -11,3 +11,6 @@ echo.egg-info
 .hypothesis
 .vscode
 cplex.log
+build/
+build/lib/
+build/lib/echo/
