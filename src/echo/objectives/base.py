@@ -14,6 +14,7 @@ class Objective(EchoBaseModel):
     component: Union[Port, Path, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: str = ""
+    weight: float = 1
 
     def __init__(self, **data):
         super().__init__(**data)
