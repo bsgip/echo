@@ -19,7 +19,7 @@ cd echo
 
 3. With your virtual environment active install using pip
 ```
-pip install .[test,validation]
+pip install .[dev,test,docs]
 ```
 
 NOTE: This package is not on pypi. Doing `pip install echo` will NOT install this package. It will install a different package.
@@ -43,8 +43,34 @@ Open source:
 - CBC: This solver can be used provided you only include linear costs (no quadratic costs or regularisation). Information on the solver is available here https://github.com/coin-or/Cbc . For installing on ubuntu run `sudo apt-get install -y coinor-cbc1
 
 
-## Documentation (under creation)
-Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.markdown).
+## Documentation
+
+### Building the documentation
+
+Make sure you have the documentation dependencies installed
+
+```
+pip install .[docs]
+```
+
+1. Generate the documentation for the echo package (from docstrings)
+
+```
+sphinx-apidoc --force --implicit-namespaces --module-first --no-toc --separate -o docs/source/_reference src/echo
+```
+
+The auto-generated documentation can be found in `docs/source/_reference`
+
+2. Build the documentation (as html)
+
+```
+sphinx-build -b html docs/source docs/_build
+```
+
+The built documentation can be found in `docs/_build`. Warnings about duplicated labels can be safely ignored.
+
+### Design (under creation)
+Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.md).
 
 ## Issues
 Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issues).

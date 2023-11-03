@@ -57,6 +57,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
+docs = ["sphinx", "sphinx-rtd-theme"]
 
 [tool.setuptools.package-data]
 "echo" = ["py.typed"]

@@ -124,9 +124,9 @@ class ControlledLoadOrGen(FlexPort):
     """
     A controlled load or generation has a max/min power, as well as a max/min utilisation.
     Min utilisation is the ratio between the minimum energy consumed/generated,
-        and the maximum energy that could be consumed/generated if the load operated at max power.
+    and the maximum energy that could be consumed/generated if the load operated at max power.
     Max utilisation is the ratio between the maximum energy consumed/generated,
-        and the maximum energy that could be consumed/generated if the load operated at max power.
+    and the maximum energy that could be consumed/generated if the load operated at max power.
     """
 
     min_utilisation: Optional[float] = None
