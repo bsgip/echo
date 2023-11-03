@@ -313,12 +313,15 @@ class TimePeriod(EchoBaseModel):
         ).astype(int)
 
     def overlaps(self, other: "TimePeriod"):
-        """
-        Determine whether two `TimePeriod`s are overlapping. Used for validating `Window`s.
+        """Determines whether two :obj:`TimePeriod` objects are overlapping.
+
+        Intended use if for validating :obj:`Window` objects.
+
         Args:
-            other:
+            other: The other TimePeriod to compare to
 
         Returns:
+            bool: True if both :obj:`TimePeriod` objects overlap, False otherwise.
 
         """
         if set(self.day_type).intersection(set(other.day_type)):

@@ -32,6 +32,7 @@ To create a custom transform:
 An arbitrary number of these transformations can be added to a node. Each transform will get 'unpacked' into a single pyomo constraint when the optimiser is initialised. The function that unpacks any transformation is shown below for completeness:
 
 .. code-block::
+
             def transform(model, p, t):  # Generic transformation node
             def unpack_transform(x):
                 expr = 0

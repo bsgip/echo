@@ -30,7 +30,7 @@ Building the pyomo model
 TBC - how everything gets initialised
 
 Setting the objective
---------------------
+---------------------
 TBC - detail about the two places objective terms are defined (objective set + on ports/nodes where relevant)
 
 Optimising

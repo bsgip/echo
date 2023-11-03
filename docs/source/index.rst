@@ -18,6 +18,7 @@ This project is developed and maintained by the Battery Storage and Integration 
    :caption: Contents:
 
    getting_started
+   overview
    user_guide
    nodes
    ports
@@ -27,8 +28,9 @@ This project is developed and maintained by the Battery Storage and Integration 
    constraints
    optimiser
    flows
+   expansion_planning
    examples
-   echo
+   _reference/echo
 
 Indices and tables
 ==================
