@@ -277,7 +277,7 @@ def optimise(
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
-        results: SolverResults = opt.solve(model, tee=True, symbolic_solver_labels=True)
+        results: SolverResults = opt.solve(model, tee=False, symbolic_solver_labels=True)
 
     # Extract the optimisation result
     termination_condition: TerminationCondition = results.solver.termination_condition
