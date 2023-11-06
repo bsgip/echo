@@ -291,7 +291,7 @@ class BoundedPort(FlexPort):
         # Set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
-        set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
+        set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=ub_dict, lb=lb_dict)
 
 
 class BoundedLoad(BoundedPort):

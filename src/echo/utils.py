@@ -5,6 +5,7 @@ import numpy as np
 import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
+from pyomo.core.base.var import IndexedVar
 from sklearn import linear_model
 
 from echo.exceptions import validate
@@ -127,14 +128,14 @@ def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[f
     Returns:
         None
     """
-    v = getattr(model, var_name)
+    var = getattr(model, var_name)
     if lb is not None:
-        v.setlb(lb)
+        var.setlb(lb)
     if ub is not None:
-        v.setub(ub)
+        var.setub(ub)
 
 
-def set_var_bounds_from_dict(var, ub: Optional[dict], lb: Optional[dict]) -> None:
+def set_var_bounds_from_dict(model: EchoConcreteModel, var_name: str, ub: Optional[dict], lb: Optional[dict]) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
     Args:
@@ -144,6 +145,7 @@ def set_var_bounds_from_dict(var, ub: Optional[dict], lb: Optional[dict]) -> Non
     Returns:
         None
     """
+    var = getattr(model, var_name)
     if lb is not None:
         for k, i in lb.items():
             var[k].setlb(i)

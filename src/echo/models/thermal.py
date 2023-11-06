@@ -114,7 +114,7 @@ class ThermalNode(Node):
         # Create temperature variable
         setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
         # Bound temp variable to be within range
-        set_var_bounds_from_dict(var=getattr(model, self.internal_temp), ub=self.temp_ub, lb=self.temp_lb)
+        set_var_bounds_from_dict(model=model, var_name=self.internal_temp, ub=self.temp_ub, lb=self.temp_lb)
 
     def loss_and_gain_constraints_and_variables(self, model: EchoConcreteModel):
         # Create variable for losses and gains
