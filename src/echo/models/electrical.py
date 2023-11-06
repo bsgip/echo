@@ -34,8 +34,8 @@ class ElectricalGeneration(Source):
     ):
         self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(ElectricalGeneration, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(ElectricalGeneration, self).add_port_to_model(model, profile)
         if self.curtailable is False:
             getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
         else:

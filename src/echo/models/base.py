@@ -334,7 +334,7 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
         )
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         """Creates pyomo vars, params, and constraints for the port."""
         self._add_flow_variable_to_model(model=model, profile=profile)
 
@@ -515,7 +515,7 @@ class Node(BaseModel):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
             port.verify_port()
-            port.initialise_port(model, profile)
+            port.add_port_to_model(model, profile)
 
     def add_objective(self, model: EchoConcreteModel):
         total = 0
