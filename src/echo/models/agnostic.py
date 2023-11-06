@@ -184,8 +184,8 @@ class ControlledLoadOrGen(FlexPort):
     min_power: Optional[float] = None
     units: Units = Units.KW
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(ControlledLoadOrGen, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(ControlledLoadOrGen, self).add_port_to_model(model, profile)
 
         # Set bounds using min and max power
         set_float_var_bounds(model=model, var_name=self.port_name, ub=self.max_power, lb=self.min_power)
@@ -263,8 +263,8 @@ class OffOrConstrainedPort(FlexPort):
     def active(self):
         return "active_" + self.port_name
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(OffOrConstrainedPort, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(OffOrConstrainedPort, self).add_port_to_model(model, profile)
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
@@ -286,8 +286,8 @@ class BoundedPort(FlexPort):
 
     bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedPort, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(BoundedPort, self).add_port_to_model(model, profile)
         # Set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
@@ -303,8 +303,8 @@ class BoundedLoad(BoundedPort):
     upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
     lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedLoad, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(BoundedLoad, self).add_port_to_model(model, profile)
 
 
 class Storage(Port):
@@ -345,8 +345,8 @@ class Storage(Port):
         self.import_constraint_value = self.charging_power_limit
         self.export_constraint_value = self.discharging_power_limit
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(Storage, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
         self.apply_soc_constraints(model)
 
@@ -475,8 +475,8 @@ class MobileStorage(Storage):
             validate(available is not None, "soc_conserve requires available")
         return values
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(Storage, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
         self.apply_modified_soc_constraints(model)
         self.apply_conserv_soc_constraints(model)
