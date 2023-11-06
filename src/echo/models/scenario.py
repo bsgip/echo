@@ -17,12 +17,21 @@ class ScenarioSettings:
 
 @dataclass
 class EngineSettings:
-    """High level settings for the underlying optimisation engine"""
+    """High level settings for the underlying optimisation engine
+
+    Args:
+        engine: the name (str) of the optimiser e.g. "cplex"
+        engine_executable: the path to the executable (str). An empty string causes echo
+            to try to determine the path to the solver.
+        smallM: small bias value (float). A small fudge factor for reducing the size
+            of the solution set and achieving a unique optimisation solution.
+        bigM: big bias value (int). A bigM value for integer optimisation
+    """
 
     engine: str
     engine_executable: str
-    smallM: float  # A small fudge factor for reducing the size of the solution set and achieving a unique solution
-    bigM: int  # A bigM value for integer optimisation
+    smallM: float
+    bigM: int
 
 
 class EchoConcreteModel(ConcreteModel):
