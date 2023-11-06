@@ -229,7 +229,7 @@ def build_model_and_objective(
 
     # Add objectives defined in the objective set
     if objective_set is not None:
-        objective_set.initialise_objective(model, profile)
+        objective_set.add_objectives_to_model(model, profile)
         objective += objective_set.get_objective_total(model)
 
     # Add any other costs that are defined on graph nodes/ports/paths
