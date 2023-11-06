@@ -216,7 +216,7 @@ def build_model_and_objective(
 
     # Initialise paths
     for _, path in graph.paths.items():
-        path.initialise_path(model)
+        path.add_path_to_model(model)
 
     # Apply constraints
     for _, obj in graph.node_obj.items():
