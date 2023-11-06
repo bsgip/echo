@@ -207,7 +207,7 @@ def build_model_and_objective(
     # Initialise node variables/params and add node constraints
     for _, node_obj in graph.node_obj.items():
         node_obj.verify_node()
-        node_obj.initialise_node(model, profile)
+        node_obj.add_node_to_model(model, profile)
 
     # Initialise edge variables/params and add edge constraints
     for _, edge_obj in graph.edge_obj.items():

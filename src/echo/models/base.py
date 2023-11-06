@@ -512,7 +512,7 @@ class Node(BaseModel):
         if bool(self.ports) is False:
             raise ConfigurationError("A node must have at least one port.")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
         for port in self.ports.values():
             port.verify_port()
             port.initialise_port(model, profile)

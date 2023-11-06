@@ -267,8 +267,8 @@ class EV(TransformNode):
             )
         validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(EV, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(EV, self).add_node_to_model(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
             vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
@@ -328,8 +328,8 @@ class Inverter(Node):
         named_ports = [self.ac_port_name] + self.dc_port_names
         validate(set(all_port_names) == set(named_ports), "All ports on inverter must be ac or dc.")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(Inverter, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(Inverter, self).add_node_to_model(model, profile)
 
         ac_port = self.ports[self.ac_port_name]
         # Split ac port into pos/neg, so we can apply the correct efficiencies

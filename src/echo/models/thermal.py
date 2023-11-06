@@ -104,8 +104,8 @@ class ThermalNode(Node):
         self.losses = "losses_" + self.node_name
         self.gains = "gains_" + self.node_name
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(ThermalNode, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(ThermalNode, self).add_node_to_model(model, profile)
         self.create_and_bound_temp_vars(model)
         self.loss_and_gain_constraints_and_variables(model)
         self.apply_energy_balance_constraint(model)
@@ -239,8 +239,8 @@ class HeatPump(Node):
         self.heat_in = "heat_in_" + self.node_name
         self.cool_in = "cool_in_" + self.node_name
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(HeatPump, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(HeatPump, self).add_node_to_model(model, profile)
 
         # Create variables for attributing the input to either heating or cooling
         setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
@@ -333,8 +333,8 @@ class HeatPumpSingleOutput(HeatPump):
         # Create output port
         self.ports["output"] = FlexPort(units=Units.KWT)
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(HeatPumpSingleOutput, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(HeatPumpSingleOutput, self).add_node_to_model(model, profile)
         # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
         self.ports["output"].constrain_pos_neg(model)
 
@@ -356,8 +356,8 @@ class HeatPumpDualOutput(HeatPump):
         self.ports["heating"] = FlexSource(units=Units.KWT)
         self.ports["cooling"] = FlexSink(units=Units.KWT)
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(HeatPumpDualOutput, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(HeatPumpDualOutput, self).add_node_to_model(model, profile)
         self.ports["cooling"].constrain_pos_neg(
             model
         )  # need to do this so we have a binary variable for the constraints

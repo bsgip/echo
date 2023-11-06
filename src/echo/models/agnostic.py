@@ -633,8 +633,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         validate(self.input_pts is not None, "No input points defined")
         validate(self.output_pts is not None, "No output points defined")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(TimeVaryingPiecewiseIONode, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.input_ub, lb=self.input_lb)
         set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.output_ub, lb=self.output_lb)

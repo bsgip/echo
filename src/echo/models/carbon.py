@@ -34,8 +34,8 @@ class CarbonAggregation(Node):
     def verify_node(self):
         super(CarbonAggregation, self).verify_node()
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(CarbonAggregation, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(CarbonAggregation, self).add_node_to_model(model, profile)
         # Create a variable for the total CO2
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
