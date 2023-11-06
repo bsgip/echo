@@ -46,7 +46,7 @@ class ObjectiveSet(EchoBaseModel):
 
     objective_list: list[Objective]
 
-    def initialise_objective(self, model: EchoConcreteModel, df: Optional[pd.DataFrame] = None):
+    def add_objectives_to_model(self, model: EchoConcreteModel, df: Optional[pd.DataFrame] = None):
         for obj in self.objective_list:
             obj.verify_objective(model, df)
             obj.create_params(model, df)
