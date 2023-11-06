@@ -170,23 +170,18 @@ def validate_network_graph(graph: OptimisationGraph):
 def build_model_and_objective(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
+    smallM: en.Param,
+    bigM: en.Param,
     profile: Optional[pd.DataFrame],
     objective_set: Optional[ObjectiveSet],
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    # Set up the Pyomo model
+    # Create and set up the Pyomo model
     model = EchoConcreteModel()
+    model.smallM = smallM
+    model.bigM = bigM
     model.scenario_settings = scenario_settings
-
-    # Bias Values
-
-    # A small fudge factor for reducing the size of the solution set and
-    # achieving a unique optimisation solution
-    model.smallM = en.Param(initialize=engine_settings.smallM)
-    # A bigM value for integer optimisation
-    model.bigM = en.Param(initialize=engine_settings.bigM)
 
     # We use RangeSet to create an index for each of the time
     # periods that we will optimise within.
@@ -268,7 +263,14 @@ def optimise(
 
     validate_network_graph(graph)
 
-    (model, objective) = build_model_and_objective(graph, scenario_settings, engine_settings, profile, objective_set)
+    model, objective = build_model_and_objective(
+        graph=graph,
+        scenario_settings=scenario_settings,
+        smallM=en.Param(initialize=engine_settings.smallM),
+        bigM=en.Param(initialize=engine_settings.bigM),
+        profile=profile,
+        objective_set=objective_set,
+    )
 
     def objective_function(model: EchoConcreteModel):
         return objective
