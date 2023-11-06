@@ -89,6 +89,16 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
+    def df_objective_by_port(self, index={1}):
+        """ Sums all objectives that take the defined port as their component."""
+        dct = {}
+        for obj in self.objective_set.objective_list:
+            try:
+                dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj) / obj.weight
+            except ZeroDivisionError:
+                dct[obj.component.port_name + "-" + obj.name] = 0
+        return pd.DataFrame(dct, index=index)
+
     def values(self, variable_name, expansion=0):
         """Returns the value of a single specified variable during a single specified expansion period."""
 
