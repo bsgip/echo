@@ -700,8 +700,12 @@ class Path(BaseModel):
             vertex_list = [i.node_name for i in vertex_list]
         self.vertices = vertex_list
 
-    def initialise_path(self, model: EchoConcreteModel):
-        setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+    def add_path_to_model(self, model: EchoConcreteModel):
+        setattr(
+            model,
+            self.flow_value,
+            en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
+        )
 
     def add_objective(self, model: EchoConcreteModel):
         total = 0
