@@ -463,7 +463,7 @@ class Transform(BaseModel):
     def transform_name(self):
         return "transform_" + str(self.uid)
 
-    def initialise_transform(self, model: EchoConcreteModel):
+    def _add_transform_to_model(self, model: EchoConcreteModel):
         # Check if we need to create pos/neg components, and initialise the weights
         for term in self.lhs:
             term.weight.set_periods(len(model.Expansion), len(model.Time))
@@ -588,7 +588,7 @@ class TransformNode(Node):
             return lhs == current_transform.rhs
 
         for _, current_transform in self.transformations.items():
-            current_transform.initialise_transform(model)  # make sure that all variables have been initialised
+            current_transform._add_transform_to_model(model)  # make sure that all variables have been initialised
             con_name = "transformation_con_" + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
 
