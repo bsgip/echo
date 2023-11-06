@@ -206,21 +206,21 @@ def _build_model(graph, scenario_settings, smallM, bigM, profile):
     model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
 
     # Initialise node variables/params and add node constraints
-    for _, node_obj in graph.node_obj.items():
+    for node_obj in graph.node_obj.values():
         node_obj.verify_node()
         node_obj.add_node_to_model(model, profile)
 
     # Initialise edge variables/params and add edge constraints
-    for _, edge_obj in graph.edge_obj.items():
+    for edge_obj in graph.edge_obj.values():
         edge_obj.verify_edge()
         edge_obj.add_edge_to_model(model)
 
     # Initialise paths
-    for _, path in graph.paths.items():
+    for path in graph.paths.values():
         path.add_path_to_model(model)
 
     # Apply constraints
-    for _, obj in graph.node_obj.items():
+    for obj in graph.node_obj.values():
         obj.apply_node_constraints(model)
     if graph.paths:
         graph.apply_path_constraints(model)
@@ -242,14 +242,14 @@ def _build_objective(
         objective += objective_set.get_objective_total(model)
 
     # Add any other costs that are defined on graph nodes/ports/paths
-    for _, node_obj in graph.node_obj.items():
+    for node_obj in graph.node_obj.values():
         node_obj.add_objective(model)
         objective += node_obj.objective
-        for _, port_obj in node_obj.ports.items():
+        for port_obj in node_obj.ports.values():
             port_obj.add_objective(model)  # populate the .objective attribute for each port
             objective += port_obj.objective  # add the newly populated attribute to our total
 
-    for _, path_obj in graph.paths.items():
+    for path_obj in graph.paths.values():
         path_obj.add_objective(model)
         objective += path_obj.objective
     return objective
