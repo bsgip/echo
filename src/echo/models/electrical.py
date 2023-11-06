@@ -41,7 +41,7 @@ class ElectricalGeneration(Source):
         else:
             # Constrain solar gen to be within initial value (max value)
             getattr(model, self.port_name).unfix()
-            set_var_bounds_from_dict(getattr(model, self.port_name), lb=self.initial_value, ub=None)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
 
 
 class ElectricalStorage(Storage):

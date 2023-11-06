@@ -224,7 +224,7 @@ class Port(BaseModel):
         if self.slack:
             self._add_slack_import_constraints_to_model(model=model)
         else:
-            set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=import_constraint_dict, lb=None)
 
     def _add_slack_import_constraints_to_model(self, model: EchoConcreteModel):
         """Adds import capacity constraint with slack rules"""
@@ -289,7 +289,7 @@ class Port(BaseModel):
         if self.slack:
             self._add_slack_export_constraints_to_model(model=model)
         else:
-            set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
 
     def _add_slack_export_constraints_to_model(self, model: EchoConcreteModel):
         """Adds import capacity constraint with slack rules"""
