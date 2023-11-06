@@ -587,7 +587,7 @@ class TransformNode(Node):
                 lhs += getattr(model, var_name)[p, t] * weight[p, t]
             return lhs == current_transform.rhs
 
-        for _, current_transform in self.transformations.items():
+        for current_transform in self.transformations.values():
             current_transform._add_transform_to_model(model)  # make sure that all variables have been initialised
             con_name = "transformation_con_" + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
@@ -844,7 +844,7 @@ class OptimisationGraph(BaseModel):
     def lookup_node_names_from_port(self, port: Port) -> str:
         """Returns node name of the node that a specified port belongs to, if the port belongs to a node."""
         for node_name, node in self.node_obj.items():
-            for _, p in node.ports.items():
+            for p in node.ports.values():
                 if port == p:
                     return node_name
         raise ConfigurationError(f"Port {port.port_name} is not part of any node, or node has not been added to graph.")
@@ -869,7 +869,7 @@ class OptimisationGraph(BaseModel):
         """Returns a set that contains all source and sink nodes."""
         validate(bool(self.paths) is True, "Create paths before retrieving sources and sinks.")
         sources_or_sinks = set()
-        for _, path in self.paths.items():
+        for path in self.paths.values():
             sources_or_sinks.add(path.vertices[0])
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
@@ -945,7 +945,7 @@ class OptimisationGraph(BaseModel):
 
         def path_flow_rule(model: EchoConcreteModel, p, t):
             a = 0
-            for _, path in self.paths.items():  # Iterate through all paths in the model
+            for path in self.paths.values():  # Iterate through all paths in the model
                 if path.vertices[0] is current_node_name:  # If the path starts at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
@@ -954,7 +954,7 @@ class OptimisationGraph(BaseModel):
 
         def only_inflow_or_outflow1(model: EchoConcreteModel, p, t):
             a = 0
-            for _, path in self.paths.items():
+            for path in self.paths.values():
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
@@ -963,7 +963,7 @@ class OptimisationGraph(BaseModel):
 
         def only_inflow_or_outflow2(model: EchoConcreteModel, p, t):
             a = 0
-            for _, path in self.paths.items():
+            for path in self.paths.values():
                 if path.vertices[0] is current_node_name:  # If the path starts at the node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (

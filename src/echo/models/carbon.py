@@ -42,7 +42,7 @@ class CarbonAggregation(Node):
     def apply_node_constraints(self, model: EchoConcreteModel):
         def sum_rule(model: EchoConcreteModel, p, t):
             a = 0
-            for _, port in self.ports.items():
+            for port in self.ports.values():
                 a += getattr(model, port.port_name)[p, t]
             return getattr(model, self.total)[p, t] == a
 

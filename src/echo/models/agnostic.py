@@ -43,7 +43,7 @@ class TellegenNode(Node):
     def apply_node_constraints(self, model: EchoConcreteModel):
         def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
             a = 0
-            for _, port in node_ports.items():
+            for port in node_ports.values():
                 a += getattr(model, port.port_name)[p, t]
             return a == 0
 
