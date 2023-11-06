@@ -212,7 +212,7 @@ def build_model_and_objective(
     # Initialise edge variables/params and add edge constraints
     for _, edge_obj in graph.edge_obj.items():
         edge_obj.verify_edge()
-        edge_obj.initialise_edge(model)
+        edge_obj.add_edge_to_model(model)
 
     # Initialise paths
     for _, path in graph.paths.items():

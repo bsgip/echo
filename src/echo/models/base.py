@@ -638,7 +638,7 @@ class Edge(BaseModel):
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
             raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
 
-    def initialise_edge(self, model: EchoConcreteModel):
+    def add_edge_to_model(self, model: EchoConcreteModel):
         """Applies edge constraint: ``port1 = -1 *port2``
 
         Args:
