@@ -109,8 +109,8 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = "inlet_temp_" + self.node_name
         self.exit_t = "outlet_temp_" + self.node_name
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(TempControlledBoiler, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(TempControlledBoiler, self).add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
             model,
