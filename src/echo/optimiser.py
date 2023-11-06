@@ -96,7 +96,7 @@ class OptimisationResult:
             try:
                 dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj) / obj.weight
             except ZeroDivisionError:
-                dct[obj.component.port_name + "-" + obj.name] = 0
+                dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
         return pd.DataFrame(dct, index=index)
 
     def values(self, variable_name, expansion=0):
