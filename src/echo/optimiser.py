@@ -177,7 +177,13 @@ def build_model_and_objective(
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    # Create and set up the Pyomo model
+    model = _build_model(graph=graph, scenario_settings=scenario_settings, smallM=smallM, bigM=bigM, profile=profile)
+    objective = _build_objective(model=model, graph=graph, objective_set=objective_set, profile=profile)
+
+    return model, objective
+
+
+def _build_model(graph, scenario_settings, smallM, bigM, profile):
     model = EchoConcreteModel()
     model.smallM = smallM
     model.bigM = bigM
@@ -186,6 +192,7 @@ def build_model_and_objective(
     # We use RangeSet to create an index for each of the time
     # periods that we will optimise within.
     model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
+
     # Create index for expansion periods
     if scenario_settings.number_of_expansion_intervals == 0:
         model.Expansion = en.RangeSet(0, 0)
@@ -193,11 +200,10 @@ def build_model_and_objective(
         model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
 
     # Setup discounting
-    dr = {}
+    discount_rates = {}
     for ep in range(0, scenario_settings.number_of_expansion_intervals):
-        dr[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
-
-    model.discount_rates = en.Param(model.Expansion, initialize=dr)
+        discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
+    model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
 
     # Initialise node variables/params and add node constraints
     for _, node_obj in graph.node_obj.items():
@@ -219,7 +225,15 @@ def build_model_and_objective(
     if graph.paths:
         graph.apply_path_constraints(model)
 
-    # Build objective
+    return model
+
+
+def _build_objective(
+    model: EchoConcreteModel,
+    graph: OptimisationGraph,
+    profile: Optional[pd.DataFrame],
+    objective_set: Optional[ObjectiveSet],
+):
     objective: Union[float, en.numeric_expr.NumericExpression] = 0
 
     # Add objectives defined in the objective set
@@ -238,8 +252,7 @@ def build_model_and_objective(
     for _, path_obj in graph.paths.items():
         path_obj.add_objective(model)
         objective += path_obj.objective
-
-    return model, objective
+    return objective
 
 
 def optimise(
