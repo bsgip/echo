@@ -90,7 +90,7 @@ class OptimisationResult:
         return df
 
     def df_objective_by_port(self, index={1}):
-        """ Sums all objectives that take the defined port as their component."""
+        """ Return the value of each objective assigned to each port."""
         dct = {}
         for obj in self.objective_set.objective_list:
             dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
