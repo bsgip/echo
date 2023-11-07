@@ -54,7 +54,7 @@ class ObjectiveSet(EchoBaseModel):
             obj.apply_constraints(model)
 
     def get_objective_total(self, model: EchoConcreteModel):
-        return sum(obj.objective_expr(model) for obj in self.objective_list)
+        return sum([obj.objective_expr(model) * obj.weight for obj in self.objective_list])
 
 
 class TotalFlow(Objective):

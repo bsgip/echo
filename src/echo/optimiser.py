@@ -93,10 +93,8 @@ class OptimisationResult:
         """ Sums all objectives that take the defined port as their component."""
         dct = {}
         for obj in self.objective_set.objective_list:
-            try:
-                dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj) / obj.weight
-            except ZeroDivisionError:
-                dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
+            dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
+
         return pd.DataFrame(dct, index=index)
 
     def values(self, variable_name, expansion=0):
@@ -170,11 +168,11 @@ def validate_network_graph(graph: OptimisationGraph):
 
 
 def build_model_and_objective(
-    graph: OptimisationGraph,
-    scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
+        graph: OptimisationGraph,
+        scenario_settings: ScenarioSettings,
+        engine_settings: EngineSettings,
+        profile: Optional[pd.DataFrame],
+        objective_set: Optional[ObjectiveSet],
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
@@ -250,14 +248,14 @@ def build_model_and_objective(
 
 
 def optimise(
-    scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
-    graph: OptimisationGraph,
-    objective_set: Optional[ObjectiveSet] = None,
-    profile: Optional[pd.DataFrame] = None,
-    verbose: bool = False,
-    logfile: Optional[str] = None,
-    acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
+        scenario_settings: ScenarioSettings,
+        engine_settings: EngineSettings,
+        graph: OptimisationGraph,
+        objective_set: Optional[ObjectiveSet] = None,
+        profile: Optional[pd.DataFrame] = None,
+        verbose: bool = False,
+        logfile: Optional[str] = None,
+        acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
     using the supplied graph.
