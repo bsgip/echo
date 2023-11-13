@@ -123,13 +123,16 @@ class EV(Node):
         # EV needs a custom transformation because of the positive load convention
         self.create_ev_transformation()
 
-    def initialise_data(self, usage, available, initial_state_of_charge, interval_duration):
+    def initialise_data(self, usage, available, initial_state_of_charge, interval_duration, edge_port):
         """In-lieu of abstract models, add new timeseries-like data and reinitialise the EV object."""
         # Update the node attributes of interest
         self.usage = usage
         self.available = available
         self.initial_state_of_charge = initial_state_of_charge
         self.interval_duration = interval_duration
+        self.V0G_SOC = None
+        self.V0G_delta = None
+        self.V0G_trip_infeasibility = None
 
         # Need to update some attributes on the vehicle port too
         self.ports["vehicle"].available = self.available
@@ -144,7 +147,6 @@ class EV(Node):
                 )
 
         self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
-
         self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
 
         # Customise connection point port type based on the charge mode
@@ -160,6 +162,10 @@ class EV(Node):
             if self.charge_mode == EVChargeMode.V1G:
                 electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
 
+        # The port on the edge that connects the EV to a connection point is a copy of that port on the EV node, not a
+        # reference, so we need to set things on that too.
+        edge_port.initial_value = self.ports[self.connection_port_name].initial_value
+
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
         t = Transform()
@@ -170,6 +176,7 @@ class EV(Node):
 
     def process_V0G_charging(self, interval_duration: float):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
+
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
         if self.tod_charging is not None:
