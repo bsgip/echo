@@ -14,6 +14,7 @@ class Objective(EchoBaseModel):
     component: Union[Port, Path, None]
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: str = ""
+    weight: float = 1
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -53,7 +54,7 @@ class ObjectiveSet(EchoBaseModel):
             obj.apply_constraints(model)
 
     def get_objective_total(self, model: EchoConcreteModel):
-        return sum(obj.objective_expr(model) for obj in self.objective_list)
+        return sum([obj.objective_expr(model) * obj.weight for obj in self.objective_list])
 
 
 class TotalFlow(Objective):

@@ -89,6 +89,14 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
+    def df_objective_by_port(self, index={1}):
+        """Return the value of each objective assigned to each port."""
+        dct = {}
+        for obj in self.objective_set.objective_list:
+            dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
+
+        return pd.DataFrame(dct, index=index)
+
     def values(self, variable_name, expansion=0):
         """Returns the value of a single specified variable during a single specified expansion period."""
 
@@ -277,7 +285,7 @@ def optimise(
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
-        results: SolverResults = opt.solve(model, tee=True, symbolic_solver_labels=True)
+        results: SolverResults = opt.solve(model, tee=False, symbolic_solver_labels=True)
 
     # Extract the optimisation result
     termination_condition: TerminationCondition = results.solver.termination_condition
