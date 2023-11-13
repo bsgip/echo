@@ -8,6 +8,7 @@ import pyomo.environ as en
 from pyomo.core.base.var import IndexedVar
 from sklearn import linear_model
 
+from echo.configuration import Flows
 from echo.exceptions import validate
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
@@ -387,3 +388,16 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
                 d[(p, t)] = array[i]
                 i += 1
     return d
+
+
+def domain_from_flow(flow: Flows):
+    match flow:
+        case Flows.Both:
+            domain = en.Reals
+        case Flows.Export:
+            domain = en.NonPositiveReals
+        case Flows.Import:
+            domain = en.NonNegativeReals
+        case Flows.NA:
+            raise ValueError("Cannot add flow variable to port with flows=Flows.NA")
+    return domain

@@ -16,6 +16,7 @@ from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
     ArrayWrappableType,
+    domain_from_flow,
     expand,
     generate_array_constraint,
     set_var_bounds_from_dict,
@@ -161,28 +162,12 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def _add_flow_variable_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        time_periods = len(model.Time)
-        exp_periods = len(model.Expansion)
-        initial_value_scaling = self.initial_value_scaling or 1
-
-        domain = en.Reals
-        if self.flows is Flows.Export:
-            domain = en.NonPositiveReals
-        elif self.flows is Flows.Import:
-            domain = en.NonNegativeReals
-
-        if self.initial_value_ref is not None:
-            initial_val = to_initial_values(
-                profile, self.initial_value_ref, time_periods, exp_periods, scaling=initial_value_scaling
-            )
-        else:
-            # TODO: add scaling for explicit initial value
-            initial_val = self.initial_value
-        setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
-
-        if self.opt_type is OptimisationType.Parameter:
-            getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
+    def _add_flow_variable_to_model(self, model: EchoConcreteModel, initial_value, domain):
+        setattr(
+            model,
+            self.port_name,
+            en.Var(model.Expansion, model.Time, initialize=initial_value, domain=domain),
+        )
 
     def _add_active_period_constraints_to_model(self, model: EchoConcreteModel):
         port_active_periods = self.active_periods
@@ -334,9 +319,36 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
         )
 
+    def _determine_initial_value(self, time_periods: int, expansion_periods: int, profile: pd.DataFrame):
+        initial_value_scaling = self.initial_value_scaling or 1
+        if self.initial_value_ref is not None:
+            initial_val = to_initial_values(
+                profile,
+                self.initial_value_ref,
+                time_periods,
+                expansion_periods,
+                scaling=initial_value_scaling,
+            )
+        else:
+            # TODO: add scaling for explicit initial value
+            initial_val = self.initial_value
+        return initial_val
+
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         """Creates pyomo vars, params, and constraints for the port."""
-        self._add_flow_variable_to_model(model=model, profile=profile)
+        initial_value = self._determine_initial_value(
+            time_periods=len(model.Time), expansion_periods=len(model.Expansion), profile=profile
+        )
+
+        domain = domain_from_flow(self.flows)
+
+        # Flow is always represented with a pyomo variable.
+        # This gives us flexibility for converting it between a variable and parameter in fix/unfix
+        self._add_flow_variable_to_model(model=model, initial_value=initial_value, domain=domain)
+
+        # Convert flow variable to parameter if requested.
+        if self.opt_type is OptimisationType.Parameter:
+            getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
 
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
             self._add_import_constraints_to_model(model=model)
