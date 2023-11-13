@@ -45,7 +45,7 @@ class Port(BaseModel):
     initial_value: dict = 0
     initial_value_ref: Optional[str]  # string ref to df column
     initial_value_scaling: Optional[int]  # scaling factor for initial values
-    opt_type: OptimisationType = OptimisationType.NA
+    flow_type: OptimisationType = OptimisationType.NA
     uid: Optional[str] = Field(default_factory=shortuuid.uuid)
     port_name: str = ""
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
@@ -156,7 +156,7 @@ class Port(BaseModel):
                     "The Export flow constraint value cannot be set to None when an Export constraint exists."
                 )
 
-        if self.opt_type is OptimisationType.NA:
+        if self.flow_type is OptimisationType.NA:
             raise ConfigurationError("The Optimisation Type has to be configured before instantiation.")
 
         if self.units is Units.NA:
@@ -347,7 +347,7 @@ class Port(BaseModel):
         self._add_flow_variable_to_model(model=model, initial_value=initial_value, domain=domain)
 
         # Convert flow variable to parameter if requested.
-        if self.opt_type is OptimisationType.Parameter:
+        if self.flow_type is OptimisationType.Parameter:
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
 
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables

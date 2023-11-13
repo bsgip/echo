@@ -98,7 +98,7 @@ class FlexPort(Port):
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
+    flow_type = OptimisationType.Variable
 
 
 class FlexSink(FlexPort):
@@ -119,7 +119,7 @@ class FixedPort(Port):
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Parameter
+    flow_type = OptimisationType.Parameter
 
 
 class Source(Port):
@@ -127,7 +127,7 @@ class Source(Port):
 
     flows = Flows.Export
     export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Parameter
+    flow_type = OptimisationType.Parameter
 
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
@@ -144,7 +144,7 @@ class Sink(Port):
 
     flows = Flows.Import
     import_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Parameter
+    flow_type = OptimisationType.Parameter
 
     non_neg_check = validator("initial_value", allow_reuse=True)(
         nonnegative_load
@@ -311,7 +311,7 @@ class Storage(Port):
     """Same as old storage but without all the EV attributes"""
 
     flows = Flows.Both
-    opt_type = OptimisationType.Variable
+    flow_type = OptimisationType.Variable
     import_constraint = FlowConstraint.Fixed
     export_constraint = FlowConstraint.Fixed
     max_capacity: float
