@@ -14,11 +14,11 @@ from echo.models.prebuilt import FlexElectricalNode
 def test_port_reference_is_made_in_edge():
     """This test whether a port on a node and on an edge are references or copies.
 
-     Ideally they should be references but they are currently copies. This is a pydantic feature to make copies of
-     objects when imbedding them in new objects eg. take a port and referencing it in an edge. Trying to work
-     around this breaks pydantic philosophy. This indicates that echo needs a redesign.
+    Ideally they should be references but they are currently copies. This is a pydantic feature to make copies of
+    objects when imbedding them in new objects eg. take a port and referencing it in an edge. Trying to work
+    around this breaks pydantic philosophy. This indicates that echo needs a redesign.
 
-     This test should currently fail. When trying to fix this issue, remove the asserts from within the with block.
+    This test should currently fail. When trying to fix this issue, remove the asserts from within the with block.
 
     """
 

@@ -796,4 +796,3 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
 
 # def test_v2g_soc_conserv():
 #     pass
-
