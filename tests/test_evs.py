@@ -290,7 +290,6 @@ def test_v0g_with_stateful_data_injection():
         system.delete_edge(("cp", "ev"))
         system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
-        print(available_usages)
         # Optimise
         optimise(
             scenario_settings=ScenarioSettings(
@@ -2248,3 +2247,93 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     expected_soc_2 = np.array([4, 8, 12, 16, 26, 27, 26, 30, 15, 0])
 
     assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
+
+
+def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
+    """Check that node uid and port uids are preserved when injecting stateful data into an ev """
+
+    # Set up hyper params
+    time_periods = 96  # number of time periods to run the optimisation for
+    interval_duration = 15  # each time period is 15 mins long
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create assets
+    grid = Node(node_name="grid")  # create node representing upstream grid
+    grid.add_port(
+        "cp", FlexPort(units=Units.KW)
+    )  # create a port which will be used to connect this with the connection_point
+
+    # create the connection point (where we will sum everything up)
+    connection_point = TellegenNode(node_name="cp")
+    connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
+
+    # Create V0G vehicle
+
+    available = np.array([1] * 48 + [0] * 48)  # bool when at charger
+    usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
+
+    ev_cp = EV(
+        node_name="ev",
+        charge_mode=EVChargeMode.V0G,
+        available=available,
+        usage=usage,
+        connection_port_name="cp",
+        max_capacity=100,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-1e4,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=15.0,
+        tod_charging=False,
+        trip_slack=True,
+    )
+
+    system.add_node_obj([grid, ev_cp, connection_point])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+
+    # Define new stateful parameters
+    new_interval_duration = 30
+    new_initial_state_of_charge = 50
+    new_time_periods = 6
+
+    # Get node uid
+    old_node_uid = system.get_node("ev").uid
+
+    # Get port names and uids sets
+    old_port_names = {port_name for port_name in system.get_node("ev").ports.keys()}
+    old_port_uids = {port.uid for port in system.get_node("ev").ports.values()}
+
+    # Inject stateful data
+    system.node_obj["ev"].update(
+        available=np.array([1, 1, 0, 0, 1, 1]),
+        usage=np.array([0, 0, 10, 10, 0, 0]),
+        initial_state_of_charge=new_initial_state_of_charge,
+        interval_duration=new_interval_duration,
+    )
+
+    # Update the edge
+    system.delete_edge(("cp", "ev"))
+    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+
+    # Get node uid
+    new_node_uid = system.get_node("ev").uid
+
+    # Get port names and uids sets
+    new_port_names = {port_name for port_name in system.get_node("ev").ports.keys()}
+    new_port_uids = {port.uid for port in system.get_node("ev").ports.values()}
+
+    # Check they all equal each other
+    assert old_node_uid == new_node_uid
+    assert old_port_names == new_port_names
+    assert old_port_uids == new_port_uids
