@@ -5,7 +5,7 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, conlist, constr
 
-from echo.configuration import EVChargeMode, TransformRule, Units
+from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
@@ -35,12 +35,14 @@ class ElectricalGeneration(Source):
         self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        # Whether curtailable is set or not affect whether the flow is represented as a parameter or variable
+        # Handle that here before calling `add_port_to_model`
+        self.flow_type = OptimisationType.Variable if self.curtailable else OptimisationType.Parameter
+
         super(ElectricalGeneration, self).add_port_to_model(model, profile)
-        if self.curtailable is False:
-            getattr(model, self.port_name).fix()  # Equivalent to setting a variable to be a parameter after creation
-        else:
+
+        if self.curtailable:
             # Constrain solar gen to be within initial value (max value)
-            getattr(model, self.port_name).unfix()
             set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
 
 
