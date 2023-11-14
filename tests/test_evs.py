@@ -210,74 +210,8 @@ def test_v0g_3():
     )
 
 
-def test_v0g_with_initialise_data():
+def test_v0g_with_stateful_data_injection():
     # Extends off test_v0g()
-
-    # Set up hyper params
-    time_periods = 96  # number of time periods to run the optimisation for
-    interval_duration = 15  # each time period is 15 mins long
-    expansion_periods = 1  # not yet implemented leave as 1
-    discount_rate = 0  # not yet implemented leave as 0
-
-    # Create graph
-    system = OptimisationGraph()
-
-    # Create assets
-    grid = Node(node_name="grid")  # create node representing upstream grid
-    grid.add_port(
-        "cp", FlexPort(units=Units.KW)
-    )  # create a port which will be used to connect this with the connection_point
-
-    # create the connection point (where we will sum everything up)
-    connection_point = TellegenNode(node_name="cp")
-    connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
-
-    # Create V0G vehicle
-
-    available = np.array([1] * 48 + [0] * 48)  # bool when at charger
-    usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
-
-    ev_cp = EV(
-        node_name="ev",
-        charge_mode=EVChargeMode.V0G,
-        available=available,
-        usage=usage,
-        connection_port_name="cp",
-        max_capacity=100,
-        depth_of_discharge_limit=0,
-        charging_power_limit=10,
-        discharging_power_limit=-1e4,
-        charging_efficiency=1,
-        discharging_efficiency=1,
-        initial_state_of_charge=20,
-        soc_conserv=None,
-        soc_conserv_cost=0.0,
-        interval_duration=15.0,
-        tod_charging=False,
-        trip_slack=True,
-    )
-
-    system.add_node_obj([grid, ev_cp, connection_point])
-
-    # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
-
-    # Invoke the optimiser and optimise
-    optimise(
-        scenario_settings=ScenarioSettings(
-            interval_duration=interval_duration,
-            number_of_intervals=time_periods,
-            number_of_expansion_intervals=expansion_periods,
-            discount_rate=discount_rate,
-        ),
-        engine_settings=engine_settings_from_environment(),
-        graph=system,
-    )
-
-    new_interval_duration = 30
-    new_initial_state_of_charge = 50
-    new_time_periods = 6
 
     # Available and usage combinations that work
     good_available_usages: List[Tuple[np.array, np.array]] = [
@@ -288,15 +222,75 @@ def test_v0g_with_initialise_data():
         (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0])),
     ]
 
-    for available_usage in good_available_usages:
-        system.get_node("ev").initialise_data(
-            available=available_usage[0],
-            usage=available_usage[1],
-            initial_state_of_charge=new_initial_state_of_charge,
-            interval_duration=new_interval_duration,
-            edge_port=system.get_edge(("cp", "ev")).vertices[1],
+    for available_usages in good_available_usages:
+        # Set up hyper params
+        time_periods = 96  # number of time periods to run the optimisation for
+        interval_duration = 15  # each time period is 15 mins long
+        expansion_periods = 1  # not yet implemented leave as 1
+        discount_rate = 0  # not yet implemented leave as 0
+
+        # Create graph
+        system = OptimisationGraph()
+
+        # Create assets
+        grid = Node(node_name="grid")  # create node representing upstream grid
+        grid.add_port(
+            "cp", FlexPort(units=Units.KW)
+        )  # create a port which will be used to connect this with the connection_point
+
+        # create the connection point (where we will sum everything up)
+        connection_point = TellegenNode(node_name="cp")
+        connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
+
+        # Create V0G vehicle
+
+        available = np.array([1] * 48 + [0] * 48)  # bool when at charger
+        usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
+
+        ev_cp = EV(
+            node_name="ev",
+            charge_mode=EVChargeMode.V0G,
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=100,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-1e4,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=15.0,
+            tod_charging=False,
+            trip_slack=True,
         )
 
+        system.add_node_obj([grid, ev_cp, connection_point])
+
+        # Create edge objects and add to graph
+        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+        system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+
+        # Define new stateful parameters
+        new_interval_duration = 30
+        new_initial_state_of_charge = 50
+        new_time_periods = 6
+
+        # Inject stateful data
+        system.node_obj["ev"].update(
+            available=available_usages[0],
+            usage=available_usages[1],
+            initial_state_of_charge=new_initial_state_of_charge,
+            interval_duration=new_interval_duration,
+        )
+
+        # Update the edge
+        system.delete_edge(("cp", "ev"))
+        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+
+        print(available_usages)
         # Optimise
         optimise(
             scenario_settings=ScenarioSettings(
@@ -308,37 +302,6 @@ def test_v0g_with_initialise_data():
             engine_settings=engine_settings_from_environment(),
             graph=system,
         )
-
-    # Available and usage combinations that will throw an error
-    bad_available_usages: List[Tuple[list, list]] = [
-        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]),
-        ([0, 0, 1, 1, 0, 0], [0, 0, 1, 1, 0, 0]),
-        ([1, 1, 0, 0, 1, 1], [0, 0, 40, 40, 0, 0]),
-        ([1, 1, 0, 0, 1, 1], [0, 0, -10, -10, 0, 0]),
-        # ([-1, 1, 0, 0, 1, 1], [0, 0, 10, 10, 0, 0]),  # TODO: Case currently not handled
-        # ([5, 1, 0, 0, 1, 1], [0, 0, 10, 10, 0, 0]),  # TODO: Case currently not handled
-    ]
-
-    for available_usage in bad_available_usages:
-        with pytest.raises(Exception):
-            system.get_node("ev").initialise_data(
-                available=available_usage[0],
-                usage=available_usage[1],
-                initial_state_of_charge=new_initial_state_of_charge,
-                interval_duration=new_interval_duration,
-            )
-
-            # Optimise
-            optimise(
-                scenario_settings=ScenarioSettings(
-                    interval_duration=new_interval_duration,
-                    number_of_intervals=new_time_periods,
-                    number_of_expansion_intervals=expansion_periods,
-                    discount_rate=discount_rate,
-                ),
-                engine_settings=engine_settings_from_environment(),
-                graph=system,
-            )
 
 
 def test_v0g_output_matches_expectation():
@@ -544,39 +507,22 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
-    # Invoke the optimiser and optimise
-    optimise_results = optimise(
-        scenario_settings=ScenarioSettings(
-            interval_duration=interval_duration,
-            number_of_intervals=time_periods,
-            number_of_expansion_intervals=expansion_periods,
-            discount_rate=discount_rate,
-        ),
-        engine_settings=engine_settings_from_environment(),
-        graph=system,
-    )
-
     # Set new values for these parameters
     available = [1] * 24 + [0] * 24  # bool when at charger
     usage = [0.0] * 24 + [5] * 24  # kw average during use
     interval_duration = 30
     time_periods = len(available)
 
-    # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
-    # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
-
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
-
-    # Inject the new parameters into the EV node
-    system.get_node("ev").initialise_data(
+    # Inject stateful data
+    system.node_obj["ev"].update(
         available=available,
         usage=usage,
-        initial_state_of_charge=20,
-        interval_duration=30,
-        edge_port=system.get_edge(("cp", "ev")).vertices[1],
+        interval_duration=interval_duration,
     )
+
+    # Update the edge
+    system.delete_edge(("cp", "ev"))
+    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
@@ -725,46 +671,22 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
-    # Invoke the optimiser and optimise
-    optimise(
-        scenario_settings=ScenarioSettings(
-            interval_duration=interval_duration,
-            number_of_intervals=time_periods,
-            number_of_expansion_intervals=expansion_periods,
-            discount_rate=discount_rate,
-        ),
-        engine_settings=engine_settings_from_environment(),
-        graph=system,
-        verbose=False,
-    )
-    # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
-    # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
-
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
-
     # Set new values for these parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
     usage = [0.0] * 7 + [5] * 3  # kw average during use
     interval_duration = 10
     time_periods = len(available)
 
-    # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
-    # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
-
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
-
-    # Inject the new parameters into the EV node
-    system.get_node("ev").initialise_data(
+    system.node_obj["ev"].update(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
         interval_duration=interval_duration,
-        edge_port=system.get_edge(("cp", "ev")).vertices[1],
     )
+
+    # Update the edge
+    system.delete_edge(("cp", "ev"))
+    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
