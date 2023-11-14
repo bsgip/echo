@@ -1022,7 +1022,8 @@ class OptimisationGraph(BaseModel):
             labels (dict): Optional way of supplying node labels as a dictionary of labels (strings) keyed by node.
                 Default = None.
             **kwargs: Optional keyword arguments for customising the drawing of the network.
-                See https://networkx.org/documentation/stable/reference/generated/networkx.drawing.nx_pylab.draw_networkx.html for more information.
+                See https://networkx.org/documentation/stable/reference/generated/networkx.drawing.nx_pylab.draw_networkx.html  # noqa: E501
+                for more information.
 
         Examples:
             The following example shows how to draw an already created OptimisationGraph with the name `network`

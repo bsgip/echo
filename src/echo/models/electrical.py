@@ -6,7 +6,7 @@ import pyomo.environ as en
 from pydantic import Field, conlist, constr
 
 from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
-from echo.exceptions import ConfigurationError, validate
+from echo.exceptions import validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
