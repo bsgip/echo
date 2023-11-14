@@ -75,12 +75,12 @@ class TotalImportFlow(Objective):
     minimise: bool = True
 
     def apply_constraints(self, model: EchoConcreteModel):
-        if hasattr(model, self.component.neg) is False:
+        if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
     def objective_expr(self, model: EchoConcreteModel):
-        sign = -1 if self.minimise else 1
-        return sign * sum(getattr(model, self.component.neg)[p, t] for p in model.Expansion for t in model.Time)
+        sign = 1 if self.minimise else -1
+        return sign * sum(getattr(model, self.component.pos)[p, t] for p in model.Expansion for t in model.Time)
 
 
 class TotalExportFlow(Objective):
@@ -95,4 +95,4 @@ class TotalExportFlow(Objective):
 
     def objective_expr(self, model: EchoConcreteModel):
         sign = -1 if self.minimise else 1
-        return sign * sum(getattr(model, self.component.pos)[p, t] for p in model.Expansion for t in model.Time)
+        return sign * sum(getattr(model, self.component.neg)[p, t] for p in model.Expansion for t in model.Time)
