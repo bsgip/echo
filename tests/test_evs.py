@@ -1561,9 +1561,15 @@ def test_v1g_with_objective():
     solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
@@ -1667,9 +1673,15 @@ def test_v1g_with_load_with_objective():
     solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
@@ -1774,9 +1786,15 @@ def test_v2g_with_load_with_objective():
     solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
@@ -1885,9 +1903,15 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
@@ -1994,9 +2018,15 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     solar.ports["solar_to_inverter"].curtailable = False
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
@@ -2121,9 +2151,15 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     solar.ports["solar_to_inverter"].curtailable = False
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
