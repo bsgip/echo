@@ -1,4 +1,4 @@
-from typing import Optional, Union, cast
+from typing import Optional, Dict, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -87,6 +87,8 @@ class EV(Node):
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
     charge_status: Optional[str]
 
+    port_name_to_port_uid_map: Optional[Dict[str, str]] = None
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
@@ -98,23 +100,54 @@ class EV(Node):
                     )
                 )
 
-        vehicle = MobileElectricalStorage(**data)
+        # Initialise port_name_to_port_uid_map
+        if self.port_name_to_port_uid_map is None:
+            self.port_name_to_port_uid_map = dict()
+
+        # Preserve uid if present on port
+        if "vehicle" in self.port_name_to_port_uid_map.keys():
+            vehicle = MobileElectricalStorage(
+                uid=self.port_name_to_port_uid_map["vehicle"],
+                **{k: v for k, v in data.items() if k != "uid"},
+            )
+        else:
+            vehicle = MobileElectricalStorage(**data)
+
         vehicle.enable_trip_slack = self.trip_slack  # Apply trip slack
         self.ports["vehicle"] = vehicle  # EV always has a storage port
 
-        usage_port = ElectricalDemand()
+        # Preserve uid if present on port
+        if "usage" in self.port_name_to_port_uid_map.keys():
+            usage_port = ElectricalDemand(
+                uid=self.port_name_to_port_uid_map["usage"],
+                **{k: v for k, v in data.items() if k != "uid"},
+            )
+        else:
+            usage_port = ElectricalDemand()
+
         usage_port.add_demand_profile_from_array(self.usage, expansion_periods=1)
         self.ports["usage"] = usage_port  # EV always has a fixed trip port
+
         # Customise connection point port type based on the charge mode
         if self.charge_mode == EVChargeMode.V0G:
             self.trip_slack = True  # Set slack to true
             vehicle.enable_trip_slack = self.trip_slack
-            electrical_demand = ElectricalDemand()
+            if self.connection_port_name in self.port_name_to_port_uid_map.keys():
+                electrical_demand = ElectricalDemand(
+                    uid=self.port_name_to_port_uid_map[self.connection_port_name],
+                    **{k: v for k, v in data.items() if k != "uid"},
+                )
+
+            else:
+                electrical_demand = ElectricalDemand()
             self.ports[self.connection_port_name] = electrical_demand
             self.process_V0G_charging(self.interval_duration)
             electrical_demand.add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
-            electrical_port = ElectricalPort()
+            if self.connection_port_name in self.port_name_to_port_uid_map.keys():
+                electrical_port = ElectricalPort(uid=self.port_name_to_port_uid_map[self.connection_port_name])
+            else:
+                electrical_port = ElectricalPort()
             electrical_port.add_active_periods_from_array(self.available, expansion_periods=1)
             self.ports[self.connection_port_name] = electrical_port
             if self.charge_mode == EVChargeMode.V1G:
@@ -123,9 +156,14 @@ class EV(Node):
         # EV needs a custom transformation because of the positive load convention
         self.create_ev_transformation()
 
+        # Set port_name_to_port_uid_map
+        if len(self.port_name_to_port_uid_map.keys()) == 0:
+            self.port_name_to_port_uid_map = {port_name: port.uid for port_name, port in self.ports.items()}
+
     def update(self, usage=None, available=None, initial_state_of_charge=None, interval_duration=None):
         self.__init__(
             node_name=self.node_name,
+            uid=self.uid,
             charge_mode=self.charge_mode,
             available=available if available is not None else self.available,
             usage=usage if usage is not None else self.usage,
@@ -144,6 +182,7 @@ class EV(Node):
             trip_slack=self.trip_slack,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
+            port_name_to_port_uid_map=self.port_name_to_port_uid_map,
         )
 
     def create_ev_transformation(self):
