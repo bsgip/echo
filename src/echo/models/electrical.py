@@ -123,48 +123,28 @@ class EV(Node):
         # EV needs a custom transformation because of the positive load convention
         self.create_ev_transformation()
 
-    def initialise_data(self, usage, available, initial_state_of_charge, interval_duration, edge_port):
-        """In-lieu of abstract models, add new timeseries-like data and reinitialise the EV object."""
-        # Update the node attributes of interest
-        self.usage = usage
-        self.available = available
-        self.initial_state_of_charge = initial_state_of_charge
-        self.interval_duration = interval_duration
-        self.V0G_SOC = None
-        self.V0G_delta = None
-        self.V0G_trip_infeasibility = None
-
-        # Need to update some attributes on the vehicle port too
-        self.ports["vehicle"].available = self.available
-        self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
-
-        for i in self.usage:
-            if i > self.discharging_power_limit * -1:
-                raise ValueError(
-                    "Usage requirement of {} exceeds battery discharge limit of {}.".format(
-                        i, self.discharging_power_limit
-                    )
-                )
-
-        self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
-        self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
-
-        # Customise connection point port type based on the charge mode
-        if self.charge_mode == EVChargeMode.V0G:
-            self.trip_slack = True  # Set slack to true
-            self.ports["vehicle"].enable_trip_slack = self.trip_slack
-            self.process_V0G_charging(self.interval_duration)
-            self.ports[self.connection_port_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
-        else:
-            electrical_port = ElectricalPort()
-            electrical_port.add_active_periods_from_array(self.available, expansion_periods=1)
-            self.ports[self.connection_port_name] = electrical_port
-            if self.charge_mode == EVChargeMode.V1G:
-                electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
-
-        # The port on the edge that connects the EV to a connection point is a copy of that port on the EV node, not a
-        # reference, so we need to set things on that too.
-        edge_port.initial_value = self.ports[self.connection_port_name].initial_value
+    def update(self, usage=None, available=None, initial_state_of_charge=None, interval_duration=None):
+        self.__init__(
+            node_name=self.node_name,
+            charge_mode=self.charge_mode,
+            available=available if available is not None else self.available,
+            usage=usage if usage is not None else self.usage,
+            connection_port_name=self.connection_port_name,
+            tod_charging=self.tod_charging,
+            interval_duration=interval_duration if interval_duration is not None else self.interval_duration,
+            max_capacity=self.max_capacity,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            charging_efficiency=self.charging_efficiency,
+            discharging_efficiency=self.discharging_efficiency,
+            initial_state_of_charge=initial_state_of_charge
+            if initial_state_of_charge is not None
+            else self.initial_state_of_charge,
+            trip_slack=self.trip_slack,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+        )
 
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
