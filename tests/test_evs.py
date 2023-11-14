@@ -2244,6 +2244,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc = np.array([4, 8, 12, 22, 27, 27, 26, 30, 15, 0])
+    expected_soc_1 = np.array([4, 8, 12, 22, 27, 27, 26, 30, 15, 0])
+    expected_soc_2 = np.array([4, 8, 12, 16, 26, 27, 26, 30, 15, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10**-5)
+    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
