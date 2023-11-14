@@ -48,9 +48,9 @@ class Solar(Node):
         super().__init__(**data)
         self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
         if type(profile) is dict:
-            self.ports[port_name].add_initial_value(profile)
+            self.ports[port_name].set_initial_value(profile)
         else:
-            self.ports[port_name].add_initial_value_from_array(profile)
+            self.ports[port_name].set_initial_value_from_array(profile)
 
 
 class NewSolar(Node):
@@ -68,9 +68,9 @@ class Load(Node):
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)
         if type(profile) is dict:
-            self.ports[port_name].add_initial_value(profile)
+            self.ports[port_name].set_initial_value(profile)
         else:
-            self.ports[port_name].add_initial_value_from_array(profile)
+            self.ports[port_name].set_initial_value_from_array(profile)
 
 
 class FlexNode(Node):

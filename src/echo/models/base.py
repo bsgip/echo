@@ -129,11 +129,11 @@ class Port(BaseModel):
 
     def process_initial_value(self, initial_val, expansion_periods: int = 1, time_periods: Optional[int] = None):
         if isinstance(initial_val, dict):
-            self.add_initial_value(initial_val)
+            self.set_initial_value(initial_val)
         elif isinstance(initial_val, str):
             self.initial_value_ref = initial_val
         elif hasattr(initial_val, "__iter__"):
-            self.add_initial_value_from_array(initial_val, expansion_periods, time_periods)
+            self.set_initial_value_from_array(initial_val, expansion_periods, time_periods)
 
     def verify_port(self):
         """Used to verify that a port has been set up appropriately"""
@@ -307,17 +307,17 @@ class Port(BaseModel):
 
         return constraint
 
-    def add_initial_value(self, initial_value: dict):
-        """Adds initial port value which will be used to initialise the pyomo var/param
+    def set_initial_value(self, initial_value: dict):
+        """Sets initial port value which will be used to initialise the pyomo var/param
         Args:
             initial_value: dict of initial values
         """
         self.initial_value = initial_value
 
-    def add_initial_value_from_array(
+    def set_initial_value_from_array(
         self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
-        """Adds initial port value which is used to initialise the pyomo var/param
+        """Sets initial port value which is used to initialise the pyomo var/param
 
         Args:
             array: array, list of initial values. Should have either: length = time_periods,
@@ -325,10 +325,10 @@ class Port(BaseModel):
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
-        self.add_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
+        self.set_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
 
-    def add_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
-        """Adds port active periods
+    def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
+        """Sets port active periods
         Args:
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)

@@ -133,10 +133,10 @@ class Source(Port):
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
     def add_source_profile(self, source_values: dict):
-        self.add_initial_value(source_values)
+        self.set_initial_value(source_values)
 
     def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.add_initial_value_from_array(source_values, expansion_periods, time_periods)
+        self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
 
 
 class Sink(Port):
@@ -151,22 +151,22 @@ class Sink(Port):
     )  # Sink should have non negative initial values
 
     def add_sink_profile(self, sink_values: dict):
-        self.add_initial_value(sink_values)
+        self.set_initial_value(sink_values)
 
     def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.add_initial_value_from_array(
+        self.set_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )
 
 
 class Demand(Sink):
     def add_demand_profile(self, demand: dict):
-        self.add_initial_value(demand)
+        self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
         self, demand: ArrayWrappableType, expansion_periods=1, time_periods: Optional[int] = None
     ):
-        self.add_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
+        self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
 class ControlledLoadOrGen(FlexPort):
