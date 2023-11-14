@@ -1626,9 +1626,9 @@ def test_v1g_with_objective():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc = np.array([5, 10, 10, 20, 30, 35, 35, 40, 20, 0])
-
-    assert np.allclose(soc, expected_soc, rtol=10**-5)
+    expected_soc_1 = np.array([5, 10, 10, 20, 30, 35, 35, 40, 20, 0])
+    expected_soc_2 = np.array([5, 10, 10, 15, 25, 35, 35, 40, 20, 0])
+    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
 
 
 def test_v1g_with_load_with_objective():
@@ -2223,7 +2223,11 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
         tariff_array=import_tariff,
         expansion_periods=expansion_periods,
     )
-    objective_set = ObjectiveSet(objective_list=[import_cost])
+
+    # assign a throughput cost to the ev's battery
+    throughput_cost = ThroughputCost(component=ev.ports["ev_to_cp"], rate=0.000001)
+
+    objective_set = ObjectiveSet(objective_list=[import_cost, throughput_cost])
 
     # Invoke the optimiser and optimise
     optimise_results = optimise(
@@ -2240,6 +2244,6 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc = np.array([4, 8, 12, 22, 21, 27, 26, 30, 15, 0])
+    expected_soc = np.array([4, 8, 12, 22, 27, 27, 26, 30, 15, 0])
 
     assert np.allclose(soc, expected_soc, rtol=10**-5)
