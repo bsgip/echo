@@ -27,12 +27,12 @@ class ElectricalGeneration(Source):
     curtailable: bool = False
 
     def add_generation_profile(self, generation: dict):
-        self.add_initial_value(generation)
+        self.set_initial_value(generation)
 
     def add_generation_profile_from_array(
         self, generation: ArrayType, expansion_periods=1, time_periods: Optional[int] = None
     ):
-        self.add_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
+        self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(ElectricalGeneration, self).initialise_port(model, profile)

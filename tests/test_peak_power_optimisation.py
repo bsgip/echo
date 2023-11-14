@@ -92,7 +92,7 @@ def test_peak_negative_power_objective():
     load1 = Node()
     l1 = ElectricalPort()
     l1.opt_type = OptimisationType.Parameter
-    l1.add_initial_value_from_array([-2.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
+    l1.set_initial_value_from_array([-2.0] * 6 + [2.0] * (N_INTERVALS - 6), expansion_periods)
     load1.ports["demand"] = l1
 
     site1 = TellegenNode()

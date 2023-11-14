@@ -89,7 +89,7 @@ connection_point.add_ports_from_list(["load", "bess", "pv", "grid"], FlexPort, u
 
 load = Node()
 l1 = FixedElectricalPort()
-l1.add_initial_value_from_array(aggregate_load, expansion_periods)
+l1.set_initial_value_from_array(aggregate_load, expansion_periods)
 load.ports["load"] = l1
 
 battery = Node()
