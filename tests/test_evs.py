@@ -2250,7 +2250,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
 
 def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
-    """Check that node uid and port uids are preserved when injecting stateful data into an ev """
+    """Check that node uid and port uids are preserved when injecting stateful data into an ev"""
 
     # Set up hyper params
     time_periods = 96  # number of time periods to run the optimisation for
