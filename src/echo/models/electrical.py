@@ -153,7 +153,7 @@ class EV(TransformNode):
                 )
             else:
                 electrical_port = ElectricalPort()
-            electrical_port.add_active_periods_from_array(self.available, expansion_periods=1)
+            electrical_port.set_active_periods_from_array(self.available, expansion_periods=1)
             self.ports[self.connection_port_name] = electrical_port
             if self.charge_mode == EVChargeMode.V1G:
                 electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
