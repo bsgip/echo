@@ -5,7 +5,6 @@ import numpy as np
 import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.base.var import IndexedVar
 from sklearn import linear_model
 
 from echo.configuration import Flows
