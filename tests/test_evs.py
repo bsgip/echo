@@ -1537,7 +1537,7 @@ def test_v1g_with_objective():
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, 0, 0, 0, 0, 0, -5, -5, -5]  # kw load
-    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+    import_tariff = [9, 10, 11, 1, 2, 3, 8, 9, 10, 11]  # $/kw
     interval_duration = 60
     time_periods = len(available)
     expansion_periods = 1  # not yet implemented leave as 1
@@ -1625,9 +1625,9 @@ def test_v1g_with_objective():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc_1 = np.array([5, 10, 10, 20, 30, 35, 35, 40, 20, 0])
-    expected_soc_2 = np.array([5, 10, 10, 15, 25, 35, 35, 40, 20, 0])
-    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
+    expected_soc = np.array([5, 10, 10, 20, 30, 35, 35, 40, 20, 0])
+
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 def test_v1g_with_load_with_objective():
@@ -2123,7 +2123,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     initial_state_of_charge = 0
     solar_data = [-5, -5, -5, -5, 0, 0, 0, -5, -5, -5]  # kw generated
     load_data = [1] * 10  # [10, 10, 5, 5, 10, 10, 5, 5, 10, 10] # kw load
-    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+    import_tariff = [11, 10, 19, 1, 2, 3, 11, 10, 9, 8]  # $/kw
     interval_duration = 60
     time_periods = len(available)
     expansion_periods = 1  # not yet implemented leave as 1
@@ -2242,10 +2242,9 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc_1 = np.array([4, 8, 12, 22, 27, 27, 26, 30, 15, 0])
-    expected_soc_2 = np.array([4, 8, 12, 16, 26, 27, 26, 30, 15, 0])
+    expected_soc_1 = np.array([4, 8, 12, 22, 28, 27, 26, 30, 15, 0])
 
-    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
+    assert np.allclose(soc, expected_soc_1, rtol=10**-5)
 
 
 def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
