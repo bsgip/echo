@@ -87,7 +87,8 @@ class EV(Node):
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
     charge_status: Optional[str]
 
-    port_name_to_port_uid_map: Optional[Dict[str, str]] = None
+    port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
+    port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -101,14 +102,19 @@ class EV(Node):
                 )
 
         # Initialise port_name_to_port_uid_map
-        if self.port_name_to_port_uid_map is None:
-            self.port_name_to_port_uid_map = dict()
+        if self.port_dict_name_to_port_uid_map is None:
+            self.port_dict_name_to_port_uid_map = dict()
 
-        # Preserve uid if present on port
-        if "vehicle" in self.port_name_to_port_uid_map.keys():
+        # Initialise port_name_to_port_uid_map
+        if self.port_dict_name_to_port_name_map is None:
+            self.port_dict_name_to_port_name_map = dict()
+
+        # Preserve uid and port_name if present on port
+        if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
             vehicle = MobileElectricalStorage(
-                uid=self.port_name_to_port_uid_map["vehicle"],
-                **{k: v for k, v in data.items() if k != "uid"},
+                uid=self.port_dict_name_to_port_uid_map["vehicle"],
+                port_name=self.port_dict_name_to_port_name_map["vehicle"],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
             )
         else:
             vehicle = MobileElectricalStorage(**data)
@@ -117,10 +123,11 @@ class EV(Node):
         self.ports["vehicle"] = vehicle  # EV always has a storage port
 
         # Preserve uid if present on port
-        if "usage" in self.port_name_to_port_uid_map.keys():
+        if "usage" in self.port_dict_name_to_port_uid_map.keys():
             usage_port = ElectricalDemand(
-                uid=self.port_name_to_port_uid_map["usage"],
-                **{k: v for k, v in data.items() if k != "uid"},
+                uid=self.port_dict_name_to_port_uid_map["usage"],
+                port_name=self.port_dict_name_to_port_name_map["usage"],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
             )
         else:
             usage_port = ElectricalDemand()
@@ -132,10 +139,11 @@ class EV(Node):
         if self.charge_mode == EVChargeMode.V0G:
             self.trip_slack = True  # Set slack to true
             vehicle.enable_trip_slack = self.trip_slack
-            if self.connection_port_name in self.port_name_to_port_uid_map.keys():
+            if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
                 electrical_demand = ElectricalDemand(
-                    uid=self.port_name_to_port_uid_map[self.connection_port_name],
-                    **{k: v for k, v in data.items() if k != "uid"},
+                    uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                    port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+                    **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
                 )
 
             else:
@@ -144,8 +152,11 @@ class EV(Node):
             self.process_V0G_charging(self.interval_duration)
             electrical_demand.add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
-            if self.connection_port_name in self.port_name_to_port_uid_map.keys():
-                electrical_port = ElectricalPort(uid=self.port_name_to_port_uid_map[self.connection_port_name])
+            if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+                electrical_port = ElectricalPort(
+                    uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                    port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+                )
             else:
                 electrical_port = ElectricalPort()
             electrical_port.add_active_periods_from_array(self.available, expansion_periods=1)
@@ -156,11 +167,21 @@ class EV(Node):
         # EV needs a custom transformation because of the positive load convention
         self.create_ev_transformation()
 
-        # Set port_name_to_port_uid_map
-        if len(self.port_name_to_port_uid_map.keys()) == 0:
-            self.port_name_to_port_uid_map = {port_name: port.uid for port_name, port in self.ports.items()}
+        # Set port_dict_name_to_port_uid_map
+        if len(self.port_dict_name_to_port_uid_map.keys()) == 0:
+            self.port_dict_name_to_port_uid_map = {port_name: port.uid for port_name, port in self.ports.items()}
 
-    def update(self, usage=None, available=None, initial_state_of_charge=None, interval_duration=None):
+        # Set port_dict_name_to_port_name_map
+        if len(self.port_dict_name_to_port_name_map.keys()) == 0:
+            self.port_dict_name_to_port_name_map = {port_name: port.port_name for port_name, port in self.ports.items()}
+
+    def update(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
         self.__init__(
             node_name=self.node_name,
             uid=self.uid,
@@ -182,7 +203,8 @@ class EV(Node):
             trip_slack=self.trip_slack,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
-            port_name_to_port_uid_map=self.port_name_to_port_uid_map,
+            port_dict_name_to_port_uid_map=self.port_dict_name_to_port_uid_map,
+            port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
         )
 
     def create_ev_transformation(self):
