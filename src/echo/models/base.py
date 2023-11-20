@@ -632,6 +632,9 @@ class Node(BaseModel):
     def num_ports(self):
         return len(self.ports)
 
+    def get_port_name_to_port_dict_name_map(self):
+        return {port.port_name: port_dict_name for port_dict_name, port in self.ports.items()}
+
 
 class Edge(BaseModel):
     """
@@ -1107,3 +1110,61 @@ class OptimisationGraph(BaseModel):
         G2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
 
         return G1, G2
+
+    def inject_data_into_ev(
+        self,
+        node_name: str,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        """Injects stateful data into an EV node in an OptimisationGraph.
+
+        This is a convenience method to be used for networks constructed by MESNetwork.to_echo(). It will update
+        all data in the relevant node and edges through re-initialisation of nodes, and delete and recreated of
+        the edge.
+
+        Args:
+            node_name: The node_name of the EV to have stateful data injected.
+            available: The avability data of the EV to be injected.
+            usage: The usage data of the EV to be injected.
+            initial_state_of_charge: The initial state of charge of the EV to be injected.
+            interval_duration: The interval duration of the EV to be injected.
+
+        Returns:
+            None
+
+        """
+        # Update the edge associated with the EV
+        ev_edge = None
+        for edge in self.edge_list():
+            if node_name in edge:
+                ev_edge = edge
+                edge_node_1_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[0])
+                edge_node_2_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[1])
+                edge_node_1_port_name = self.get_edge(edge).vertices[0].port_name
+                edge_node_2_port_name = self.get_edge(edge).vertices[1].port_name
+
+        if ev_edge is None:
+            raise ValueError(f"No edges contain node: {node_name}")
+
+        # Inject stateful data
+        self.get_node(node_name).update(
+            available=available,
+            usage=usage,
+            initial_state_of_charge=initial_state_of_charge,
+            interval_duration=interval_duration,
+        )
+
+        # Get the correct port objects to build a new edge
+        node1 = self.node_obj[edge_node_1_name]
+        node2 = self.node_obj[edge_node_2_name]
+        edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
+        edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
+        port1 = node1.ports[edge_node_1_port_dict_name]
+        port2 = node2.ports[edge_node_2_port_dict_name]
+
+        # Update the edge
+        self.delete_edge(ev_edge)
+        self.connect_ports_and_create_edge(port1, port2)
