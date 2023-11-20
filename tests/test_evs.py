@@ -2337,3 +2337,137 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     assert old_node_uid == new_node_uid
     assert old_port_names == new_port_names
     assert old_port_uids == new_port_uids
+
+
+def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defaults():
+    """Like test_v1g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
+    attributes.
+
+    This test is a bit different to the V0G tests with initialise data in that this will just replicate the procedure
+    used to build a network in MES: build the echo network, then inject data into the network, then optimise.
+    """
+
+    # Set up hyper params
+    available = [1, 1]
+    usage = [0, 0]
+    interval_duration = 1
+    initial_state_of_charge = 40
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Set up data to inject
+    solar_data = [-5, -5, -5, -5, 0, 0, 0, -5, -5, -5]  # kw generated
+    load_data = [1] * 10  # kw load
+    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create a load object
+    load = Node(node_name="load")
+    load.ports["load_to_cp"] = ElectricalDemand()
+
+    # create a node for the solar
+    solar = Node(node_name="solar")
+    solar.ports["solar_to_inverter"] = ElectricalGeneration()
+    solar.ports["solar_to_inverter"].curtailable = False
+
+    # Create an inverter to attach the solar to
+    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
+    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
+    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+
+    # Create V1G vehicle
+    ev = EV(
+        node_name="ev",
+        charge_mode=EVChargeMode.V1G,
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
+    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+
+    # Inject data into load
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+
+    # Inject data into solar
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(
+        solar_data,
+        expansion_periods,
+    )
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [20] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+    time_periods = len(available)
+
+    # Inject data into the EV
+    system.inject_data_into_ev(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    # Create objectives/tariffs
+    import_cost = ImportTariff(
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
+    )
+    objective_set = ObjectiveSet(objective_list=[import_cost])
+
+    # Invoke the optimiser and optimise
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+    )
+
+    soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
+
+    expected_soc = np.array([4, 8, 12, 16, 26, 36, 36, 40, 20, 0])
+
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
