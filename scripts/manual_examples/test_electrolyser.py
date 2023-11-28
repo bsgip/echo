@@ -18,7 +18,8 @@ source_df["Solar"] *= -1
 grid_emission_factor = source_df["Carbon intensity"]
 test_battery_size = 100e3  # kWh
 electrolyser_cop = 1/39.4  # kWh of electricity to 1 kg of Hydrogen
-electrolyser_max_input = 1750162  # kW max input
+electrolyser_min_input = 0
+electrolyser_max_input = 1500000  # kW max input
 h2_storage_capacity = 10003211 # kg
 
 # Instantiate echo Optimisation Graph
@@ -82,7 +83,10 @@ battery = Battery(node_name='Battery',
 electrolyser = Electrolyser(node_name='Electrolyser',
                                input_port_unit=Units.KW,
                                output_port_unit=Units.H2Kg,
-                               max_input=electrolyser_max_input)
+                                max_input=electrolyser_max_input)
+
+electrolyser.ports['input'].import_constraint = FlowConstraint.Fixed
+electrolyser.ports['input'].import_constraint_value = electrolyser.max_input
 
 hydrogen_load = Node(node_name='H2Demand',
                      ports={f'h2_demand': Demand(units=Units.H2Kg,
@@ -165,7 +169,12 @@ optimise_results = optimise(
 )
 
 result_df = optimise_results.df_by_port()
+assert(round(result_df['input'].max())==electrolyser_max_input)
+
 result_df_raw = optimise_results.df()
+
+result_df['input'].max()
+
 
 solar_port = solar.ports['solar']
 wind_port = solar.ports['solar']

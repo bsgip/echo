@@ -3,7 +3,14 @@ from typing import Optional, Union
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
-from echo.configuration import Units
+from echo.configuration import (
+    FlowConstraint,
+    Flows,
+    NodeRule,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.models.agnostic import (
     Demand,
     FlexPort,
@@ -180,10 +187,16 @@ class Electrolyser(InputOutputNode):
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # add an input and output Port, and create appropriate transformations
-        self.ports["output"] = FlexSource(units=self.output_port_unit)
+        if self.max_input:
+            _import_constraint =  FlowConstraint.InRange
+        self.ports["output"] = FlexSource(units=self.output_port_unit,
+                                          import_constraint
+                                          upper_bound=self.max_output,
+                                          lower_bound=self.min_output
+                                          )
         self.ports["input"] = FlexSink(units=self.input_port_unit,
-                                       upper_bound=self.min_output,
-                                       lower_bound=self.max_output)
+                                       upper_bound=self.max_input,
+                                       lower_bound=self.min_input)
 
 
     def apply_node_constraints(self, model: EchoConcreteModel):
