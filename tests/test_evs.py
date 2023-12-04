@@ -5,7 +5,7 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from echo.configuration import Units, EVChargeMode
+from echo.configuration import EVChargeMode, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import EV, ElectricalDemand, ElectricalGeneration, Inverter
@@ -13,7 +13,7 @@ from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower
-from echo.objectives.tariff import ThroughputCost, ImportTariff
+from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
 
@@ -2381,9 +2381,15 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     solar.ports["solar_to_inverter"].curtailable = False
 
     # Create an inverter to attach the solar to
-    inverter = Inverter(node_name="inverter", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("inverter_to_cp")  # add a port that is used to connect back to the connection_point
-    inverter.add_dc_port("inverter_to_solar")  # add a port to connect to the pv
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
 
     # Create V1G vehicle
     ev = EV(
