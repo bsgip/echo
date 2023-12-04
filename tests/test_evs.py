@@ -1752,7 +1752,7 @@ def test_v2g_with_load_with_objective():
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, 0, 0, 0, 0, 0, -5, -5, -5]  # kw generated
     load_data = [10, 10, 5, 5, 10, 10, 5, 5, 10, 10]  # kw load
-    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+    import_tariff = [10, 10, 10, 1, 1, 1, 10, 1, 10, 10]  # $/kw
     interval_duration = 60
     time_periods = len(available)
     expansion_periods = 1  # not yet implemented leave as 1
