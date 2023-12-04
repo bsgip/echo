@@ -541,6 +541,9 @@ class Node(BaseModel):
         """This should be overridden in the base class"""
         pass
 
+    def get_port_name_to_port_dict_name_map(self):
+        return {port.port_name: port_dict_name for port_dict_name, port in self.ports.items()}
+
 
 class TransformNode(Node):
     """Implements node constraints using Transforms"""
@@ -603,17 +606,6 @@ class TransformNode(Node):
             current_transform._add_transform_to_model(model)  # make sure that all variables have been initialised
             con_name = "transformation_con_" + self.node_name
             setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=transform))
-
-    def add_objective(self, model: EchoConcreteModel):
-        total = 0
-
-        self.objective += total
-
-    def num_ports(self):
-        return len(self.ports)
-
-    def get_port_name_to_port_dict_name_map(self):
-        return {port.port_name: port_dict_name for port_dict_name, port in self.ports.items()}
 
 
 class Edge(BaseModel):
