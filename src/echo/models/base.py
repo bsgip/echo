@@ -343,7 +343,7 @@ class Port(BaseModel):
         domain = domain_from_flow(self.flows)
 
         # Flow is always represented with a pyomo variable.
-        # This gives us flexibility for converting it between a variable and parameter in fix/unfix
+        # This gives us flexibility for converting between a variable and parameter with fix/unfix
         self._add_flow_variable_to_model(model=model, initial_value=initial_value, domain=domain)
 
         # Convert flow variable to parameter if requested.
