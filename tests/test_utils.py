@@ -10,6 +10,12 @@ from echo.utils import expand
         (range(4), 4, 1, {(0, 0): 0, (0, 1): 1, (0, 2): 2, (0, 3): 3}),  # smaller array with no expansion periods
         (42, 5, 1, {(0, 0): 42, (0, 1): 42, (0, 2): 42, (0, 3): 42, (0, 4): 42}),  # scalar with no expansion periods
         (
+            [42],
+            5,
+            1,
+            {(0, 0): 42, (0, 1): 42, (0, 2): 42, (0, 3): 42, (0, 4): 42},
+        ),  # "wrapped" scalar with no expansion periods
+        (
             range(5),
             5,
             2,
