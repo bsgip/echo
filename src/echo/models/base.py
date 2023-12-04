@@ -416,6 +416,8 @@ class Port(BaseModel):
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
+        if time_periods is None:
+            time_periods = len(array)
         self.set_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
 
     def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
@@ -424,6 +426,8 @@ class Port(BaseModel):
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
         """
+        if time_periods is None:
+            time_periods = len(array)
         self.active_periods = expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def add_objective(self, model: EchoConcreteModel):

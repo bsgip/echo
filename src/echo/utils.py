@@ -109,10 +109,8 @@ class ArrayWrap(Sequence):
             raise TypeError("requires float, int, list or array like")
 
 
-def expand(array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None):
+def expand(array: ArrayWrappableType, time_periods: int, expansion_periods: int = 1):
     x = ArrayWrap(array)
-    if time_periods is None:
-        time_periods = len(x)
     x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
     return x.dict()
 
