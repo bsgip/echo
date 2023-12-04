@@ -97,11 +97,11 @@ class EV(TransformNode):
 
         # Initialise port_name_to_port_uid_map
         if self.port_dict_name_to_port_uid_map is None:
-            self.port_dict_name_to_port_uid_map = dict()
+            self.port_dict_name_to_port_uid_map = {}
 
         # Initialise port_name_to_port_uid_map
         if self.port_dict_name_to_port_name_map is None:
-            self.port_dict_name_to_port_name_map = dict()
+            self.port_dict_name_to_port_name_map = {}
 
         # Preserve uid and port_name if present on port
         if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
