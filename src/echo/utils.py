@@ -116,7 +116,7 @@ class ArrayWrap(Sequence):
 class TimeSeriesData:
     """Compressed way of describing time series data"""
 
-    value: Union[Sized, int, float]  # Scalar (int, float) or 1d List or 2d List
+    value: ArrayWrappableType  # Scalar (int, float) or 1d List or 2d List
     num_time_intervals: int
     num_expansion_intervals: int
 
