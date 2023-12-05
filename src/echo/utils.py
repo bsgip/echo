@@ -1,7 +1,9 @@
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Optional, Sized, Union
 
 import numpy as np
+import numpy.typing as npt
 import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
@@ -9,6 +11,7 @@ from sklearn import linear_model
 
 from echo.configuration import Flows
 from echo.exceptions import validate
+from echo.functional import maybe_list
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
@@ -113,6 +116,41 @@ def expand(array: ArrayWrappableType, time_periods: int, expansion_periods: int 
     x = ArrayWrap(array)
     x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
     return x.dict()
+
+
+@dataclass
+class TimeSeriesData:
+    """Compressed way of describing time series data"""
+
+    value: Union[Sized, int, float]  # Scalar (int, float) or 1d List or 2d List
+    num_time_intervals: int
+    num_expansion_intervals: int
+
+
+def expand_as_dict(data: TimeSeriesData) -> dict:
+    expanded_data = expand_as_array(data)
+
+    keys = [(x, i) for x in range(data.num_expansion_intervals) for i in range(data.num_time_intervals)]
+    return dict(zip(keys, expanded_data.flatten()))
+
+
+def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
+    value = maybe_list(data.value)
+    flat_array = np.array(value).flatten()
+
+    if len(flat_array) == 1:
+        num_repeats = data.num_time_intervals * data.num_expansion_intervals
+        return np.repeat(flat_array[0], num_repeats).reshape((data.num_expansion_intervals, data.num_time_intervals))
+
+    if len(flat_array) == data.num_time_intervals:  # tile across expansion periods
+        return np.vstack([flat_array] * data.num_expansion_intervals)
+
+    if len(flat_array) == data.num_time_intervals * data.num_expansion_intervals:
+        return np.reshape(flat_array, (data.num_expansion_intervals, data.num_time_intervals))
+
+    raise Exception(
+        "expecting shape of a scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"  # noqa E501
+    )
 
 
 def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
