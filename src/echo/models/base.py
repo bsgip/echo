@@ -16,8 +16,9 @@ from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
     ArrayWrappableType,
+    TimeSeriesData,
     domain_from_flow,
-    expand,
+    expand_as_dict,
     generate_array_constraint,
     set_var_bounds_from_dict,
     to_initial_values,
@@ -405,6 +406,9 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
+    def set_initial_value_from_timeseriesdata(self, time_series_data: TimeSeriesData):
+        self.set_initial_value(expand_as_dict(time_series_data))
+
     def set_initial_value_from_array(
         self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
@@ -418,7 +422,11 @@ class Port(BaseModel):
         """
         if time_periods is None:
             time_periods = len(array)
-        self.set_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
+
+        time_series_data = TimeSeriesData(
+            value=array, num_time_intervals=time_periods, num_expansion_intervals=expansion_periods
+        )
+        self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
     def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Sets port active periods
@@ -428,7 +436,11 @@ class Port(BaseModel):
         """
         if time_periods is None:
             time_periods = len(array)
-        self.active_periods = expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods)
+
+        time_series_data = TimeSeriesData(
+            value=array, num_time_intervals=time_periods, num_expansion_intervals=expansion_periods
+        )
+        self.active_periods = expand_as_dict(time_series_data)
 
     def add_objective(self, model: EchoConcreteModel):
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed

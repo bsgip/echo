@@ -112,12 +112,6 @@ class ArrayWrap(Sequence):
             raise TypeError("requires float, int, list or array like")
 
 
-def expand(array: ArrayWrappableType, time_periods: int, expansion_periods: int = 1):
-    x = ArrayWrap(array)
-    x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
-    return x.dict()
-
-
 @dataclass
 class TimeSeriesData:
     """Compressed way of describing time series data"""
