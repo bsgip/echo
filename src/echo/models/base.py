@@ -14,10 +14,10 @@ from echo.constants import negative_variable_component, positive_variable_compon
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    ArrayWrap,
     TimeExpandableType,
     TimeSeriesData,
     domain_from_flow,
+    expand_as_array,
     expand_as_dict,
     generate_array_constraint,
     set_var_bounds_from_dict,
@@ -472,7 +472,7 @@ class Port(BaseModel):
 class TransformTerm:
     var: Port
     rule: TransformRule
-    weight: ArrayWrap
+    weight: TimeExpandableType
 
 
 class Transform(BaseModel):
@@ -492,9 +492,8 @@ class Transform(BaseModel):
         return "transform_" + str(self.uid)
 
     def _add_transform_to_model(self, model: EchoConcreteModel):
-        # Check if we need to create pos/neg components, and initialise the weights
+        # Check if we need to create pos/neg components
         for term in self.lhs:
-            term.weight.set_periods(len(model.Expansion), len(model.Time))
             if term.rule is not TransformRule.Both:
                 var = term.var
                 var.constrain_pos_neg(model)
@@ -575,8 +574,8 @@ class TransformNode(Node):
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         lhs_terms = [
-            TransformTerm(var=output_port, rule=TransformRule.Both, weight=ArrayWrap(1)),
-            TransformTerm(var=input_port, rule=TransformRule.Both, weight=ArrayWrap(-input_weight)),
+            TransformTerm(var=output_port, rule=TransformRule.Both, weight=1),
+            TransformTerm(var=input_port, rule=TransformRule.Both, weight=-input_weight),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
@@ -589,8 +588,8 @@ class TransformNode(Node):
             emission_factor: a ratio = emissions generated/emitting unit generated (float), or an array of values
         """
         lhs_terms = [
-            TransformTerm(carbon_port, TransformRule.Neg, ArrayWrap(1)),
-            TransformTerm(emitting_port, TransformRule.Neg, ArrayWrap(-emission_factor)),
+            TransformTerm(var=carbon_port, rule=TransformRule.Neg, weight=1),
+            TransformTerm(var=emitting_port, rule=TransformRule.Neg, weight=-emission_factor),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
@@ -605,7 +604,13 @@ class TransformNode(Node):
         def transform(model: EchoConcreteModel, p, t):  # Generic transformation node
             lhs = 0
             for term in current_transform.lhs:
-                weight = term.weight
+                weight = expand_as_array(
+                    TimeSeriesData(
+                        value=term.weight,
+                        num_expansion_intervals=len(model.Expansion),
+                        num_time_intervals=len(model.Time),
+                    )
+                )
                 rule = term.rule
                 if rule is TransformRule.Both:
                     var_name = term.var.port_name

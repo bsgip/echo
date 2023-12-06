@@ -7,7 +7,6 @@ from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, Elec
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
-from echo.utils import ArrayWrap
 
 
 def test_simple_bounded_load():
@@ -121,8 +120,8 @@ def test_feedback_loop():
     load.ports["load"] = l1
     load.ports["excess"] = excess
     lhs_terms = [
-        TransformTerm(l1, TransformRule.Both, ArrayWrap(1)),
-        TransformTerm(excess, TransformRule.Both, ArrayWrap(1)),
+        TransformTerm(var=l1, rule=TransformRule.Both, weight=1),
+        TransformTerm(var=excess, rule=TransformRule.Both, weight=1),
     ]
     t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)

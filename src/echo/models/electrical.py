@@ -204,9 +204,9 @@ class EV(TransformNode):
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
         lhs_terms = [
-            TransformTerm(self.ports["vehicle"], TransformRule.Both, ArrayWrap(1)),
-            TransformTerm(self.ports["usage"], TransformRule.Both, ArrayWrap(1)),
-            TransformTerm(self.ports[self.connection_port_name], TransformRule.Both, ArrayWrap(-1)),
+            TransformTerm(var=self.ports["vehicle"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports["usage"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports[self.connection_port_name], rule=TransformRule.Both, weight=-1),
         ]
         return Transform(lhs_terms=lhs_terms)
 
