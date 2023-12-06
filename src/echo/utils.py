@@ -390,11 +390,6 @@ def orjson_dumps(v, *, default):
     return orjson.dumps(v, default=default).decode()
 
 
-def process_time_series_data(array: np.ndarray, time_periods: int, expansion_periods: int = 1):
-    x = ArrayWrap(array)
-    x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
-
-
 def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion_periods: int = 1):
     """
     Generates a dict suitable for initializing a pyomo var or param.
