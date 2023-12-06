@@ -10,7 +10,7 @@ from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
-    ArrayWrappableType,
+    TimeExpandableType,
     generate_array_constraint,
     populate_values_across_time_and_expansion_indices,
     set_float_var_bounds,
@@ -162,7 +162,7 @@ class Demand(Sink):
         self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
-        self, demand: ArrayWrappableType, expansion_periods=1, time_periods: Optional[int] = None
+        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
     ):
         self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 

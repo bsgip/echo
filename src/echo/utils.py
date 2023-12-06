@@ -22,7 +22,7 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
-ArrayWrappableType = Union[Sized, int, float]
+TimeExpandableType = Union[Sized, int, float]
 
 
 class ArrayWrap(Sequence):
@@ -31,7 +31,7 @@ class ArrayWrap(Sequence):
     tp_set: bool
     is_scalar: bool
 
-    def __init__(self, var: ArrayWrappableType):  # scalar, 1d list, 2d list,
+    def __init__(self, var: TimeExpandableType):  # scalar, 1d list, 2d list,
         self.var = var
         if not hasattr(var, "__len__"):
             self.get_func = self.get_scalar
@@ -116,7 +116,7 @@ class ArrayWrap(Sequence):
 class TimeSeriesData:
     """Compressed way of describing time series data"""
 
-    value: ArrayWrappableType  # Scalar (int, float) or 1d List or 2d List
+    value: TimeExpandableType  # Scalar (int, float) or 1d List or 2d List
     num_time_intervals: int
     num_expansion_intervals: int
 

@@ -15,7 +15,7 @@ from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     ArrayWrap,
-    ArrayWrappableType,
+    TimeExpandableType,
     TimeSeriesData,
     domain_from_flow,
     expand_as_dict,
@@ -410,7 +410,7 @@ class Port(BaseModel):
         self.set_initial_value(expand_as_dict(time_series_data))
 
     def set_initial_value_from_array(
-        self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
+        self, array: TimeExpandableType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
         """Sets initial port value which is used to initialise the pyomo var/param
 
