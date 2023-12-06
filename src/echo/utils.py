@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Sized, Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -21,14 +21,14 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
-TimeExpandableType = Union[Sized, int, float]
+TimeExpandableType = Union[int, float, list[int | float], list[list[int | float]]]
 
 
 @dataclass
 class TimeSeriesData:
     """Compressed way of describing time series data"""
 
-    value: TimeExpandableType  # Scalar (int, float) or 1d List or 2d List
+    value: TimeExpandableType
     num_time_intervals: int
     num_expansion_intervals: int
 
