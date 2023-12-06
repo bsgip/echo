@@ -10,7 +10,7 @@ from echo.exceptions import validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
+from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
 from echo.validators import ArrayType
 
 
@@ -73,7 +73,7 @@ class EV(TransformNode):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
 
     V0G_delta: Optional[Union[ArrayType, list]]
