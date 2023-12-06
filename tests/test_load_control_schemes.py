@@ -5,7 +5,7 @@ from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
 
@@ -82,8 +82,6 @@ def test_time_delay_node(time_delay):
 
     print(optimise_results.opt_status)
     grid = optimise_results.values(grid.ports["grid"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
@@ -153,8 +151,6 @@ def test_feedback_loop():
 
     print(optimise_results.opt_status)
     cp = optimise_results.values(cp.ports["supply"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
