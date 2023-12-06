@@ -34,10 +34,10 @@ class TimeSeriesData:
 
 
 def expand_as_dict(data: TimeSeriesData) -> dict:
-    expanded_data = expand_as_array(data)
+    expanded_data = expand_as_array(data).flatten()
 
     keys = [(x, i) for x in range(data.num_expansion_intervals) for i in range(data.num_time_intervals)]
-    return dict(zip(keys, expanded_data.flatten()))
+    return dict(zip(keys, expanded_data))
 
 
 def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
