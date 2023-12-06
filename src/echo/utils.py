@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Optional, Sized, Union
 
@@ -23,93 +22,6 @@ def _to_values(profile, key):
 
 
 TimeExpandableType = Union[Sized, int, float]
-
-
-class ArrayWrap(Sequence):
-    time_periods: Optional[int]
-    expansion_periods: Optional[int]
-    tp_set: bool
-    is_scalar: bool
-
-    def __init__(self, var: TimeExpandableType):  # scalar, 1d list, 2d list,
-        self.var = var
-        if not hasattr(var, "__len__"):
-            self.get_func = self.get_scalar
-            self.is_scalar = True
-        elif (len(var) == 1) and (not hasattr(var[0], "__len__")):
-            self.get_func = self.get_scalar
-            self.is_scalar = True
-            self.var = var[0]
-        else:
-            self.get_func = self.get_dummy
-            self.is_scalar = False
-        self.time_periods = None
-        self.expansion_periods = None
-        self.tp_set = False  # for indicating whether the time period has been set
-
-        super().__init__()
-
-    def dict(self):
-        """For converting array wrap to a dict"""
-        validate(self.tp_set is True, "Set time periods before converting to dict")
-        keys = [(x, i) for x in range(self.expansion_periods) for i in range(self.time_periods)]
-        if not self.is_scalar:
-            vals = np.reshape(self.var, self.expansion_periods * self.time_periods)
-        else:
-            vals = self.var * np.ones(self.expansion_periods * self.time_periods)
-        d = dict(zip(keys, vals))
-        return d
-
-    def set_periods(self, expansion_periods: int, time_periods: int) -> None:
-        self.time_periods = time_periods
-        self.expansion_periods = expansion_periods
-        self.tp_set = True
-        if not self.is_scalar:
-            self.get_func = self.get_array
-            var_array = np.array(self.var).flatten()
-            if len(var_array) == time_periods:  # tile across expansion periods
-                self.var = np.vstack([var_array] * expansion_periods)
-            elif len(var_array) == time_periods * expansion_periods:
-                self.var = np.reshape(var_array, (expansion_periods, time_periods))
-            else:
-                raise Exception(
-                    "expecting shape of a scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"  # noqa E501
-                )
-
-    def __getitem__(self, i):
-        return self.get_func(i)
-
-    def get_scalar(self, i):
-        # todo this will return valid numbers even if the index is out of range
-        return self.var
-
-    def get_dummy(self, i):
-        validate(self.tp_set, "for non scalar values must set time and expansion periods of ArrayWrap")
-        return None
-
-    def get_array(self, i):
-        return self.var[i]
-
-    #
-    # def get_non_scalar(self, i):
-    #     if isinstance(i, tuple):
-    #         p = i[0], t=i[1]
-
-    def __len__(self):
-        return len(self.var)
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if isinstance(v, ArrayWrap):
-            return v
-        if isinstance(v, (float, int, list, np.ndarray)):
-            return cls(v)
-        else:
-            raise TypeError("requires float, int, list or array like")
 
 
 @dataclass
