@@ -22,6 +22,13 @@ def _to_values(profile, key):
 
 
 TimeExpandableType = Union[int, float, list[int | float], list[list[int | float]]]
+"""TimeExpandableType
+
+Variables with type `TimeExpandableType` should only contain numbers (int or float).
+They should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, ...]
+or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
+"""
 
 
 class UnexpandableTimeSeriesDataError(Exception):
@@ -30,14 +37,73 @@ class UnexpandableTimeSeriesDataError(Exception):
 
 @dataclass
 class TimeSeriesData:
-    """Compressed way of describing time series data"""
+    """A dataclass to hold a compressed way of describing time series data.
+
+    The TimeSeriesData object describes (potentially) compressed form of time-series data by only
+    storing a minimal set of values.
+
+    `value` has type ``TimeExpandableType``. It should only contain numbers (int or float).
+    It should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+    a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, ...]
+    or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
+
+    For 1-dimensional and 2-dimensional lists it is important to match the number of elements in the lists to the
+    `num_time_intervals` and `num_expansion_intervals`.
+    1-dimensional lists:
+        `len(value) == num_time_intervals * num_expansion_intervals`
+    2-dimensional lists:
+        `len(value) == num_expansion_intervals` AND the sublists in `value` should have
+        `len(sublist) == num_time_intervals`
+
+    For example, if we have 4 time-intervals and 2 expansion-intervals, then the following would be valid:
+    value = [[1, 2, 3, 4], [5, 6, 7, 8]] (2-dimensional list). Remember: the first index into a 2-dimensional list is
+    the expansion interval and the second index is the time interval.
+
+    or we could flatten the above list into a 1-dimensional list:
+    value = [1, 2, 3, 4, 5, 6, 7, 8] since len(value) == 4 * 2. The first four value (1, 2, 3, 4) would apply to the
+    first expansion period and the next four values (5, 6, 7, 8) would apply to the second expansion period.
+
+    Note:
+        TimeSeriesData performs no validation. In other words it is possible to create invalid TimeSeriesData objects.
+        For example, `TimeSeriesData(value=[1,2,3], num_time_intervals=5, num_expansion_intervals=1)`
+        would be invalid because the `num_time_intervals` (5) is greater than the number of elements in the value
+        (only 3).
+
+    TimeSeriesData objects serve as input to the `expand_as_array` and `expand_as_dict` functions. These functions
+    serve to expand a TimeSeriesData description into a full set of time series data.
+
+    Attributes:
+        value (TimeExpandableType): time series data. See above for more information on valid values.
+        num_time_intervals (int): the number of time intervals for the time series data.
+        num_expansion_intervals (int): the number of expansion intervals for the time series data.
+    """
 
     value: TimeExpandableType
     num_time_intervals: int
     num_expansion_intervals: int
 
 
-def expand_as_dict(data: TimeSeriesData) -> dict:
+def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], Union[int, float]]:
+    """Converts a TimeSeriesData object to a dictionary of time-series values keyed by the expansion and time intervals.
+
+    Calls `expand_as_array` internally to produce enough values for the time and expansion intervals.
+    See `expand_as_array` for an explanation of how this works.
+
+    Example:
+        >>> expand_as_dict(TimeSeriesData(value=[[1,2],[3,4]],num_time_intervals=2,num_expansion_intervals=2))
+        {(0, 0): 1, (0, 1): 2, (1, 0): 3, (1, 1): 4}
+
+    Args:
+        data (TimeSeriesData): A TimeSeriesData object.
+
+    Returns:
+        dictionary of time series values keyed by a tuple of the form: (expansion interval, time interval)
+
+    Raises:
+        UnexpandableTimeSeriesDataError: If there are too few or too many time series values for the given number of
+        time periods/expansion periods.
+
+    """
     expanded_data = expand_as_array(data).flatten()
 
     keys = [(x, i) for x in range(data.num_expansion_intervals) for i in range(data.num_time_intervals)]
@@ -45,6 +111,44 @@ def expand_as_dict(data: TimeSeriesData) -> dict:
 
 
 def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
+    """Expands a TimeSeriesData object into a numpy array.
+
+    The TimeSeriesData object described (potentially) compressed form of time-series data by only
+    stor
+
+    Example:
+        >>> t = TimeSeriesData(value=[1,2,3,4],num_time_intervals=2,num_expansion_intervals=2)
+        >>> expand_as_array()
+        array([[1, 2],
+            [3, 4]])
+
+    Example:
+        >>> t = TimeSeriesData(value=89.2,num_time_intervals=3,num_expansion_intervals=2)
+        >>> expand_as_array(t)
+        array([[89.2, 89.2, 89.2],
+            [89.2, 89.2, 89.2]])
+
+    Example:
+        >>> t = TimeSeriesData(value=[12.1,12.2],num_time_intervals=2,num_expansion_intervals=4)
+        >>> expand_as_array(t)
+        array([[12.1, 12.2],
+            [12.1, 12.2],
+            [12.1, 12.2],
+            [12.1, 12.2]])
+
+
+    Args:
+        data (TimeSeriesData): A TimeSeriesData object.
+
+    Returns:
+        An 2-dimensional array of time series data. The first index is the expansion interval
+        and the second index is the time period.
+
+    Raises:
+        UnexpandableTimeSeriesDataError: If there are too few or too many time series values for the given number of
+        time periods/expansion periods.
+
+    """
     value = maybe_list(data.value)
     flat_array = np.array(value).flatten()
 
