@@ -24,6 +24,10 @@ def _to_values(profile, key):
 TimeExpandableType = Union[int, float, list[int | float], list[list[int | float]]]
 
 
+class UnexpandableTimeSeriesDataError(Exception):
+    pass
+
+
 @dataclass
 class TimeSeriesData:
     """Compressed way of describing time series data"""
@@ -54,8 +58,8 @@ def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
     if len(flat_array) == data.num_time_intervals * data.num_expansion_intervals:
         return np.reshape(flat_array, (data.num_expansion_intervals, data.num_time_intervals))
 
-    raise Exception(
-        "expecting shape of a scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"  # noqa E501
+    raise UnexpandableTimeSeriesDataError(
+        "Mismatch between the number of time intervals/expansion periods and the number of elements in `value`. See TimeSeriesData for more information"  # noqa E501
     )
 
 

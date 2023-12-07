@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from echo.utils import TimeSeriesData, expand_as_array, expand_as_dict
+from echo.utils import (
+    TimeSeriesData,
+    UnexpandableTimeSeriesDataError,
+    expand_as_array,
+    expand_as_dict,
+)
 
 
 @pytest.mark.parametrize(
@@ -63,15 +68,15 @@ def test_expand_as_dict(timeseriesdata, expected):
     "timeseriesdata",
     [
         (
-            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=5, num_expansion_intervals=1),
+            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=5, num_expansion_intervals=1)
         ),  # number of time intervals bigger than array
         (
-            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=3, num_expansion_intervals=1),
+            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=3, num_expansion_intervals=1)
         ),  # number of time invervals smaller than array
     ],
 )
 def test_expand_as_dict_should_raise_exception(timeseriesdata):
-    with pytest.raises(Exception):
+    with pytest.raises(UnexpandableTimeSeriesDataError):
         expand_as_dict(data=timeseriesdata)
 
 
@@ -112,13 +117,13 @@ def test_expand_as_array(timeseriesdata, expected):
     "timeseriesdata",
     [
         (
-            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=5, num_expansion_intervals=1),
+            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=5, num_expansion_intervals=1)
         ),  # number of time intervals bigger than array
         (
-            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=3, num_expansion_intervals=1),
+            TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=3, num_expansion_intervals=1)
         ),  # number of time invervals smaller than array
     ],
 )
 def test_expand_as_array_should_raise_exception(timeseriesdata):
-    with pytest.raises(Exception):
+    with pytest.raises(UnexpandableTimeSeriesDataError):
         expand_as_array(data=timeseriesdata)
