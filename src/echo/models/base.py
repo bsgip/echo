@@ -526,6 +526,7 @@ class Node(BaseModel):
     def add_port(self, name: str, port: Port):
         if self.ports.get(name) is None:
             self.ports[name] = port
+
         else:
             raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
