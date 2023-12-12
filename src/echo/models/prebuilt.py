@@ -188,9 +188,8 @@ class Electrolyser(InputOutputNode):
         super().__init__(**data)
         # add an input and output Port, and create appropriate transformations
         if self.max_input:
-            _import_constraint =  FlowConstraint.InRange
+            _import_constraint = FlowConstraint.InRange
         self.ports["output"] = FlexSource(units=self.output_port_unit,
-                                          import_constraint
                                           upper_bound=self.max_output,
                                           lower_bound=self.min_output
                                           )

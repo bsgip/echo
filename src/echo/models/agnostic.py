@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
@@ -50,6 +51,100 @@ class FlexPort(Port):
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
     opt_type = OptimisationType.Variable
+
+
+
+class AdditivityPort(Port):
+    """Port that implements Additivity constraint on it's net flow value over given window
+
+    Args:
+        max_net_flow (float): Upper bound on net port flow value within the given window
+        window_length (int): Number of optimisation periods in each constraint window, expecting at least 2
+        start_period (int): Index of the optimisation period to use as the start of the first window
+        end_period (int): Index of the optimisation period to use as the end of the last window
+        use_last_window (bool): If True, applies constraint to the last not full interval window,
+                                when selected set of time indexes can not be fully split into equal
+                                windows of the given length
+    """
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+    opt_type = OptimisationType.Variable
+    max_net_flow: float
+    window_length: int
+    start_period: int = 0
+    end_period: int = None
+    use_last_window: bool = False
+
+    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(AdditivityPort, self).initialise_port(model, profile)
+        self.constraint_port_flow_within_window(model)
+
+    def constraint_port_flow_within_window(self,
+                                           model: EchoConcreteModel):
+        """Adds a constraint on the net port flow value to be less or equal max_flow
+        within each time window of a given length
+
+        model (EchoConcreteModel): pyomo optimisation model to add constraint to
+        max_flow (float): Upper bound on net port flow value within the given window
+        window_length (int): Number of optimisation periods in each constraint window, expecting at least 2
+        start_period (int): Index of the optimisation period to use as the start of the first window
+        end_period (int): Index of the optimisation period to use as the end of the last window
+        """
+
+        max_flow = self.max_net_flow
+        window_length = self.window_length
+
+        if window_length < 2:
+            raise ValueError(f"Unable to process port {self.port_name} flow within window constraint. "
+                             f"Expecting window length of at least 2 periods, given {window_length}")
+        # Check if model has a variable that corresponds to the net port flow value
+        # Raise value error if no variable is found
+        # (decided not to explicitly add port variable here to avoid possible conflicts with port initialisation)
+        if hasattr(model, self.port_name) is False:
+            raise ValueError(f"Port {self.port_name} flow variable is not defined on the model ")
+
+        # Check variable domain vs max_value (expecting 'NonPositiveReals', 'PositiveReals', 'Reals')
+        var_domain_name = next(iter((getattr(model, self.port_name).values()))).domain.name
+        # 'NonPositiveReals'
+
+        # Set default start and end period values to correspond to entire model.Time array
+        if not self.end_period:
+            self.end_period = len(model.Time.data())
+        if not self.start_period:
+            self.start_period = 0
+
+        # Using start and end periods select times from entire model.Time array for which constraint applies
+        selected_times = model.Time.data()[self.start_period:self.end_period+1]
+
+        # Calculate number of full windows of the given window_length that fits into selected times array
+        number_full_windows = len(selected_times) // window_length
+
+        # Calculate the remainder that does not fit into selected times array
+        remainder = len(selected_times) - number_full_windows*window_length
+
+        # if there is a non-zero remainder, trim selected time to fit full number of windows
+        if remainder > 0:
+            selected_times = selected_times[:-remainder]
+            last_window = selected_times[len(selected_times[:-remainder]):]
+
+        # Split selected_times array into window_arrays of the given window_length
+        window_arrays = np.array_split(selected_times, number_full_windows)
+
+        # If use_last_window attribute set to True, add last remainder window to window_array
+        if self.use_last_window:
+            window_arrays.append(list(last_window))
+
+        def additivity_rule(model, _i, _w, _max):
+            return sum(getattr(model, self.port_name)[_i, t] for t in _w) <= _max
+
+        for i in model.Expansion.data():
+
+            for _window in window_arrays:
+                _expr = additivity_rule(model, i, _window, max_flow)
+                con_name = f'{self.port_name}_max_net_flow_{i}_{_window[0]}:{_window[-1]}'
+                setattr(model, con_name, en.Constraint(expr=_expr))
+
 
 
 class FlexSink(FlexPort):

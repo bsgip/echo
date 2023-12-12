@@ -1,5 +1,5 @@
 from echo.configuration import Units, FlowConstraint
-from echo.models.agnostic import FlexPort, TellegenNode, Source, InputOutputNode, Demand, Storage
+from echo.models.agnostic import FlexPort, TellegenNode, Source, InputOutputNode, Demand, Storage, AdditivityPort
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import Inverter, ElectricalGeneration
 from echo.models.carbon import CarbonAggregation, CarbonPort
@@ -7,8 +7,9 @@ from echo.models.carbon import CarbonAggregation, CarbonPort
 from echo.models.prebuilt import Battery, FlexNodeWithEmissions, Electrolyser
 from echo.objectives.tariff import ImportTariff, ExportTariff
 from echo.objectives.base import ObjectiveSet
-from echo.optimiser import optimise
+from echo.optimiser import optimise, build_model_and_objective
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+import pyomo.environ as pyo
 
 import pandas as pd
 source_df = pd.read_csv("scripts/manual_examples/Dataframe.csv")
@@ -21,6 +22,7 @@ electrolyser_cop = 1/39.4  # kWh of electricity to 1 kg of Hydrogen
 electrolyser_min_input = 0
 electrolyser_max_input = 1500000  # kW max input
 h2_storage_capacity = 10003211 # kg
+
 
 # Instantiate echo Optimisation Graph
 system = OptimisationGraph()
@@ -43,10 +45,15 @@ carbon_aggregation = CarbonAggregation(node_name='BulkEmissions',
 
 # Define all port for electrical connection point, omitting DC/AC Inverter model for now
 electrical_cp_ports = {'CP_grid': FlexPort(units=Units.KW,
-                                           export_constraint=FlowConstraint.Fixed,
-                                           export_constraint_value= -100000),
+                                                 export_constraint=FlowConstraint.Fixed,
+                                                 export_constraint_value=-175e3),
+                        # 'CP_grid': AdditivityPort(units=Units.KW,
+                        #                          export_constraint=FlowConstraint.Fixed,
+                        #                          export_constraint_value=-1000000000,
+                        #                          max_net_flow=0,
+                        #                          window_length=24),
                        'CP_solar': FlexPort(units=Units.KW),
-                        'CP_wind': FlexPort(units=Units.KW),
+                       'CP_wind': FlexPort(units=Units.KW),
                        'CP_battery': FlexPort(units=Units.KW),
                        'CP_electrolyser': FlexPort(units=Units.KW)}
 
@@ -102,8 +109,8 @@ hydrogen_cp_ports = {'CP_electrolyser': FlexPort(units=Units.H2Kg),
 hydrogen_connection_point = TellegenNode(node_name='H2ConnectionPoint', ports=hydrogen_cp_ports)
 
 
-hydrogen_storage = Node(node_name ="H2Storage",
-                        ports = {'h2_storage_port': Storage( units = Units.H2Kg,
+hydrogen_storage = Node(node_name="H2Storage",
+                        ports={'h2_storage_port': Storage( units = Units.H2Kg,
                                                              max_capacity =h2_storage_capacity,
                                                              charging_power_limit = h2_storage_capacity,
                                                              discharging_power_limit = -1*h2_storage_capacity,
@@ -143,7 +150,7 @@ system.connect_ports_and_create_edge(hydrogen_load.ports['h2_demand'],
                                      edge_name=f'{hydrogen_load.node_name}_{hydrogen_connection_point.node_name}')
 
 
-system.draw_echo_graph(with_labels=True)
+#system.draw_echo_graph(with_labels=True)
 
 
 
@@ -168,6 +175,30 @@ optimise_results = optimise(
     profile=source_df
 )
 
+# ######################################################
+# (model, objective) = build_model_and_objective(graph = system,
+#                                                scenario_settings=ScenarioSettings(
+#                                                    interval_duration=60,
+#                                                    number_of_intervals=len(source_df.index),
+#                                                    number_of_expansion_intervals=1,
+#                                                    discount_rate=5
+#                                                ),
+#                                                engine_settings =  engine_settings_from_environment(),
+#                                                profile = source_df,
+#                                                objective_set =  objective_set)
+
+
+# port_vars = [i for i in dir(model) if 'port' in i]
+# cp_upstream_port = system.node_obj['ConnectionPoint'].ports['CP_grid']
+# cp_upstream_port_vars = [_v for _v in port_vars if cp_upstream_port.port_name in _v]
+#
+#
+# def objective_function():
+#     return objective
+#
+# model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
+
+
 result_df = optimise_results.df_by_port()
 assert(round(result_df['input'].max())==electrolyser_max_input)
 
@@ -182,5 +213,3 @@ wind_port = solar.ports['solar']
 
 (source_df.Solar.values - result_df.solar.values).sum()
 (source_df.Wind.values - result_df.wind.values).sum()
-
-
