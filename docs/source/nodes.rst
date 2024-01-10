@@ -1,4 +1,5 @@
 .. _Nodes_ref:
+
 ============
 *echo* Nodes
 ============
@@ -47,7 +48,7 @@ If the node has :math:`N` ports, each with a value of :math:`p^i_{x, t}` for :ma
 
 
 Multi Commodity Tellegen
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 A multi commodity Tellegen Node is an energy conserving node. The sum of all flows of the same commodity through the node must equal zero. This node does not necessarily represent a physical interconnection, but it is useful for representing logical connections (e.g., a building that has both gas and electricity supply).
 
 Like the Tellegen node, the Multi Commodity Tellegen node requires at least two ports per commodity.
@@ -111,7 +112,8 @@ Max utilisation is the ratio between the maximum energy consumed, and the maximu
 
 An example of initialising a controlled load is
 
-.. code-block::
+.. code-block:: python
+
     controlled_load = ControlledLoad(max_power=10,
                                      min_power=0,
                                      min_utilisation = 0.5,
@@ -569,7 +571,7 @@ Constraint relating the heating/cooling delivered to the node to the internal te
 
 
 Heat Pump Single Output
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 This Node models a heat pump that converts electrical energy into either heating or cooling output.
 A single output heat pump has one input electrical port :math:`p^\text{in}_{x, t}`, and one output thermal port :math:`p^\text{out}_{x, t}` that can either be positive (behaving as a heat sink, or cooling source), or negative (behaving as a heat source).
 An example of initialising a single output heat pump is
@@ -634,7 +636,7 @@ Cooling output constraint:
 
 
 Heat Pump Dual Output
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 A heat pump with dual outputs has separate ports for heating and cooling, and can be used to serve separate heating and cooling loads.
 It has one input electrical port :math:`p^\text{in}_{x, t}`, one output thermal port for heating (export only) :math:`p^\text{heat out}_{x, t}`, and one output port for cooling (import only) :math:`p^\text{cool out}_{x, t}`.
 

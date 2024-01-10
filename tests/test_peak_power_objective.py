@@ -1,18 +1,20 @@
 import numpy as np
 
-from echo.echo_models import *
-from echo.echo_optimiser import EchoOptimiser
-from echo.configuration import *
-from echo.objectives import *
-
-import os
-
-SOLVER = os.environ.get('OPTIMISER_ENGINE', 'cplex')
-SOLVER_EXECUTABLE = None
+from echo.configuration import Units
+from echo.models.agnostic import ControlledLoad, FlexPort
+from echo.models.base import Node, OptimisationGraph
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.power import QuadraticPower
+from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
-def test_controlled_load_with_peak_power_objective():
+
+def test_controlled_load_with_peak_power_objective(can_optimiser_do_non_linear_optimisation):
+    # Check if the optimiser can do non-linear problems. If not, skip test.
+    if not can_optimiser_do_non_linear_optimisation:
+        return
 
     expansion_periods = 1
     time_periods = 48
@@ -21,31 +23,31 @@ def test_controlled_load_with_peak_power_objective():
     system = OptimisationGraph()
 
     grid = Node()
-    grid.add_electrical_ports_from_list(['grid'])
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0/60.0)
-    controlled_load.ports['cload'] = cl
+    cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0 / 60.0)
+    controlled_load.ports["cload"] = cl
 
     system.add_node_obj([grid, controlled_load])
-    system.connect_ports_and_create_edge(grid.ports['grid'], cl)
+    system.connect_ports_and_create_edge(grid.ports["grid"], cl)
 
-    quad_power = QuadraticPower(component=grid.ports['grid'])
+    quad_power = QuadraticPower(component=grid.ports["grid"])
     objective_set = ObjectiveSet(objective_list=[quad_power])
 
-    optimiser = EchoOptimiser(
-        interval_duration=interval_duration,
-        number_of_intervals=time_periods,
-        number_of_expansion_intervals=expansion_periods,
-        discount_rate=0,
-        ES=system,
-        objective_set=objective_set
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
     )
 
-    optimiser.optimise()
-
-    root_p = optimiser.values(grid.ports['grid'].port_name, 0)*-1
-    cl_p = optimiser.values(cl.port_name, 0)
+    root_p = optimise_results.values(grid.ports["grid"].port_name, 0) * -1
+    cl_p = optimise_results.values(cl.port_name, 0)
 
     np.testing.assert_array_almost_equal(list(cl_p), [2 * 10.0 / N_INTERVALS] * 48)
 

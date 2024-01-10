@@ -79,8 +79,8 @@ to grid, load and inverter.
     connection_point.add_electrical_ports_from_list(['load', 'inv', 'grid'])
 
 
- Create *Load* node
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Create *Load* node
+^^^^^^^^^^^^^^^^^^
 We use generic *echo* Node to represent an aggregated household Load. Load nodes typically have a single port.
 Create an electrical demand port for the Load Node. Link load consumption profile (load_array) ot its ElectricalDemand port.
 

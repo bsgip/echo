@@ -1,0 +1,63 @@
+[tool.black]
+line-length = 120
+
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
+testpaths = "tests"
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.isort]
+profile = "black"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+
+[tool.mypy]
+exclude = ["docs/", "scripts/"]
+check_untyped_defs = true
+
+# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
+[[tool.mypy.overrides]]
+module = "pyomo.*"
+ignore_missing_imports = true
+
+# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
+[[tool.mypy.overrides]]
+module = "matplotlib.*"
+ignore_missing_imports = true
+
+# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
+[[tool.mypy.overrides]]
+module = "networkx.*"
+ignore_missing_imports = true
+
+
+[build-system]
+requires = ["setuptools >= 40.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "echo"
+version = "2.0.4"
+dependencies = [
+    "pyomo>=3.5",
+    "numpy>=1.21",
+    "pandas>=1.4",
+    "networkx>=2.7",
+    "seaborn>=0.11",
+    "typing-extensions>=4.1",
+    "pydantic>=1.9,<2",
+    "tqdm>=4.63",
+    "pyarrow>=7.0",
+    "scikit-learn>=1.1",
+    "orjson>=3.8",
+    "shortuuid>=1.0.11,<2",
+]
+
+[project.optional-dependencies]
+dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
+test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
+docs = ["sphinx", "sphinx-rtd-theme"]
+
+[tool.setuptools.package-data]
+"echo" = ["py.typed"]

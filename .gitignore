@@ -8,4 +8,11 @@ echo.egg-info
 /build/
 /build/lib/
 /build/lib/echo/
-/scripts/jupyter_examples/.ipynb_checkpoints/
+/docs/_build/
+/docs/source/_reference/
+.hypothesis
+.vscode
+cplex.log
+build/
+build/lib/
+build/lib/echo/
