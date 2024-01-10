@@ -51,7 +51,6 @@ def test_gas_boiler_fixed_cop():
     print("boiler output (heat): ", optimise_results.values(boiler.ports["output"].port_name, 0))
     print("heating load: ", hl.initial_value.values())
 
-
     gas_mains = optimise_results.values(gas_mains.ports["mains"].port_name, 0)
     hl_p = hl.initial_value
 

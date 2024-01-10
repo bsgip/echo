@@ -48,6 +48,7 @@ class MultiCommodityTellegenNode(Node):
     A node with ports that have multiple commodities.
     A tellegen constraint is applied per commodity.
     """
+
     node_rule = NodeRule.Custom
 
     def apply_node_constraints(self, model):
@@ -69,7 +70,12 @@ class MultiCommodityTellegenNode(Node):
                 commodities[p.units].append(p)
 
         for ctype, commodity_ports in commodities.items():
-            setattr(model, 'node_con_' + str(ctype) + self.node_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+            setattr(
+                model,
+                "node_con_" + str(ctype) + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=reliability),
+            )
+
 
 class FlexPort(Port):
     """Flexible variable port, which can import and export without constraints."""

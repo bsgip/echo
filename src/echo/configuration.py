@@ -134,7 +134,6 @@ class NodeType(Enum):
     FlexWithEmissions = "flex_with_emissions"
 
 
-
 class Resource(Enum):
     """ Enumeration object defining the types of Energy Resources (Commodities)
     """

@@ -39,7 +39,6 @@ def test_simple_controlled_load_does_minimum_energy_action():
     grid_export = optimise_results.values(grid.ports["grid"].neg, 0)
     load_import = optimise_results.values(cl.port_name, 0)
 
-
     np.testing.assert_almost_equal(sum(grid_export) * -1, cl.max_power * time_periods * cl.min_utilisation)
     # assert sum(optimiser.values(grid.ports['grid'].neg, 0))*-1 * 30.0 / 60.0 == 10.0
 

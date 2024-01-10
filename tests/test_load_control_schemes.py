@@ -3,11 +3,7 @@ import pytest
 from echo.configuration import NodeRule, TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform
-from echo.models.electrical import (
-    BoundedElectricalLoad,
-    ElectricalDemand,
-    ElectricalPort,
-)
+from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise

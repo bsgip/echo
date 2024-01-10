@@ -23,15 +23,7 @@ from echo.optimiser import optimise
 
 
 @pytest.mark.parametrize(
-    "minimum_demand,demand",
-    [
-        (0.0, 1.0),
-        (1.0, 1.0),
-        (2.0, 1.0),
-        (0.0, 2.0),
-        (1.0, 2.0),
-        (2.0, 2.0),
-    ],
+    "minimum_demand,demand", [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)]
 )
 @pytest.mark.parametrize("battery_capacity", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
 def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_capacity):

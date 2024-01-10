@@ -17,10 +17,7 @@ from echo.models.agnostic import (
 )
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (
-    create_input_output_pts_from_coefficients,
-    set_var_bounds_from_dict,
-)
+from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict
 from echo.validators import ArrayType
 
 
