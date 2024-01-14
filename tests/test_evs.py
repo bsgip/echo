@@ -711,7 +711,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
         [21.66666667, 23.33333333, 25.0, 26.66666667, 28.33333333, 30.0, 31.66666667, 30.83333333, 30.0, 29.16666667]
     )
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 # def test_v2g_soc_conserv():
@@ -1198,7 +1198,7 @@ def test_simple_v1g_with_stateful_data_injection():
     soc = optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0)
 
     # Assert soc will be what we think it will be
-    assert np.allclose(soc, good_soc, rtol=10 ** -5)
+    assert np.allclose(soc, good_soc, rtol=10**-5)
 
 
 def test_simple_v2g_with_stateful_data_injection_2():
@@ -1412,7 +1412,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
         soc = optimise_results.values(ev_cp.ports["vehicle"].soc_value, 0)
 
         # Assert soc will be what we think it will be
-        assert np.allclose(soc, good_socs[i], rtol=10 ** -5)
+        assert np.allclose(soc, good_socs[i], rtol=10**-5)
 
         i += 1
 
@@ -1422,10 +1422,10 @@ def test_simple_v1g_with_stateful_data_injection_2():
     cp_to_ev_flow = optimise_results.values(connection_point.ports["ev"].port_name, 0)
     ev_to_cp_flow = optimise_results.values(ev_cp.ports["cp"].port_name, 0)
 
-    assert np.allclose(grid_to_cp_flow, np.array([0, 0, 0, 0, -5, 0]), rtol=10 ** -5)
-    assert np.allclose(cp_to_grid_flow, np.array([0, 0, 0, 0, 5, 0]), rtol=10 ** -5)
-    assert np.allclose(cp_to_ev_flow, np.array([0, 0, 0, 0, -5, 0]), rtol=10 ** -5)
-    assert np.allclose(ev_to_cp_flow, np.array([0, 0, 0, 0, 5, 0]), rtol=10 ** -5)
+    assert np.allclose(grid_to_cp_flow, np.array([0, 0, 0, 0, -5, 0]), rtol=10**-5)
+    assert np.allclose(cp_to_grid_flow, np.array([0, 0, 0, 0, 5, 0]), rtol=10**-5)
+    assert np.allclose(cp_to_ev_flow, np.array([0, 0, 0, 0, -5, 0]), rtol=10**-5)
+    assert np.allclose(ev_to_cp_flow, np.array([0, 0, 0, 0, 5, 0]), rtol=10**-5)
 
 
 def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
@@ -1621,7 +1621,7 @@ def test_v1g_with_objective():
 
     expected_soc_1 = np.array([5, 10, 10, 20, 30, 35, 35, 40, 20, 0])
     expected_soc_2 = np.array([5, 10, 10, 15, 25, 35, 35, 40, 20, 0])
-    assert np.allclose(soc, expected_soc_1, rtol=10 ** -5) or np.allclose(soc, expected_soc_2, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
 
 
 def test_v1g_with_load_with_objective():
@@ -1728,7 +1728,7 @@ def test_v1g_with_load_with_objective():
 
     expected_soc = np.array([0, 0, 10, 20, 30, 40, 40, 40, 20, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 def test_v2g_with_load_with_objective():
@@ -1839,7 +1839,7 @@ def test_v2g_with_load_with_objective():
 
     expected_soc = np.array([0, 0, 0, 10, 20, 30, 30, 40, 20, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 def test_v2g_with_load_with_objective_v2g_behaviour():
@@ -1950,7 +1950,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
 
     expected_soc = np.array([35, 30, 40, 40, 30, 20, 30, 40, 20, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 def test_v1g_with_load_with_objective_with_stateful_data_injection():
@@ -2077,7 +2077,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
 
     expected_soc = np.array([4, 8, 12, 16, 26, 36, 36, 40, 20, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
 def test_v2g_with_load_with_objective_with_stateful_data_injection():
@@ -2209,7 +2209,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     expected_soc_1 = np.array([4, 8, 12, 22, 27, 27, 26, 30, 15, 0])
     expected_soc_2 = np.array([4, 8, 12, 16, 26, 27, 26, 30, 15, 0])
 
-    assert np.allclose(soc, expected_soc_1, rtol=10 ** -5) or np.allclose(soc, expected_soc_2, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc_1, rtol=10**-5) or np.allclose(soc, expected_soc_2, rtol=10**-5)
 
 
 def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
@@ -2428,4 +2428,4 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
 
     expected_soc = np.array([4, 8, 12, 16, 26, 36, 36, 40, 20, 0])
 
-    assert np.allclose(soc, expected_soc, rtol=10 ** -5)
+    assert np.allclose(soc, expected_soc, rtol=10**-5)
