@@ -25,7 +25,6 @@ def test_simple_controlled_load_does_minimum_energy_action():
     system.add_node_obj([grid, controlled_load])
     system.connect_ports_and_create_edge(grid.ports["grid"], cl)
 
-    # minimise imports
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,

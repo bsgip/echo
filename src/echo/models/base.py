@@ -10,14 +10,7 @@ import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import (
-    FlowConstraint,
-    Flows,
-    NodeRule,
-    OptimisationType,
-    TransformRule,
-    Units,
-)
+from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, TransformRule, Units
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
@@ -133,12 +126,7 @@ class Port(BaseModel):
         if slack is not None:
             self.slack = slack
 
-    def process_initial_value(
-        self,
-        initial_val,
-        expansion_periods: int = 1,
-        time_periods: Optional[int] = None,
-    ):
+    def process_initial_value(self, initial_val, expansion_periods: int = 1, time_periods: Optional[int] = None):
         if isinstance(initial_val, dict):
             self.add_initial_value(initial_val)
         elif isinstance(initial_val, str):
@@ -187,20 +175,12 @@ class Port(BaseModel):
 
         if self.initial_value_ref is not None:
             initial_val = to_initial_values(
-                profile,
-                self.initial_value_ref,
-                time_periods,
-                exp_periods,
-                scaling=initial_value_scaling,
+                profile, self.initial_value_ref, time_periods, exp_periods, scaling=initial_value_scaling
             )
         else:
             # TODO: add scaling for explicit initial value
             initial_val = self.initial_value
-        setattr(
-            model,
-            self.port_name,
-            en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain),
-        )
+        setattr(model, self.port_name, en.Var(model.Expansion, model.Time, initialize=initial_val, domain=domain))
 
         if self.opt_type is OptimisationType.Parameter:
             getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
@@ -231,41 +211,19 @@ class Port(BaseModel):
             setattr(
                 model,
                 self.import_con_val,
-                en.Param(
-                    model.Expansion,
-                    model.Time,
-                    initialize=import_constraint_dict,
-                    domain=en.NonNegativeReals,
-                ),
+                en.Param(model.Expansion, model.Time, initialize=import_constraint_dict, domain=en.NonNegativeReals),
             )
 
             if self.slack is True:
                 setattr(
                     model,
                     self.import_slack,
-                    en.Var(
-                        model.Expansion,
-                        model.Time,
-                        initialize=0,
-                        domain=en.NonPositiveReals,
-                    ),
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals),
                 )
-                setattr(
-                    model,
-                    con_name,
-                    en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack),
-                )
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_rule_slack))
                 con_name = "import_con_max_" + self.port_name
-                setattr(
-                    model,
-                    self.import_slack_max,
-                    en.Var(initialize=0, domain=en.NonPositiveReals),
-                )
-                setattr(
-                    model,
-                    con_name,
-                    en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule),
-                )
+                setattr(model, self.import_slack_max, en.Var(initialize=0, domain=en.NonPositiveReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule))
 
             else:
                 set_var_bounds_from_dict(getattr(model, self.port_name), ub=import_constraint_dict, lb=None)
@@ -276,41 +234,19 @@ class Port(BaseModel):
             setattr(
                 model,
                 self.export_con_val,
-                en.Param(
-                    model.Expansion,
-                    model.Time,
-                    initialize=export_constraint_dict,
-                    domain=en.NonPositiveReals,
-                ),
+                en.Param(model.Expansion, model.Time, initialize=export_constraint_dict, domain=en.NonPositiveReals),
             )
 
             if self.slack is True:
                 setattr(
                     model,
                     self.export_slack,
-                    en.Var(
-                        model.Expansion,
-                        model.Time,
-                        initialize=0,
-                        domain=en.NonNegativeReals,
-                    ),
+                    en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
                 )
-                setattr(
-                    model,
-                    con_name,
-                    en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack),
-                )
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_rule_slack))
                 con_name = "export_con_max_" + self.port_name
-                setattr(
-                    model,
-                    self.export_slack_max,
-                    en.Var(initialize=0, domain=en.NonNegativeReals),
-                )
-                setattr(
-                    model,
-                    con_name,
-                    en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
-                )
+                setattr(model, self.export_slack_max, en.Var(initialize=0, domain=en.NonNegativeReals))
+                setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule))
 
             else:
                 set_var_bounds_from_dict(getattr(model, self.port_name), ub=None, lb=export_constraint_dict)
@@ -325,52 +261,22 @@ class Port(BaseModel):
                 return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
 
             setattr(
-                model,
-                f"active_con1_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=on_off_rule1),
+                model, f"active_con1_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule1)
             )
             setattr(
-                model,
-                f"active_con2_{self.port_name}",
-                en.Constraint(model.Expansion, model.Time, rule=on_off_rule2),
+                model, f"active_con2_{self.port_name}", en.Constraint(model.Expansion, model.Time, rule=on_off_rule2)
             )
 
     def constrain_pos_neg(self, model: EchoConcreteModel):
         """Applies a mixed integer constraint that splits a port var into positive and negative components"""
         if hasattr(model, self.pos) is False:
-            setattr(
-                model,
-                self.pos,
-                en.Var(
-                    model.Expansion,
-                    model.Time,
-                    initialize=0,
-                    domain=en.NonNegativeReals,
-                ),
-            )
-            setattr(
-                model,
-                self.neg,
-                en.Var(
-                    model.Expansion,
-                    model.Time,
-                    initialize=0,
-                    domain=en.NonPositiveReals,
-                ),
-            )
-            setattr(
-                model,
-                self.is_pos,
-                en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
-            )
+            setattr(model, self.pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+            setattr(model, self.neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals))
+            setattr(model, self.is_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
             con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
             con_name = positive_variable_component + negative_variable_component + self.port_name
-            setattr(
-                model,
-                con_name,
-                en.Constraint(model.Expansion, model.Time, rule=con_rule),
-            )
+            setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=con_rule))
 
             def only_pos_or_neg_one(model: EchoConcreteModel, p, t):
                 return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
@@ -684,11 +590,7 @@ class Edge(BaseModel):
             return getattr(model, port1.port_name)[p, t] + getattr(model, port2.port_name)[p, t] == 0
 
         con_name = "edge_con_" + port1.port_name + "_" + port2.port_name
-        setattr(
-            model,
-            con_name,
-            en.Constraint(model.Expansion, model.Time, rule=edge_constraint_rule),
-        )
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=edge_constraint_rule))
 
     def get_max_flow_along_edge(self, forwards: bool = True):
         max_flow = None
@@ -737,11 +639,7 @@ class Path(BaseModel):
         self.vertices = vertex_list
 
     def initialise_path(self, model: EchoConcreteModel):
-        setattr(
-            model,
-            self.flow_value,
-            en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
-        )
+        setattr(model, self.flow_value, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
 
     def add_objective(self, model: EchoConcreteModel):
         total = 0

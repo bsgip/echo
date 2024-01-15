@@ -513,11 +513,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     time_periods = len(available)
 
     # Inject stateful data
-    system.node_obj["ev"].update(
-        available=available,
-        usage=usage,
-        interval_duration=interval_duration,
-    )
+    system.node_obj["ev"].update(available=available, usage=usage, interval_duration=interval_duration)
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
@@ -1604,9 +1600,7 @@ def test_v1g_with_objective():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -1713,9 +1707,7 @@ def test_v1g_with_load_with_objective():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -1734,9 +1726,7 @@ def test_v1g_with_load_with_objective():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc = np.array(
-        [0, 0, 10, 20, 30, 40, 40, 40, 20, 0],
-    )
+    expected_soc = np.array([0, 0, 10, 20, 30, 40, 40, 40, 20, 0])
 
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
@@ -1824,9 +1814,7 @@ def test_v2g_with_load_with_objective():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
 
     # assign a throughput cost to the battery
@@ -1937,9 +1925,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
 
     # assign a throughput cost to the ev's battery
@@ -1962,20 +1948,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
-    expected_soc = np.array(
-        [
-            35,
-            30,
-            40,
-            40,
-            30,
-            20,
-            30,
-            40,
-            20,
-            0,
-        ]
-    )
+    expected_soc = np.array([35, 30, 40, 40, 30, 20, 30, 40, 20, 0])
 
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
@@ -2063,10 +2036,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(
-        solar_data,
-        expansion_periods,
-    )
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
@@ -2086,9 +2056,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -2195,10 +2163,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(
-        solar_data,
-        expansion_periods,
-    )
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [15] * 2  # kw average during use
@@ -2218,9 +2183,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
 
     # assign a throughput cost to the ev's battery
@@ -2425,10 +2388,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(
-        solar_data,
-        expansion_periods,
-    )
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
@@ -2447,9 +2407,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"],
-        tariff_array=import_tariff,
-        expansion_periods=expansion_periods,
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 

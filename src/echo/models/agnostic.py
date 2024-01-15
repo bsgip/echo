@@ -43,6 +43,38 @@ class TellegenNode(Node):
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
 
+class MultiCommodityTellegenNode(Node):
+    """
+    A node with ports that have multiple commodities.
+    A tellegen constraint is applied per commodity.
+    """
+
+    node_rule = NodeRule.Custom
+
+    def apply_node_constraints(self, model):
+        # todo avoid repeating the below
+        def reliability(model, p, t):  # Tellegen node rule
+            a = 0
+            for port in commodity_ports:
+                b = getattr(model, port.port_name)
+                a += b[p, t]
+            return a == 0
+
+        commodities = dict()
+        for p in self.ports.values():
+            if commodities.get(p.units) is None:
+                commodities[p.units] = [p]
+            else:
+                commodities[p.units].append(p)
+
+        for commodity_type, commodity_ports in commodities.items():
+            setattr(
+                model,
+                "node_con_" + str(commodity_type) + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=reliability),
+            )
+
+
 class FlexPort(Port):
     """Flexible variable port, which can import and export without constraints."""
 

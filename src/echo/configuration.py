@@ -105,6 +105,8 @@ class ExpansionType(Enum):
 
 
 class NodeType(Enum):
+    """Enumeration of Node types"""
+
     ElectricalFlex = "electrical_flex"
     ElectricalTellegen = "elec_tellegen"
     MultiCommodityTellegen = "multi_commodity_tellegen"
@@ -171,6 +173,8 @@ class Resets(Enum):
 
 
 class EVChargeMode(Enum):
+    """Enumeration of EV class charging modes"""
+
     V0G = "V0G"
     V1G = "V1G"
     V2G = "V2G"

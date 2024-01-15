@@ -6,11 +6,7 @@ from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import (
-    DemandTariffObjective,
-    ExportDemandCharge,
-    ImportDemandCharge,
-)
+from echo.objectives.tariff import DemandTariffObjective, ExportDemandCharge, ImportDemandCharge
 from echo.optimiser import optimise
 
 
