@@ -63,15 +63,14 @@ class MultiCommodityTellegenNode(Node):
         commodities = dict()
         for p in self.ports.values():
             if commodities.get(p.units) is None:
-                commodities[p.units] = []
-                commodities[p.units].append(p)
+                commodities[p.units] = [p]
             else:
                 commodities[p.units].append(p)
 
-        for ctype, commodity_ports in commodities.items():
+        for commodity_type, commodity_ports in commodities.items():
             setattr(
                 model,
-                "node_con_" + str(ctype) + self.node_name,
+                "node_con_" + str(commodity_type) + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=reliability),
             )
 
