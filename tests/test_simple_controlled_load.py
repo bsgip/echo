@@ -4,7 +4,7 @@ from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Edge, Node, OptimisationGraph
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow, TotalExportFlow
+from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 
