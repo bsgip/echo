@@ -8,6 +8,7 @@ filterwarnings = ["error::DeprecationWarning"]
 
 [tool.isort]
 profile = "black"
+line_length=120
 
 [tool.bandit]
 exclude_dirs = ["tests"]
