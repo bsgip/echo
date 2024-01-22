@@ -66,8 +66,6 @@ class MultiCommodityTellegenNode(Node):
     A tellegen constraint is applied per commodity.
     """
 
-    node_rule = NodeRule.Custom
-
     def apply_node_constraints(self, model):
         # todo avoid repeating the below
         def reliability(model, p, t):  # Tellegen node rule
