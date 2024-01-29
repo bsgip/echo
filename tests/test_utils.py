@@ -10,19 +10,19 @@ from echo.utils import TimeSeriesData, UnexpandableTimeSeriesDataError, expand_a
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=1),
             {(0, 0): 0, (0, 1): 1, (0, 2): 2, (0, 3): 3, (0, 4): 4},
-        ),  # array with no expansion periods
+        ),  # array with no expansion intervals
         (
             TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=4, num_expansion_intervals=1),
             {(0, 0): 0, (0, 1): 1, (0, 2): 2, (0, 3): 3},
-        ),  # smaller array with no expansion periods
+        ),  # smaller array with no expansion intervals
         (
             TimeSeriesData(value=42, num_time_intervals=5, num_expansion_intervals=1),
             {(0, 0): 42, (0, 1): 42, (0, 2): 42, (0, 3): 42, (0, 4): 42},
-        ),  # scalar with no expansion periods
+        ),  # scalar with no expansion intervals
         (
             TimeSeriesData(value=[42], num_time_intervals=5, num_expansion_intervals=1),
             {(0, 0): 42, (0, 1): 42, (0, 2): 42, (0, 3): 42, (0, 4): 42},
-        ),  # "wrapped" scalar with no expansion periods
+        ),  # "wrapped" scalar with no expansion intervals
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=2),
             {
@@ -37,7 +37,7 @@ from echo.utils import TimeSeriesData, UnexpandableTimeSeriesDataError, expand_a
                 (1, 3): 3,
                 (1, 4): 4,
             },
-        ),  # array with 2 expansion periods
+        ),  # array with 2 expansion intervals
         (
             TimeSeriesData(value=[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]], num_time_intervals=5, num_expansion_intervals=2),
             {
@@ -52,7 +52,7 @@ from echo.utils import TimeSeriesData, UnexpandableTimeSeriesDataError, expand_a
                 (1, 3): 3,
                 (1, 4): 4,
             },
-        ),  # 2d list and 2 expansion periods [[time period for first expansion],[time period for second expansion]]
+        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]
     ],
 )
 def test_expand_as_dict(timeseriesdata, expected):
@@ -81,27 +81,27 @@ def test_expand_as_dict_should_raise_exception(timeseriesdata):
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=1),
             [[0, 1, 2, 3, 4]],
-        ),  # array with no additional expansion periods
+        ),  # array with no additional expansion intervals
         (
             TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=4, num_expansion_intervals=1),
             [[0, 1, 2, 3]],
-        ),  # smaller array with no additional expansion periods
+        ),  # smaller array with no additional expansion intervals
         (
             TimeSeriesData(value=42, num_time_intervals=5, num_expansion_intervals=1),
             [[42, 42, 42, 42, 42]],
-        ),  # scalar with no additional expansion periods
+        ),  # scalar with no additional expansion intervals
         (
             TimeSeriesData(value=[42], num_time_intervals=5, num_expansion_intervals=1),
             [[42, 42, 42, 42, 42]],
-        ),  # "wrapped" scalar with no expansion periods
+        ),  # "wrapped" scalar with no expansion intervals
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=2),
             [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
-        ),  # array with 2 expansion periods
+        ),  # array with 2 expansion intervals
         (
             TimeSeriesData(value=[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]], num_time_intervals=5, num_expansion_intervals=2),
             [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
-        ),  # 2d list and 2 expansion periods [[time period for first expansion],[time period for second expansion]]
+        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]
     ],
 )
 def test_expand_as_array(timeseriesdata, expected):
@@ -119,7 +119,7 @@ def test_expand_as_array(timeseriesdata, expected):
         ),  # number of time invervals smaller than array
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=0)
-        ),  # array with expansion periods set to 0
+        ),  # array with expansion intervals set to 0
         (
             TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=0, num_expansion_intervals=1)
         ),  # array with time intervals set to 0
