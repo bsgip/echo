@@ -39,20 +39,20 @@ from echo.utils import TimeSeriesData, UnexpandableTimeSeriesDataError, expand_a
             },
         ),  # array with 2 expansion intervals
         (
-            TimeSeriesData(value=[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]], num_time_intervals=5, num_expansion_intervals=2),
+            TimeSeriesData(value=[[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]], num_time_intervals=5, num_expansion_intervals=2),
             {
                 (0, 0): 0,
                 (0, 1): 1,
                 (0, 2): 2,
                 (0, 3): 3,
                 (0, 4): 4,
-                (1, 0): 0,
-                (1, 1): 1,
-                (1, 2): 2,
-                (1, 3): 3,
-                (1, 4): 4,
+                (1, 0): 5,
+                (1, 1): 6,
+                (1, 2): 7,
+                (1, 3): 8,
+                (1, 4): 9,
             },
-        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]
+        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]  # noqa E501
     ],
 )
 def test_expand_as_dict(timeseriesdata, expected):
@@ -99,9 +99,9 @@ def test_expand_as_dict_should_raise_exception(timeseriesdata):
             [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
         ),  # array with 2 expansion intervals
         (
-            TimeSeriesData(value=[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]], num_time_intervals=5, num_expansion_intervals=2),
-            [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
-        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]
+            TimeSeriesData(value=[[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]], num_time_intervals=5, num_expansion_intervals=2),
+            [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]],
+        ),  # 2d list and 2 expansion intervals [[time interval for first expansion],[time interval for second expansion]]  # noqa E501
     ],
 )
 def test_expand_as_array(timeseriesdata, expected):
