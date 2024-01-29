@@ -39,15 +39,15 @@ class UnexpandableTimeSeriesDataError(Exception):
 class TimeSeriesData:
     """A dataclass to hold a compressed way of describing time series data.
 
-    The TimeSeriesData object describes (potentially) compressed form of time-series data by only
-    storing a minimal set of values.
+    The TimeSeriesData object describes a potentially compressed form of time-series data by
+    allowing you to store only a minimal set of values.
 
     `value` has type ``TimeExpandableType``. It should only contain numbers (int or float).
     It should be either a single number e.g 37.3, a list containing a single number e.g. [5],
     a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, ...]
     or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
 
-    For 1-dimensional and 2-dimensional lists it is important to match the number of elements in the lists to the
+    For 1-dimensional and 2-dimensional lists, it is important to match the number of elements in the lists to the
     `num_time_intervals` and `num_expansion_intervals`.
     1-dimensional lists:
         `len(value) == num_time_intervals * num_expansion_intervals`
