@@ -117,6 +117,9 @@ def test_expand_as_array(timeseriesdata, expected):
         (
             TimeSeriesData(value=[0, 1, 2, 3], num_time_intervals=3, num_expansion_intervals=1)
         ),  # number of time invervals smaller than array
+        (
+            TimeSeriesData(value=[0, 1, 2, 3, 4], num_time_intervals=5, num_expansion_intervals=0)
+        ),  # array with expansion periods set to 0
     ],
 )
 def test_expand_as_array_should_raise_exception(timeseriesdata):

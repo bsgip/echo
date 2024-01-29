@@ -75,7 +75,8 @@ class TimeSeriesData:
     Attributes:
         value (TimeExpandableType): time series data. See above for more information on valid values.
         num_time_intervals (int): the number of time intervals for the time series data.
-        num_expansion_intervals (int): the number of expansion intervals for the time series data.
+        num_expansion_intervals (int): the number of expansion intervals for the time series data. Minimum value is 1,
+         which can be thought as having no expansion intervals.
     """
 
     value: TimeExpandableType
@@ -149,6 +150,11 @@ def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
         time periods/expansion periods.
 
     """
+    if data.num_expansion_intervals < 1:
+        raise UnexpandableTimeSeriesDataError(
+            f"num_expansion_intervals is less than one ('{data.num_expansion_intervals}' provided). See TimeSeriesData for more information"  # noqa E501
+        )
+
     value = maybe_list(data.value)
     flat_array = np.array(value).flatten()
 
