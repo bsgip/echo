@@ -191,9 +191,9 @@ class EV(TransformNode):
             discharging_power_limit=self.discharging_power_limit,
             charging_efficiency=self.charging_efficiency,
             discharging_efficiency=self.discharging_efficiency,
-            initial_state_of_charge=initial_state_of_charge
-            if initial_state_of_charge is not None
-            else self.initial_state_of_charge,
+            initial_state_of_charge=(
+                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
+            ),
             trip_slack=self.trip_slack,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
