@@ -14,10 +14,11 @@ from echo.constants import negative_variable_component, positive_variable_compon
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    ArrayWrap,
-    ArrayWrappableType,
+    TimeExpandableType,
+    TimeSeriesData,
     domain_from_flow,
-    expand,
+    expand_as_array,
+    expand_as_dict,
     generate_array_constraint,
     set_var_bounds_from_dict,
     to_initial_values,
@@ -405,8 +406,11 @@ class Port(BaseModel):
         """
         self.initial_value = initial_value
 
+    def set_initial_value_from_timeseriesdata(self, time_series_data: TimeSeriesData):
+        self.set_initial_value(expand_as_dict(time_series_data))
+
     def set_initial_value_from_array(
-        self, array: ArrayWrappableType, expansion_periods: int = 1, time_periods: Optional[int] = None
+        self, array: TimeExpandableType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
         """Sets initial port value which is used to initialise the pyomo var/param
 
@@ -416,7 +420,13 @@ class Port(BaseModel):
             time_periods: int, optional number of time periods. If=None, assume that time_periods = len(array)
             expansion_periods: number of expansion periods
         """
-        self.set_initial_value(expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods))
+        if time_periods is None:
+            time_periods = len(array)
+
+        time_series_data = TimeSeriesData(
+            value=array, num_time_intervals=time_periods, num_expansion_intervals=expansion_periods
+        )
+        self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
     def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Sets port active periods
@@ -424,7 +434,13 @@ class Port(BaseModel):
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
         """
-        self.active_periods = expand(array=array, expansion_periods=expansion_periods, time_periods=time_periods)
+        if time_periods is None:
+            time_periods = len(array)
+
+        time_series_data = TimeSeriesData(
+            value=array, num_time_intervals=time_periods, num_expansion_intervals=expansion_periods
+        )
+        self.active_periods = expand_as_dict(time_series_data)
 
     def add_objective(self, model: EchoConcreteModel):
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed
@@ -456,7 +472,7 @@ class Port(BaseModel):
 class TransformTerm:
     var: Port
     rule: TransformRule
-    weight: ArrayWrap
+    weight: TimeExpandableType
 
 
 class Transform(BaseModel):
@@ -476,9 +492,8 @@ class Transform(BaseModel):
         return "transform_" + str(self.uid)
 
     def _add_transform_to_model(self, model: EchoConcreteModel):
-        # Check if we need to create pos/neg components, and initialise the weights
+        # Check if we need to create pos/neg components
         for term in self.lhs:
-            term.weight.set_periods(len(model.Expansion), len(model.Time))
             if term.rule is not TransformRule.Both:
                 var = term.var
                 var.constrain_pos_neg(model)
@@ -559,8 +574,8 @@ class TransformNode(Node):
 
     def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         lhs_terms = [
-            TransformTerm(var=output_port, rule=TransformRule.Both, weight=ArrayWrap(1)),
-            TransformTerm(var=input_port, rule=TransformRule.Both, weight=ArrayWrap(-input_weight)),
+            TransformTerm(var=output_port, rule=TransformRule.Both, weight=1),
+            TransformTerm(var=input_port, rule=TransformRule.Both, weight=-input_weight),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
@@ -573,8 +588,8 @@ class TransformNode(Node):
             emission_factor: a ratio = emissions generated/emitting unit generated (float), or an array of values
         """
         lhs_terms = [
-            TransformTerm(carbon_port, TransformRule.Neg, ArrayWrap(1)),
-            TransformTerm(emitting_port, TransformRule.Neg, ArrayWrap(-emission_factor)),
+            TransformTerm(var=carbon_port, rule=TransformRule.Neg, weight=1),
+            TransformTerm(var=emitting_port, rule=TransformRule.Neg, weight=-emission_factor),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
@@ -589,7 +604,13 @@ class TransformNode(Node):
         def transform(model: EchoConcreteModel, p, t):  # Generic transformation node
             lhs = 0
             for term in current_transform.lhs:
-                weight = term.weight
+                weight = expand_as_array(
+                    TimeSeriesData(
+                        value=term.weight,
+                        num_expansion_intervals=len(model.Expansion),
+                        num_time_intervals=len(model.Time),
+                    )
+                )
                 rule = term.rule
                 if rule is TransformRule.Both:
                     var_name = term.var.port_name

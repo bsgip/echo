@@ -10,7 +10,7 @@ from echo.exceptions import validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict
+from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
 from echo.validators import ArrayType
 
 
@@ -73,7 +73,7 @@ class EV(TransformNode):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
 
     V0G_delta: Optional[Union[ArrayType, list]]
@@ -97,11 +97,11 @@ class EV(TransformNode):
 
         # Initialise port_name_to_port_uid_map
         if self.port_dict_name_to_port_uid_map is None:
-            self.port_dict_name_to_port_uid_map = dict()
+            self.port_dict_name_to_port_uid_map = {}
 
         # Initialise port_name_to_port_uid_map
         if self.port_dict_name_to_port_name_map is None:
-            self.port_dict_name_to_port_name_map = dict()
+            self.port_dict_name_to_port_name_map = {}
 
         # Preserve uid and port_name if present on port
         if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
@@ -191,9 +191,9 @@ class EV(TransformNode):
             discharging_power_limit=self.discharging_power_limit,
             charging_efficiency=self.charging_efficiency,
             discharging_efficiency=self.discharging_efficiency,
-            initial_state_of_charge=initial_state_of_charge
-            if initial_state_of_charge is not None
-            else self.initial_state_of_charge,
+            initial_state_of_charge=(
+                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
+            ),
             trip_slack=self.trip_slack,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
@@ -204,9 +204,9 @@ class EV(TransformNode):
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
         lhs_terms = [
-            TransformTerm(self.ports["vehicle"], TransformRule.Both, ArrayWrap(1)),
-            TransformTerm(self.ports["usage"], TransformRule.Both, ArrayWrap(1)),
-            TransformTerm(self.ports[self.connection_port_name], TransformRule.Both, ArrayWrap(-1)),
+            TransformTerm(var=self.ports["vehicle"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports["usage"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports[self.connection_port_name], rule=TransformRule.Both, weight=-1),
         ]
         return Transform(lhs_terms=lhs_terms)
 

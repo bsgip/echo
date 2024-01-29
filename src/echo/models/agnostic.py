@@ -9,8 +9,9 @@ from echo.exceptions import validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    ArrayWrap,
-    ArrayWrappableType,
+    TimeExpandableType,
+    TimeSeriesData,
+    expand_as_array,
     generate_array_constraint,
     populate_values_across_time_and_expansion_indices,
     set_float_var_bounds,
@@ -162,7 +163,7 @@ class Demand(Sink):
         self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
-        self, demand: ArrayWrappableType, expansion_periods=1, time_periods: Optional[int] = None
+        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
     ):
         self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
@@ -450,7 +451,7 @@ class MobileStorage(Storage):
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
     # soc_conserve: scalarOrArray
     available: Union[ArrayType, list, None] = None
@@ -483,19 +484,24 @@ class MobileStorage(Storage):
         def soc_conservative_rule(
             model: EchoConcreteModel, p, t
         ):  # a rule for enforcing conservativeness while plugged in
-            if self.soc_conserv and self.available is not None and self.available[t]:
+            if expanded_soc_conserv and self.available is not None and self.available[t]:
                 return (
                     getattr(model, self.soc_value)[p, t]
                     + getattr(model, self.cons_slack)[p, t]
-                    - self.soc_conserv[p, t]
+                    - expanded_soc_conserv[p, t]
                     >= 0
                 )
             else:
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
-            self.soc_conserv.set_periods(len(model.Expansion), len(model.Time))
-            # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
+            expanded_soc_conserv = expand_as_array(
+                TimeSeriesData(
+                    value=self.soc_conserv,
+                    num_expansion_intervals=len(model.Expansion),
+                    num_time_intervals=len(model.Time),
+                )
+            )
             setattr(
                 model, self.cons_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
             )

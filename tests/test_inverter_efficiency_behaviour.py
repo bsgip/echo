@@ -5,7 +5,7 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalImportFlow, TotalExportFlow
+from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48

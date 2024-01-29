@@ -5,9 +5,8 @@ from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
-from echo.utils import ArrayWrap
 
 
 def test_simple_bounded_load():
@@ -83,8 +82,6 @@ def test_time_delay_node(time_delay):
 
     print(optimise_results.opt_status)
     grid = optimise_results.values(grid.ports["grid"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
@@ -121,8 +118,8 @@ def test_feedback_loop():
     load.ports["load"] = l1
     load.ports["excess"] = excess
     lhs_terms = [
-        TransformTerm(l1, TransformRule.Both, ArrayWrap(1)),
-        TransformTerm(excess, TransformRule.Both, ArrayWrap(1)),
+        TransformTerm(var=l1, rule=TransformRule.Both, weight=1),
+        TransformTerm(var=excess, rule=TransformRule.Both, weight=1),
     ]
     t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)
@@ -154,8 +151,6 @@ def test_feedback_loop():
 
     print(optimise_results.opt_status)
     cp = optimise_results.values(cp.ports["supply"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
