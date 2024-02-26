@@ -4,14 +4,14 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
 
-def test_hybrid_inverter_dc_ac_efficiency():
+def test_hybrid_inverter_dc_ac_efficiency(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -71,7 +71,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )
@@ -91,7 +91,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
         np.testing.assert_almost_equal(sol_p[i] + sto_p[i], inv_p[i] / 0.9, 6)
 
 
-def test_hybrid_inverter_dc_dc_efficiency():
+def test_hybrid_inverter_dc_dc_efficiency(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -153,7 +153,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )

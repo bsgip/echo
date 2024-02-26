@@ -4,13 +4,13 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import DemandTariffObjective, ExportTariff, ImportDemandCharge, ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
 
-def test_objectives_sum_correctly():
+def test_objectives_sum_correctly(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -95,7 +95,7 @@ def test_objectives_sum_correctly():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=obj_set,
     )

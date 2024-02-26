@@ -50,10 +50,12 @@ class EchoConcreteModel(ConcreteModel):
 def engine_settings_from_environment(optimiser_engine: Optional[str] = None) -> EngineSettings:
     """Configure the optimiser through setting appropriate environmental variables."""
 
+    DEFAULT_OPTIMISER_ENGINE = "cplex"
+
+    # optimiser_engine is None or "" (empty string)
     if not optimiser_engine:
-        optimiser_engine = os.environ.get(
-            "OPTIMISER_ENGINE", "cplex"
-        )  # Default to cplex, as we seem to want quadratic costs
+        optimiser_engine = os.environ.get("OPTIMISER_ENGINE", DEFAULT_OPTIMISER_ENGINE)
+    optimiser_engine = optimiser_engine.lower()
 
     return EngineSettings(
         engine=optimiser_engine,
@@ -61,3 +63,9 @@ def engine_settings_from_environment(optimiser_engine: Optional[str] = None) -> 
         bigM=5000000,  # This value has been arbitrarily chosen
         smallM=0.0001,  # This value has been arbitrarily chosen
     )
+
+
+def can_optimiser_do_non_linear_optimisation(optimiser: str) -> bool:
+    """Returns True if optimiser can *only* do linear optimisations"""
+    linear_optimisers = ["cbc"]  # TODO Make this list complete
+    return optimiser not in linear_optimisers

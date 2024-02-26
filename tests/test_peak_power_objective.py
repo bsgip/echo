@@ -1,9 +1,10 @@
 import numpy as np
+import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Node, OptimisationGraph
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import QuadraticPower
 from echo.optimiser import optimise
@@ -11,10 +12,8 @@ from echo.optimiser import optimise
 N_INTERVALS = 48
 
 
-def test_controlled_load_with_peak_power_objective(can_optimiser_do_non_linear_optimisation):
-    # Check if the optimiser can do non-linear problems. If not, skip test.
-    if not can_optimiser_do_non_linear_optimisation:
-        return
+@pytest.mark.nonlinear
+def test_controlled_load_with_peak_power_objective(engine_settings):
 
     expansion_periods = 1
     time_periods = 48
@@ -41,7 +40,7 @@ def test_controlled_load_with_peak_power_objective(can_optimiser_do_non_linear_o
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

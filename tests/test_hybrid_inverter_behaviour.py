@@ -4,12 +4,12 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
 
-def test_hybrid_inverter_limits_battery_discharge_rate():
+def test_hybrid_inverter_limits_battery_discharge_rate(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -68,7 +68,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"])]),
     )
@@ -77,7 +77,7 @@ def test_hybrid_inverter_limits_battery_discharge_rate():
         np.testing.assert_almost_equal(optimise_results.values(cp.ports["grid"].port_name, 0)[i], 1.0)
 
 
-def test_hybrid_inverter_limits_path_flows():
+def test_hybrid_inverter_limits_path_flows(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -138,7 +138,7 @@ def test_hybrid_inverter_limits_path_flows():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"])]),
     )

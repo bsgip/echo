@@ -4,14 +4,14 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, FlexSink, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
 
-def test_solar_generation_limited_by_inverter_size():
+def test_solar_generation_limited_by_inverter_size(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -50,7 +50,7 @@ def test_solar_generation_limited_by_inverter_size():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=inverter.ports["cp"], minimise=False)]),
     )
@@ -66,7 +66,7 @@ def test_solar_generation_limited_by_inverter_size():
         np.testing.assert_almost_equal(cp_p[i], min(i, 5.0))
 
 
-def test_non_curtailable_system_not_curtailed():
+def test_non_curtailable_system_not_curtailed(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -98,7 +98,7 @@ def test_non_curtailable_system_not_curtailed():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"])]),
     )
@@ -113,7 +113,7 @@ def test_non_curtailable_system_not_curtailed():
         np.testing.assert_almost_equal(root_p[i], 5.0)
 
 
-def test_curtailable_system_curtailed():
+def test_curtailable_system_curtailed(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -147,7 +147,7 @@ def test_curtailable_system_curtailed():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"])]),
     )

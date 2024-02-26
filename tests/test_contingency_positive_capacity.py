@@ -4,13 +4,13 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.contingency import ContingencyPositive
 from echo.optimiser import optimise
 
 
-def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
+def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -61,7 +61,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -71,7 +71,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
         assert cont_pos_p[i] == 5.0
 
 
-def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingency_():
+def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingency_(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -123,7 +123,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -192,7 +192,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     #     assert sol_p[i] == 0.0
 
 
-def test_positive_contingency_calculation_with_storage_full():
+def test_positive_contingency_calculation_with_storage_full(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -258,7 +258,7 @@ def test_positive_contingency_calculation_with_storage_full():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

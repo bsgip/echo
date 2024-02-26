@@ -4,13 +4,13 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import DemandTariffObjective, ExportDemandCharge, ImportDemandCharge
 from echo.optimiser import optimise
 
 
-def test_system_import_demand_tariff():
+def test_system_import_demand_tariff(engine_settings):
     """Test that we correctly calculate the max import demand"""
 
     expansion_periods = 1
@@ -50,7 +50,7 @@ def test_system_import_demand_tariff():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -60,7 +60,7 @@ def test_system_import_demand_tariff():
     np.testing.assert_array_almost_equal(max_demand, max_in_window - minimum_demand)
 
 
-def test_system_export_demand_tariff():
+def test_system_export_demand_tariff(engine_settings):
     """Test that we correctly calculate the max export demand"""
 
     expansion_periods = 1
@@ -100,7 +100,7 @@ def test_system_export_demand_tariff():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -110,7 +110,7 @@ def test_system_export_demand_tariff():
     np.testing.assert_array_almost_equal(max_demand, max_in_window - minimum_demand)
 
 
-def test_system_import_demand_tariff_two_resets():
+def test_system_import_demand_tariff_two_resets(engine_settings):
     """Test that we correctly calculate the max import demand when we use a reset period"""
 
     expansion_periods = 1
@@ -150,7 +150,7 @@ def test_system_import_demand_tariff_two_resets():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

@@ -53,6 +53,7 @@ dependencies = [
     "scikit-learn>=1.1",
     "orjson>=3.8",
     "shortuuid>=1.0.11,<2",
+    "rich>=13.5.2,<14"
 ]
 
 [project.optional-dependencies]

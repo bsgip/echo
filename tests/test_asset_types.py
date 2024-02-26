@@ -6,7 +6,7 @@ from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import FlexGasPort, GasBoilerFixedCOP
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
@@ -15,7 +15,7 @@ from echo.optimiser import optimise
 N_INTERVALS = 48
 
 
-def test_gas_boiler_fixed_cop():
+def test_gas_boiler_fixed_cop(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -42,7 +42,7 @@ def test_gas_boiler_fixed_cop():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -58,7 +58,7 @@ def test_gas_boiler_fixed_cop():
         assert gas_mains[i] * boiler.cop == hl_p[(0, i)] * -1
 
 
-def test_modulating_gas_boiler():
+def test_modulating_gas_boiler(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -85,7 +85,7 @@ def test_modulating_gas_boiler():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -96,7 +96,7 @@ def test_modulating_gas_boiler():
         assert boiler_input[i] * boiler.cop == -1 * boiler_output[i]
 
 
-def test_chiller_operation():
+def test_chiller_operation(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -127,7 +127,7 @@ def test_chiller_operation():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -153,7 +153,7 @@ def test_chiller_operation():
         assert chiller_input[i] == 3
 
 
-def test_carbon_aggregation():
+def test_carbon_aggregation(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -210,7 +210,7 @@ def test_carbon_aggregation():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[import_tariff]),
     )
