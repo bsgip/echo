@@ -1,0 +1,47 @@
+# Build
+# docker build -f Dockerfile-tox -t echo-tox:latest .
+# Run
+# docker run --volume .:/opt/tox/echo echo-tox:latest
+# pull official base image
+FROM ubuntu:22.04
+# Prevent having to answer question about geographic area
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update --quiet --yes && \
+    apt-get install --quiet --yes build-essential ca-certificates git python3 python3-dev python3-venv software-properties-common
+
+# Install cbc (solver used by)
+RUN apt-get install --quiet --yes coinor-cbc coinor-libcbc-dev
+
+# Install deadsnakes (required for tox testing)
+RUN add-apt-repository --yes --update ppa:deadsnakes/ppa && \
+    apt-get install --quiet --yes python3.8 python3.8-dev python3.8-venv python3.9 python3.9-dev python3.9-venv python3.10 python3.10-dev python3.10-venv python3.11 python3.11-dev python3.11-venv python3.12 python3.12-dev python3.12-venv && \
+    apt-get autoremove -yqq --purge && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create user
+ARG uid=${UID:-1000}
+ARG gid=${GID:-1000}
+RUN groupadd group --gid=$gid
+RUN useradd user --uid=$uid --gid=$gid --home-dir=/tmp --no-create-home
+USER $uid:$gid
+
+# Create working directory
+WORKDIR /opt/tox
+
+# Install required python packages
+RUN python3 -m venv ./tox-venv
+RUN ./tox-venv/bin/python3 -m pip install --upgrade pip
+RUN ./tox-venv/bin/python3 -m pip install tox
+
+# Configure environment
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /opt/tox/echo
+
+# Defaults
+ENTRYPOINT [ "../tox-venv/bin/tox" ]
