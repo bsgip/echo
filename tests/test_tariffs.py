@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pytest
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
 
@@ -11,7 +11,7 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.prebuilt import FlexNode, Load
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
     BlockImportTariff,
@@ -28,7 +28,7 @@ from echo.optimiser import optimise
     "minimum_demand,demand", [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)]
 )
 @pytest.mark.parametrize("battery_capacity", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
-def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_capacity):
+def test_system_precharges_for_demand_tariff(engine_settings, demand, minimum_demand, battery_capacity):
     """
     Test that we appropriately minimise the demand charge associated with the demand period.
     The tests use the minimal objective function that gives a well-defined result,
@@ -91,7 +91,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -106,9 +106,9 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     )
 
 
-@settings(deadline=3000)
+@settings(deadline=3000, suppress_health_check=(HealthCheck.function_scoped_fixture,))
 @given(arrays(float, 12, elements=floats(1, 100)))
-def test_demand_charge_minimised_given_random_demand_in_period(demand_period_demand):
+def test_demand_charge_minimised_given_random_demand_in_period(engine_settings, demand_period_demand):
     minimum_demand = 0.0
     demand = np.concatenate([np.zeros(24), demand_period_demand, np.ones(12)])
 
@@ -182,7 +182,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -198,7 +198,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     np.testing.assert_array_almost_equal(optimise_results.values(b1.neg, 0)[24:36], expected_discharge, 3)
 
 
-def test_system_path_flows_adjust_to_path_tariffs():
+def test_system_path_flows_adjust_to_path_tariffs(engine_settings):
     """Tests whether path flows reroute based on path tariffs"""
 
     expansion_periods = 1
@@ -255,7 +255,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -266,7 +266,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     np.testing.assert_array_almost_equal(grid_to_load_vals[24:36], np.ones(12) * net_load)
 
 
-def test_path_flows_respect_port_constraints():
+def test_path_flows_respect_port_constraints(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -324,7 +324,7 @@ def test_path_flows_respect_port_constraints():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -350,7 +350,7 @@ def test_path_flows_respect_port_constraints():
 # This test sometimes fails due to the non-deterministic nature of optimizations.
 # We don't want this test to block a merging a pull request due to a failing run of the Github Action
 @pytest.mark.skipif(os.getenv("CI") == "true", reason="don't perform non-deterministic test in Github action")
-def test_demand_tariff_reset_periods():
+def test_demand_tariff_reset_periods(engine_settings):
     expansion_periods = 1
     expansion_periods = 1
     day_periods = 48
@@ -387,7 +387,7 @@ def test_demand_tariff_reset_periods():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -402,7 +402,7 @@ def test_demand_tariff_reset_periods():
         np.testing.assert_almost_equal(max_opt, max_calc, 5)
 
 
-def test_block_tariff():
+def test_block_tariff(engine_settings):
     time_periods = 24
     interval_duration = 60
     expansion_periods = 1
@@ -427,7 +427,7 @@ def test_block_tariff():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

@@ -3,12 +3,12 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Edge, Node, OptimisationGraph
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 
-def test_simple_controlled_load_does_minimum_energy_action():
+def test_simple_controlled_load_does_minimum_energy_action(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -31,7 +31,7 @@ def test_simple_controlled_load_does_minimum_energy_action():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"])]),
     )
@@ -47,7 +47,7 @@ def test_simple_controlled_load_does_minimum_energy_action():
         # assert optimiser.values(grid.ports['grid'].port_name, 0)[i] == optimiser.values(cl.port_name, 0)[i]*-1
 
 
-def test_simple_controlled_load_does_minimum_power_action():
+def test_simple_controlled_load_does_minimum_power_action(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -71,7 +71,7 @@ def test_simple_controlled_load_does_minimum_power_action():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"])]),
     )
@@ -84,7 +84,7 @@ def test_simple_controlled_load_does_minimum_power_action():
         np.testing.assert_almost_equal(grid_export[i], load_import[i])
 
 
-def test_simple_controlled_load_limited_to_max_energy():
+def test_simple_controlled_load_limited_to_max_energy(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -109,7 +109,7 @@ def test_simple_controlled_load_limited_to_max_energy():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"], minimise=False)]),
     )
@@ -125,7 +125,7 @@ def test_simple_controlled_load_limited_to_max_energy():
         # assert grid_export[i] == load_import[i]
 
 
-def test_simple_controlled_load_limited_to_max_power():
+def test_simple_controlled_load_limited_to_max_power(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -150,7 +150,7 @@ def test_simple_controlled_load_limited_to_max_power():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"], minimise=False)]),
     )

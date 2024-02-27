@@ -4,14 +4,14 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48
 
 
-def test_export_slack_var_is_minimised():
+def test_export_slack_var_is_minimised(engine_settings):
     """Connect curtailable solar to a connection pt with a flow constraint and slack vars enabled.
     The optimiser should curtail the solar rather than allowing the slack to be nonzero."""
     expansion_periods = 1
@@ -45,7 +45,7 @@ def test_export_slack_var_is_minimised():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"], minimise=False)]),
     )
@@ -55,7 +55,7 @@ def test_export_slack_var_is_minimised():
     np.testing.assert_almost_equal(inv_export_slack, 0)
 
 
-def test_import_slack_var_is_minimised():
+def test_import_slack_var_is_minimised(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -87,7 +87,7 @@ def test_import_slack_var_is_minimised():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=pv1, minimise=False)]),
     )
@@ -98,7 +98,7 @@ def test_import_slack_var_is_minimised():
     np.testing.assert_almost_equal(g_import_slack, 0)
 
 
-def test_slack_vars_take_up_slack_when_forced_to():
+def test_slack_vars_take_up_slack_when_forced_to(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -130,7 +130,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 

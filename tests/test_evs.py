@@ -10,14 +10,14 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import EV, ElectricalDemand, ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower
 from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
 
-def test_v0g():
+def test_v0g(engine_settings):
     # Set up hyper params
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -75,12 +75,12 @@ def test_v0g():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v0g_2():
+def test_v0g_2(engine_settings):
     """Like test_v0g, just different parameters."""
 
     # Set up hyper params
@@ -140,12 +140,12 @@ def test_v0g_2():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v0g_3():
+def test_v0g_3(engine_settings):
     """Like test_v0g_2, just different parameters, but discharge first, then charge."""
 
     # Set up hyper params
@@ -205,12 +205,12 @@ def test_v0g_3():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v0g_with_stateful_data_injection():
+def test_v0g_with_stateful_data_injection(engine_settings):
     # Extends off test_v0g()
 
     # Available and usage combinations that work
@@ -298,12 +298,12 @@ def test_v0g_with_stateful_data_injection():
                 number_of_expansion_intervals=expansion_periods,
                 discount_rate=discount_rate,
             ),
-            engine_settings=engine_settings_from_environment(),
+            engine_settings=engine_settings,
             graph=system,
         )
 
 
-def test_v0g_output_matches_expectation():
+def test_v0g_output_matches_expectation(engine_settings):
     """This example if taken from scripts/manual_examples/ev_example.
 
     The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
@@ -372,7 +372,7 @@ def test_v0g_output_matches_expectation():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -442,7 +442,7 @@ def test_v0g_output_matches_expectation():
     assert np.array_equal(soc, expected_soc)
 
 
-def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset():
+def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset(engine_settings):
     """This example builds on test_v0g_output_matches_expectation.
 
     The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
@@ -537,7 +537,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -600,7 +600,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     assert np.array_equal(soc, expected_soc)
 
 
-def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_dataset():
+def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_dataset(engine_settings):
     """This example builds on test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset
 
     The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
@@ -701,7 +701,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -718,7 +718,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
 #     pass
 
 
-def test_v1g_no_objective():
+def test_v1g_no_objective(engine_settings):
     # Set up hyper params
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -776,12 +776,12 @@ def test_v1g_no_objective():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v1g_no_objective_2():
+def test_v1g_no_objective_2(engine_settings):
     """Like test_v1g, just different parameters."""
 
     # Set up hyper params
@@ -841,12 +841,12 @@ def test_v1g_no_objective_2():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v1g_no_objective_3():
+def test_v1g_no_objective_3(engine_settings):
     """Like test_v1g_2, just different parameters, but discharge first, then charge."""
 
     # Set up hyper params
@@ -906,12 +906,12 @@ def test_v1g_no_objective_3():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v2g_no_objective():
+def test_v2g_no_objective(engine_settings):
     # Set up hyper params
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -969,12 +969,12 @@ def test_v2g_no_objective():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v2g_no_objective_2():
+def test_v2g_no_objective_2(engine_settings):
     """Like test_v1g, just different parameters."""
 
     # Set up hyper params
@@ -1034,12 +1034,12 @@ def test_v2g_no_objective_2():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_v2g_no_objective_3():
+def test_v2g_no_objective_3(engine_settings):
     """Like test_v1g_2, just different parameters, but discharge first, then charge."""
 
     # Set up hyper params
@@ -1099,12 +1099,12 @@ def test_v2g_no_objective_3():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
 
-def test_simple_v1g_with_stateful_data_injection():
+def test_simple_v1g_with_stateful_data_injection(engine_settings):
     """Get V1G to behave properly"""
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
     good_soc = np.array([50, 50, 40, 30, 30, 30])
@@ -1189,7 +1189,7 @@ def test_simple_v1g_with_stateful_data_injection():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         verbose=False,
     )
@@ -1201,7 +1201,7 @@ def test_simple_v1g_with_stateful_data_injection():
     assert np.allclose(soc, good_soc, rtol=10**-5)
 
 
-def test_simple_v2g_with_stateful_data_injection_2():
+def test_simple_v2g_with_stateful_data_injection_2(engine_settings):
     """Get V1G to behave properly"""
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
 
@@ -1284,7 +1284,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         verbose=False,
     )
@@ -1299,7 +1299,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     assert any(np.not_equal(soc, np.array([0] * 6)))
 
 
-def test_simple_v1g_with_stateful_data_injection_2():
+def test_simple_v1g_with_stateful_data_injection_2(engine_settings):
     """Get V1G to behave properly"""
 
     # Available and usage combinations that work
@@ -1403,7 +1403,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
                 number_of_expansion_intervals=expansion_periods,
                 discount_rate=discount_rate,
             ),
-            engine_settings=engine_settings_from_environment(),
+            engine_settings=engine_settings,
             graph=system,
             verbose=False,
         )
@@ -1428,7 +1428,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
     assert np.allclose(ev_to_cp_flow, np.array([0, 0, 0, 0, 5, 0]), rtol=10**-5)
 
 
-def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
+def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection(engine_settings):
     """Get V1G to behave properly"""
 
     bad_available_usages: List[Tuple[list, list]] = [
@@ -1524,13 +1524,13 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
                     number_of_expansion_intervals=expansion_periods,
                     discount_rate=discount_rate,
                 ),
-                engine_settings=engine_settings_from_environment(),
+                engine_settings=engine_settings,
                 graph=system,
                 verbose=False,
             )
 
 
-def test_v1g_with_objective():
+def test_v1g_with_objective(engine_settings):
     """Like test_v1g_no_objective_2, but with objective"""
 
     # Set up hyper params
@@ -1618,7 +1618,7 @@ def test_v1g_with_objective():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -1630,7 +1630,7 @@ def test_v1g_with_objective():
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-def test_v1g_with_load_with_objective():
+def test_v1g_with_load_with_objective(engine_settings):
     """Like test_v1g_with_objective, but with a load.
 
     Expect delayed charging behaviour.
@@ -1731,7 +1731,7 @@ def test_v1g_with_load_with_objective():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -1743,7 +1743,7 @@ def test_v1g_with_load_with_objective():
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-def test_v2g_with_load_with_objective():
+def test_v2g_with_load_with_objective(engine_settings):
     """Like test_v1g_with_load_with_objective, but with a load.
 
     Expect delayed charging behaviour.
@@ -1848,7 +1848,7 @@ def test_v2g_with_load_with_objective():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -1860,7 +1860,7 @@ def test_v2g_with_load_with_objective():
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-def test_v2g_with_load_with_objective_v2g_behaviour():
+def test_v2g_with_load_with_objective_v2g_behaviour(engine_settings):
     """Like test_v1g_with_load_with_objective, but with a load.
 
     Expect delayed EV to supply some power to load behaviour.
@@ -1965,7 +1965,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -1977,7 +1977,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-def test_v1g_with_load_with_objective_with_stateful_data_injection():
+def test_v1g_with_load_with_objective_with_stateful_data_injection(engine_settings):
     """Like test_v1g_with_load_with_objective, now using the initialise data function.
 
     This test is a bit different to the V0G tests with initialise data in that this will just replicate the procedure
@@ -2098,7 +2098,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -2110,7 +2110,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-def test_v2g_with_load_with_objective_with_stateful_data_injection():
+def test_v2g_with_load_with_objective_with_stateful_data_injection(engine_settings):
     """Like test_v2g_with_load_with_objective, now using the initialise data function.
 
     This test is a bit different to the V0G tests with initialise data in that this will just replicate the procedure
@@ -2235,7 +2235,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -2337,7 +2337,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     assert old_port_uids == new_port_uids
 
 
-def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defaults():
+def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defaults(engine_settings):
     """Like test_v1g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
     attributes.
 
@@ -2460,7 +2460,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
             number_of_expansion_intervals=expansion_periods,
             discount_rate=discount_rate,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

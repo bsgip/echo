@@ -4,13 +4,13 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.contingency import ContingencyNegative
 from echo.optimiser import optimise
 
 
-def test_negative_contingency_respects_hybrid_inverter_constraints():
+def test_negative_contingency_respects_hybrid_inverter_constraints(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -74,7 +74,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -87,7 +87,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
         np.testing.assert_almost_equal(cont_neg_p[i], -5.0)
 
 
-def test_negative_contingency_maximisation_curtails_solar():
+def test_negative_contingency_maximisation_curtails_solar(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -153,7 +153,7 @@ def test_negative_contingency_maximisation_curtails_solar():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )
@@ -170,7 +170,7 @@ def test_negative_contingency_maximisation_curtails_solar():
         np.testing.assert_almost_equal(sol_p[i], 0.0)
 
 
-def test_negative_contingency_calculation_with_no_available_energy():
+def test_negative_contingency_calculation_with_no_available_energy(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -235,7 +235,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=objective_set,
     )

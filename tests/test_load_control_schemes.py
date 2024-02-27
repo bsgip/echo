@@ -4,12 +4,12 @@ from echo.configuration import TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
 from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
 from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
 
-def test_simple_bounded_load():
+def test_simple_bounded_load(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -34,7 +34,7 @@ def test_simple_bounded_load():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
         objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"])]),
     )
@@ -47,7 +47,7 @@ def test_simple_bounded_load():
 
 
 @pytest.mark.parametrize("time_delay", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
-def test_time_delay_node(time_delay):
+def test_time_delay_node(engine_settings, time_delay):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -76,7 +76,7 @@ def test_time_delay_node(time_delay):
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -91,7 +91,7 @@ def test_time_delay_node(time_delay):
             assert load_import[i] == -1 * grid[int(i - td.time_delay)]
 
 
-def test_feedback_loop():
+def test_feedback_loop(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30
@@ -142,7 +142,7 @@ def test_feedback_loop():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 

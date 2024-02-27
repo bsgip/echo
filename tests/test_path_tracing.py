@@ -1,14 +1,15 @@
 import numpy as np
+import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings
 from echo.optimiser import optimise
 
 
-def test_partitioning_regions_for_path_flow():
+def test_partitioning_regions_for_path_flow(engine_settings):
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
@@ -72,7 +73,7 @@ def test_partitioning_regions_for_path_flow():
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
@@ -95,10 +96,8 @@ def test_partitioning_regions_for_path_flow():
         )
 
 
-def test_regularisation_of_path_flows(can_optimiser_do_non_linear_optimisation):
-    # Check if the optimiser can do non-linear problems. If not, skip test.
-    if not can_optimiser_do_non_linear_optimisation:
-        return
+@pytest.mark.nonlinear
+def test_regularisation_of_path_flows(engine_settings):
 
     expansion_periods = 1
     time_periods = 48
@@ -143,7 +142,7 @@ def test_regularisation_of_path_flows(can_optimiser_do_non_linear_optimisation):
             number_of_intervals=time_periods,
             number_of_expansion_intervals=expansion_periods,
         ),
-        engine_settings=engine_settings_from_environment(),
+        engine_settings=engine_settings,
         graph=system,
     )
 
