@@ -168,11 +168,11 @@ def validate_network_graph(graph: OptimisationGraph):
 
 
 def build_model_and_objective(
-    graph: OptimisationGraph,
-    scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
+        graph: OptimisationGraph,
+        scenario_settings: ScenarioSettings,
+        engine_settings: EngineSettings,
+        profile: Optional[pd.DataFrame],
+        objective_set: Optional[ObjectiveSet],
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
@@ -248,14 +248,14 @@ def build_model_and_objective(
 
 
 def optimise(
-    scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
-    graph: OptimisationGraph,
-    objective_set: Optional[ObjectiveSet] = None,
-    profile: Optional[pd.DataFrame] = None,
-    verbose: bool = False,
-    logfile: Optional[str] = None,
-    acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
+        scenario_settings: ScenarioSettings,
+        engine_settings: EngineSettings,
+        graph: OptimisationGraph,
+        objective_set: Optional[ObjectiveSet] = None,
+        profile: Optional[pd.DataFrame] = None,
+        verbose: bool = False,
+        logfile: Optional[str] = None,
+        acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
     using the supplied graph.
@@ -282,6 +282,16 @@ def optimise(
         opt = SolverFactory(engine_settings.engine)
 
     # Run the optimisation, logging everything to the specified file
+    SOLVER_NAME = engine_settings.engine
+    TIME_LIMIT = 120
+    if 'cplex' in SOLVER_NAME:
+        opt.solver.options['timelimit'] = TIME_LIMIT
+    elif 'glpk' in SOLVER_NAME:
+        opt.solver.options['tmlim'] = TIME_LIMIT
+    elif 'gurobi' in SOLVER_NAME:
+        opt.solver.options['TimeLimit'] = TIME_LIMIT
+    elif 'xpress' in SOLVER_NAME:
+        opt.solver.options['soltimelimit'] = TIME_LIMIT
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
