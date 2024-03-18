@@ -302,10 +302,10 @@ def optimise(
     termination_condition: TerminationCondition = results.solver.termination_condition
     solver_status: SolverStatus = results.solver.status
 
-    if solver_status != SolverStatus.ok:
-        raise OptimiserResultError(f"Solver status returned as {solver_status}")
-    elif solver_status == SolverStatus.aborted:
+    if solver_status == SolverStatus.aborted:
         print(termination_condition)
+    elif solver_status != SolverStatus.ok:
+        raise OptimiserResultError(f"Solver status returned as {solver_status}")
 
     if termination_condition not in acceptable_conditions:
         raise OptimiserResultError(
