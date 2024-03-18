@@ -19,6 +19,7 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
         TerminationCondition.globallyOptimal,
         TerminationCondition.locallyOptimal,
         TerminationCondition.optimal,
+        TerminationCondition.maxTimeLimit,
     ]
 )
 
@@ -303,6 +304,8 @@ def optimise(
 
     if solver_status != SolverStatus.ok:
         raise OptimiserResultError(f"Solver status returned as {solver_status}")
+    elif solver_status == SolverStatus.aborted:
+        print(termination_condition)
 
     if termination_condition not in acceptable_conditions:
         raise OptimiserResultError(
