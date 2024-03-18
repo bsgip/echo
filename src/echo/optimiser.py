@@ -285,13 +285,13 @@ def optimise(
     SOLVER_NAME = engine_settings.engine
     TIME_LIMIT = 120
     if 'cplex' in SOLVER_NAME:
-        opt.solver.options['timelimit'] = TIME_LIMIT
+        opt.options['timelimit'] = TIME_LIMIT
     elif 'glpk' in SOLVER_NAME:
-        opt.solver.options['tmlim'] = TIME_LIMIT
+        opt.options['tmlim'] = TIME_LIMIT
     elif 'gurobi' in SOLVER_NAME:
-        opt.solver.options['TimeLimit'] = TIME_LIMIT
+        opt.options['TimeLimit'] = TIME_LIMIT
     elif 'xpress' in SOLVER_NAME:
-        opt.solver.options['soltimelimit'] = TIME_LIMIT
+        opt.options['soltimelimit'] = TIME_LIMIT
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
