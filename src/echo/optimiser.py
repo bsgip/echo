@@ -257,6 +257,7 @@ def optimise(
         verbose: bool = False,
         logfile: Optional[str] = None,
         acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
+        time_limit: int = 300
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
     using the supplied graph.
@@ -284,15 +285,14 @@ def optimise(
 
     # Run the optimisation, logging everything to the specified file
     SOLVER_NAME = engine_settings.engine
-    TIME_LIMIT = 120
     if 'cplex' in SOLVER_NAME:
-        opt.options['timelimit'] = TIME_LIMIT
+        opt.options['timelimit'] = time_limit
     elif 'glpk' in SOLVER_NAME:
-        opt.options['tmlim'] = TIME_LIMIT
+        opt.options['tmlim'] = time_limit
     elif 'gurobi' in SOLVER_NAME:
-        opt.options['TimeLimit'] = TIME_LIMIT
+        opt.options['TimeLimit'] = time_limit
     elif 'xpress' in SOLVER_NAME:
-        opt.options['soltimelimit'] = TIME_LIMIT
+        opt.options['soltimelimit'] = time_limit
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
