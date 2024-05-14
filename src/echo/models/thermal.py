@@ -1,4 +1,5 @@
 from typing import Optional
+from pydantic import root_validator, validator
 
 import numpy as np
 import pyomo.environ as en
@@ -175,38 +176,183 @@ class ThermalNode(Node):
         setattr(model, "internal_temp_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
 
+class ThermalStorage(Node):
+    """Model of sensible thermal storage with liquid or solid storage medium.
+
+    Thermal storage keeps track of its internal temperature value base. Assumes homogenious temperature throughout the
+    TES volume.
+    """
+
+    max_temp: float  # Maximum operational temperature in degrees  Celsius
+    min_temp: float  # Minimum operational temperature in degrees  Celsius
+    ambient_temp: dict  # Ambient temp, formatted as dict with expansion-time keys
+    storage_mass: float  # Mass of storage medium in kg
+    specific_heat: float  # Specific heat capacity in Joule/kg*C
+    ins_transmittance: float = 0  # Thermal transmittance U-value of TES insulation in W/sqm*C
+    surface_area: float = 0  # Surface area of TES in square meters, default value=0 means zero heat loss/gain
+    initial_temp: float = None  # initial internal temperature in degrees  Celsius
+    optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
+    energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
+    separate_in_out_ports: bool = True  # Create two thermal ports charge and discharge, else 1 two-way port
+
+
+    # Pyomo vars/params
+    internal_temp: str
+    is_gain: str
+    losses: str
+    gains: str
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.internal_temp = "internal_temp_" + self.node_name
+        self.net_loss_gain = "net_loss_gain_" + self.node_name
+
+        # TODO: Shall both ports be bi-directional?
+        if self.separate_in_out_ports:
+            self.ports["input"] = FlexSink(units=self.energy_flow_units)
+            self.ports["output"] = FlexSource(units=self.energy_flow_units)
+        else:
+            self.ports["input_output"] = FlexSink(units=self.energy_flow_units)
+
+
+        # Initial temperature is not defined set to mid-operation range
+        if not self.initial_temp:
+            self.initial_temp = self.min_temp + 0.5*(self.max_temp-self.min_temp)
+
+    @property
+    def soc_value(self):
+        return "storage_soc_" + self.node_name
+
+    @property
+    def soc_constraint(self):
+        return "soc_cons_" + self.node_name
+
+    @property
+    def lump_capacitance(self):
+        return self.storage_mass*self.specific_heat
+
+    @property
+    def lump_conductance(self):
+        return self.ins_transmittance*self.surface_area
+
+    @property
+    def energy_units_conversion(self):
+        if self.energy_flow_units == Units.KWT:
+            # If ports flow in KWT calculate energy in KWTh
+            return 1/3600000
+        elif self.energy_flow_units == Units.JPS:
+            # If ports flow in JPS calculate energy in Joules
+            return 1
+
+    @property
+    def max_heat_storage_capacity(self):
+        return self.lump_capacitance*(self.max_temp-self.min_temp)*self.energy_units_conversion
+
+    @root_validator
+    def _non_zero_temp_range(cls, values: dict) -> dict:
+        """Temperature range must be non-zero and positive for TES to be operational"""
+        if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
+            raise ValueError(
+                f"Temperature range must be non-zero and positive for TES to be operational."
+                f"Was given max temperature {values['max_temp']} "
+                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] - values['min_temp']}"
+            )
+        return values
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(ThermalStorage, self).add_node_to_model(model, profile)
+        self.create_and_bound_temp_variable(model)
+        self.create_soc_variable(model)
+        self.apply_net_loss_and_gain_constraint(model)
+        self.apply_energy_balance_constraint(model)
+        self.apply_soc_constraint(model)
+
+    def create_and_bound_temp_variable(self, model: EchoConcreteModel):
+        # Create temperature variable
+        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # Bound temp variable to be within range
+        set_var_bounds_from_dict(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
+
+    def create_soc_variable(self, model: EchoConcreteModel):
+        # Calculate initial state of charge based on the initial internal temperature value
+        initial_soc = self.lump_capacitance*(self.initial_temp - self.min_temp)*self.energy_units_conversion
+        # Create soc variable and bound it
+        setattr(model, self.soc_value, en.Var(model.Expansion, model.Time,
+                initialize=initial_soc, bounds=(0, self.max_heat_storage_capacity)))
+
+    def apply_net_loss_and_gain_constraint(self, model: EchoConcreteModel):
+        # Create variable for net losses and gains
+        setattr(model, self.net_loss_gain, en.Var(model.Expansion, model.Time, domain=en.Reals))
+
+        # Apply constraints on loss and gain variables
+        def net_loss_gain_constraint(model: EchoConcreteModel, p, t):
+            """Losses to /gains from environment equals to the temperature
+            difference between ambient and internal multiplied by lump_conductance """
+            return (
+                getattr(model, self.net_loss_gain)[p, t]
+                == (self.external_temp[p, t] -
+                    getattr(model, self.internal_temp)[p, t])*self.lump_conductance
+            )
+        # Loss/gain values calculated in Joules!
+
+        setattr(
+            model, "loss_gain_con1_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=net_loss_gain_constraint),
+        )
+
+    def apply_energy_balance_constraint(self, model: EchoConcreteModel):
+        # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
+        dt_sec = model.scenario_settings.interval_duration*60
+        max_t = len(model.Time)
+        if self.energy_flow_units == Units.KWT:
+            # If ports flow in KWT transform to Joules
+            flow_units_scaler = 1000
+        elif self.energy_flow_units == Units.JPS:
+            # If ports flow in JPS calculate losses in JPS
+            flow_units_scaler = 1
+
+        def change_of_internal_temperature_constraint(model: EchoConcreteModel, p, t):
+            heat_in_out = 0
+            for v in self.ports.values():
+                heat_in_out += getattr(model, v.port_name)[p, t]  # sum together our thermal ports
+
+            heat_in_out *= flow_units_scaler
+            internal_temp = getattr(model, self.internal_temp)
+            loss_gain = getattr(model, self.net_loss_gain)[p, t]
+
+            if p == 0 and t == 0:
+                return (
+                    (heat_in_out+loss_gain)*dt_sec
+                    == (internal_temp[p, t] - self.initial_internal_temp)*self.lump_capacitance
+                )
+            elif t == 0:
+                # Constraint enforcing temperature (and thus SOC) at the beginning of each expansion
+                # periods be the same as at the end of previous expansion period
+                return (
+                    (heat_in_out+loss_gain)*dt_sec
+                    == (internal_temp[p, t] - internal_temp[p-1, max_t])*self.lump_capacitance
+                )
+            else:
+                temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
+                return (heat_in_out+loss_gain)*dt_sec == temp_diff * self.lump_capacitance
+
+        setattr(model, "internal_temp_con_" + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=change_of_internal_temperature_constraint))
+
+    def apply_soc_constraint(self, model: EchoConcreteModel):
+        # State of charge in Joule or KWTh is a linear function of the internal temperature
+        def soc_rule(model: EchoConcreteModel, p, t):
+            soc = getattr(model, self.soc_value)
+            internal_temperature = getattr(model, self.port_name)
+            self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
+            return (soc[p, t] == self.lump_capacitance * (internal_temperature[p, t]
+                                                          - self.min_temp) * self.energy_units_conversion)
+        setattr(model, "SOC_con_" + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=soc_rule))
+
+
 class ThermalPort(FlexPort):
     """Flexible thermal port, +ve if importing heat, -ve if exporting heat."""
-
-    units = Units.KWT
-
-
-class FlexHeatSource(ThermalPort):
-    flows = Flows.Export
-
-
-class FlexCoolingSource(ThermalPort):
-    flows = Flows.Import
-
-
-class FlexHeatSink(ThermalPort):
-    flows = Flows.Import
-
-
-class FlexCoolingSink(ThermalPort):
-    flows = Flows.Export
-
-
-class HeatSource(Source):
-    units = Units.KWT
-
-
-class HeatSink(Sink):
-    units = Units.KWT
-
-
-class FixedThermalPort(FixedPort):
-    """Fixed thermal port, +ve if importing heat, -ve if exporting heat."""
 
     units = Units.KWT
 
