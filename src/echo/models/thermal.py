@@ -179,7 +179,7 @@ class ThermalNode(Node):
 class ThermalStorage(Node):
     """Model of sensible thermal storage with liquid or solid storage medium.
 
-    Thermal storage keeps track of its internal temperature value base. Assumes homogenious temperature throughout the
+    Thermal storage keeps track of its internal temperature value base. Assumes homogeneous temperature throughout the
     TES volume.
     """
 
@@ -214,10 +214,27 @@ class ThermalStorage(Node):
         else:
             self.ports["input_output"] = FlexSink(units=self.energy_flow_units)
 
-
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
             self.initial_temp = self.min_temp + 0.5*(self.max_temp-self.min_temp)
+
+    @root_validator
+    def _non_zero_temp_range(cls, values: dict) -> dict:
+        """Temperature range must be non-zero and positive for TES to be operational"""
+        if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
+            raise ValueError(
+                f"Temperature range must be non-zero and positive for TES to be operational."
+                f"Was given max temperature {values['max_temp']} "
+                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] - values['min_temp']}"
+            )
+        return values
+
+    @validator("energy_flow_units", allow_reuse=True)
+    def _units_are_allowed(cls, v: Units) -> Units:
+        if v and v not in {Units.JPS, Units.KWT}:
+            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS)."
+                             f"Received {v}")
+        return v
 
     @property
     def soc_value(self):
@@ -247,17 +264,6 @@ class ThermalStorage(Node):
     @property
     def max_heat_storage_capacity(self):
         return self.lump_capacitance*(self.max_temp-self.min_temp)*self.energy_units_conversion
-
-    @root_validator
-    def _non_zero_temp_range(cls, values: dict) -> dict:
-        """Temperature range must be non-zero and positive for TES to be operational"""
-        if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
-            raise ValueError(
-                f"Temperature range must be non-zero and positive for TES to be operational."
-                f"Was given max temperature {values['max_temp']} "
-                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] - values['min_temp']}"
-            )
-        return values
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(ThermalStorage, self).add_node_to_model(model, profile)
