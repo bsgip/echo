@@ -18,7 +18,7 @@ from echo.models.agnostic import (
 )
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict
+from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict, set_float_var_bounds
 from echo.validators import ArrayType
 
 
@@ -195,24 +195,15 @@ class ThermalStorage(Node):
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = True  # Create two thermal ports charge and discharge, else 1 two-way port
 
-
-    # Pyomo vars/params
-    internal_temp: str
-    is_gain: str
-    losses: str
-    gains: str
-
     def __init__(self, **data):
         super().__init__(**data)
-        self.internal_temp = "internal_temp_" + self.node_name
-        self.net_loss_gain = "net_loss_gain_" + self.node_name
 
         # TODO: Shall both ports be bi-directional?
         if self.separate_in_out_ports:
             self.ports["input"] = FlexSink(units=self.energy_flow_units)
             self.ports["output"] = FlexSource(units=self.energy_flow_units)
         else:
-            self.ports["input_output"] = FlexSink(units=self.energy_flow_units)
+            self.ports["input_output"] = FlexPort(units=self.energy_flow_units)
 
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
@@ -235,6 +226,14 @@ class ThermalStorage(Node):
             raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS)."
                              f"Received {v}")
         return v
+
+    @property
+    def internal_temp(self):
+        return "internal_temp_" + self.node_name
+
+    @property
+    def net_loss_gain(self):
+        return "net_loss_gain_" + self.node_name
 
     @property
     def soc_value(self):
@@ -277,7 +276,7 @@ class ThermalStorage(Node):
         # Create temperature variable
         setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
         # Bound temp variable to be within range
-        set_var_bounds_from_dict(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
+        set_float_var_bounds(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
 
     def create_soc_variable(self, model: EchoConcreteModel):
         # Calculate initial state of charge based on the initial internal temperature value
@@ -296,7 +295,7 @@ class ThermalStorage(Node):
             difference between ambient and internal multiplied by lump_conductance """
             return (
                 getattr(model, self.net_loss_gain)[p, t]
-                == (self.external_temp[p, t] -
+                == (self.ambient_temp[p, t] -
                     getattr(model, self.internal_temp)[p, t])*self.lump_conductance
             )
         # Loss/gain values calculated in Joules!
@@ -329,7 +328,7 @@ class ThermalStorage(Node):
             if p == 0 and t == 0:
                 return (
                     (heat_in_out+loss_gain)*dt_sec
-                    == (internal_temp[p, t] - self.initial_internal_temp)*self.lump_capacitance
+                    == (internal_temp[p, t] - self.initial_temp)*self.lump_capacitance
                 )
             elif t == 0:
                 # Constraint enforcing temperature (and thus SOC) at the beginning of each expansion
@@ -349,7 +348,7 @@ class ThermalStorage(Node):
         # State of charge in Joule or KWTh is a linear function of the internal temperature
         def soc_rule(model: EchoConcreteModel, p, t):
             soc = getattr(model, self.soc_value)
-            internal_temperature = getattr(model, self.port_name)
+            internal_temperature = getattr(model, self.internal_temp)
             self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
             return (soc[p, t] == self.lump_capacitance * (internal_temperature[p, t]
                                                           - self.min_temp) * self.energy_units_conversion)
