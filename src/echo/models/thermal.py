@@ -193,7 +193,7 @@ class ThermalStorage(Node):
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
-    separate_in_out_ports: bool = True  # Create two thermal ports charge and discharge, else 1 two-way port
+    separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
     def __init__(self, **data):
         super().__init__(**data)
