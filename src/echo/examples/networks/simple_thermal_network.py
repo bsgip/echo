@@ -12,6 +12,7 @@ from echo.objectives.power import PeakPositivePower
 from echo.objectives.tariff import ThroughputCost
 from echo.optimiser import optimise
 import pandas as pd
+
 pd.options.plotting.backend = "plotly"
 
 
@@ -89,19 +90,25 @@ thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
 thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
-storage = ThermalStorage(max_temp=80,
-                         min_temp=10,
-                         ambient_temp=ambient_temp_dict,
-                         storage_mass=mass,
-                         specific_heat=4184,
-                         ins_transmittance=u_ins,
-                         surface_area=area,
-                         separate_in_out_ports=False)
+storage = ThermalStorage(
+    max_temp=80,
+    min_temp=10,
+    ambient_temp=ambient_temp_dict,
+    storage_mass=mass,
+    specific_heat=4184,
+    ins_transmittance=u_ins,
+    surface_area=area,
+    separate_in_out_ports=False,
+)
 
-cp = TellegenNode(node_name="conn_point",
-                  ports={"to_supply_kwt": FlexPort(units=Units.KWT),
-                         "to_storage_kwt": FlexPort(units=Units.KWT),
-                         "to_demand_kwt": FlexPort(units=Units.KWT)})
+cp = TellegenNode(
+    node_name="conn_point",
+    ports={
+        "to_supply_kwt": FlexPort(units=Units.KWT),
+        "to_storage_kwt": FlexPort(units=Units.KWT),
+        "to_demand_kwt": FlexPort(units=Units.KWT),
+    },
+)
 
 # ----------------------------------------------------------------------------------------------------------------------
 #   4. Build the optimisation graph
@@ -113,8 +120,12 @@ system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.po
 system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
 system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
 
-objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01),
-                                                 PeakPositivePower(component=cp.ports["to_supply_kwt"])])
+objective_set = ObjectiveSet(
+    objective_list=[
+        ThroughputCost(component=storage.ports["input_output"], rate=0.01),
+        PeakPositivePower(component=cp.ports["to_supply_kwt"]),
+    ]
+)
 
 
 optimise_results = optimise(
@@ -145,7 +156,7 @@ storage_2p = ThermalStorage(
     specific_heat=4184,
     ins_transmittance=u_ins,
     surface_area=area,
-    separate_in_out_ports=True
+    separate_in_out_ports=True,
 )
 
 cp_1 = TellegenNode(
