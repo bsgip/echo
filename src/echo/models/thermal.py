@@ -458,6 +458,8 @@ class HotWaterTank(Node):
         super(HotWaterTank, self).add_node_to_model(model, profile)
         self.create_and_bound_temp_variable(model)
         self.apply_net_loss_and_gain_constraint(model)
+        self.apply_convective_heat_constraint(model)
+        self.apply_conductive_heat_constraint(model)
         self.apply_energy_balance_constraint(model)
 
     def create_and_bound_temp_variable(self, model: EchoConcreteModel):
@@ -515,18 +517,23 @@ class HotWaterTank(Node):
             # Apply constraint on convective temperature change variables
             def convective_temp_change(model: EchoConcreteModel, p, t):
                 """Temperature change of each layer due to inflow water volume"""
+                # TODO: review this condition. For valid formulation the outflow volume per time interval is
+                #  not expected to exceed volume of one layer
+                volume_out_p_t = volume_out[p, t]
+                # if abs(volume_out_p_t) > self.layer_volume:
+                #     volume_out_p_t = -self.layer_volume
                 if i == 0:
                     """convective exchange in the bottom layer is due to mains/return water inflow"""
-                    return getattr(model, f"{i}_dT_conv_{self.node_name}")[p, t] == -volume_out[
+                    return getattr(model, f"{i}_dT_conv_{self.node_name}")[
                         p, t
-                    ] * dt_sec / self.layer_volume * (
+                    ] == -volume_out_p_t * dt_sec / self.layer_volume * (
                         self.inlet_temp - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
                     )
                 else:
                     """convective exchange in non bottom layer is due to water inflow from the layer below"""
-                    return getattr(model, f"{i}_dT_conv_{self.node_name}")[p, t] == -volume_out[
+                    return getattr(model, f"{i}_dT_conv_{self.node_name}")[
                         p, t
-                    ] * dt_sec / self.layer_volume * (
+                    ] == -volume_out_p_t * dt_sec / self.layer_volume * (
                         getattr(model, f"{i-1}_{self.internal_temp}")[p, t - 1]
                         - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
                     )
@@ -653,22 +660,29 @@ class HeatPump(Node):
     heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
     cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
 
-    # pyomo vars/params
-    heating_cop: str
-    cooling_cop: str
-    heat_in: str
-    cool_in: str
-
     def __init__(self, **data):
         super().__init__(**data)
         # Create input and output ports
         self.ports["input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
 
         # Naming variables
-        self.heating_cop = "heating_cop_" + self.node_name
-        self.cooling_cop = "cooling_cop_" + self.node_name
-        self.heat_in = "heat_in_" + self.node_name
-        self.cool_in = "cool_in_" + self.node_name
+
+    @property
+    def heating_cop(self):
+        return "heating_cop_" + self.node_name
+
+    @property
+    def cooling_cop(self):
+        return "cooling_cop_" + self.node_name
+
+    @property
+    def heat_in(self):
+        return "heat_in_" + self.node_name
+
+    @property
+    def cool_in(self):
+        return "cool_in_" + self.node_name
+
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(HeatPump, self).add_node_to_model(model, profile)
