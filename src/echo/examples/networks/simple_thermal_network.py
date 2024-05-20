@@ -12,20 +12,29 @@ from echo.objectives.power import PeakPositivePower
 from echo.objectives.tariff import ThroughputCost
 from echo.optimiser import optimise
 import pandas as pd
-
 pd.options.plotting.backend = "plotly"
 
+
+""" A simple thermal network
+
+    A heating load, thermal storage and heating mains are connected resulting in this graph:
+
+                       +--------+
+                    +--+ th load 
++------+     +------+  |  +--------+
+|th mains +--+ C.P. +--+                
++------+     +------+  |  +----------+  
+                    +--+ th storage
+                       +----------+  
+"""
+
+# ----------------------------------------------------------------------------------------------------------------------
+#   1. Define constants
+# ----------------------------------------------------------------------------------------------------------------------
 
 NUMBER_INTERVALS = 48
 INTERVAL_DURATION = 30
 NUM_EXPANSION_PERIODS = 1
-
-amb_temp_data = TimeSeriesData(
-    value=25, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
-)
-ambient_temp_dict = expand_as_dict(amb_temp_data)
-u_ins = 5  # W/sqm*C (from 0.5 - 11 is reasonable range)
-mass = 500
 
 
 def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True):
@@ -41,8 +50,20 @@ def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True)
         return round(2 * np.pi * radius * height + np.pi * radius**2, 3)
 
 
+# Thermal transmittance of storage insulation in W/sqm*C (from 0.5 - 11 is reasonable range)
+u_ins = 5
+# mass of thermal storage in kg
+mass = 500
+# Specific heat capacity of storage medium (here is water) in J/kg*C
+c_p = 4184
+# Total surface area of thermal storage from volume (for water 1 kg=1 litre)
 area = default_surface_area_of_cylinder(mass * 1e-3)
-q_max_joules = 4184 * mass * 70  # Max energy storage capacity in joules
+
+# ----------------------------------------------------------------------------------------------------------------------
+#   2. Define thermal demand profile and ambient temperature profile
+# ----------------------------------------------------------------------------------------------------------------------
+
+q_max_joules = c_p * mass * 70  # Max energy storage capacity in joules
 q_max_kwh = q_max_joules / 3600000
 th_load = [0.1] * 14 + [0.4] * 4 + [0.05] * 16 + [0.4] * 6 + [0.2] * 8
 th_load = list((np.array(th_load) * q_max_kwh).round())
@@ -53,23 +74,14 @@ th_demand_data = TimeSeriesData(
 
 th_demand_dict = expand_as_dict(th_demand_data)
 
-# DHW demand profiles
-max_temp_dhw = 60
-min_temp_dhw = 45
-temp_mains_dhw = 10
-dhw_load_normalised = [0] * 8 + [0.2] * 4 + [0.3] * 4 + [0.05] * 16 + [0.1] * 4 + [0.2] * 4 + [0.05] * 8
-dhw_total_daily_ltr = 200
-dhw_load_litres = list((np.array(dhw_load_normalised) * dhw_total_daily_ltr / sum(dhw_load_normalised)).round())
-
-
-dhw_load_data = TimeSeriesData(
-    value=dhw_load_litres, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+amb_temp_data = TimeSeriesData(
+    value=25, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
 )
+ambient_temp_dict = expand_as_dict(amb_temp_data)
 
-dhw_load_data_dict = expand_as_dict(dhw_load_data)
-
-
-###########################
+# ----------------------------------------------------------------------------------------------------------------------
+#   3. Define nodes
+# ----------------------------------------------------------------------------------------------------------------------
 
 thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
 
@@ -77,29 +89,53 @@ thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
 thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
-# storage = ThermalStorage(max_temp=80,
-#                          min_temp=10,
-#                          ambient_temp=ambient_temp_dict,
-#                          storage_mass=mass,
-#                          specific_heat=4184,
-#                          ins_transmittance=u_ins,
-#                          surface_area=area,
-#                          separate_in_out_ports=False)
-#
-# cp = TellegenNode(node_name="conn_point",
-#                   ports={"to_supply_kwt": FlexPort(units=Units.KWT),
-#                          "to_storage_kwt": FlexPort(units=Units.KWT),
-#                          "to_demand_kwt": FlexPort(units=Units.KWT)})
-#
-# system = OptimisationGraph()
-# system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-# system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
-# system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
-# system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
-#
-# objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
-# objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01),
-#                                                  PeakPositivePower(component=cp.ports["to_supply_kwt"])])
+storage = ThermalStorage(max_temp=80,
+                         min_temp=10,
+                         ambient_temp=ambient_temp_dict,
+                         storage_mass=mass,
+                         specific_heat=4184,
+                         ins_transmittance=u_ins,
+                         surface_area=area,
+                         separate_in_out_ports=False)
+
+cp = TellegenNode(node_name="conn_point",
+                  ports={"to_supply_kwt": FlexPort(units=Units.KWT),
+                         "to_storage_kwt": FlexPort(units=Units.KWT),
+                         "to_demand_kwt": FlexPort(units=Units.KWT)})
+
+# ----------------------------------------------------------------------------------------------------------------------
+#   4. Build the optimisation graph
+# ----------------------------------------------------------------------------------------------------------------------
+
+system = OptimisationGraph()
+system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+
+objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01),
+                                                 PeakPositivePower(component=cp.ports["to_supply_kwt"])])
+
+
+optimise_results = optimise(
+    scenario_settings=ScenarioSettings(
+        interval_duration=INTERVAL_DURATION,
+        number_of_intervals=NUMBER_INTERVALS,
+        number_of_expansion_intervals=NUM_EXPANSION_PERIODS,
+    ),
+    engine_settings=engine_settings_from_environment(),
+    graph=system,
+    objective_set=objective_set,
+)
+
+
+""" When Storage has two ports, we need two connection points as only one edge is allowed between any two nodes
+"""
+
+# ----------------------------------------------------------------------------------------------------------------------
+#   5. Create thermal storage with 2 ports and two separate connection points
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 storage_2p = ThermalStorage(
     max_temp=80,
@@ -109,9 +145,8 @@ storage_2p = ThermalStorage(
     specific_heat=4184,
     ins_transmittance=u_ins,
     surface_area=area,
+    separate_in_out_ports=True
 )
-
-# When Storage has two ports, we need two connection points as only one edge is allowed between any two nodes
 
 cp_1 = TellegenNode(
     node_name="conn_point_supply",
@@ -130,6 +165,11 @@ cp_2 = TellegenNode(
         "to_storage_output_kwt": FlexPort(units=Units.KWT),
     },
 )
+
+# ----------------------------------------------------------------------------------------------------------------------
+#   6. Build new optimisation graph
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 system = OptimisationGraph()
 system.add_node_obj([storage_2p, thermal_demand, thermal_mains, cp_1, cp_2])
@@ -182,17 +222,3 @@ fig = pd.DataFrame(soc_100).plot(
     labels=dict(index="Time", value="KWTh", variable="SOC"),
 )
 fig.show()
-
-
-
-
-hwt = HotWaterTank(
-    max_outlet_temp=65,
-    min_outlet_temp=45,
-    inlet_temp = 10,
-    ambient_temp=ambient_temp_dict,
-    tank_volume = 350,
-    max_flow_rate = 9,
-    ins_transmittance=u_ins,
-    surface_area=area,
-)
