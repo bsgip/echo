@@ -164,7 +164,7 @@ cp_1 = TellegenNode(
     ports={
         "to_supply_kwt": FlexPort(units=Units.KWT),
         "to_demand_cp_kwt": FlexPort(units=Units.KWT),
-        f"to_storage_input_kwt": FlexPort(units=Units.KWT),
+        "to_storage_input_kwt": FlexPort(units=Units.KWT),
     },
 )
 

@@ -211,7 +211,7 @@ class ThermalStorage(Node):
         """Temperature range must be non-zero and positive for TES to be operational"""
         if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
             raise ValueError(
-                f"Temperature range must be non-zero and positive for TES to be operational."
+                "Temperature range must be non-zero and positive for TES to be operational."
                 f"Was given max temperature {values['max_temp']} "
                 f"and min temperature {values['min_temp']}, "
                 f"resulting in range {values['max_temp'] - values['min_temp']}"
@@ -221,7 +221,7 @@ class ThermalStorage(Node):
     @validator("energy_flow_units", allow_reuse=True)
     def _units_are_allowed(cls, v: Units) -> Units:
         if v and v not in {Units.JPS, Units.KWT}:
-            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS)." f"Received {v}")
+            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS). Received {v}")
         return v
 
     @property
