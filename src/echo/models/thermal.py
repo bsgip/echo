@@ -4,16 +4,13 @@ from pydantic import root_validator, validator
 import numpy as np
 import pyomo.environ as en
 
-from echo.configuration import Flows, Units
+from echo.configuration import Units
 from echo.exceptions import validate
 from echo.models.agnostic import (
-    FixedPort,
     FlexPort,
     FlexSink,
     FlexSource,
     SinglePiecewiseIONode,
-    Sink,
-    Source,
     TimeVaryingPiecewiseIONode,
 )
 from echo.models.base import Node
@@ -216,7 +213,8 @@ class ThermalStorage(Node):
             raise ValueError(
                 f"Temperature range must be non-zero and positive for TES to be operational."
                 f"Was given max temperature {values['max_temp']} "
-                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] - values['min_temp']}"
+                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] 
+                                                                                - values['min_temp']}"
             )
         return values
 

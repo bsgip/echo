@@ -2,10 +2,10 @@ import numpy as np
 
 from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink, FixedPort
-from echo.models.base import Node, OptimisationGraph, TransformNode
+from echo.models.agnostic import FlexPort, TellegenNode, Sink
+from echo.models.base import Node, OptimisationGraph
 
-from echo.models.thermal import ThermalStorage, HeatPump, HotWaterTank
+from echo.models.thermal import ThermalStorage
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakPositivePower
