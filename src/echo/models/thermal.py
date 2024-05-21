@@ -213,8 +213,8 @@ class ThermalStorage(Node):
             raise ValueError(
                 f"Temperature range must be non-zero and positive for TES to be operational."
                 f"Was given max temperature {values['max_temp']} "
-                f"and min temperature {values['min_temp']}, resulting in range {values['max_temp'] 
-                                                                                - values['min_temp']}"
+                f"and min temperature {values['min_temp']}, "
+                f"resulting in range {values['max_temp'] - values['min_temp']}"
             )
         return values
 
