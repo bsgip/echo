@@ -1,4 +1,6 @@
 from typing import Optional
+
+import pandas as pd
 from pydantic import root_validator, validator
 
 import numpy as np
@@ -15,7 +17,12 @@ from echo.models.agnostic import (
 )
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict, set_float_var_bounds
+from echo.utils import (
+    create_input_output_pts_from_coefficients,
+    set_var_bounds_from_dict,
+    set_float_var_bounds,
+    to_initial_values,
+)
 from echo.validators import ArrayType
 
 
@@ -182,9 +189,10 @@ class ThermalStorage(Node):
 
     max_temp: float  # Maximum operational temperature in degrees  Celsius
     min_temp: float  # Minimum operational temperature in degrees  Celsius
-    ambient_temp: dict  # Ambient temp, formatted as dict with expansion-time keys
     storage_mass: float  # Mass of storage medium in kg
     specific_heat: float  # Specific heat capacity in Joule/kg*C
+    ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
+    ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
     ins_transmittance: float = 0  # Thermal transmittance U-value of TES insulation in W/sqm*C
     surface_area: float = 0  # Surface area of TES in square meters, default value=0 means zero heat loss/gain
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
@@ -263,11 +271,28 @@ class ThermalStorage(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(ThermalStorage, self).add_node_to_model(model, profile)
+        self.load_values_from_profile(model, profile)
         self.create_and_bound_temp_variable(model)
         self.create_soc_variable(model)
         self.apply_net_loss_and_gain_constraint(model)
         self.apply_energy_balance_constraint(model)
         self.apply_soc_constraint(model)
+
+    def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """For all attributes set by str reference, load values from profile."""
+        if self.ambient_temp_ref and self.ambient_temp_ref in profile_df.columns:
+            self.ambient_temp = to_initial_values(
+                profile_df,
+                key=self.ambient_temp_ref,
+                time_periods=len(model.Time),
+                expansion_periods=len(model.Expansion),
+            )
+        elif self.ambient_temp_ref and self.ambient_temp_ref not in profile_df.columns:
+            raise ValueError(
+                f"Could find reference column name {self.ambient_temp_ref} " "for ambient temperature in the profile."
+            )
+        else:
+            pass
 
     def create_and_bound_temp_variable(self, model: EchoConcreteModel):
         # Create temperature variable
@@ -292,7 +317,13 @@ class ThermalStorage(Node):
         # Apply constraints on loss and gain variables
         def net_loss_gain_constraint(model: EchoConcreteModel, p, t):
             """Losses to /gains from environment equals to the temperature
-            difference between ambient and internal multiplied by lump_conductance"""
+            difference between ambient and internal multiplied by lump_conductance.
+
+            If not ambient temperature values are provided, set loss to zero.
+            """
+            if not self.ambient_temp:
+                return getattr(model, self.net_loss_gain)[p, t] == 0
+
             return (
                 getattr(model, self.net_loss_gain)[p, t]
                 == (self.ambient_temp[p, t] - getattr(model, self.internal_temp)[p, t]) * self.lump_conductance

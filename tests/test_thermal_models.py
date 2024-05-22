@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
@@ -45,6 +46,7 @@ q_max_joules = 4184 * mass * (max_temp - min_temp)  # Max energy storage capacit
 q_max_kwh = q_max_joules / 3600000
 th_load = [0.1] * 14 + [0.4] * 4 + [0.05] * 16 + [0.4] * 6 + [0.2] * 8
 th_load = list((np.array(th_load) * q_max_kwh).round())
+profile_df = pd.DataFrame({"thermal_load": th_load, "ambient_temp": [25] * NUMBER_INTERVALS})
 
 
 def test_thermal_storage():
@@ -144,6 +146,163 @@ def test_thermal_storage():
 
     # Expecting peak power to be less with peak power objective
     assert cp_flow_df_no["to_supply_kwt"].max() >= cp_flow_df_pp["to_supply_kwt"].max()
+
+
+def test_thermal_storage_with_profile():
+    storage = ThermalStorage(
+        max_temp=max_temp,
+        min_temp=min_temp,
+        ambient_temp_ref="ambient_temp",
+        storage_mass=mass,
+        specific_heat=4184,
+        ins_transmittance=u_ins,
+        surface_area=area,
+        separate_in_out_ports=False,
+    )
+
+    thermal_demand = Node(
+        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")}
+    )
+
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
+
+    cp = TellegenNode(
+        node_name="conn_point",
+        ports={
+            "to_supply_kwt": FlexPort(units=Units.KWT),
+            "to_storage_kwt": FlexPort(units=Units.KWT),
+            "to_demand_kwt": FlexPort(units=Units.KWT),
+        },
+    )
+    system = OptimisationGraph()
+    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
+
+    optimise_results_no = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS,
+            number_of_expansion_intervals=NUM_EXPANSION_PERIODS,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+        profile=profile_df,
+    )
+
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
+    loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
+    soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
+
+    cp_flow_df_no = (
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+    )
+
+    # Check that SOC values (in energy units) make sense
+    assert all([0 <= v <= 1 for v in soc_100.values])
+
+    # Check that heat loss/gain to environment is calculated correctly
+    assert all(
+        [
+            round(loss_gain[k]) >= round((storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance)
+            for k in loss_gain.keys()
+        ]
+    )
+
+    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
+
+    objective_set = ObjectiveSet(
+        objective_list=[
+            ThroughputCost(component=storage.ports["input_output"], rate=0.01),
+            PeakPositivePower(component=cp.ports["to_supply_kwt"]),
+        ]
+    )
+    optimise_results_pp = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS,
+            number_of_expansion_intervals=NUM_EXPANSION_PERIODS,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+        profile=profile_df,
+    )
+
+    cp_flow_df_pp = (
+        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+    )
+
+    # Expecting peak power to be less with peak power objective
+    assert cp_flow_df_no["to_supply_kwt"].max() >= cp_flow_df_pp["to_supply_kwt"].max()
+
+
+def test_thermal_storage_no_ambient_temp():
+    storage = ThermalStorage(
+        max_temp=max_temp,
+        min_temp=min_temp,
+        storage_mass=mass,
+        specific_heat=4184,
+        ins_transmittance=u_ins,
+        surface_area=area,
+        separate_in_out_ports=False,
+    )
+
+    thermal_demand = Node(
+        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")}
+    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
+
+    cp = TellegenNode(
+        node_name="conn_point",
+        ports={
+            "to_supply_kwt": FlexPort(units=Units.KWT),
+            "to_storage_kwt": FlexPort(units=Units.KWT),
+            "to_demand_kwt": FlexPort(units=Units.KWT),
+        },
+    )
+    system = OptimisationGraph()
+    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
+
+    optimise_results_no = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS,
+            number_of_expansion_intervals=NUM_EXPANSION_PERIODS,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+        profile=profile_df,
+    )
+
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
+    loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
+    soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
+
+    cp_flow_df_no = (
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+    )
+
+    # Check that SOC values (in energy units) make sense
+    assert all([0 <= v <= 1 for v in soc_100.values])
+
+    # Check that heat loss/gain equals to zero when no ambient temperature reference is supplied
+    assert all([round(loss_gain[k]) == 0 for k in loss_gain.keys()])
+
+    # Expecting no change in storage temperature with zero flows and zero gain/loss
+    assert all([round(storage_temp[k]) == storage.initial_temp for k in storage_temp.keys()])
+
+    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
 
 def test_thermal_storage_2_ports():
