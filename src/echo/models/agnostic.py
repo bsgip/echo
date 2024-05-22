@@ -597,6 +597,7 @@ class InputOutputNode(Node):
     An input-output node has one input port and one output port.
     A custom transformation can be defined between input and output.
     """
+    # TODO: This Node does not do anything, unnecessary inheritance
 
     input_port_unit: Units
     output_port_unit: Units
