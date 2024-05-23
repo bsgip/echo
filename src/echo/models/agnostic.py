@@ -597,6 +597,7 @@ class InputOutputNode(Node):
     An input-output node has one input port and one output port.
     A custom transformation can be defined between input and output.
     """
+
     # TODO: This Node does not do anything, unnecessary inheritance
 
     input_port_unit: Units
@@ -604,8 +605,14 @@ class InputOutputNode(Node):
     # Optional parameters for controlling input/output port flows
     max_output: Optional[float]  # output might be neg or pos, leave it open
     min_output: Optional[float]
-    max_input: Optional[NonNegativeFloat]  # input should generally be non negative
-    min_input: Optional[NonNegativeFloat]
+    max_input: Optional[float]
+    min_input: Optional[float]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Create an input port and an outport port with the correct units
+        self.ports["input"] = FlexPort(units=self.input_port_unit)
+        self.ports["output"] = FlexPort(units=self.output_port_unit)
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
@@ -617,16 +624,10 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
     output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
 
-    # These values are automatically calculated by the 'set_bounds_from_piecewise_pts' validator
-    input_ub: Optional[float] = None
-    input_lb: Optional[float] = None
-    output_ub: Optional[float] = None
-    output_lb: Optional[float] = None
-
     piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output pts
     populate_bounds = root_validator(allow_reuse=True)(
         set_bounds_from_piecewise_pts
-    )  # set attributes input_ub, input_lb, output_ub, output_lb from input pts/output pts
+    )  # set attributes max_output,  min_output, max_input, min_input from input pts/output pts
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -641,8 +642,10 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
-        set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.input_ub, lb=self.input_lb)
-        set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.output_ub, lb=self.output_lb)
+        set_float_var_bounds(
+            model=model, var_name=self.ports["input"].port_name, ub=self.max_output, lb=self.min_output
+        )
+        set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.max_input, lb=self.min_input)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         xvar = getattr(model, self.ports["input"].port_name)

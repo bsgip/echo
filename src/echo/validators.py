@@ -160,10 +160,10 @@ def set_bounds_from_piecewise_pts(cls, values):
     input_pts = values.get("input_pts")
     output_pts = values.get("output_pts")
     if input_pts is not None and output_pts is not None:
-        values["input_ub"] = max(max(input_pts.values()))
-        values["input_lb"] = min(min(input_pts.values()))
-        values["output_ub"] = max(max(output_pts.values()))
-        values["output_lb"] = min(min(output_pts.values()))
+        values["max_output"] = max(max(input_pts.values()))
+        values["min_output"] = min(min(input_pts.values()))
+        values["max_input"] = max(max(output_pts.values()))
+        values["min_input"] = min(min(output_pts.values()))
     return values
 
 
