@@ -27,12 +27,10 @@ from echo.validators import ArrayType
 
 
 class SimpleChiller(SinglePiecewiseIONode):
-    """
-    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output
-    (+ve because it is a heat sink).
+    """ A chiller has one electrical input port and one cooling output (thermal sink) port.
 
-    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints used for
-    all time periods.
+    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
+    chiller COP used for all time periods.
     """
 
     input_port_unit = Units.KW
