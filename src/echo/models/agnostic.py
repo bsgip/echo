@@ -629,15 +629,18 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         set_bounds_from_piecewise_pts
     )  # set attributes max_output,  min_output, max_input, min_input from input pts/output pts
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Create an input port and an outport port with the correct units
-        self.ports["input"] = FlexPort(units=self.input_port_unit)
-        self.ports["output"] = FlexPort(units=self.output_port_unit)
-
     def verify_node(self):
         validate(self.input_pts is not None, "No input points defined")
         validate(self.output_pts is not None, "No output points defined")
+        # Validate that dictionary keys match and length of each value array are the same
+        for k in self.input_pts.keys():
+            validate(k in self.output_pts.keys(), f"Key {k} not found in output_pts dictionary")
+            validate(
+                len(self.input_pts[k]) == len(self.output_pts[k]),
+                "Number of break points in "
+                "input_pts output_pts must match."
+                f"Different length value arrays for key {k}",
+            )
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
