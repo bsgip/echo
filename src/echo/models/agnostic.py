@@ -631,7 +631,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         set_bounds_from_piecewise_pts
     )  # set attributes max_output,  min_output, max_input, min_input from input pts/output pts
 
-    def verify_node(self):
+    def verify_pts_values(self):
         validate(self.input_pts is not None, "No input points defined")
         validate(self.output_pts is not None, "No output points defined")
         # Validate that dictionary keys match and length of each value array are the same
@@ -647,6 +647,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
+        self.verify_pts_values()
         set_float_var_bounds(
             model=model, var_name=self.ports["input"].port_name, ub=self.max_output, lb=self.min_output
         )
@@ -702,8 +703,8 @@ class SinglePiecewiseIONode(TimeVaryingPiecewiseIONode):
             pass
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(SinglePiecewiseIONode, self).add_node_to_model(model, profile)
         self.load_pts_values_from_profile(model, profile)
+        super(SinglePiecewiseIONode, self).add_node_to_model(model, profile)
 
 
 class TimeDelayNode(InputOutputNode):
