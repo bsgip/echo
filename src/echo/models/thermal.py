@@ -23,18 +23,44 @@ from echo.utils import (
     set_float_var_bounds,
     to_initial_values,
 )
-from echo.validators import ArrayType
+from echo.validators import ArrayType, validate_partial_load_cop
 
 
 class SimpleChiller(SinglePiecewiseIONode):
-    """ A chiller has one electrical input port and one cooling output (thermal sink) port.
+    """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
     A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
     chiller COP used for all time periods.
     """
 
-    input_port_unit = Units.KW
-    output_port_unit = Units.KWT
+    nominal_cop: float  # Nominal coefficient of performance COP = output/input
+    max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    thermal_flow_units: Units = Units.KWT
+    partial_load_cop: dict = {0: 0, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.85}
+
+    pl_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # A chiller has one electrical input port and one cooling output (thermal sink) port
+        self.ports["input"] = FlexSink(units=self.input_port_unit)
+        self.ports["output"] = FlexSink(units=self.thermal_flow_units)
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        self.set_input_output_pts()
+        super(SimpleChiller, self).add_node_to_model(model, profile)
+
+    def set_input_output_pts(self, model):
+        # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
+        self.add_input_pts(
+            [k * self.max_cooling_capacity / (v * self.nominal_cop) for k, v in self.partial_load_cop.items()],
+            len(model.Time),
+            len(model.Expansion),
+        )
+        # Outputs breakpoints are partial cooling load values (% of max capacity)
+        self.add_output_pts(
+            [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()], len(model.Time), len(model.Expansion)
+        )
 
 
 class ParameterisedChiller(TimeVaryingPiecewiseIONode):
@@ -559,9 +585,3 @@ class HeatPumpDualOutput(HeatPump):
         self.apply_node_transformation_constraints(
             model, heating_out_var=h_out.port_name, cooling_out_var=c_out.port_name
         )
-
-
-class HeatPump4Pipe(Node):
-    """a 4 pipe heat pump can produce heating and cooling simultaneously"""
-
-    # todo implement this

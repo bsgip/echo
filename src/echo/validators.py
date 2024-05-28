@@ -186,3 +186,22 @@ def validate_startup_efficiency(cls, values):
     if eta is not None:
         validate(cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)")
     return values
+
+
+def validate_partial_load_cop(cls, values):
+    partial_load_cop = values.get("partial_load_cop")
+    for k, v in partial_load_cop.items():
+        validate(
+            0 <= k <= 1,
+            f"All keys in partial load cop must be float values between 0 and 1, offending key {k}",
+        )
+        validate(
+            0 <= v <= 1,
+            f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
+        )
+
+        is_non_negative(
+            v,
+            f"All values in partial load cop must be non negative, offending value {v}",
+        )
+    return values
