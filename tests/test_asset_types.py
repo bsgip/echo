@@ -1,7 +1,7 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink, FixedPort
+from echo.models.agnostic import FlexPort, TellegenNode, Sink, FixedPort, Source
 from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
@@ -11,6 +11,7 @@ from echo.models.thermal import SimpleChiller
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
+from echo.utils import TimeSeriesData, expand_as_dict
 
 N_INTERVALS = 48
 
@@ -97,60 +98,46 @@ def test_modulating_gas_boiler():
 
 
 def test_chiller_operation():
-    expansion_periods = 1
-    time_periods = 48
-    interval_duration = 30
+    """Test SimpleChiller operation with piecewise linear COP dependent on partial load value"""
 
     system = OptimisationGraph()
-
-    grid = Node()
-    grid.ports["grid"] = ElectricalPort()
-
-    input_breakpoints = [0, 2, 3, 8]
-    output_values = [0, -3, -4, -8]
-    chiller = SimpleChiller()
-    chiller.add_input_pts(input_breakpoints, time_periods=time_periods)
-    chiller.add_output_pts(output_values, time_periods=time_periods)
-
-    cooling_load = Node()
-    cl = FixedPort(units=Units.KWT)
-    cl.set_initial_value_from_array([4] * time_periods, expansion_periods=expansion_periods)
-    cooling_load.ports["load"] = cl
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    chiller = SimpleChiller(max_cooling_capacity=10, nominal_cop=2.5)
+    # Cooling demand is a heat source
+    cooling_load_data = TimeSeriesData(
+        value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
+    )
+    cooling_demand_dict = expand_as_dict(cooling_load_data)
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports["grid"], chiller.ports["input"])
-    system.connect_ports_and_create_edge(chiller.ports["output"], cl)
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
+    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
-            interval_duration=interval_duration,
-            number_of_intervals=time_periods,
-            number_of_expansion_intervals=expansion_periods,
+            interval_duration=30,
+            number_of_intervals=6,
+            number_of_expansion_intervals=1,
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
     )
 
-    print("mains gas: ", optimise_results.values(grid.ports["grid"].port_name, 0))
-    print("chiller input (elec): ", optimise_results.values(chiller.ports["input"].port_name, 0))
-    print("chiller output (cooling): ", optimise_results.values(chiller.ports["output"].port_name, 0))
-    print("cooling load: ", cl.initial_value.values())
-    print(
-        "cop: ",
-        np.divide(
-            optimise_results.values(chiller.ports["output"].port_name, 0),
-            optimise_results.values(chiller.ports["input"].port_name, 0),
-        ),
+    chiller_actual_cop = np.divide(
+        optimise_results.values(chiller.ports["output"].port_name, 0),
+        optimise_results.values(chiller.ports["input"].port_name, 0),
     )
 
-    chiller_input = optimise_results.values(chiller.ports["input"].port_name, 0)
-    # chiller_output = optimise_results.values(chiller.ports['output'].port_name, 0)
-    # grid_import = optimise_results.values(grid.ports['grid'].port_name, 0)
-    # cl_p = cl.initial_value
-    # cop = np.divide(optimise_results.values(chiller.ports['output'].port_name, 0), optimise_results.values(chiller.ports['input'].port_name, 0))
+    # Check that we observe variation in COP
+    assert min(chiller_actual_cop) != max(chiller_actual_cop)
 
-    for i in range(time_periods):
-        assert chiller_input[i] == 3
+    # Check that observed COP values are within expected range
+    min_cop = min([v for v in chiller.partial_load_cop.values() if v != 0]) * chiller.nominal_cop
+    for cop_v in chiller_actual_cop:
+        assert cop_v >= min_cop
+        assert cop_v <= chiller.nominal_cop
 
 
 def test_carbon_aggregation():

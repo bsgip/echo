@@ -35,8 +35,9 @@ class SimpleChiller(SinglePiecewiseIONode):
 
     nominal_cop: float  # Nominal coefficient of performance COP = output/input
     max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
-    thermal_flow_units: Units = Units.KWT
     partial_load_cop: dict = {0: 0, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.85}
+    input_port_unit = Units.KW
+    output_port_unit = Units.KWT
 
     pl_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
 
@@ -44,16 +45,22 @@ class SimpleChiller(SinglePiecewiseIONode):
         super().__init__(**data)
         # A chiller has one electrical input port and one cooling output (thermal sink) port
         self.ports["input"] = FlexSink(units=self.input_port_unit)
-        self.ports["output"] = FlexSink(units=self.thermal_flow_units)
+        self.ports["output"] = FlexSink(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        self.set_input_output_pts()
+        self.set_input_output_pts(model)
         super(SimpleChiller, self).add_node_to_model(model, profile)
 
     def set_input_output_pts(self, model):
         # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
+        def input_point(k, v):
+            if v == 0:
+                return 0
+            else:
+                return k * self.max_cooling_capacity / (v * self.nominal_cop)
+
         self.add_input_pts(
-            [k * self.max_cooling_capacity / (v * self.nominal_cop) for k, v in self.partial_load_cop.items()],
+            [input_point(k, v) for k, v in self.partial_load_cop.items()],
             len(model.Time),
             len(model.Expansion),
         )
