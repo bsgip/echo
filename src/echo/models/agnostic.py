@@ -5,7 +5,7 @@ import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.exceptions import validate
+from echo.exceptions import validate, ConfigurationError
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -719,3 +719,42 @@ class TimeDelayNode(InputOutputNode):
 
         con_name = "time_delay_con_" + self.node_name
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=time_delay_rule))
+
+
+class AggregationNode(Node):
+    """Arbitrary commodity aggregation node.
+
+    This node has an additional variable, 'total', which equals the sum of all ports defined on the node.
+    port_units attribute is used for validation, all ports mst be the same commodity.
+    """
+
+    port_units: Units
+
+    aggregator_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+
+    @property
+    def total(self):
+        return "total_value_" + self.node_name
+
+    def verify_node(self):
+        super(AggregationNode, self).verify_node()
+
+    def add_port(self, port_name: str):
+        if self.ports.get(port_name) is None:
+            self.ports[port_name] = FlexSink(units=self.port_units)
+        else:
+            raise ConfigurationError(f"Port with name {port_name} is already defined on node {self.node_name}")
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(AggregationNode, self).add_node_to_model(model, profile)
+        # Create a variable for the total value
+        setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        def sum_rule(model: EchoConcreteModel, p, t):
+            a = 0
+            for port in self.ports.values():
+                a += getattr(model, port.port_name)[p, t]
+            return getattr(model, self.total)[p, t] == a
+
+        setattr(model, "total_sum_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))

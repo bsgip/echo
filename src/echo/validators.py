@@ -129,15 +129,20 @@ def check_bound_order(cls, values):
 
 
 def node_unit_validator(cls, values):
-    """Checks that a tellegen node's ports all have the same units."""
+    """Checks that a tellegen and aggregation node's ports all have the same units."""
     ports = values.get("ports")
     u = None
+    nominal_units = values.get("port_units")
     if ports is not None:
-        for p in ports.values():
+        for port_key, p in ports.items():
             if u is not None:
-                validate(p.units == u, "Tellegen node ports must have the same units.")
+                validate(p.units == u, "Tellegen and Aggregation Node ports must have the same units.")
             else:
                 u = p.units
+            if nominal_units is not None:
+                validate(
+                    p.units == nominal_units, f"Port {port_key} units do not match nominal node units {nominal_units}."
+                )
 
     return values
 

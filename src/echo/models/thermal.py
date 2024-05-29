@@ -35,8 +35,10 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
     nominal_cop: float  # Nominal coefficient of performance COP = output/input
     max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
     partial_load_cop: dict = {0: 0, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.85}
-    input_port_unit = Units.KW
-    output_port_unit = Units.KWT
+    input_port_unit: Units = Units.KW
+    output_port_unit: Units = Units.KWT
+    heat_rejection_port: bool = False
+    heat_rejection_coeff: float = 1
 
     pl_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
 
@@ -45,12 +47,16 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
         # A chiller has one electrical input port and one cooling output (thermal sink) port
         self.ports["input"] = FlexSink(units=self.input_port_unit)
         self.ports["output"] = FlexSink(units=self.output_port_unit)
+        if self.heat_rejection_port:
+            self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         self.set_input_output_pts(model)
         super(SimpleChiller, self).add_node_to_model(model, profile)
+        if "heat_rejection" in self.ports:
+            self.add_heat_rejection_constraint(model)
 
-    def set_input_output_pts(self, model):
+    def set_input_output_pts(self, model: EchoConcreteModel):
         # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
         def input_point(k, v):
             if v == 0:
@@ -66,6 +72,24 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
         # Outputs breakpoints are partial cooling load values (% of max capacity)
         self.add_output_pts(
             [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()], len(model.Time), len(model.Expansion)
+        )
+
+    def add_heat_rejection_constraint(self, model: EchoConcreteModel):
+        """Get variables representing port flow values for cooling output (heat in) and
+        rejected heat flow, set the constraint."""
+        heat_in = getattr(model, self.ports["output"].port_name)
+        heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
+
+        def heat_reject_constraint(model: EchoConcreteModel, p, t):
+            """Amount of rejected heat at each interval equals amount of cooling delivered (heat in) multiplied by
+            heat rejection coefficient
+            """
+            return heat_reject[p, t] == -heat_in[p, t] * self.heat_rejection_coeff
+
+        setattr(
+            model,
+            "heat_rejection_constraint_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
 
