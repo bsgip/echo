@@ -12,7 +12,6 @@ from echo.models.agnostic import (
     FlexPort,
     FlexSink,
     FlexSource,
-    SinglePiecewiseIONode,
     TimeVaryingPiecewiseIONode,
 )
 from echo.models.base import Node
@@ -26,7 +25,7 @@ from echo.utils import (
 from echo.validators import ArrayType, validate_partial_load_cop
 
 
-class SimpleChiller(SinglePiecewiseIONode):
+class SimpleChiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
     A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing

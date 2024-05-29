@@ -372,10 +372,6 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
     """Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
 
     Example:
-        >>> values=10
-        >>> time_periods=4
-        >>> expansion_periods=2
-        >>> populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods)
         {(0, 0): 10, (0, 1): 10, (0, 2): 10, (0, 3): 10, (1, 0): 10, (1, 1): 10, (1, 2): 10, (1, 3): 10}
     """
     output = {}

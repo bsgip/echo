@@ -625,6 +625,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
 
     input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
     output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
+    input_pts_ref: Optional[str]  # Ref to profile dataframe column with input points array to be used across all times
+    output_pts_ref: Optional[str]  # Ref to profile dataframe column with input points array to be used across all times
 
     piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output pts
     populate_bounds = root_validator(allow_reuse=True)(
@@ -644,7 +646,24 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
                 f"Different length value arrays for key {k}",
             )
 
+    def load_pts_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """For all attributes set by str reference, load values from profile."""
+        if self.input_pts_ref and self.input_pts_ref in profile_df.columns:
+            self.add_input_pts(profile_df[self.input_pts_ref].to_list(), len(model.Time), len(model.Expansion))
+        elif self.input_pts_ref and self.input_pts_ref not in profile_df.columns:
+            raise ValueError(f"Could find reference column name {self.input_pts_ref} in the profile.")
+        else:
+            pass
+
+        if self.output_pts_ref and self.output_pts_ref in profile_df.columns:
+            self.add_output_pts(profile_df[self.output_pts_ref].to_list(), len(model.Time), len(model.Expansion))
+        elif self.output_pts_ref and self.output_pts_ref not in profile_df.columns:
+            raise ValueError(f"Could find reference column name {self.output_pts_ref} in the profile.")
+        else:
+            pass
+
     def add_node_to_model(self, model: EchoConcreteModel, profile):
+        self.load_pts_values_from_profile(model, profile)
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         self.verify_pts_values()
@@ -668,43 +687,13 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
             ),
         )
 
+    def add_input_pts(self, input_pts: Union[float, int, list], time_periods: int, expansion_periods: int = 1):
+        """Tiles constant input points across time and expansion periods"""
+        self.input_pts = populate_values_across_time_and_expansion_indices(input_pts, time_periods, expansion_periods)
 
-class SinglePiecewiseIONode(TimeVaryingPiecewiseIONode):
-    """
-    The relationship between input and output for all time intervals
-    is given by an array of input-->output point pairs, which are used to construct a piecewise constraint.
-    """
-
-    input_pts_ref: Optional[str]
-    output_pts_ref: Optional[str]
-
-    def add_input_pts(self, array, time_periods, expansion_periods=1):
-        """Tiles input points across time and expansion periods."""
-        self.input_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
-
-    def add_output_pts(self, array, time_periods, expansion_periods=1):
-        """Tiles output points across time and expansion periods."""
-        self.output_pts = populate_values_across_time_and_expansion_indices(array, time_periods, expansion_periods)
-
-    def load_pts_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
-        """For all attributes set by str reference, load values from profile."""
-        if self.input_pts_ref and self.input_pts_ref in profile_df.columns:
-            self.add_input_pts(profile_df[self.input_pts_ref].to_list(), len(model.Time), len(model.Expansion))
-        elif self.input_pts_ref and self.input_pts_ref not in profile_df.columns:
-            raise ValueError(f"Could find reference column name {self.input_pts_ref} in the profile.")
-        else:
-            pass
-
-        if self.output_pts_ref and self.output_pts_ref in profile_df.columns:
-            self.add_output_pts(profile_df[self.output_pts_ref].to_list(), len(model.Time), len(model.Expansion))
-        elif self.output_pts_ref and self.output_pts_ref not in profile_df.columns:
-            raise ValueError(f"Could find reference column name {self.output_pts_ref} in the profile.")
-        else:
-            pass
-
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        self.load_pts_values_from_profile(model, profile)
-        super(SinglePiecewiseIONode, self).add_node_to_model(model, profile)
+    def add_output_pts(self, output_pts: Union[float, int, list], time_periods, expansion_periods=1):
+        """Tiles constant output points across time and expansion periods."""
+        self.output_pts = populate_values_across_time_and_expansion_indices(output_pts, time_periods, expansion_periods)
 
 
 class TimeDelayNode(InputOutputNode):
