@@ -210,3 +210,25 @@ def validate_partial_load_cop(cls, values):
             f"All values in partial load cop must be non negative, offending value {v}",
         )
     return values
+
+
+def validate_temp_dependent_cop(cls, values):
+    temp_cop_coeff = values.get("temp_dependent_cop")
+    for k, v in temp_cop_coeff.items():
+        validate(
+            -10 <= k <= 50,
+            # TODO: reasonable value range is different between air cooled and water cooled chillers.
+            #  Do this validation better
+            f"All keys in temperature dependent cop must be float values representing ambient operational "
+            f"temperature expecting values between -10 and 50, offending key {k}",
+        )
+        validate(
+            0 <= v <= 1,
+            f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
+        )
+
+        is_non_negative(
+            v,
+            f"All values in temperature dependent must be non negative, offending value {v}",
+        )
+    return values

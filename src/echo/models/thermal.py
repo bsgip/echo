@@ -18,14 +18,17 @@ from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     create_input_output_pts_from_coefficients,
+    populate_values_across_time_and_expansion_indices,
     set_var_bounds_from_dict,
     set_float_var_bounds,
     to_initial_values,
+    TimeSeriesData,
+    expand_as_dict,
 )
-from echo.validators import ArrayType, validate_partial_load_cop
+from echo.validators import ArrayType, validate_partial_load_cop, validate_temp_dependent_cop
 
 
-class SimpleChiller(TimeVaryingPiecewiseIONode):
+class Chiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
     A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
@@ -35,12 +38,30 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
     nominal_cop: float  # Nominal coefficient of performance COP = output/input
     max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
     partial_load_cop: dict = {0: 0, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.85}
+    temp_dependent_cop: dict = {0: 0.7, 10: 1, 20: 0.5, 30: 0.35, 45: 0.2}
+    ambient_temp_dict: dict = (
+        None  # Condenser side temperature, ambient air temp or condenser water temp for water cooled chiller
+    )
+    ambient_temp_ref: str = None
     input_port_unit: Units = Units.KW
     output_port_unit: Units = Units.KWT
     heat_rejection_port: bool = False
     heat_rejection_coeff: float = 1
 
     pl_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
+    temp_cop_check = root_validator(allow_reuse=True)(validate_temp_dependent_cop)
+
+    @property
+    def temp_cop_coeff(self):
+        return "temp_cop_coeff_" + self.node_name
+
+    @property
+    def ambient_temp_var(self):
+        return "ambient_temp_var" + self.node_name
+
+    @property
+    def ambient_temp_param(self):
+        return "ambient_temp_param" + self.node_name
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -50,11 +71,96 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
         if self.heat_rejection_port:
             self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        self.load_tem_values_from_profile(model, profile)
         self.set_input_output_pts(model)
-        super(SimpleChiller, self).add_node_to_model(model, profile)
+        super(Chiller, self).add_node_to_model(model, profile)
+        self.define_ambient_temp_var_param(model)
+        self.define_temp_dependent_cop_coefficient(model)
         if "heat_rejection" in self.ports:
             self.add_heat_rejection_constraint(model)
+
+    def define_temp_dependent_cop_coefficient(self, model: EchoConcreteModel):
+        """Get COP scaler for each interval.
+
+        Calculate value of the self.temp_cop_coeff variable based on piecewise linear break points in temp_dependent_cop
+         dict and actual ambient temperature value for each interval.
+        """
+        # Create a variable that holds temperature dependent multiplier for COP
+        setattr(model, self.temp_cop_coeff, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        set_float_var_bounds(
+            model=model,
+            var_name=self.temp_cop_coeff,
+            ub=max(self.temp_dependent_cop.values()),
+            lb=min(self.temp_dependent_cop.values()),
+        )
+
+        # Create a piecewise linear constraint
+        xdata = populate_values_across_time_and_expansion_indices(
+            list(self.temp_dependent_cop.keys()), len(model.Time), len(model.Expansion)
+        )
+        ydata = populate_values_across_time_and_expansion_indices(
+            list(self.temp_dependent_cop.values()), len(model.Time), len(model.Expansion)
+        )
+
+        xvar = getattr(model, self.ambient_temp_var)
+        yvar = getattr(model, self.temp_cop_coeff)
+
+        setattr(
+            model,
+            "piecewise_con_temp_cop_" + self.node_name,
+            en.Piecewise(
+                model.Expansion, model.Time, yvar, xvar, pw_pts=xdata, pw_constr_type="EQ", f_rule=ydata, pw_repn="SOS2"
+            ),
+        )
+
+    def define_ambient_temp_var_param(self, model: EchoConcreteModel):
+        """Define intermediate parameter that holds value of the ambient temperature.
+
+        Pyomo piecewise does not accept parameter. + Tracking values out of default dict bounds"""
+
+        if self.ambient_temp_dict:
+            temp_dict = self.ambient_temp_dict
+        else:
+            # Set default amb temp value to 10 >> no change to nominal COP
+            temp_dict = expand_as_dict(
+                TimeSeriesData(
+                    value=10, num_time_intervals=len(model.Time), num_expansion_intervals=len(model.Expansion)
+                )
+            )
+        # Create a parameter holding ambient/condenser temperature dictionary (defaulting to 10 degrees)
+        setattr(
+            model,
+            self.ambient_temp_param,
+            en.Param(model.Expansion, model.Time, initialize=temp_dict, domain=en.Reals),
+        )
+        # Create intermediate variable to hold ambient temperature
+        setattr(model, self.ambient_temp_var, en.Var(model.Expansion, model.Time, domain=en.Reals))
+        set_float_var_bounds(
+            model=model,
+            var_name=self.ambient_temp_var,
+            ub=max(self.temp_dependent_cop.keys()),
+            lb=min(self.temp_dependent_cop.keys()),
+        )
+
+        def ambient_temperature_var_constraint(model: EchoConcreteModel, p, t):
+            ambient_temp_var = getattr(model, self.ambient_temp_var)
+            ambient_temp_param = getattr(model, self.ambient_temp_param)
+            upper_bound = max(self.temp_dependent_cop.keys())
+            lower_bound = min(self.temp_dependent_cop.keys())
+
+            if ambient_temp_param[p, t] >= upper_bound:
+                return ambient_temp_var[p, t] == upper_bound
+            elif ambient_temp_param[p, t] <= lower_bound:
+                return ambient_temp_var[p, t] == lower_bound
+            else:
+                return ambient_temp_var[p, t] == ambient_temp_param[p, t]
+
+        setattr(
+            model,
+            "ambient_temp_var_param_con_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=ambient_temperature_var_constraint),
+        )
 
     def set_input_output_pts(self, model: EchoConcreteModel):
         # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
@@ -92,47 +198,19 @@ class SimpleChiller(TimeVaryingPiecewiseIONode):
             en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
-
-class ParameterisedChiller(TimeVaryingPiecewiseIONode):
-    """
-    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output
-    (+ve because it is a heat sink).
-    A temperature
-    The conversion is defined by a piecewise constraint relating input/output.
-    This constraint can be different for different time periods, reflecting that chiller performance depends on
-    external air temperature which can be included as a parameter.
-    """
-
-    input_port_unit = Units.KW
-    output_port_unit = Units.KWT
-    external_temp: Optional[ArrayType]  # array of external temperatures
-    input_coefficients: Optional[ArrayType]  # coefficients on the input power
-    temp_coefficients: Optional[ArrayType]  # coefficients on external temp
-    n_pts: Optional[int] = 5  # number of points per piecewise approximation
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        if self.external_temp is not None:
-            validate(self.input_coefficients is not None, "If temp data is provided, temp coefficients are required.")
-            validate(self.temp_coefficients is not None, "If temp data is provided, input coefficients are required.")
-            self.generate_input_output_pts_from_coefficients()
-
-    def generate_input_output_pts_from_coefficients(self):
-        xpts = np.linspace(0, self.max_input, self.n_pts)
-        time_periods = len(self.external_temp)
-        self.input_pts, self.output_pts = create_input_output_pts_from_coefficients(
-            self.temp_coefficients, self.input_coefficients, self.external_temp, xpts, time_periods
-        )
-
-    def get_cop(self, optimiser):
-        """Returns the coefficient of performance (output/input)"""
-        # todo not set up for expansion planning
-        _input = optimiser.values(self.ports["input"].port_name)
-        _output = optimiser.values(self.ports["output"].port_name)
-        cop = np.zeros(len(_input))
-        for i in range(len(_input)):
-            cop[i] = _output[i] / _input[i] * -1
-        return cop
+    def load_tem_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """For all attributes set by str reference, load values from profile."""
+        if self.ambient_temp_ref and self.ambient_temp_ref in profile_df.columns:
+            self.ambient_temp_dict = to_initial_values(
+                profile_df,
+                key=self.ambient_temp_ref,
+                time_periods=len(model.Time),
+                expansion_periods=len(model.Expansion),
+            )
+        elif self.ambient_temp_ref and self.ambient_temp_ref not in profile_df.columns:
+            raise ValueError(f"Could find reference column name {self.ambient_temp_ref} in the profile.")
+        else:
+            pass
 
 
 class ThermalNode(Node):
