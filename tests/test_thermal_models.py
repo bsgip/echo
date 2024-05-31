@@ -522,3 +522,57 @@ def test_chiller_with_heat_rejection():
     for cop_v in chiller_actual_cop:
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
+
+
+def test_chiller_with_temperature_cop():
+    """Test Chiller operation with piecewise linear COP dependent on partial load value and ambient temperature"""
+
+    amb_temp_data = TimeSeriesData(value=[10, 0, 7, 20, 5, 15], num_time_intervals=6, num_expansion_intervals=1)
+    ambient_temp_dict = expand_as_dict(amb_temp_data)
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    chiller = Chiller(
+        max_cooling_capacity=10,
+        nominal_cop=2.5,
+        partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
+        ambient_temp_dict=ambient_temp_dict,
+    )
+    # Cooling demand is a heat source
+    cooling_load_data = TimeSeriesData(
+        value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
+    )
+    cooling_demand_dict = expand_as_dict(cooling_load_data)
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
+
+    system.add_node_obj([grid, chiller, cooling_load])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
+    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=30,
+            number_of_intervals=6,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+    )
+
+    chiller_actual_cop = np.divide(
+        optimise_results.values(chiller.ports["output"].port_name, 0),
+        optimise_results.values(chiller.ports["input"].port_name, 0),
+    ).tolist()
+
+    temp_cop_factor = optimise_results.values(chiller.temp_cop_param).tolist()
+
+    # Check that we observe variation in COP
+    assert min(chiller_actual_cop) != max(chiller_actual_cop)
+
+    # Check that observed COP values are within expected range
+    min_cop = min([v for v in temp_cop_factor]) * chiller.nominal_cop
+    for cop_v in chiller_actual_cop:
+        i = chiller_actual_cop.index(cop_v)
+        assert cop_v >= min_cop
+        assert cop_v <= chiller.nominal_cop
+        assert round(cop_v, 2) == round(temp_cop_factor[i] * chiller.nominal_cop, 2)

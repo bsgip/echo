@@ -52,16 +52,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
     temp_cop_check = root_validator(allow_reuse=True)(validate_temp_dependent_cop)
 
     @property
-    def temp_cop_coeff(self):
-        return "temp_cop_coeff_" + self.node_name
-
-    @property
-    def ambient_temp_var(self):
-        return "ambient_temp_var" + self.node_name
-
-    @property
-    def ambient_temp_param(self):
-        return "ambient_temp_param" + self.node_name
+    def temp_cop_param(self):
+        return f"temperature_cop_factor_{self.node_name}"
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -73,112 +65,71 @@ class Chiller(TimeVaryingPiecewiseIONode):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         self.load_tem_values_from_profile(model, profile)
+        self.define_temp_dependent_cop_coefficient(model)
         self.set_input_output_pts(model)
         super(Chiller, self).add_node_to_model(model, profile)
-        self.define_ambient_temp_var_param(model)
-        self.define_temp_dependent_cop_coefficient(model)
         if "heat_rejection" in self.ports:
             self.add_heat_rejection_constraint(model)
 
     def define_temp_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get COP scaler for each interval.
 
-        Calculate value of the self.temp_cop_coeff variable based on piecewise linear break points in temp_dependent_cop
-         dict and actual ambient temperature value for each interval.
+        Calculate value of the temp_cop_factor parameter using numpy linear interpolation function.
         """
-        # Create a variable that holds temperature dependent multiplier for COP
-        setattr(model, self.temp_cop_coeff, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
-        set_float_var_bounds(
-            model=model,
-            var_name=self.temp_cop_coeff,
-            ub=max(self.temp_dependent_cop.values()),
-            lb=min(self.temp_dependent_cop.values()),
-        )
 
-        # Create a piecewise linear constraint
-        xdata = populate_values_across_time_and_expansion_indices(
-            list(self.temp_dependent_cop.keys()), len(model.Time), len(model.Expansion)
-        )
-        ydata = populate_values_across_time_and_expansion_indices(
-            list(self.temp_dependent_cop.values()), len(model.Time), len(model.Expansion)
-        )
-
-        xvar = getattr(model, self.ambient_temp_var)
-        yvar = getattr(model, self.temp_cop_coeff)
-
-        setattr(
-            model,
-            "piecewise_con_temp_cop_" + self.node_name,
-            en.Piecewise(
-                model.Expansion, model.Time, yvar, xvar, pw_pts=xdata, pw_constr_type="EQ", f_rule=ydata, pw_repn="SOS2"
-            ),
-        )
-
-    def define_ambient_temp_var_param(self, model: EchoConcreteModel):
-        """Define intermediate parameter that holds value of the ambient temperature.
-
-        Pyomo piecewise does not accept parameter. + Tracking values out of default dict bounds"""
+        temp_points = list(self.temp_dependent_cop.keys())
+        cop_points = list(self.temp_dependent_cop.values())
 
         if self.ambient_temp_dict:
             temp_dict = self.ambient_temp_dict
         else:
             # Set default amb temp value to 10 >> no change to nominal COP
             temp_dict = expand_as_dict(
-                TimeSeriesData(
-                    value=10, num_time_intervals=len(model.Time), num_expansion_intervals=len(model.Expansion)
-                )
+                TimeSeriesData(value=10, num_time_intervals=len(model.Time), num_expansion_intervals=1)
             )
+
+        def value_or_bound(temp_val):
+            if temp_val >= max(self.temp_dependent_cop.keys()):
+                return max(self.temp_dependent_cop.keys())
+            elif temp_val <= min(self.temp_dependent_cop.keys()):
+                return min(self.temp_dependent_cop.keys())
+            else:
+                return temp_val
+
+        # Use numpy linear interpolation function to get temp cop factor from temp dictionary
+        temp_cop_dict = {k: np.interp(value_or_bound(v), temp_points, cop_points) for k, v in temp_dict.items()}
+
         # Create a parameter holding ambient/condenser temperature dictionary (defaulting to 10 degrees)
         setattr(
             model,
-            self.ambient_temp_param,
-            en.Param(model.Expansion, model.Time, initialize=temp_dict, domain=en.Reals),
-        )
-        # Create intermediate variable to hold ambient temperature
-        setattr(model, self.ambient_temp_var, en.Var(model.Expansion, model.Time, domain=en.Reals))
-        set_float_var_bounds(
-            model=model,
-            var_name=self.ambient_temp_var,
-            ub=max(self.temp_dependent_cop.keys()),
-            lb=min(self.temp_dependent_cop.keys()),
-        )
-
-        def ambient_temperature_var_constraint(model: EchoConcreteModel, p, t):
-            ambient_temp_var = getattr(model, self.ambient_temp_var)
-            ambient_temp_param = getattr(model, self.ambient_temp_param)
-            upper_bound = max(self.temp_dependent_cop.keys())
-            lower_bound = min(self.temp_dependent_cop.keys())
-
-            if ambient_temp_param[p, t] >= upper_bound:
-                return ambient_temp_var[p, t] == upper_bound
-            elif ambient_temp_param[p, t] <= lower_bound:
-                return ambient_temp_var[p, t] == lower_bound
-            else:
-                return ambient_temp_var[p, t] == ambient_temp_param[p, t]
-
-        setattr(
-            model,
-            "ambient_temp_var_param_con_" + self.node_name,
-            en.Constraint(model.Expansion, model.Time, rule=ambient_temperature_var_constraint),
+            self.temp_cop_param,
+            en.Param(model.Expansion, model.Time, initialize=temp_cop_dict, domain=en.Reals),
         )
 
     def set_input_output_pts(self, model: EchoConcreteModel):
+        # get parameter holding temperature dependent COP factor
+        temp_cop_param = getattr(model, self.temp_cop_param)
+
         # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
+        # and scaled by 1/temp_cop_param value
         def input_point(k, v):
             if v == 0:
                 return 0
             else:
                 return k * self.max_cooling_capacity / (v * self.nominal_cop)
 
-        self.add_input_pts(
-            [input_point(k, v) for k, v in self.partial_load_cop.items()],
-            len(model.Time),
-            len(model.Expansion),
-        )
+        self.input_pts = {
+            (p, t): [input_point(k, v) / temp_cop_param[p, t] for k, v in self.partial_load_cop.items()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
+
         # Outputs breakpoints are partial cooling load values (% of max capacity)
-        self.add_output_pts(
-            [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()], len(model.Time), len(model.Expansion)
-        )
+        self.output_pts = {
+            (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
 
     def add_heat_rejection_constraint(self, model: EchoConcreteModel):
         """Get variables representing port flow values for cooling output (heat in) and
