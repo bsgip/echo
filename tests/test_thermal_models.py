@@ -6,10 +6,10 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
 from echo.models.base import Node, OptimisationGraph
 
-from echo.models.thermal import ThermalStorage, HeatPump, Chiller
+from echo.models.thermal import ThermalStorage, Chiller
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import ImportTariff, ThroughputCost
+from echo.objectives.tariff import ThroughputCost
 from echo.objectives.power import PeakPositivePower
 from echo.optimiser import optimise
 
@@ -120,7 +120,7 @@ def test_thermal_storage():
         ]
     )
 
-    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
     assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
     objective_set = ObjectiveSet(
@@ -212,7 +212,7 @@ def test_thermal_storage_with_profile():
         ]
     )
 
-    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
     assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
     objective_set = ObjectiveSet(
@@ -301,7 +301,7 @@ def test_thermal_storage_no_ambient_temp():
     # Expecting no change in storage temperature with zero flows and zero gain/loss
     assert all([round(storage_temp[k]) == storage.initial_temp for k in storage_temp.keys()])
 
-    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
     assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
 
@@ -395,7 +395,7 @@ def test_thermal_storage_2_ports():
         ]
     )
 
-    # # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
+    # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
     for storage_port in storage_2p.ports:
         assert (
             round(cp_flow_df_no[f"to_storage_{storage_port}_kwt"].min())
@@ -419,10 +419,10 @@ def test_thermal_storage_2_ports():
     )
 
     cp_flow_df_pp = (
-        optimise_results_no.df_by_port()[[k for k in cp_1.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp_1.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_2 = (
-        optimise_results_no.df_by_port()[[k for k in cp_2.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp_2.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_pp = cp_flow_df_pp.join(cp_flow_df_2)
 

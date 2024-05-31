@@ -17,8 +17,6 @@ from echo.models.agnostic import (
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    create_input_output_pts_from_coefficients,
-    populate_values_across_time_and_expansion_indices,
     set_var_bounds_from_dict,
     set_float_var_bounds,
     to_initial_values,
