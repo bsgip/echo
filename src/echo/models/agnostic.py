@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
+from pydantic import Field, PositiveFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import validate, ConfigurationError

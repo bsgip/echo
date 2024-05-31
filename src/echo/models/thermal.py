@@ -7,7 +7,6 @@ import numpy as np
 import pyomo.environ as en
 
 from echo.configuration import Units
-from echo.exceptions import validate
 from echo.models.agnostic import (
     FlexPort,
     FlexSink,
@@ -23,7 +22,7 @@ from echo.utils import (
     TimeSeriesData,
     expand_as_dict,
 )
-from echo.validators import ArrayType, validate_partial_load_cop, validate_temp_dependent_cop
+from echo.validators import validate_partial_load_cop, validate_temp_dependent_cop
 
 
 class Chiller(TimeVaryingPiecewiseIONode):

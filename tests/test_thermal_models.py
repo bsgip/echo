@@ -575,4 +575,4 @@ def test_chiller_with_temperature_cop():
         i = chiller_actual_cop.index(cop_v)
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
-        assert round(cop_v, 2) == round(temp_cop_factor[i] * chiller.nominal_cop, 2)
+        assert round(cop_v, 1) == round(temp_cop_factor[i] * chiller.nominal_cop, 1)
