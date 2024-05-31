@@ -641,3 +641,368 @@ class HeatPumpDualOutput(HeatPump):
         self.apply_node_transformation_constraints(
             model, heating_out_var=h_out.port_name, cooling_out_var=c_out.port_name
         )
+
+
+class HotWaterTank(Node):
+    """Model of a domestic hot water tank with one thermal port and one water flow port.
+
+    Assumes constant water volume in the tank (inlet_flow=outlet_flow). Does not have State of Charge variable.
+    Tracks water temperature at all levels.
+
+    Uses constant layer volume model of stratified hot water tank, with 4 equal layers of constant volume
+    and varying temperature. Model assumes that the hot water is supplied from the top most layer, cold water enters the
+    bottom-most layer.
+
+    Has one thermal port. Requires hot water consumption profile to be provided directly to this node.
+
+    """
+
+    max_outlet_temp: float  # Maximum temperature for hot water supply in degrees  Celsius
+    min_outlet_temp: float  # Minimum temperature for hot water supply in degrees  Celsius
+    inlet_temp: float  # Inlet temperature from water mains in degrees  Celsius
+    ambient_temp: dict  # Ambient temp, formatted as dict with expansion-time keys
+    dhw_consumption: dict  # Domestic hot water consumption profile in LPS, formatted as dict with expansion-time keys
+    tank_volume: float  # Water tank volume in litres
+    max_flow_rate: float  # Max hot water flow rate in litres per minute (for validation)
+    ins_transmittance: float = 0  # Thermal transmittance U-value of TES insulation in W/sqm*C
+    surface_area: float = 0  # Surface area of TES in square meters, default value=0 means zero heat loss/gain
+    initial_temp: float = None  # initial internal temperature in degrees, applies to all layers Celsius
+    energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
+    heat_to_top_only: bool = True  # All heat from thermal port is added to the top layer, if False split equally
+    number_of_layers: int = 4  # Number of discrete constant temperature layers in the model
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        self.ports["thermal_input"] = FlexSink(units=self.energy_flow_units)
+
+        # Initial temperature is not defined set to median outlet temperature (applied for all layers)
+        if not self.initial_temp:
+            self.initial_temp = self.min_outlet_temp + 0.5 * (self.max_outlet_temp - self.min_outlet_temp)
+
+    #  TODO max_flow_rate vs volume, constraint to prevent discharging more than available
+    @validator("energy_flow_units", allow_reuse=True)
+    def _units_are_allowed(cls, v: Units) -> Units:
+        if v and v not in {Units.JPS, Units.KWT}:
+            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS)." f"Received {v}")
+        return v
+
+    @validator("number_of_layers", allow_reuse=True)
+    def _units_are_allowed(cls, v: int) -> int:
+        if v and v < 2:
+            raise ValueError(
+                f"Minimum of 2 constant temperature layers must be defined for the stratified model." f"Received {v}"
+            )
+        return v
+
+    # Define variable names to track internal temperatures of each layer
+    @property
+    def internal_temp(self):
+        return "internal_temp_" + self.node_name
+
+    @property
+    def conv_heat(self):
+        return "convective_heat_" + self.node_name
+
+    @property
+    def cond_heat(self):
+        return "conductive_heat_" + self.node_name
+
+    @property
+    def loss_gain(self):
+        return "dQ_loss_gain_" + self.node_name
+
+    @property
+    def top_layer(self):
+        return self.number_of_layers - 1
+
+    @property
+    def layer_volume(self):
+        return self.tank_volume / self.number_of_layers
+
+    @property
+    def lump_conductance(self):
+        return self.ins_transmittance * self.surface_area
+
+    @property
+    def layer_lump_capacitance(self):
+        return self.tank_volume * 4184 / self.number_of_layers
+
+    @property
+    def energy_units_conversion(self):
+        if self.energy_flow_units == Units.KWT:
+            # If ports flow in KWT calculate energy in KWTh
+            return 1 / 3600000
+        elif self.energy_flow_units == Units.JPS:
+            # If ports flow in JPS calculate energy in Joules
+            return 1
+
+    @property
+    def heat_flow_scaling(self):
+        """Scaling factor for heat flow units to convert to JPS"""
+        if self.energy_flow_units == Units.KWT:
+            # If port flow is in KWT transform to JPS
+            return 1000
+        else:
+            return 1
+
+    @property
+    def heat_in_layer(self):
+        """Portion of total heat in added to each of the layers"""
+        if self.heat_to_top_only:
+            heat_portion_dict = {l: 0 for l in range(self.number_of_layers)}
+            heat_portion_dict[self.top_layer] = 1
+            return heat_portion_dict
+        else:
+            return {l: 1 / self.number_of_layers for l in range(self.number_of_layers)}
+
+    @property
+    def tank_radius(self):
+        """Calculate water tank radius in meters assuming Height/Diameter=3"""
+        return np.cbrt(self.tank_volume / (np.pi * 6)) * 0.001
+
+    @property
+    def layer_height(self):
+        """Calculate water tank height in meters assuming Height/Diameter=3.
+        Divide equally between layers
+        """
+        return 6 * self.tank_radius / self.number_of_layers
+
+    @property
+    def layer_conductance(self):
+        """Thermal conductance of each layer"""
+        # Thermal conductivity of water in W/m*C (value is at 25C, but assuming constant for simplicity)
+        lambda_water = 0.6
+        return lambda_water * np.pi * self.tank_radius**2 / self.layer_height
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(HotWaterTank, self).add_node_to_model(model, profile)
+        self.create_and_bound_temp_variable(model)
+        self.apply_net_loss_and_gain_constraint(model)
+        for i in range(self.number_of_layers):
+            self.apply_convective_heat_constraint(model, i)
+            self.apply_conductive_heat_constraint(model, i)
+            self.apply_energy_balance_constraint(model, i)
+
+    def create_and_bound_temp_variable(self, model: EchoConcreteModel):
+        # Create temperature variables for each layer, bound the top layer variable
+        for i in range(self.number_of_layers):
+            setattr(model, f"{i}_{self.internal_temp}", en.Var(model.Expansion,
+                                                               model.Time,
+                                                               domain=en.NonNegativeReals,
+                                                               bounds=(self.inlet_temp, self.max_outlet_temp)))
+        # Bound temp variable of the top layer to be within range
+        set_float_var_bounds(
+            model=model,
+            var_name=f"{self.top_layer}_{self.internal_temp}",
+            ub=self.max_outlet_temp,
+            lb=self.min_outlet_temp,
+        )
+
+    def apply_net_loss_and_gain_constraint(self, model: EchoConcreteModel):
+        # Create variable for heat loss/gain in each layer
+        for i in range(self.number_of_layers):
+            setattr(model, f"{i}_{self.loss_gain}", en.Var(model.Expansion, model.Time, domain=en.Reals))
+
+            # Apply constraints on loss/gain variables
+            def net_loss_gain_constraint(model: EchoConcreteModel, p, t):
+                """Losses to /gains from environment equals to the temperature
+                difference between ambient and internal multiplied by lump_conductance.
+
+                lump_conductance for each layer is proportional to surface area of the layer.
+                The top layer will experience a higher loss due to the top of the tank exposed to environment.
+                Proportion can be calculated exactly with an assumption of H/V ratio. Here using approx value."""
+                if i == self.top_layer:
+                    area = 0.05 + 0.95 / self.number_of_layers
+                else:
+                    area = 0.95 / self.number_of_layers
+                return (
+                    getattr(model, f"{i}_{self.loss_gain}")[p, t]
+                    == (self.ambient_temp[p, t] - getattr(model, f"{i}_{self.internal_temp}")[p, t])
+                    * self.lump_conductance
+                    * area
+                )
+
+            # Loss/gain values calculated in Joules per second!
+            setattr(
+                model,
+                f"{i}_dQ_loss_gain_con_{self.node_name}",
+                en.Constraint(model.Expansion, model.Time, rule=net_loss_gain_constraint),
+            )
+
+    def apply_convective_heat_constraint(self, model: EchoConcreteModel, i: int):
+        """Convective heat exchange in each layer happens due to inflow of water volume at different temperature"""
+        dt_sec = model.scenario_settings.interval_duration * 60
+        t_max = len(model.Time)
+        # This constraint represents temperature change in each layer due to inflow from supply or the layer below
+        setattr(model, f"{i}_dT_conv_{self.node_name}", en.Var(model.Expansion, model.Time, domain=en.Reals))
+
+        # Apply constraint on convective temperature change variables
+        def convective_temp_change(model: EchoConcreteModel, p, t):
+            """Temperature change of each layer due to inflow water volume"""
+            # TODO: For valid formulation the outflow volume per time interval is
+            #  not expected to exceed volume of one layer
+            volume_out_p_t = self.dhw_consumption[p, t]
+            # if abs(volume_out_p_t) > self.layer_volume:
+            #     volume_out_p_t = -self.layer_volume
+            if p == 0 and t == 0 and i == 0:
+                """convective exchange in the bottom layer is due to mains/return water inflow"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[
+                    p, t
+                ] == volume_out_p_t * dt_sec / self.layer_volume * (self.inlet_temp - self.initial_temp)
+            elif p == 0 and t == 0 and i > 0:
+                """convective exchange in non bottom layer is due to water inflow from the layer below
+                Is zero at the first interval as we assume constant temperature through water tank"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[p, t] == 0
+
+            elif t == 0 and i == 0:
+                """convective exchange in the bottom layer is due to mains/return water inflow"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[
+                    p, t
+                ] == volume_out_p_t * dt_sec / self.layer_volume * (
+                    self.inlet_temp - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                )
+            elif t == 0 and i > 0:
+                """convective exchange in non bottom layer is due to water inflow from the layer below"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[
+                    p, t
+                ] == volume_out_p_t * dt_sec / self.layer_volume * (
+                    getattr(model, f"{i-1}_{self.internal_temp}")[p - 1, t_max]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                )
+            elif i == 0:
+                """convective exchange in the bottom layer is due to mains/return water inflow"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[
+                    p, t
+                ] == volume_out_p_t * dt_sec / self.layer_volume * (
+                    self.inlet_temp - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                )
+            else:
+                """convective exchange in non bottom layer is due to water inflow from the layer below"""
+                return getattr(model, f"{i}_dT_conv_{self.node_name}")[
+                    p, t
+                ] == volume_out_p_t * dt_sec / self.layer_volume * (
+                    getattr(model, f"{i-1}_{self.internal_temp}")[p, t - 1]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                )
+
+            # Temperature change due to convective heat exchange is calculated in degrees C/K
+
+        setattr(
+            model,
+            f"{i}_dT_conv_con_{self.node_name}",
+            en.Constraint(model.Expansion, model.Time, rule=convective_temp_change),
+        )
+
+    def apply_conductive_heat_constraint(self, model: EchoConcreteModel, i: int):
+        """Convective heat exchange in each layer happens due to heat added from external source and
+        due to exchange through contact with neighbouring layers"""
+        heat_port = self.ports["thermal_input"]
+        heat_in = getattr(model, heat_port.port_name)
+        t_max = len(model.Time)
+        setattr(model, f"{i}_dQ_cond_{self.node_name}", en.Var(model.Expansion, model.Time, domain=en.Reals))
+
+        # Apply constraints on conductive heat flow
+        def conductive_heat_exchange(model: EchoConcreteModel, p, t):
+            """Thermal energy change of each layer due to conductive exchange"""
+            heat_in_p_t = heat_in[p, t] * self.heat_flow_scaling
+            if p == 0 and t == 0:
+                """At the first interval conductive heat exchange is only due added heat as
+                all layers start at the same temperature"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[i]
+            elif t == 0 and i == self.top_layer:
+                """Top layer only exchanges heat with the layer below"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i-1}_{self.internal_temp}")[p - 1, t_max]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                )
+            elif t == 0 and i == 0:
+                """Bottom layer only exchanges heat with the layer above"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i+1}_{self.internal_temp}")[p - 1, t_max]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                )
+            elif t == 0:
+                """Each other layer exchange heat with the layer above and below it"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i+1}_{self.internal_temp}")[p - 1, t_max]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                ) + self.layer_conductance * (
+                    getattr(model, f"{i - 1}_{self.internal_temp}")[p - 1, t_max]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p - 1, t_max]
+                )
+            elif i == self.top_layer:
+                """Top layer only exchanges heat with the layer below"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i-1}_{self.internal_temp}")[p, t - 1]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                )
+            elif i == 0:
+                """Bottom layer only exchanges heat with the layer above"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i+1}_{self.internal_temp}")[p, t - 1]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                )
+            else:
+                """Each other layer exchange heat with the layer above and below it"""
+                return getattr(model, f"{i}_dQ_cond_{self.node_name}")[p, t] == heat_in_p_t * self.heat_in_layer[
+                    i
+                ] + self.layer_conductance * (
+                    getattr(model, f"{i+1}_{self.internal_temp}")[p, t - 1]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                ) + self.layer_conductance * (
+                    getattr(model, f"{i - 1}_{self.internal_temp}")[p, t - 1]
+                    - getattr(model, f"{i}_{self.internal_temp}")[p, t - 1]
+                )
+
+            # Conductive heat in/outflow is calculated in JPS
+
+        setattr(
+            model,
+            f"{i}_dQ_cond_con_{self.node_name}",
+            en.Constraint(model.Expansion, model.Time, rule=conductive_heat_exchange),
+        )
+
+    def apply_energy_balance_constraint(self, model: EchoConcreteModel, i: int):
+        # Constraint relating internal temperature of each layer with heat in/outflow due to convective and conductive
+        # heat exchange and loss/gain to environment
+        dt_sec = model.scenario_settings.interval_duration * 60
+        max_t = len(model.Time)
+
+        internal_temp = getattr(model, f"{i}_{self.internal_temp}")
+        loss_gain = getattr(model, f"{i}_{self.loss_gain}")
+        cond_heat = getattr(model, f"{i}_dQ_cond_{self.node_name}")
+        conv_dt = getattr(model, f"{i}_dT_conv_{self.node_name}")
+
+        def change_of_internal_temperature_constraint(model: EchoConcreteModel, p, t):
+            if p == 0 and t == 0:
+                return (cond_heat[p, t] + loss_gain[p, t]) * dt_sec + conv_dt[p, t] == (
+                    internal_temp[p, t] - self.initial_temp
+                ) * self.layer_lump_capacitance
+            elif t == 0:
+                # Constraint enforcing temperature (and thus SOC) at the beginning of each expansion
+                # periods be the same as at the end of previous expansion period
+                return (cond_heat[p, t] + loss_gain[p, t]) * dt_sec + conv_dt[p, t] == (
+                    internal_temp[p, t] - internal_temp[p - 1, max_t]
+                ) * self.layer_lump_capacitance
+            else:
+                temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
+                return (cond_heat[p, t] + loss_gain[p, t]) * dt_sec + conv_dt[
+                    p, t
+                ] == temp_diff * self.layer_lump_capacitance
+
+        setattr(
+            model,
+            f"{i}_internal_temp_con_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=change_of_internal_temperature_constraint),
+        )
