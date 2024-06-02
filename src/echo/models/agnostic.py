@@ -667,10 +667,10 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         self.verify_pts_values()
+        set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.max_input, lb=self.min_input)
         set_float_var_bounds(
-            model=model, var_name=self.ports["input"].port_name, ub=self.max_output, lb=self.min_output
+            model=model, var_name=self.ports["output"].port_name, ub=self.max_output, lb=self.min_output
         )
-        set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.max_input, lb=self.min_input)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         xvar = getattr(model, self.ports["input"].port_name)
