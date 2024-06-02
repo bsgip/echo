@@ -53,7 +53,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
         # water temperature for water cooled chiller
     )
     ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
-    constant_ambient_temperature: float = 10  # Constant value for ambient temperature when no array data is provided
+    constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
+    # when no array data is provided
     input_port_unit: Units = Units.KW  # Input port units
     output_port_unit: Units = Units.KWT  # Output port units TODO: implementation for output units JPS
     heat_rejection_port: bool = False  # If True, add heat rejection port
@@ -77,7 +78,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         self.load_temperature_values_from_profile(model, profile)
         self.define_temperature_dependent_cop_coefficient(model)
-        self.set_input_output_pts(model)
+        self.set_input_points(model)
+        self.set_output_points(model)
         super(Chiller, self).add_node_to_model(model, profile)
         if "heat_rejection" in self.ports:
             self.add_heat_rejection_constraint(model)
@@ -126,12 +128,13 @@ class Chiller(TimeVaryingPiecewiseIONode):
             en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict, domain=en.Reals),
         )
 
-    def set_input_output_pts(self, model: EchoConcreteModel):
+    def set_input_points(self, model: EchoConcreteModel):
+        """Input breakpoints are input electrical power values calculated as
+        cooling_output/(COP*partial_load_correction) and scaled by 1/temperature_cop_param value"""
+
         # get parameter holding temperature dependent COP factor
         temperature_cop_param = getattr(model, self.temperature_cop_param)
 
-        # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
-        # and scaled by 1/temp_cop_param value
         def input_point(k, v):
             if v == 0:
                 return 0
@@ -144,7 +147,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
             for t in range(len(model.Time))
         }
 
-        # Outputs breakpoints are partial cooling load values (% of max capacity)
+    def set_output_points(self, model: EchoConcreteModel):
+        """Outputs breakpoints are partial cooling load values (% of max capacity)"""
         self.output_pts = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
             for p in range(len(model.Expansion))
@@ -152,7 +156,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
         }
 
     def add_heat_rejection_constraint(self, model: EchoConcreteModel):
-        """Get variables representing port flow values for cooling output (heat in) and
+        """Get vari    set_input_pointsables representing port flow values for cooling output (heat in) and
         rejected heat flow, set the constraint."""
         heat_in = getattr(model, self.ports["output"].port_name)
         heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
