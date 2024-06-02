@@ -610,7 +610,7 @@ class InputOutputNode(Node):
 
     def __init__(self, **data):
         super().__init__(**data)
-        # Create an input port and an outport port with the correct units
+        # Create an input port and an output port with the correct units
         self.ports["input"] = FlexPort(units=self.input_port_unit)
         self.ports["output"] = FlexPort(units=self.output_port_unit)
 
