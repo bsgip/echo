@@ -49,7 +49,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
         20: 0.5,
         30: 0.35,
         45: 0.2,
-    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the ambient/condenser temperature value
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on
+    # the ambient/condenser temperature value
     ambient_temperature_dict: dict = (
         None  # Condenser side temperature ambient air temperature or condenser
         # water temperature for water cooled chiller
