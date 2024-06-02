@@ -15,6 +15,10 @@ from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
 
+def clamp(n, smallest, largest):
+    return max(smallest, min(n, largest))
+
+
 def _to_values(profile, key):
     if isinstance(profile, dict):
         return profile[key]

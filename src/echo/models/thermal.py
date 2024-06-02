@@ -21,6 +21,7 @@ from echo.utils import (
     to_initial_values,
     TimeSeriesData,
     expand_as_dict,
+    clamp,
 )
 from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop
 
@@ -105,19 +106,12 @@ class Chiller(TimeVaryingPiecewiseIONode):
                 )
             )
 
-        def value_or_bound(temperature_value):
-            """If ambient temperature value is outside the bounds in temperature_dependent_cop dictionary,
-            then return the bound"""
-            if temperature_value >= max(self.temperature_dependent_cop.keys()):
-                return max(self.temperature_dependent_cop.keys())
-            elif temperature_value <= min(self.temperature_dependent_cop.keys()):
-                return min(self.temperature_dependent_cop.keys())
-            else:
-                return temperature_value
-
         # Use numpy linear interpolation function to get temp cop factor from temp dictionary
+        min_temp = min(self.temperature_dependent_cop.keys())
+        max_temp = max(self.temperature_dependent_cop.keys())
         temperature_cop_dict = {
-            k: np.interp(value_or_bound(v), temperature_points, cop_points) for k, v in temperature_dict.items()
+            k: np.interp(clamp(v, min_temp, max_temp), temperature_points, cop_points)
+            for k, v in temperature_dict.items()
         }
 
         # Create a parameter holding ambient/condenser temperature dictionary
