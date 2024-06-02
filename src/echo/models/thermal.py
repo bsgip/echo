@@ -135,7 +135,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
             else:
                 return k * self.max_cooling_capacity / (v * self.nominal_cop)
 
-        self.input_pts = {
+        self.input_points = {
             (p, t): [input_point(k, v) / temperature_cop_param[p, t] for k, v in self.partial_load_cop.items()]
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
@@ -143,7 +143,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
 
     def set_output_points(self, model: EchoConcreteModel):
         """Outputs breakpoints are partial cooling load values (% of max capacity)"""
-        self.output_pts = {
+        self.output_points = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
