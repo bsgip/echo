@@ -130,6 +130,25 @@ optimise_results = optimise(
     objective_set=objective_set,
 )
 
+storage_temp = getattr(optimise_results.model, storage.internal_temp).get_values()
+loss_gain = getattr(optimise_results.model, storage.net_loss_gain).get_values()
+soc_kwth = optimise_results.df()[storage.soc_value]
+soc_100 = optimise_results.df()[storage.soc_value][0] * 1 / q_max_kwh
+
+cp_flow_df = optimise_results.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
+
+fig = cp_flow_df.plot(
+    title="Connection Point flows in KWTh",
+    labels=dict(index="Time", value="KWTh"),
+)
+fig.show()
+
+fig = pd.DataFrame(soc_100).plot(
+    title="Thermal Storage SOC in KWTh",
+    labels=dict(index="Time", value="KWTh", variable="SOC"),
+)
+fig.show()
+
 
 """ When Storage has two ports, we need two connection points as only one edge is allowed between any two nodes
 """
