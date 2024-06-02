@@ -650,7 +650,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
                 f"Different length value arrays for key {k}",
             )
 
-    def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def load_input_output_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """If input/output point string references are provided, load values from profile.
 
         input_points_ref/output_points_ref will override input_points/output_points values provided
@@ -676,7 +676,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
             pass
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        self.load_values_from_profile(model, profile)
+        self.load_input_output_values_from_profile(model, profile)
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         self.verify_points_values()
