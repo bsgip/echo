@@ -129,7 +129,7 @@ def check_bound_order(cls, values):
 
 
 def node_unit_validator(cls, values):
-    """Checks that a tellegen and aggregation node's ports all have the same units."""
+    """Checks that a tellegen and aggregation nodes' ports all have the same units."""
     ports = values.get("ports")
     u = None
     nominal_units = values.get("port_units")
