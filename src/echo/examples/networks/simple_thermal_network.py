@@ -104,7 +104,11 @@ cp = TellegenNode(
 # ----------------------------------------------------------------------------------------------------------------------
 #   4. Build the optimisation graph
 # ----------------------------------------------------------------------------------------------------------------------
-
+#
+#     thermal_mains---cp---thermal_demand
+#                     |
+#                  storage
+#
 system = OptimisationGraph()
 system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
 system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
@@ -190,7 +194,11 @@ cp_2 = TellegenNode(
 # ----------------------------------------------------------------------------------------------------------------------
 #   6. Build new optimisation graph
 # ----------------------------------------------------------------------------------------------------------------------
-
+#
+#     thermal_mains---cp_1---cp_2---thermal_demand
+#                       \     /
+#                       storage
+#
 
 system = OptimisationGraph()
 system.add_node_obj([storage_2p, thermal_demand, thermal_mains, cp_1, cp_2])
