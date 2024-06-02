@@ -43,19 +43,19 @@ def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True)
 
 
 # Thermal transmittance of storage insulation in W/sqm*C (from 0.5 - 11 is reasonable range)
-u_ins = 5
+INSULATION_TRANSMITTANCE = 5
 # mass of thermal storage in kg
-mass = 500
+MASS = 500
 # Specific heat capacity of storage medium (here is water) in J/kg*C
-c_p = 4184
+SPECIFIC_HEAT_CAPACITY_WATER = 4184
 # Total surface area of thermal storage from volume (for water 1 kg=1 litre)
-area = default_surface_area_of_cylinder(mass * 1e-3)
+SURFACE_AREA = default_surface_area_of_cylinder(MASS * 1e-3)
 
 # ----------------------------------------------------------------------------------------------------------------------
 #   2. Define thermal demand profile and ambient temperature profile
 # ----------------------------------------------------------------------------------------------------------------------
 
-q_max_joules = c_p * mass * 70  # Max energy storage capacity in joules
+q_max_joules = SPECIFIC_HEAT_CAPACITY_WATER * MASS * 70  # Max energy storage capacity in joules
 q_max_kwh = q_max_joules / 3600000
 th_load = [0.1] * 14 + [0.4] * 4 + [0.05] * 16 + [0.4] * 6 + [0.2] * 8
 th_load = list((np.array(th_load) * q_max_kwh).round())
@@ -85,10 +85,10 @@ storage = ThermalStorage(
     max_temp=80,
     min_temp=10,
     ambient_temp=ambient_temp_dict,
-    storage_mass=mass,
-    specific_heat=4184,
-    ins_transmittance=u_ins,
-    surface_area=area,
+    storage_mass=MASS,
+    specific_heat=SPECIFIC_HEAT_CAPACITY_WATER,
+    ins_transmittance=INSULATION_TRANSMITTANCE,
+    surface_area=SURFACE_AREA,
     separate_in_out_ports=False,
 )
 
@@ -143,10 +143,10 @@ storage_2p = ThermalStorage(
     max_temp=80,
     min_temp=10,
     ambient_temp=ambient_temp_dict,
-    storage_mass=mass,
-    specific_heat=4184,
-    ins_transmittance=u_ins,
-    surface_area=area,
+    storage_mass=MASS,
+    specific_heat=SPECIFIC_HEAT_CAPACITY_WATER,
+    ins_transmittance=INSULATION_TRANSMITTANCE,
+    surface_area=SURFACE_AREA,
     separate_in_out_ports=True,
 )
 
