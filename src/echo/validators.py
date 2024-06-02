@@ -212,9 +212,10 @@ def validate_partial_load_cop(cls, values):
     return values
 
 
-def validate_temp_dependent_cop(cls, values):
-    temp_cop_coeff = values.get("temp_dependent_cop")
-    for k, v in temp_cop_coeff.items():
+def validate_temperature_dependent_cop(cls, values):
+    """Validate temperature dependent cop dictionary"""
+    temperature_cop_coeff = values.get("temperature_dependent_cop")
+    for k, v in temperature_cop_coeff.items():
         validate(
             -10 <= k <= 50,
             # TODO: reasonable value range is different between air cooled and water cooled chillers.

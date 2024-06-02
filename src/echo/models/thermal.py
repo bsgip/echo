@@ -22,7 +22,7 @@ from echo.utils import (
     TimeSeriesData,
     expand_as_dict,
 )
-from echo.validators import validate_partial_load_cop, validate_temp_dependent_cop
+from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop
 
 
 class Chiller(TimeVaryingPiecewiseIONode):
@@ -34,22 +34,36 @@ class Chiller(TimeVaryingPiecewiseIONode):
 
     nominal_cop: float  # Nominal coefficient of performance COP = output/input
     max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
-    partial_load_cop: dict = {0: 0, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.85}
-    temp_dependent_cop: dict = {0: 0.7, 10: 1, 20: 0.5, 30: 0.35, 45: 0.2}
-    ambient_temp_dict: dict = (
-        None  # Condenser side temperature, ambient air temp or condenser water temp for water cooled chiller
+    partial_load_cop: dict = {
+        0: 0,
+        0.25: 0.8,
+        0.5: 0.9,
+        0.75: 1,
+        1: 0.85,
+    }  # Scaling factor for the nominal COP depending on the partial load value
+    temperature_dependent_cop: dict = {
+        0: 0.7,
+        10: 1,
+        20: 0.5,
+        30: 0.35,
+        45: 0.2,
+    }  # Scaling factor for the nominal COP depending on the ambient/condenser temperature value
+    ambient_temperature_dict: dict = (
+        None  # Condenser side temperature ambient air temperature or condenser
+        # water temperature for water cooled chiller
     )
-    ambient_temp_ref: str = None
-    input_port_unit: Units = Units.KW
-    output_port_unit: Units = Units.KWT
-    heat_rejection_port: bool = False
-    heat_rejection_coeff: float = 1
+    ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
+    constant_ambient_temperature: float = 10  # Constant value for ambient temperature when no array data is provided
+    input_port_unit: Units = Units.KW  # Input port units
+    output_port_unit: Units = Units.KWT  # Output port units TODO: implementation for output units JPS
+    heat_rejection_port: bool = False  # If True, add heat rejection port
+    heat_rejection_coefficient: float = 1  # Heat rejection coefficient cooling_delivered/heat_rejected
 
-    pl_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
-    temp_cop_check = root_validator(allow_reuse=True)(validate_temp_dependent_cop)
+    partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
+    temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
 
     @property
-    def temp_cop_param(self):
+    def temperature_cop_param(self):
         return f"temperature_cop_factor_{self.node_name}"
 
     def __init__(self, **data):
@@ -61,51 +75,60 @@ class Chiller(TimeVaryingPiecewiseIONode):
             self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        self.load_tem_values_from_profile(model, profile)
-        self.define_temp_dependent_cop_coefficient(model)
+        self.load_temperature_values_from_profile(model, profile)
+        self.define_temperature_dependent_cop_coefficient(model)
         self.set_input_output_pts(model)
         super(Chiller, self).add_node_to_model(model, profile)
         if "heat_rejection" in self.ports:
             self.add_heat_rejection_constraint(model)
 
-    def define_temp_dependent_cop_coefficient(self, model: EchoConcreteModel):
+    def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get COP scaler for each interval.
 
-        Calculate value of the temp_cop_factor parameter using numpy linear interpolation function.
+        Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
         """
 
-        temp_points = list(self.temp_dependent_cop.keys())
-        cop_points = list(self.temp_dependent_cop.values())
+        temperature_points = list(self.temperature_dependent_cop.keys())
+        cop_points = list(self.temperature_dependent_cop.values())
 
-        if self.ambient_temp_dict:
-            temp_dict = self.ambient_temp_dict
+        if self.ambient_temperature_dict:
+            temperature_dict = self.ambient_temperature_dict
         else:
             # Set default amb temp value to 10 >> no change to nominal COP
-            temp_dict = expand_as_dict(
-                TimeSeriesData(value=10, num_time_intervals=len(model.Time), num_expansion_intervals=1)
+            temperature_dict = expand_as_dict(
+                TimeSeriesData(
+                    value=self.constant_ambient_temperature,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
             )
 
-        def value_or_bound(temp_val):
-            if temp_val >= max(self.temp_dependent_cop.keys()):
-                return max(self.temp_dependent_cop.keys())
-            elif temp_val <= min(self.temp_dependent_cop.keys()):
-                return min(self.temp_dependent_cop.keys())
+        def value_or_bound(temperature_value):
+            """If ambient temperature value is outside the bounds in temperature_dependent_cop dictionary,
+            then return the bound"""
+            if temperature_value >= max(self.temperature_dependent_cop.keys()):
+                return max(self.temperature_dependent_cop.keys())
+            elif temperature_value <= min(self.temperature_dependent_cop.keys()):
+                return min(self.temperature_dependent_cop.keys())
             else:
-                return temp_val
+                return temperature_value
 
         # Use numpy linear interpolation function to get temp cop factor from temp dictionary
-        temp_cop_dict = {k: np.interp(value_or_bound(v), temp_points, cop_points) for k, v in temp_dict.items()}
+        temperature_cop_dict = {
+            k: np.interp(value_or_bound(v), temperature_points, cop_points) for k, v in temperature_dict.items()
+        }
 
-        # Create a parameter holding ambient/condenser temperature dictionary (defaulting to 10 degrees)
+        # Create a parameter holding ambient/condenser temperature dictionary
+        # (defaulting to self.constant_ambient_temperature)
         setattr(
             model,
-            self.temp_cop_param,
-            en.Param(model.Expansion, model.Time, initialize=temp_cop_dict, domain=en.Reals),
+            self.temperature_cop_param,
+            en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict, domain=en.Reals),
         )
 
     def set_input_output_pts(self, model: EchoConcreteModel):
         # get parameter holding temperature dependent COP factor
-        temp_cop_param = getattr(model, self.temp_cop_param)
+        temperature_cop_param = getattr(model, self.temperature_cop_param)
 
         # Input breakpoints are input electrical power values calculated as cooling_output/(COP*partial_load_correction)
         # and scaled by 1/temp_cop_param value
@@ -116,7 +139,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
                 return k * self.max_cooling_capacity / (v * self.nominal_cop)
 
         self.input_pts = {
-            (p, t): [input_point(k, v) / temp_cop_param[p, t] for k, v in self.partial_load_cop.items()]
+            (p, t): [input_point(k, v) / temperature_cop_param[p, t] for k, v in self.partial_load_cop.items()]
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
         }
@@ -138,7 +161,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
             """Amount of rejected heat at each interval equals amount of cooling delivered (heat in) multiplied by
             heat rejection coefficient
             """
-            return heat_reject[p, t] == -heat_in[p, t] * self.heat_rejection_coeff
+            return heat_reject[p, t] == -heat_in[p, t] * self.heat_rejection_coefficient
 
         setattr(
             model,
@@ -146,17 +169,17 @@ class Chiller(TimeVaryingPiecewiseIONode):
             en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
-    def load_tem_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
-        """For all attributes set by str reference, load values from profile."""
-        if self.ambient_temp_ref and self.ambient_temp_ref in profile_df.columns:
-            self.ambient_temp_dict = to_initial_values(
+    def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """When ambient temperature is set by str reference, load values from profile."""
+        if self.ambient_temperature_ref and self.ambient_temperature_ref in profile_df.columns:
+            self.ambient_temperature_dict = to_initial_values(
                 profile_df,
-                key=self.ambient_temp_ref,
+                key=self.ambient_temperature_ref,
                 time_periods=len(model.Time),
                 expansion_periods=len(model.Expansion),
             )
-        elif self.ambient_temp_ref and self.ambient_temp_ref not in profile_df.columns:
-            raise ValueError(f"Could find reference column name {self.ambient_temp_ref} in the profile.")
+        elif self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
+            raise ValueError(f"Could not find reference column name {self.ambient_temperature_ref} in the profile.")
         else:
             pass
 
@@ -264,7 +287,7 @@ class ThermalStorage(Node):
     """Model of sensible thermal storage with liquid or solid storage medium.
 
     Thermal storage keeps track of its internal temperature value base. Assumes homogeneous temperature throughout the
-    TES volume.
+    storage volume.
     """
 
     max_temp: float  # Maximum operational temperature in degrees  Celsius
@@ -273,8 +296,9 @@ class ThermalStorage(Node):
     specific_heat: float  # Specific heat capacity in Joule/kg*C
     ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
     ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
-    ins_transmittance: float = 0  # Thermal transmittance U-value of TES insulation in W/sqm*C
-    surface_area: float = 0  # Surface area of TES in square meters, default value=0 means zero heat loss/gain
+    ins_transmittance: float = 0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
+    surface_area: float = 0  # Surface area of Thermal Energy Storage in square meters, default value=0
+    # means zero heat loss/gain
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
@@ -296,10 +320,10 @@ class ThermalStorage(Node):
 
     @root_validator
     def _non_zero_temp_range(cls, values: dict) -> dict:
-        """Temperature range must be non-zero and positive for TES to be operational"""
+        """Temperature range must be non-zero and positive for Thermal Energy Storage to be operational"""
         if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
             raise ValueError(
-                "Temperature range must be non-zero and positive for TES to be operational."
+                "Temperature range must be non-zero and positive for Thermal Energy Storage to be operational."
                 f"Was given max temperature {values['max_temp']} "
                 f"and min temperature {values['min_temp']}, "
                 f"resulting in range {values['max_temp'] - values['min_temp']}"
