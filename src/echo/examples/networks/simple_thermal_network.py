@@ -16,16 +16,8 @@ import pandas as pd
 pd.options.plotting.backend = "plotly"
 
 
-""" A simple thermal network
-
-    A heating load, thermal storage and heating mains are connected resulting in this graph:
-                       +--------+
-                    +--+ th load
-+------+     +------+  |  +--------+
-|th mains +--+ C.P. +--+
-+------+     +------+  |  +----------+
-                    +--+ th storage
-                       +----------+
+""" A simple thermal network.
+    A heating load, thermal storage and heating mains are connected via a connection point (TellegenNode).
 """
 
 # ----------------------------------------------------------------------------------------------------------------------
