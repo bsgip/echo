@@ -502,21 +502,31 @@ class ThermalPort(FlexPort):
     units = Units.KWT
 
 
-class HeatPump(Node):
-    """
-    A heat pump is input output node, where input is an electrical port, and either one or two output thermal ports.
-    It can only do heating or cooling, it cannot do both simultaneously.
+class HeatPumpParametrised(TimeVaryingPiecewiseIONode):
+    pass
+
+
+class HeatPumpSingleOutput(Node):
+    """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
+
+    HeatPumpSingleOutput has one input electrical port, and one output thermal port. It can do heating or cooling,
+    but not both simultaneously.
     The conversion of input electrical energy to heating or cooling output depends on provided coefficients of
-    performance (cop) time series data.
+    performance (COP) time series data. If cop attribute is None, then COP values at each step default to 1.
     """
 
-    heating_cop_time_series: dict  # Formatted dict of heating COPs (coefficients of performance) per time period
-    cooling_cop_time_series: dict  # Formatted dict of cooling COPs (coefficients of performance) per time period
+    heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
+    # per time period
+    cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
+    # per time period
+    heating_cop_time_series_ref: Optional[str]
+    cooling_cop_time_series_ref: Optional[str]
 
     def __init__(self, **data):
         super().__init__(**data)
         # Create input and output ports
         self.ports["input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
+        self.ports["output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
 
         # Naming variables
 
