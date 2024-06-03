@@ -30,7 +30,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
     A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
-    chiller COP used for all time periods.
+    chiller COP (Coefficient Of Performance = Output/Input=Cooling_delivered/Electricity_consumed) used
+    for all time periods.
     """
 
     nominal_cop: float  # Nominal coefficient of performance COP = output/input
@@ -41,14 +42,15 @@ class Chiller(TimeVaryingPiecewiseIONode):
         0.5: 0.9,
         0.75: 1,
         1: 0.85,
-    }  # Scaling factor for the nominal COP depending on the partial load value
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
     temperature_dependent_cop: dict = {
         0: 0.7,
         10: 1,
         20: 0.5,
         30: 0.35,
         45: 0.2,
-    }  # Scaling factor for the nominal COP depending on the ambient/condenser temperature value
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on
+    # the ambient/condenser temperature value
     ambient_temperature_dict: dict = (
         None  # Condenser side temperature ambient air temperature or condenser
         # water temperature for water cooled chiller
@@ -86,7 +88,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
             self.add_heat_rejection_constraint(model)
 
     def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
-        """Get COP scaler for each interval.
+        """Get COP (coefficient of performance) scaling factor for each interval.
 
         Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
         """
@@ -106,7 +108,8 @@ class Chiller(TimeVaryingPiecewiseIONode):
                 )
             )
 
-        # Use numpy linear interpolation function to get temp cop factor from temp dictionary
+        # Use numpy linear interpolation function to get temperature related cop (coefficient of performance)
+        # scaling factor based on the temperature values in the temperature dictionary
         min_temp = min(self.temperature_dependent_cop.keys())
         max_temp = max(self.temperature_dependent_cop.keys())
         temperature_cop_dict = {
@@ -124,9 +127,9 @@ class Chiller(TimeVaryingPiecewiseIONode):
 
     def set_input_points(self, model: EchoConcreteModel):
         """Input breakpoints are input electrical power values calculated as
-        cooling_output/(COP*partial_load_correction) and scaled by 1/temperature_cop_param value"""
+        cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 
-        # get parameter holding temperature dependent COP factor
+        # get parameter holding temperature dependent COP (coefficient of performance) factor
         temperature_cop_param = getattr(model, self.temperature_cop_param)
 
         def input_point(k, v):
@@ -135,7 +138,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
             else:
                 return k * self.max_cooling_capacity / (v * self.nominal_cop)
 
-        self.input_pts = {
+        self.input_points = {
             (p, t): [input_point(k, v) / temperature_cop_param[p, t] for k, v in self.partial_load_cop.items()]
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
@@ -143,7 +146,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
 
     def set_output_points(self, model: EchoConcreteModel):
         """Outputs breakpoints are partial cooling load values (% of max capacity)"""
-        self.output_pts = {
+        self.output_points = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
@@ -507,8 +510,8 @@ class HeatPump(Node):
     performance (cop) time series data.
     """
 
-    heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
-    cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
+    heating_cop_time_series: dict  # Formatted dict of heating COPs (coefficients of performance) per time period
+    cooling_cop_time_series: dict  # Formatted dict of cooling COPs (coefficients of performance) per time period
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -604,13 +607,13 @@ class HeatPump(Node):
         )
 
     def get_heating_cop(self, optimiser):
-        """Returns the heating cop"""
+        """Returns the heating cop (coefficient of performance)"""
         _out = optimiser.values(self.ports["output"].pos)
         _in = optimiser.values(self.heat_in)
         return _out / _in
 
     def get_cooling_cop(self, optimiser):
-        """Returns the cooling cop"""
+        """Returns the cooling cop (coefficient of performance)"""
         _out = optimiser.values(self.ports["output"].neg)
         _in = optimiser.values(self.cool_in)
         return _out / _in

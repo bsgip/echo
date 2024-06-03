@@ -25,7 +25,7 @@ from echo.validators import (
     nonnegative_costs,
     nonnegative_load,
     nonpositive_generation,
-    set_bounds_from_piecewise_pts,
+    set_bounds_from_piecewise_points,
     validate_piecewise_arrays,
 )
 
@@ -623,61 +623,73 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     Attributes input_port_unit and output_port_unit define node's commodity.
     """
 
-    input_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
-    output_pts: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
-    input_pts_ref: Optional[str]  # Ref to profile dataframe column with input points array to be used across all times
-    output_pts_ref: Optional[str]  # Ref to profile dataframe column with input points array to be used across all times
+    input_points: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
+    output_points: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
+    input_points_ref: Optional[
+        str
+    ]  # Ref to profile dataframe column with input points array to be used across all times
+    output_points_ref: Optional[
+        str
+    ]  # Ref to profile dataframe column with input points array to be used across all times
 
-    piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output pts
+    piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output points
     populate_bounds = root_validator(allow_reuse=True)(
-        set_bounds_from_piecewise_pts
-    )  # set attributes max_output,  min_output, max_input, min_input from input pts/output pts
+        set_bounds_from_piecewise_points
+    )  # set attributes max_output,  min_output, max_input, min_input from input points/output points
 
-    def verify_pts_values(self):
-        validate(self.input_pts is not None, "No input points defined")
-        validate(self.output_pts is not None, "No output points defined")
+    def verify_points_values(self):
+        validate(self.input_points is not None, "No input points defined")
+        validate(self.output_points is not None, "No output points defined")
         # Validate that dictionary keys match and length of each value array are the same
-        for k in self.input_pts.keys():
-            validate(k in self.output_pts.keys(), f"Key {k} not found in output_pts dictionary")
+        for k in self.input_points.keys():
+            validate(k in self.output_points.keys(), f"Key {k} not found in output_points dictionary")
             validate(
-                len(self.input_pts[k]) == len(self.output_pts[k]),
+                len(self.input_points[k]) == len(self.output_points[k]),
                 "Number of break points in "
-                "input_pts output_pts must match."
+                "input_points output_points must match."
                 f"Different length value arrays for key {k}",
             )
 
-    def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
-        """For all attributes set by str reference, load values from profile."""
-        if self.input_pts_ref and self.input_pts_ref in profile_df.columns:
-            self.add_input_pts(profile_df[self.input_pts_ref].to_list(), len(model.Time), len(model.Expansion))
-        elif self.input_pts_ref and self.input_pts_ref not in profile_df.columns:
-            raise ValueError(f"Could find reference column name {self.input_pts_ref} in the profile.")
+    def load_input_output_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """If input/output point string references are provided, load values from profile.
+
+        input_points_ref/output_points_ref will override input_points/output_points values provided
+        in the instance's attributes (if any) with values from profile dataframe.
+        """
+        if self.input_points_ref and self.input_points_ref in profile_df.columns:
+            """Load input points array from profile dataframe and set the same array across all time points"""
+            input_points_array = profile_df[self.input_points_ref].to_list()
+            self.add_constant_input_points(input_points_array, len(model.Time), len(model.Expansion))
+        elif self.input_points_ref and self.input_points_ref not in profile_df.columns:
+            raise ValueError(f"Could not find reference column name {self.input_points_ref} in the profile.")
         else:
+            """If not reference provided, skip this step"""
             pass
 
-        if self.output_pts_ref and self.output_pts_ref in profile_df.columns:
-            self.add_output_pts(profile_df[self.output_pts_ref].to_list(), len(model.Time), len(model.Expansion))
-        elif self.output_pts_ref and self.output_pts_ref not in profile_df.columns:
-            raise ValueError(f"Could find reference column name {self.output_pts_ref} in the profile.")
+        if self.output_points_ref and self.output_points_ref in profile_df.columns:
+            """Load input points array from profile dataframe and set the same array across all time points"""
+            output_points_array = profile_df[self.output_points_ref].to_list()
+            self.add_constant_output_points(output_points_array, len(model.Time), len(model.Expansion))
+        elif self.output_points_ref and self.output_points_ref not in profile_df.columns:
+            raise ValueError(f"Could not find reference column name {self.output_points_ref} in the profile.")
         else:
             pass
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        self.load_values_from_profile(model, profile)
+        self.load_input_output_values_from_profile(model, profile)
         super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
-        self.verify_pts_values()
+        self.verify_points_values()
         set_float_var_bounds(
-            model=model, var_name=self.ports["input"].port_name, ub=self.max_output, lb=self.min_output
+            model=model, var_name=self.ports["output"].port_name, ub=self.max_output, lb=self.min_output
         )
-        set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.max_input, lb=self.min_input)
+        set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.max_input, lb=self.min_input)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         xvar = getattr(model, self.ports["input"].port_name)
         yvar = getattr(model, self.ports["output"].port_name)
-        xdata = self.input_pts
-        ydata = self.output_pts
-
+        xdata = self.input_points
+        ydata = self.output_points
         con_name = "piecewise_con_" + self.node_name
         setattr(
             model,
@@ -687,13 +699,19 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
             ),
         )
 
-    def add_input_pts(self, input_pts: Union[float, int, list], time_periods: int, expansion_periods: int = 1):
-        """Tiles constant input points across time and expansion periods"""
-        self.input_pts = populate_values_across_time_and_expansion_indices(input_pts, time_periods, expansion_periods)
+    def add_constant_input_points(
+        self, input_points: Union[float, int, list], time_periods: int, expansion_periods: int = 1
+    ):
+        """Tiles constant input points array across time and expansion periods"""
+        self.input_points = populate_values_across_time_and_expansion_indices(
+            input_points, time_periods, expansion_periods
+        )
 
-    def add_output_pts(self, output_pts: Union[float, int, list], time_periods, expansion_periods=1):
-        """Tiles constant output points across time and expansion periods."""
-        self.output_pts = populate_values_across_time_and_expansion_indices(output_pts, time_periods, expansion_periods)
+    def add_constant_output_points(self, output_points: Union[float, int, list], time_periods, expansion_periods=1):
+        """Tiles constant output points array across time and expansion periods."""
+        self.output_points = populate_values_across_time_and_expansion_indices(
+            output_points, time_periods, expansion_periods
+        )
 
 
 class TimeDelayNode(InputOutputNode):
@@ -725,7 +743,7 @@ class AggregationNode(Node):
     """Arbitrary commodity aggregation node.
 
     This node has an additional variable, 'total', which equals the sum of all ports defined on the node.
-    port_units attribute is used for validation, all ports mst be the same commodity.
+    port_units attribute is used for validation, all ports must be the same commodity.
     """
 
     port_units: Units

@@ -148,27 +148,27 @@ def node_unit_validator(cls, values):
 
 
 def validate_piecewise_arrays(cls, values):
-    input_pts = values.get("input_pts")
-    output_pts = values.get("output_pts")
-    if input_pts is not None and output_pts is not None:
-        validate(len(input_pts) == len(output_pts), "Mismatched indices for input and output dictionaries.")
-        for k, _ in input_pts.items():
+    input_points = values.get("input_points")
+    output_points = values.get("output_points")
+    if input_points is not None and output_points is not None:
+        validate(len(input_points) == len(output_points), "Mismatched indices for input and output dictionaries.")
+        for k, _ in input_points.items():
             validate(
-                len(input_pts[k]) == len(output_pts[k]),
+                len(input_points[k]) == len(output_points[k]),
                 "Input and output arrays are not equal lengths for index {}".format(k),
             )
 
     return values
 
 
-def set_bounds_from_piecewise_pts(cls, values):
-    input_pts = values.get("input_pts")
-    output_pts = values.get("output_pts")
-    if input_pts is not None and output_pts is not None:
-        values["max_output"] = max(max(input_pts.values()))
-        values["min_output"] = min(min(input_pts.values()))
-        values["max_input"] = max(max(output_pts.values()))
-        values["min_input"] = min(min(output_pts.values()))
+def set_bounds_from_piecewise_points(cls, values):
+    input_points = values.get("input_points")
+    output_points = values.get("output_points")
+    if input_points is not None and output_points is not None:
+        values["max_input"] = max(max(input_points.values()))
+        values["min_input"] = min(min(input_points.values()))
+        values["max_output"] = max(max(output_points.values()))
+        values["min_output"] = min(min(output_points.values()))
     return values
 
 
@@ -204,11 +204,6 @@ def validate_partial_load_cop(cls, values):
             0 <= v <= 1,
             f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
         )
-
-        is_non_negative(
-            v,
-            f"All values in partial load cop must be non negative, offending value {v}",
-        )
     return values
 
 
@@ -226,10 +221,5 @@ def validate_temperature_dependent_cop(cls, values):
         validate(
             0 <= v <= 1,
             f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
-        )
-
-        is_non_negative(
-            v,
-            f"All values in temperature dependent must be non negative, offending value {v}",
         )
     return values
