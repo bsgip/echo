@@ -3,8 +3,8 @@ from typing import Optional
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
 
-from echo.configuration import OptimisationType, Units
-from echo.models.agnostic import FlexPort, InputOutputNode, OffOrConstrainedPort
+from echo.configuration import Units
+from echo.models.agnostic import FixedPort, FlexPort, InputOutputNode, OffOrConstrainedPort
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
     ArrayType,
@@ -13,20 +13,16 @@ from echo.validators import (
 )
 
 
-class GasPort(FlexPort):
+class FlexGasPort(FlexPort):
     """A flexible port with flow units of Joules/second"""
 
-    def __init__(self):
-        super(GasPort, self).__init__()
-        self.units = Units.JPS
+    units = Units.JPS
 
 
-class FixedGasPort(GasPort):
-    """Same as gas port, but fixed value."""
+class FixedGasPort(FixedPort):
+    """A Fixed port with flow units of Joules/second"""
 
-    def __init__(self):
-        super(FixedGasPort, self).__init__()
-        self.opt_type = OptimisationType.Parameter
+    units = Units.JPS
 
 
 class GasBoilerFixedCOP(InputOutputNode):
@@ -108,8 +104,8 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = "inlet_temp_" + self.node_name
         self.exit_t = "outlet_temp_" + self.node_name
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(TempControlledBoiler, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(TempControlledBoiler, self).add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
             model,

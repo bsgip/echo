@@ -4,11 +4,6 @@ import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
 from echo.configuration import (
-    FlowConstraint,
-    Flows,
-    NodeRule,
-    OptimisationType,
-    TransformRule,
     Units,
 )
 from echo.models.agnostic import (
@@ -19,9 +14,9 @@ from echo.models.agnostic import (
     InputOutputNode,
     OffOrConstrainedPort,
 )
-from echo.models.base import Node
+from echo.models.base import Node, TransformNode
 from echo.models.carbon import CarbonSource
-from echo.models.electrical import ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import ElectricalGeneration, ElectricalStorage
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
@@ -62,9 +57,9 @@ class Solar(Node):
         super().__init__(**data)
         self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
         if type(profile) is dict:
-            self.ports[port_name].add_initial_value(profile)
+            self.ports[port_name].set_initial_value(profile)
         else:
-            self.ports[port_name].add_initial_value_from_array(profile)
+            self.ports[port_name].set_initial_value_from_array(profile)
 
 
 class NewSolar(Node):
@@ -82,9 +77,9 @@ class Load(Node):
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)
         if type(profile) is dict:
-            self.ports[port_name].add_initial_value(profile)
+            self.ports[port_name].set_initial_value(profile)
         else:
-            self.ports[port_name].add_initial_value_from_array(profile)
+            self.ports[port_name].set_initial_value_from_array(profile)
 
 
 class FlexNode(Node):
@@ -99,15 +94,7 @@ class FlexElectricalNode(Node):
         self.ports[port_name] = FlexPort(port_name=port_name, units=Units.KW)
 
 
-class NewInverter(Inverter):
-    def __init__(self, ac_port_name: str, dc_port_names: list, **data):
-        super().__init__(**data)
-        self.add_ac_port(ac_port_name)
-        for i in dc_port_names:
-            self.add_dc_port(i)
-
-
-class FlexNodeWithEmissions(Node):
+class FlexNodeWithEmissions(TransformNode):
     def __init__(
         self,
         emitting_port: str,
@@ -181,22 +168,18 @@ class Electrolyser(InputOutputNode):
 
     input_port_unit = Units.KW
     output_port_unit = Units.H2Kg
-    cop: NonNegativeFloat = 1/40
+    cop: NonNegativeFloat = 1 / 40
     startup_efficiency: NonNegativeFloat = 1.0
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # add an input and output Port, and create appropriate transformations
-        if self.max_input:
-            _import_constraint = FlowConstraint.InRange
-        self.ports["output"] = FlexSource(units=self.output_port_unit,
-                                          upper_bound=self.max_output,
-                                          lower_bound=self.min_output
-                                          )
-        self.ports["input"] = FlexSink(units=self.input_port_unit,
-                                       upper_bound=self.max_input,
-                                       lower_bound=self.min_input)
-
+        self.ports["output"] = FlexSource(
+            units=self.output_port_unit, upper_bound=self.max_output, lower_bound=self.min_output
+        )
+        self.ports["input"] = FlexSink(
+            units=self.input_port_unit, upper_bound=self.max_input, lower_bound=self.min_input
+        )
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         super(Electrolyser, self).apply_node_constraints(model)

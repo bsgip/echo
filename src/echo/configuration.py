@@ -1,6 +1,7 @@
 """ Enumerations of possible configurations for echo model components.
 
 """
+
 from enum import Enum
 
 
@@ -67,19 +68,6 @@ class OptimisationType(Enum):
     """The port variable is variable/optimisable"""
 
 
-class NodeRule(Enum):
-    """Enumeration object defining the type Transformation for the Node object."""
-
-    NA = 0
-    """Transformation type is not specified for this Node"""
-    Tellegen = 1
-    """The Node sums all port values to 0"""
-    Custom = 2
-    """The Node has a custom defined transformation rule"""
-    Transform = 3
-    """The Node has a transformation rule defined with a Transform object"""
-
-
 class TransformRule(Enum):
     """Enumeration object defining to which component of the Port value the Transformation Rule applies"""
 
@@ -107,6 +95,8 @@ class ExpansionType(Enum):
 
 
 class NodeType(Enum):
+    """Enumeration of Node types"""
+
     ElectricalFlex = "electrical_flex"
     ElectricalTellegen = "elec_tellegen"
     MultiCommodityTellegen = "multi_commodity_tellegen"
@@ -173,6 +163,8 @@ class Resets(Enum):
 
 
 class EVChargeMode(Enum):
+    """Enumeration of EV class charging modes"""
+
     V0G = "V0G"
     V1G = "V1G"
     V2G = "V2G"

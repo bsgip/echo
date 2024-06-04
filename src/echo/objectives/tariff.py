@@ -6,15 +6,7 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import (
-    Field,
-    NonNegativeFloat,
-    NonPositiveFloat,
-    PositiveFloat,
-    PositiveInt,
-    root_validator,
-    validator,
-)
+from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
@@ -303,22 +295,21 @@ class TimePeriod(EchoBaseModel):
         if Day.holiday in self.day_type:
             raise NotImplementedError("Public holidays not currently supported in optimisation")
         return (
-            (
-                df.index.isin(
-                    df.between_time(self.start_time, self.end_time, include_start=True, include_end=False).index
-                )
-            )
+            (df.index.isin(df.between_time(self.start_time, self.end_time, inclusive="left").index))
             & (df.index.weekday <= allowed_days_of_week_end)
             & (df.index.weekday >= allowed_days_of_week_start)
         ).astype(int)
 
     def overlaps(self, other: "TimePeriod"):
-        """
-        Determine whether two `TimePeriod`s are overlapping. Used for validating `Window`s.
+        """Determines whether two :obj:`TimePeriod` objects are overlapping.
+
+        Intended use if for validating :obj:`Window` objects.
+
         Args:
-            other:
+            other: The other TimePeriod to compare to
 
         Returns:
+            bool: True if both :obj:`TimePeriod` objects overlap, False otherwise.
 
         """
         if set(self.day_type).intersection(set(other.day_type)):

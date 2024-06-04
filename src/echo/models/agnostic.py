@@ -5,13 +5,14 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, NonNegativeFloat, PositiveFloat, root_validator, validator
 
-from echo.configuration import FlowConstraint, Flows, NodeRule, OptimisationType, Units
+from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    ArrayWrap,
-    ArrayWrappableType,
+    TimeExpandableType,
+    TimeSeriesData,
+    expand_as_array,
     generate_array_constraint,
     populate_values_across_time_and_expansion_indices,
     set_float_var_bounds,
@@ -39,9 +40,56 @@ from echo.validators import (
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
 
-    node_rule = NodeRule.Tellegen
-
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
+            a = 0
+            for port in node_ports.values():
+                a += getattr(model, port.port_name)[p, t]
+            return a == 0
+
+        node_ports = self.ports
+        con_name = "reliability_con_" + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+
+    def verify_node(self):
+        super(TellegenNode, self).verify_node()
+
+        validate(
+            len(self.ports) >= 2,
+            f"A tellegen node must have at least two ports. Offending node has the name: {self.node_name}",
+        )
+
+
+class MultiCommodityTellegenNode(Node):
+    """
+    A node with ports that have multiple commodities.
+    A tellegen constraint is applied per commodity.
+    """
+
+    def apply_node_constraints(self, model):
+        # todo avoid repeating the below
+        def reliability(model, p, t):  # Tellegen node rule
+            a = 0
+            for port in commodity_ports:
+                b = getattr(model, port.port_name)
+                a += b[p, t]
+            return a == 0
+
+        commodities = dict()
+        for p in self.ports.values():
+            if commodities.get(p.units) is None:
+                commodities[p.units] = [p]
+            else:
+                commodities[p.units].append(p)
+
+        for commodity_type, commodity_ports in commodities.items():
+            setattr(
+                model,
+                "node_con_" + str(commodity_type) + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=reliability),
+            )
 
 
 class FlexPort(Port):
@@ -50,8 +98,7 @@ class FlexPort(Port):
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
-    opt_type = OptimisationType.Variable
-
+    flow_type = OptimisationType.Variable
 
 
 class AdditivityPort(Port):
@@ -66,6 +113,7 @@ class AdditivityPort(Port):
                                 when selected set of time indexes can not be fully split into equal
                                 windows of the given length
     """
+
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
@@ -80,8 +128,7 @@ class AdditivityPort(Port):
         super(AdditivityPort, self).initialise_port(model, profile)
         self.constraint_port_flow_within_window(model)
 
-    def constraint_port_flow_within_window(self,
-                                           model: EchoConcreteModel):
+    def constraint_port_flow_within_window(self, model: EchoConcreteModel):
         """Adds a constraint on the net port flow value to be less or equal max_flow
         within each time window of a given length
 
@@ -96,17 +143,15 @@ class AdditivityPort(Port):
         window_length = self.window_length
 
         if window_length < 2:
-            raise ValueError(f"Unable to process port {self.port_name} flow within window constraint. "
-                             f"Expecting window length of at least 2 periods, given {window_length}")
+            raise ValueError(
+                f"Unable to process port {self.port_name} flow within window constraint. "
+                f"Expecting window length of at least 2 periods, given {window_length}"
+            )
         # Check if model has a variable that corresponds to the net port flow value
         # Raise value error if no variable is found
         # (decided not to explicitly add port variable here to avoid possible conflicts with port initialisation)
         if hasattr(model, self.port_name) is False:
             raise ValueError(f"Port {self.port_name} flow variable is not defined on the model ")
-
-        # Check variable domain vs max_value (expecting 'NonPositiveReals', 'PositiveReals', 'Reals')
-        var_domain_name = next(iter((getattr(model, self.port_name).values()))).domain.name
-        # 'NonPositiveReals'
 
         # Set default start and end period values to correspond to entire model.Time array
         if not self.end_period:
@@ -115,13 +160,13 @@ class AdditivityPort(Port):
             self.start_period = 0
 
         # Using start and end periods select times from entire model.Time array for which constraint applies
-        selected_times = model.Time.data()[self.start_period:self.end_period+1]
+        selected_times = model.Time.data()[self.start_period: self.end_period + 1]
 
         # Calculate number of full windows of the given window_length that fits into selected times array
         number_full_windows = len(selected_times) // window_length
 
         # Calculate the remainder that does not fit into selected times array
-        remainder = len(selected_times) - number_full_windows*window_length
+        remainder = len(selected_times) - number_full_windows * window_length
 
         # if there is a non-zero remainder, trim selected time to fit full number of windows
         if remainder > 0:
@@ -142,9 +187,8 @@ class AdditivityPort(Port):
 
             for _window in window_arrays:
                 _expr = additivity_rule(model, i, _window, max_flow)
-                con_name = f'{self.port_name}_max_net_flow_{i}_{_window[0]}:{_window[-1]}'
+                con_name = f"{self.port_name}_max_net_flow_{i}_{_window[0]}:{_window[-1]}"
                 setattr(model, con_name, en.Constraint(expr=_expr))
-
 
 
 class FlexSink(FlexPort):
@@ -162,66 +206,66 @@ class FlexSource(FlexPort):
 class FixedPort(Port):
     """Fixed port (parameter), can either import or export."""
 
-    opt_type = OptimisationType.Parameter
     flows = Flows.Both
     import_constraint = FlowConstraint.NoConstraint
     export_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
 
 
 class Source(Port):
     """A fixed source of a commodity."""
 
     flows = Flows.Export
-    opt_type = OptimisationType.Parameter
     export_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
 
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
     def add_source_profile(self, source_values: dict):
-        self.add_initial_value(source_values)
+        self.set_initial_value(source_values)
 
     def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.add_initial_value_from_array(source_values, expansion_periods, time_periods)
+        self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
 
 
 class Sink(Port):
     """A fixed sink for a commodity."""
 
     flows = Flows.Import
-    opt_type = OptimisationType.Parameter
     import_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
 
     non_neg_check = validator("initial_value", allow_reuse=True)(
         nonnegative_load
     )  # Sink should have non negative initial values
 
     def add_sink_profile(self, sink_values: dict):
-        self.add_initial_value(sink_values)
+        self.set_initial_value(sink_values)
 
     def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.add_initial_value_from_array(
+        self.set_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )
 
 
 class Demand(Sink):
     def add_demand_profile(self, demand: dict):
-        self.add_initial_value(demand)
+        self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
-        self, demand: ArrayWrappableType, expansion_periods=1, time_periods: Optional[int] = None
+        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
     ):
-        self.add_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
+        self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
 class ControlledLoadOrGen(FlexPort):
     """
     A controlled load or generation has a max/min power, as well as a max/min utilisation.
     Min utilisation is the ratio between the minimum energy consumed/generated,
-        and the maximum energy that could be consumed/generated if the load operated at max power.
+    and the maximum energy that could be consumed/generated if the load operated at max power.
     Max utilisation is the ratio between the maximum energy consumed/generated,
-        and the maximum energy that could be consumed/generated if the load operated at max power.
+    and the maximum energy that could be consumed/generated if the load operated at max power.
     """
 
     min_utilisation: Optional[float] = None
@@ -230,8 +274,8 @@ class ControlledLoadOrGen(FlexPort):
     min_power: Optional[float] = None
     units: Units = Units.KW
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(ControlledLoadOrGen, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(ControlledLoadOrGen, self).add_port_to_model(model, profile)
 
         # Set bounds using min and max power
         set_float_var_bounds(model=model, var_name=self.port_name, ub=self.max_power, lb=self.min_power)
@@ -309,8 +353,8 @@ class OffOrConstrainedPort(FlexPort):
     def active(self):
         return "active_" + self.port_name
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(OffOrConstrainedPort, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(OffOrConstrainedPort, self).add_port_to_model(model, profile)
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
@@ -332,12 +376,12 @@ class BoundedPort(FlexPort):
 
     bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedPort, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(BoundedPort, self).add_port_to_model(model, profile)
         # Set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
-        set_var_bounds_from_dict(getattr(model, self.port_name), ub=ub_dict, lb=lb_dict)
+        set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=ub_dict, lb=lb_dict)
 
 
 class BoundedLoad(BoundedPort):
@@ -349,15 +393,15 @@ class BoundedLoad(BoundedPort):
     upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_costs)
     lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedLoad, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(BoundedLoad, self).add_port_to_model(model, profile)
 
 
 class Storage(Port):
     """Same as old storage but without all the EV attributes"""
 
     flows = Flows.Both
-    opt_type = OptimisationType.Variable
+    flow_type = OptimisationType.Variable
     import_constraint = FlowConstraint.Fixed
     export_constraint = FlowConstraint.Fixed
     max_capacity: float
@@ -391,8 +435,8 @@ class Storage(Port):
         self.import_constraint_value = self.charging_power_limit
         self.export_constraint_value = self.discharging_power_limit
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(Storage, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
         self.apply_soc_constraints(model)
 
@@ -498,7 +542,7 @@ class MobileStorage(Storage):
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
     # soc_conserve: scalarOrArray
     available: Union[ArrayType, list, None] = None
@@ -521,8 +565,8 @@ class MobileStorage(Storage):
             validate(available is not None, "soc_conserve requires available")
         return values
 
-    def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(Storage, self).initialise_port(model, profile)
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
         self.apply_modified_soc_constraints(model)
         self.apply_conserv_soc_constraints(model)
@@ -531,19 +575,24 @@ class MobileStorage(Storage):
         def soc_conservative_rule(
             model: EchoConcreteModel, p, t
         ):  # a rule for enforcing conservativeness while plugged in
-            if self.soc_conserv and self.available is not None and self.available[t]:
+            if expanded_soc_conserv and self.available is not None and self.available[t]:
                 return (
                     getattr(model, self.soc_value)[p, t]
                     + getattr(model, self.cons_slack)[p, t]
-                    - self.soc_conserv[p, t]
+                    - expanded_soc_conserv[p, t]
                     >= 0
                 )
             else:
                 return en.Constraint.Skip
 
         if self.soc_conserv is not None:
-            self.soc_conserv.set_periods(len(model.Expansion), len(model.Time))
-            # self.soc_conserv = generate_array_constraint(self.soc_conserv, len(model.Time), len(model.Expansion))
+            expanded_soc_conserv = expand_as_array(
+                TimeSeriesData(
+                    value=self.soc_conserv,
+                    num_expansion_intervals=len(model.Expansion),
+                    num_time_intervals=len(model.Time),
+                )
+            )
             setattr(
                 model, self.cons_slack, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
             )
@@ -647,7 +696,6 @@ class InputOutputNode(Node):
     min_output: Optional[float]
     max_input: Optional[NonNegativeFloat]  # input should generally be non negative
     min_input: Optional[NonNegativeFloat]
-    node_rule = NodeRule.Custom
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
@@ -680,8 +728,8 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         validate(self.input_pts is not None, "No input points defined")
         validate(self.output_pts is not None, "No output points defined")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(TimeVaryingPiecewiseIONode, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.input_ub, lb=self.input_lb)
         set_float_var_bounds(model=model, var_name=self.ports["output"].port_name, ub=self.output_ub, lb=self.output_lb)
@@ -721,7 +769,6 @@ class TimeDelayNode(InputOutputNode):
     """A time delay node is an input-output node that implements a fixed delay between input and output."""
 
     time_delay: int  # number of time intervals delay between input and output
-    node_rule: NodeRule = NodeRule.Custom
 
     def __init__(self, **data):
         super().__init__(**data)

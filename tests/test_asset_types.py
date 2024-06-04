@@ -2,10 +2,10 @@ import numpy as np
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
-from echo.models.base import Node, OptimisationGraph
+from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
-from echo.models.gas import GasBoilerFixedCOP, GasPort
+from echo.models.gas import FlexGasPort, GasBoilerFixedCOP
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives.base import ObjectiveSet
@@ -23,7 +23,7 @@ def test_gas_boiler_fixed_cop():
     system = OptimisationGraph()
 
     gas_mains = Node()
-    gas_mains.ports["mains"] = GasPort()
+    gas_mains.ports["mains"] = FlexGasPort()
 
     boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5, startup_cop=0.5)
 
@@ -66,7 +66,7 @@ def test_modulating_gas_boiler():
     system = OptimisationGraph()
 
     gas_mains = Node()
-    gas_mains.ports["mains"] = GasPort()
+    gas_mains.ports["mains"] = FlexGasPort()
 
     boiler = GasBoilerFixedCOP(max_input=100, min_input=0, cop=0.8, startup_cop=0.8)
 
@@ -106,7 +106,6 @@ def test_chiller_operation():
     grid = Node()
     grid.ports["grid"] = ElectricalPort()
 
-    nonlin_array = [-0.0068, 5.5052, 0]
     input_breakpoints = [0, 2, 3, 8]
     output_values = [0, -3, -4, -8]
     chiller = SimpleChiller()
@@ -115,7 +114,7 @@ def test_chiller_operation():
 
     cooling_load = Node()
     cl = FixedThermalPort()
-    cl.add_initial_value_from_array([4] * time_periods, expansion_periods=expansion_periods)
+    cl.set_initial_value_from_array([4] * time_periods, expansion_periods=expansion_periods)
     cooling_load.ports["load"] = cl
 
     system.add_node_obj([grid, chiller, cooling_load])
@@ -161,12 +160,12 @@ def test_carbon_aggregation():
 
     system = OptimisationGraph()
 
-    grid = Node()
+    grid = TransformNode()
     grid.ports["grid"] = ElectricalPort()
     grid.ports["CO2"] = CarbonSource()
     grid.add_emission_transformation(grid.ports["grid"], grid.ports["CO2"], 0.5)
 
-    battery1 = Node()
+    battery1 = TransformNode()
     b1 = ElectricalStorage(
         max_capacity=15,
         depth_of_discharge_limit=0,

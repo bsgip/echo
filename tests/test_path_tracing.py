@@ -3,12 +3,7 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (
-    ElectricalDemand,
-    ElectricalGeneration,
-    ElectricalStorage,
-    Inverter,
-)
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise
 
@@ -41,10 +36,14 @@ def test_partitioning_regions_for_path_flow():
     pv1.curtailable = False
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=1, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)

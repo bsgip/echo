@@ -8,6 +8,13 @@ echo.egg-info
 /build/
 /build/lib/
 /build/lib/echo/
+/docs/_build/
+/docs/source/_reference/
 .hypothesis
 .vscode
 cplex.log
+build/
+build/lib/
+build/lib/echo/
+.ipynb_checkpoints
+local/

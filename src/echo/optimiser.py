@@ -89,6 +89,14 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
+    def df_objective_by_port(self, index={1}):
+        """Return the value of each objective assigned to each port."""
+        dct = {}
+        for obj in self.objective_set.objective_list:
+            dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
+
+        return pd.DataFrame(dct, index=index)
+
     def values(self, variable_name, expansion=0):
         """Returns the value of a single specified variable during a single specified expansion period."""
 
@@ -162,27 +170,35 @@ def validate_network_graph(graph: OptimisationGraph):
 def build_model_and_objective(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    engine_settings: EngineSettings,
+    smallM: float,
+    bigM: int,
     profile: Optional[pd.DataFrame],
     objective_set: Optional[ObjectiveSet],
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    # Set up the Pyomo model
+    model = _build_model(graph=graph, scenario_settings=scenario_settings, smallM=smallM, bigM=bigM, profile=profile)
+    objective = _build_objective(model=model, graph=graph, objective_set=objective_set, profile=profile)
+
+    return model, objective
+
+
+def _build_model(
+    graph: OptimisationGraph,
+    scenario_settings: ScenarioSettings,
+    smallM: float,
+    bigM: int,
+    profile: Optional[pd.DataFrame],
+):
     model = EchoConcreteModel()
+    model.smallM = en.Param(initialize=smallM)
+    model.bigM = en.Param(initialize=bigM)
     model.scenario_settings = scenario_settings
-
-    # Bias Values
-
-    # A small fudge factor for reducing the size of the solution set and
-    # achieving a unique optimisation solution
-    model.smallM = en.Param(initialize=engine_settings.smallM)
-    # A bigM value for integer optimisation
-    model.bigM = en.Param(initialize=engine_settings.bigM)
 
     # We use RangeSet to create an index for each of the time
     # periods that we will optimise within.
     model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
+
     # Create index for expansion periods
     if scenario_settings.number_of_expansion_intervals == 0:
         model.Expansion = en.RangeSet(0, 0)
@@ -190,53 +206,59 @@ def build_model_and_objective(
         model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
 
     # Setup discounting
-    dr = {}
+    discount_rates = {}
     for ep in range(0, scenario_settings.number_of_expansion_intervals):
-        dr[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
-
-    model.discount_rates = en.Param(model.Expansion, initialize=dr)
+        discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
+    model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
 
     # Initialise node variables/params and add node constraints
-    for _, node_obj in graph.node_obj.items():
+    for node_obj in graph.node_obj.values():
         node_obj.verify_node()
-        node_obj.initialise_node(model, profile)
+        node_obj.add_node_to_model(model, profile)
 
     # Initialise edge variables/params and add edge constraints
-    for _, edge_obj in graph.edge_obj.items():
+    for edge_obj in graph.edge_obj.values():
         edge_obj.verify_edge()
-        edge_obj.initialise_edge(model)
+        edge_obj.add_edge_to_model(model)
 
     # Initialise paths
-    for _, path in graph.paths.items():
-        path.initialise_path(model)
+    for path in graph.paths.values():
+        path.add_path_to_model(model)
 
     # Apply constraints
-    for _, obj in graph.node_obj.items():
+    for obj in graph.node_obj.values():
         obj.apply_node_constraints(model)
     if graph.paths:
         graph.apply_path_constraints(model)
 
-    # Build objective
+    return model
+
+
+def _build_objective(
+    model: EchoConcreteModel,
+    graph: OptimisationGraph,
+    profile: Optional[pd.DataFrame],
+    objective_set: Optional[ObjectiveSet],
+):
     objective: Union[float, en.numeric_expr.NumericExpression] = 0
 
     # Add objectives defined in the objective set
     if objective_set is not None:
-        objective_set.initialise_objective(model, profile)
+        objective_set.add_objectives_to_model(model, profile)
         objective += objective_set.get_objective_total(model)
 
     # Add any other costs that are defined on graph nodes/ports/paths
-    for _, node_obj in graph.node_obj.items():
+    for node_obj in graph.node_obj.values():
         node_obj.add_objective(model)
         objective += node_obj.objective
-        for _, port_obj in node_obj.ports.items():
+        for port_obj in node_obj.ports.values():
             port_obj.add_objective(model)  # populate the .objective attribute for each port
             objective += port_obj.objective  # add the newly populated attribute to our total
 
-    for _, path_obj in graph.paths.items():
+    for path_obj in graph.paths.values():
         path_obj.add_objective(model)
         objective += path_obj.objective
-
-    return model, objective
+    return objective
 
 
 def optimise(
@@ -260,7 +282,14 @@ def optimise(
 
     validate_network_graph(graph)
 
-    (model, objective) = build_model_and_objective(graph, scenario_settings, engine_settings, profile, objective_set)
+    model, objective = build_model_and_objective(
+        graph=graph,
+        scenario_settings=scenario_settings,
+        smallM=engine_settings.smallM,
+        bigM=engine_settings.bigM,
+        profile=profile,
+        objective_set=objective_set,
+    )
 
     def objective_function(model: EchoConcreteModel):
         return objective
@@ -277,7 +306,7 @@ def optimise(
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
-        results: SolverResults = opt.solve(model, tee=True, symbolic_solver_labels=True)
+        results: SolverResults = opt.solve(model, tee=False, symbolic_solver_labels=True)
 
     # Extract the optimisation result
     termination_condition: TerminationCondition = results.solver.termination_condition

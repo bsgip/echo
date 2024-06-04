@@ -1,24 +1,16 @@
-from typing import Optional, Union, cast
+from typing import Dict, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field
+from pydantic import Field, conlist, constr
 
-from echo.configuration import EVChargeMode, NodeRule, TransformRule, Units, Flows
-from echo.exceptions import ConfigurationError, validate
-from echo.models.agnostic import (
-    BoundedLoad,
-    Demand,
-    FixedPort,
-    FlexPort,
-    MobileStorage,
-    Source,
-    Storage,
-)
-from echo.models.base import Node, Transform
+from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
+from echo.exceptions import validate
+from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
+from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import ArrayWrap, fix_port_variable, set_var_bounds_from_dict, to_initial_values
+from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict, to_initial_values
 from echo.validators import ArrayType
 
 
@@ -30,16 +22,17 @@ class ElectricalDemand(Demand):
 
 class ElectricalGeneration(Source):
     """Electrical generation which can be fixed (non-curtailable) or variable (curtailable)"""
+
     units = Units.KW
     curtailable: bool = False
 
     def add_generation_profile(self, generation: dict):
-        self.add_initial_value(generation)
+        self.set_initial_value(generation)
 
     def add_generation_profile_from_array(
-        self, generation: ArrayType, expansion_periods=1, time_periods: Optional[int] = None
+        self, generation: ArrayType, expansion_periods: int = 1, time_periods: Optional[int] = None
     ):
-        self.add_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
+        self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
 
     def initialise_port(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(ElectricalGeneration, self).initialise_port(model, profile)
@@ -64,6 +57,17 @@ class ElectricalGeneration(Source):
             getattr(model, self.port_name).unfix()
             set_var_bounds_from_dict(getattr(model, self.port_name), lb=initial_val, ub=None)
 
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        # Whether curtailable is set or not affect whether the flow is represented as a parameter or variable
+        # Handle that here before calling `add_port_to_model`
+        self.flow_type = OptimisationType.Variable if self.curtailable else OptimisationType.Parameter
+
+        super(ElectricalGeneration, self).add_port_to_model(model, profile)
+
+        if self.curtailable:
+            # Constrain solar gen to be within initial value (max value)
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
+
 
 class ElectricalStorage(Storage):
     units = Units.KW
@@ -73,8 +77,8 @@ class MobileElectricalStorage(MobileStorage):
     units = Units.KW
 
 
-class EV(Node):
-    charge_mode: Optional[str] = None
+class EV(TransformNode):
+    charge_mode: Optional[EVChargeMode] = None
     available: Union[ArrayType, list, str]
     usage: Union[ArrayType, list]
     connection_port_name: str = "cp"
@@ -92,13 +96,16 @@ class EV(Node):
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Union[ArrayWrap, None] = None
+    soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
 
     V0G_delta: Optional[Union[ArrayType, list]]
     V0G_SOC: Optional[Union[ArrayType, list]]
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
     charge_status: Optional[str]
+
+    port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
+    port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -111,41 +118,124 @@ class EV(Node):
                     )
                 )
 
-        vehicle = MobileElectricalStorage(**data)
+        # Initialise port_name_to_port_uid_map
+        if self.port_dict_name_to_port_uid_map is None:
+            self.port_dict_name_to_port_uid_map = {}
+
+        # Initialise port_name_to_port_uid_map
+        if self.port_dict_name_to_port_name_map is None:
+            self.port_dict_name_to_port_name_map = {}
+
+        # Preserve uid and port_name if present on port
+        if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
+            vehicle = MobileElectricalStorage(
+                uid=self.port_dict_name_to_port_uid_map["vehicle"],
+                port_name=self.port_dict_name_to_port_name_map["vehicle"],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+            )
+        else:
+            vehicle = MobileElectricalStorage(**data)
+
         vehicle.enable_trip_slack = self.trip_slack  # Apply trip slack
         self.ports["vehicle"] = vehicle  # EV always has a storage port
 
-        usage_port = ElectricalDemand()
+        # Preserve uid if present on port
+        if "usage" in self.port_dict_name_to_port_uid_map.keys():
+            usage_port = ElectricalDemand(
+                uid=self.port_dict_name_to_port_uid_map["usage"],
+                port_name=self.port_dict_name_to_port_name_map["usage"],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+            )
+        else:
+            usage_port = ElectricalDemand()
+
         usage_port.add_demand_profile_from_array(self.usage, expansion_periods=1)
         self.ports["usage"] = usage_port  # EV always has a fixed trip port
+
         # Customise connection point port type based on the charge mode
         if self.charge_mode == EVChargeMode.V0G:
             self.trip_slack = True  # Set slack to true
             vehicle.enable_trip_slack = self.trip_slack
-            electrical_demand = ElectricalDemand()
+            if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+                electrical_demand = ElectricalDemand(
+                    uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                    port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+                    **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+                )
+
+            else:
+                electrical_demand = ElectricalDemand()
             self.ports[self.connection_port_name] = electrical_demand
             self.process_V0G_charging(self.interval_duration)
             electrical_demand.add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
-            electrical_port = ElectricalPort()
-            electrical_port.add_active_periods_from_array(self.available, expansion_periods=1)
+            if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+                electrical_port = ElectricalPort(
+                    uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                    port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+                )
+            else:
+                electrical_port = ElectricalPort()
+            electrical_port.set_active_periods_from_array(self.available, expansion_periods=1)
             self.ports[self.connection_port_name] = electrical_port
             if self.charge_mode == EVChargeMode.V1G:
                 electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
 
         # EV needs a custom transformation because of the positive load convention
-        self.create_ev_transformation()
+        self.add_transformation(self.create_ev_transformation())
+
+        # Set port_dict_name_to_port_uid_map
+        if len(self.port_dict_name_to_port_uid_map.keys()) == 0:
+            self.port_dict_name_to_port_uid_map = {port_name: port.uid for port_name, port in self.ports.items()}
+
+        # Set port_dict_name_to_port_name_map
+        if len(self.port_dict_name_to_port_name_map.keys()) == 0:
+            self.port_dict_name_to_port_name_map = {port_name: port.port_name for port_name, port in self.ports.items()}
+
+    def update(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        self.__init__(
+            node_name=self.node_name,
+            uid=self.uid,
+            charge_mode=self.charge_mode,
+            available=available if available is not None else self.available,
+            usage=usage if usage is not None else self.usage,
+            connection_port_name=self.connection_port_name,
+            tod_charging=self.tod_charging,
+            interval_duration=interval_duration if interval_duration is not None else self.interval_duration,
+            max_capacity=self.max_capacity,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            charging_efficiency=self.charging_efficiency,
+            discharging_efficiency=self.discharging_efficiency,
+            initial_state_of_charge=(
+                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
+            ),
+            trip_slack=self.trip_slack,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+            port_dict_name_to_port_uid_map=self.port_dict_name_to_port_uid_map,
+            port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
+        )
 
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
-        t = Transform()
-        t.add_lhs_term(self.ports["vehicle"], TransformRule.Both, 1)
-        t.add_lhs_term(self.ports["usage"], TransformRule.Both, 1)
-        t.add_lhs_term(self.ports[self.connection_port_name], TransformRule.Both, -1)
-        self.add_transformation(t)
+        lhs_terms = [
+            TransformTerm(var=self.ports["vehicle"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports["usage"], rule=TransformRule.Both, weight=1),
+            TransformTerm(var=self.ports[self.connection_port_name], rule=TransformRule.Both, weight=-1),
+        ]
+        return Transform(lhs_terms=lhs_terms)
 
     def process_V0G_charging(self, interval_duration: float):
         success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
+
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
         if self.tod_charging is not None:
@@ -202,8 +292,8 @@ class EV(Node):
             )
         validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(EV, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(EV, self).add_node_to_model(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
             vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
@@ -229,27 +319,30 @@ class Inverter(Node):
     """An inverter is a node with one AC port and at least one DC port.
     Flows from AC to DC, and DC to AC, are subject to conversion efficiencies."""
 
-    max_import: Union[float, None]
-    max_export: Union[float, None]
+    max_import: Optional[float]
+    max_export: Optional[float]
     dc_ac_efficiency: float = Field(default=1.0, ge=0, le=1)
     ac_dc_efficiency: float = Field(default=1.0, ge=0, le=1)
-    dc_port_names: Optional[list] = []
-    ac_port_name: Optional[str] = None  # There should generally only be one ac port
-    node_rule = NodeRule.Custom
+    ac_port_name: constr(min_length=1)
+    dc_port_names: conlist(str, min_items=1)
 
-    def add_dc_port(self, port_name: str, uid: Union[str, None] = None):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._add_ac_port(port_name=self.ac_port_name)
+        for port_name in self.dc_port_names:
+            self._add_port(port_name=port_name)
+
+    def _add_port(self, port_name: str, uid: Union[str, None] = None):
         p = ElectricalPort(port_name=port_name, uid=uid)
-        self.dc_port_names.append(port_name)
         self.ports[port_name] = p
 
-    def add_ac_port(self, port_name: str, uid: Union[str, None] = None):
-        if self.ac_port_name is not None:
-            raise ConfigurationError("AC port already specified for this inverter.")
-        else:
-            p = ElectricalPort(port_name=port_name, uid=uid)
-            p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
-            self.ac_port_name = port_name
-            self.ports[port_name] = p
+    def _add_ac_port(self, port_name: str, uid: Union[str, None] = None):
+        p = ElectricalPort(port_name=port_name, uid=uid)
+        p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
+        self.ports[port_name] = p
 
     def verify_node(self):
         # Check that we have at least one ac and one dc port
@@ -260,8 +353,8 @@ class Inverter(Node):
         named_ports = [self.ac_port_name] + self.dc_port_names
         validate(set(all_port_names) == set(named_ports), "All ports on inverter must be ac or dc.")
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(Inverter, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(Inverter, self).add_node_to_model(model, profile)
 
         ac_port = self.ports[self.ac_port_name]
         # Split ac port into pos/neg, so we can apply the correct efficiencies

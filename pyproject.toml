@@ -8,6 +8,7 @@ filterwarnings = ["error::DeprecationWarning"]
 
 [tool.isort]
 profile = "black"
+line_length=120
 
 [tool.bandit]
 exclude_dirs = ["tests"]
@@ -38,7 +39,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "echo"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
     "pyomo>=3.5",
     "numpy>=1.21",
@@ -57,6 +58,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
+docs = ["sphinx", "sphinx-rtd-theme"]
 
 [tool.setuptools.package-data]
 "echo" = ["py.typed"]

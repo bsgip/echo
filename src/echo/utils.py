@@ -1,13 +1,16 @@
-from collections.abc import Sequence
-from typing import Optional, Sized, Union
+from dataclasses import dataclass
+from typing import Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
 from sklearn import linear_model
 
+from echo.configuration import Flows
 from echo.exceptions import validate
+from echo.functional import maybe_list
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
@@ -18,94 +21,156 @@ def _to_values(profile, key):
     return dict(enumerate(profile[key].values))
 
 
-ArrayWrappableType = Union[Sized, int, float]
+TimeExpandableType = Union[int, float, list[int | float], list[list[int | float]]]
+"""TimeExpandableType
+
+Variables with type `TimeExpandableType` should only contain numbers (int or float).
+They should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, ...]
+or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
+"""
 
 
-class ArrayWrap(Sequence):
-    time_periods: Optional[int]
-    expansion_periods: Optional[int]
-    tp_set: bool
-    is_scalar: bool
+class UnexpandableTimeSeriesDataError(Exception):
+    pass
 
-    def __init__(self, var: ArrayWrappableType):  # scalar, 1d list, 2d list,
-        self.var = var
-        if not hasattr(var, "__len__"):
-            self.get_func = self.get_scalar
-            self.is_scalar = True
-        elif (len(var) == 1) and (not hasattr(var[0], "__len__")):
-            self.get_func = self.get_scalar
-            self.is_scalar = True
-            self.var = var[0]
-        else:
-            self.get_func = self.get_dummy
-            self.is_scalar = False
-        self.time_periods = None
-        self.expansion_periods = None
-        self.tp_set = False  # for indicating whether the time period has been set
 
-        super().__init__()
+@dataclass
+class TimeSeriesData:
+    """A dataclass to hold a compressed way of describing time series data.
 
-    def dict(self):
-        """For converting array wrap to a dict"""
-        validate(self.tp_set is True, "Set time periods before converting to dict")
-        keys = [(x, i) for x in range(self.expansion_periods) for i in range(self.time_periods)]
-        if not self.is_scalar:
-            vals = np.reshape(self.var, self.expansion_periods * self.time_periods)
-        else:
-            vals = self.var * np.ones(self.expansion_periods * self.time_periods)
-        d = dict(zip(keys, vals))
-        return d
+    The TimeSeriesData object describes a potentially compressed form of time-series data by
+    allowing you to store only a minimal set of values.
 
-    def set_periods(self, expansion_periods: int, time_periods: int) -> None:
-        self.time_periods = time_periods
-        self.expansion_periods = expansion_periods
-        self.tp_set = True
-        if not self.is_scalar:
-            self.get_func = self.get_array
-            var_array = np.array(self.var).flatten()
-            if len(var_array) == time_periods:  # tile across expansion periods
-                self.var = np.vstack([var_array] * expansion_periods)
-            elif len(var_array) == time_periods * expansion_periods:
-                self.var = np.reshape(var_array, (expansion_periods, time_periods))
-            else:
-                raise Exception(
-                    "expecting shape of a scalar, (expansion_periods,time_periods), (time periods,) or (expansion_periods * time_periods,)"  # noqa E501
-                )
+    `value` has type ``TimeExpandableType``. It should only contain numbers (int or float).
+    It should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+    a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, ...]
+    or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
 
-    def __getitem__(self, i):
-        return self.get_func(i)
+    For 1-dimensional and 2-dimensional lists, it is important to match the number of elements in the lists to the
+    `num_time_intervals` and `num_expansion_intervals`.
+    1-dimensional lists:
+        `len(value) == num_time_intervals * num_expansion_intervals`
+    2-dimensional lists:
+        `len(value) == num_expansion_intervals` AND the sublists in `value` should have
+        `len(sublist) == num_time_intervals`
 
-    def get_scalar(self, i):
-        # todo this will return valid numbers even if the index is out of range
-        return self.var
+    For example, if we have 4 time-intervals and 2 expansion-intervals, then the following would be valid:
+    value = [[1, 2, 3, 4], [5, 6, 7, 8]] (2-dimensional list). Remember: the first index into a 2-dimensional list is
+    the expansion interval and the second index is the time interval.
 
-    def get_dummy(self, i):
-        validate(self.tp_set, "for non scalar values must set time and expansion periods of ArrayWrap")
-        return None
+    or we could flatten the above list into a 1-dimensional list:
+    value = [1, 2, 3, 4, 5, 6, 7, 8] since len(value) == 4 * 2. The first four value (1, 2, 3, 4) would apply to the
+    first expansion period and the next four values (5, 6, 7, 8) would apply to the second expansion period.
 
-    def get_array(self, i):
-        return self.var[i]
+    Note:
+        TimeSeriesData performs no validation. In other words it is possible to create invalid TimeSeriesData objects.
+        For example, `TimeSeriesData(value=[1,2,3], num_time_intervals=5, num_expansion_intervals=1)`
+        would be invalid because the `num_time_intervals` (5) is greater than the number of elements in the value
+        (only 3).
 
-    #
-    # def get_non_scalar(self, i):
-    #     if isinstance(i, tuple):
-    #         p = i[0], t=i[1]
+    TimeSeriesData objects serve as input to the `expand_as_array` and `expand_as_dict` functions. These functions
+    serve to expand a TimeSeriesData description into a full set of time series data.
 
-    def __len__(self):
-        return len(self.var)
+    Attributes:
+        value (TimeExpandableType): time series data. See above for more information on valid values.
+        num_time_intervals (int): the number of time intervals for the time series data.
+        num_expansion_intervals (int): the number of expansion intervals for the time series data. Minimum value is 1,
+         which can be thought as having no expansion intervals.
+    """
 
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    value: TimeExpandableType
+    num_time_intervals: int
+    num_expansion_intervals: int
 
-    @classmethod
-    def validate(cls, v):
-        if isinstance(v, ArrayWrap):
-            return v
-        if isinstance(v, (float, int, list, np.ndarray)):
-            return cls(v)
-        else:
-            raise TypeError("requires float, int, list or array like")
+
+def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], Union[int, float]]:
+    """Converts a TimeSeriesData object to a dictionary of time-series values keyed by the expansion and time intervals.
+
+    Calls `expand_as_array` internally to produce enough values for the time and expansion intervals.
+    See `expand_as_array` for an explanation of how this works.
+
+    Example:
+        >>> expand_as_dict(TimeSeriesData(value=[[1,2],[3,4]],num_time_intervals=2,num_expansion_intervals=2))
+        {(0, 0): 1, (0, 1): 2, (1, 0): 3, (1, 1): 4}
+
+    Args:
+        data (TimeSeriesData): A TimeSeriesData object.
+
+    Returns:
+        dictionary of time series values keyed by a tuple of the form: (expansion interval, time interval)
+
+    Raises:
+        UnexpandableTimeSeriesDataError: If there are too few or too many time series values for the given number of
+        time periods/expansion periods.
+
+    """
+    expanded_data = expand_as_array(data).flatten()
+
+    keys = [(x, i) for x in range(data.num_expansion_intervals) for i in range(data.num_time_intervals)]
+    return dict(zip(keys, expanded_data))
+
+
+def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
+    """Expands a TimeSeriesData object into a numpy array.
+
+    The TimeSeriesData object described (potentially) compressed form of time-series data by only
+    stor
+
+    Example:
+        >>> t = TimeSeriesData(value=[1,2,3,4],num_time_intervals=2,num_expansion_intervals=2)
+        >>> expand_as_array()
+        array([[1, 2],
+            [3, 4]])
+
+    Example:
+        >>> t = TimeSeriesData(value=89.2,num_time_intervals=3,num_expansion_intervals=2)
+        >>> expand_as_array(t)
+        array([[89.2, 89.2, 89.2],
+            [89.2, 89.2, 89.2]])
+
+    Example:
+        >>> t = TimeSeriesData(value=[12.1,12.2],num_time_intervals=2,num_expansion_intervals=4)
+        >>> expand_as_array(t)
+        array([[12.1, 12.2],
+            [12.1, 12.2],
+            [12.1, 12.2],
+            [12.1, 12.2]])
+
+
+    Args:
+        data (TimeSeriesData): A TimeSeriesData object.
+
+    Returns:
+        An 2-dimensional array of time series data. The first index is the expansion interval
+        and the second index is the time period.
+
+    Raises:
+        UnexpandableTimeSeriesDataError: If there are too few or too many time series values for the given number of
+        time periods/expansion periods.
+
+    """
+    if data.num_expansion_intervals < 1:
+        raise UnexpandableTimeSeriesDataError(
+            f"num_expansion_intervals is less than one ('{data.num_expansion_intervals}' provided). See TimeSeriesData for more information"  # noqa E501
+        )
+
+    value = maybe_list(data.value)
+    flat_array = np.array(value).flatten()
+
+    if len(flat_array) == 1:
+        num_repeats = data.num_time_intervals * data.num_expansion_intervals
+        return np.repeat(flat_array[0], num_repeats).reshape((data.num_expansion_intervals, data.num_time_intervals))
+
+    if len(flat_array) == data.num_time_intervals:  # tile across expansion periods
+        return np.vstack([flat_array] * data.num_expansion_intervals)
+
+    if len(flat_array) == data.num_time_intervals * data.num_expansion_intervals:
+        return np.reshape(flat_array, (data.num_expansion_intervals, data.num_time_intervals))
+
+    raise UnexpandableTimeSeriesDataError(
+        "Mismatch between the number of time intervals/expansion periods and the number of elements in `value`. See TimeSeriesData for more information"  # noqa E501
+    )
 
 
 def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
@@ -119,14 +184,14 @@ def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[f
     Returns:
         None
     """
-    v = getattr(model, var_name)
+    var = getattr(model, var_name)
     if lb is not None:
-        v.setlb(lb)
+        var.setlb(lb)
     if ub is not None:
-        v.setub(ub)
+        var.setub(ub)
 
 
-def set_var_bounds_from_dict(var, ub: Optional[dict], lb: Optional[dict]) -> None:
+def set_var_bounds_from_dict(model: EchoConcreteModel, var_name: str, ub: Optional[dict], lb: Optional[dict]) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
     Args:
@@ -136,6 +201,7 @@ def set_var_bounds_from_dict(var, ub: Optional[dict], lb: Optional[dict]) -> Non
     Returns:
         None
     """
+    var = getattr(model, var_name)
     if lb is not None:
         for k, i in lb.items():
             var[k].setlb(i)
@@ -304,16 +370,13 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
 
 def populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods):
     """Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
-    Eg for inputs:
-        values = 10
-        time_periods = 4
-        expansion_periods = 2
-    the output dict would be:
-    Output = {(0,0): 10,
-              (0,1): 10,
-              ...
-              (2,2): 10
-              (2,3): 10}
+
+    Example:
+        >>> values=10
+        >>> time_periods=4
+        >>> expansion_periods=2
+        >>> populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods)
+        {(0, 0): 10, (0, 1): 10, (0, 2): 10, (0, 3): 10, (1, 0): 10, (1, 1): 10, (1, 2): 10, (1, 3): 10}
     """
     output = {}
     for p in range(expansion_periods):
@@ -353,11 +416,6 @@ def orjson_dumps(v, *, default):
     return orjson.dumps(v, default=default).decode()
 
 
-def process_time_series_data(array: np.ndarray, time_periods: int, expansion_periods: int = 1):
-    x = ArrayWrap(array)
-    x.set_periods(time_periods=time_periods, expansion_periods=expansion_periods)
-
-
 def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion_periods: int = 1):
     """
     Generates a dict suitable for initializing a pyomo var or param.
@@ -380,3 +438,16 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
                 d[(p, t)] = array[i]
                 i += 1
     return d
+
+
+def domain_from_flow(flow: Flows):
+    match flow:
+        case Flows.Both:
+            domain = en.Reals
+        case Flows.Export:
+            domain = en.NonPositiveReals
+        case Flows.Import:
+            domain = en.NonNegativeReals
+        case Flows.NA:
+            raise ValueError("Cannot add flow variable to port with flows=Flows.NA")
+    return domain

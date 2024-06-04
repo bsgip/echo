@@ -3,14 +3,9 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (
-    ElectricalDemand,
-    ElectricalGeneration,
-    ElectricalStorage,
-    Inverter,
-)
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48
@@ -41,13 +36,17 @@ def test_hybrid_inverter_dc_ac_efficiency():
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array([-4] * time_periods, expansion_periods)
-    pv1.curtailable = True
+    pv1.curtailable = False
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=0.9, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=0.9,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
@@ -74,10 +73,10 @@ def test_hybrid_inverter_dc_ac_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"])]),
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )
 
-    root_p = optimise_results.values(grid.ports["grid"].port_name, 0) * -1
+    root_p = optimise_results.values(grid.ports["grid"].port_name, 0)
     inv_p = optimise_results.values(inverter.ports["cp"].port_name, 0)
     cp_p = optimise_results.values(cp.ports["grid"].port_name, 0)
     sol_p = optimise_results.values(pv1.port_name, 0)
@@ -87,7 +86,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
     # but each interval should be importing at 1.0
     # TODO Test for preferencing solar gen vs storage
     for i in range(N_INTERVALS):
-        np.testing.assert_almost_equal(root_p[i], 1.0)
+        np.testing.assert_almost_equal(cp_p[i], 1.0)
         # Check that the efficiency matches the DC input
         np.testing.assert_almost_equal(sol_p[i] + sto_p[i], inv_p[i] / 0.9, 6)
 
@@ -122,10 +121,14 @@ def test_hybrid_inverter_dc_dc_efficiency():
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
-    inverter = Inverter(max_import=5, max_export=-5, dc_ac_efficiency=0.9, ac_dc_efficiency=1)
-    inverter.add_ac_port("cp")
-    inverter.add_dc_port("bess")
-    inverter.add_dc_port("pv")
+    inverter = Inverter(
+        max_import=5,
+        max_export=-5,
+        dc_ac_efficiency=0.9,
+        ac_dc_efficiency=1,
+        ac_port_name="cp",
+        dc_port_names=["bess", "pv"],
+    )
 
     cp = TellegenNode()
     cp.add_ports_from_list(["load", "inv", "grid"], FlexPort, units=Units.KW)
@@ -152,17 +155,19 @@ def test_hybrid_inverter_dc_dc_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"])]),
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )
 
-    root_p = optimise_results.values(grid.ports["grid"].neg, 0)
+    root_p = optimise_results.values(grid.ports["grid"].port_name, 0)
+    cp_p = optimise_results.values(cp.ports["grid"].pos, 0)
     sol_p = optimise_results.values(pv1.port_name, 0)
     sto_p = optimise_results.values(b1.port_name, 0)
+    load_p = optimise_results.values(load.ports["load"].port_name, 0)
 
     for i in range(N_INTERVALS // 2):
-        np.testing.assert_almost_equal(root_p[i], 0.0, 5)  # Had to add 5dp
+        np.testing.assert_almost_equal(cp_p[i], 0.0, 5)  # Had to add 5dp
         np.testing.assert_almost_equal(sol_p[i], -sto_p[i], 5)
         np.testing.assert_almost_equal(sol_p[i], -2.0 / 0.9, 5)
     for i in range(N_INTERVALS // 2, N_INTERVALS):
-        np.testing.assert_almost_equal(root_p[i], 0.0, 5)
+        np.testing.assert_almost_equal(cp_p[i], 0.0, 5)
         assert sto_p[i]

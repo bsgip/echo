@@ -1,15 +1,11 @@
 import pytest
 
-from echo.configuration import NodeRule, TransformRule, Units
+from echo.configuration import TransformRule, Units
 from echo.models.agnostic import FlexPort, TellegenNode, TimeDelayNode
-from echo.models.base import Node, OptimisationGraph, Transform
-from echo.models.electrical import (
-    BoundedElectricalLoad,
-    ElectricalDemand,
-    ElectricalPort,
-)
+from echo.models.base import Node, OptimisationGraph, Transform, TransformNode, TransformTerm
+from echo.models.electrical import BoundedElectricalLoad, ElectricalDemand, ElectricalPort
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
 
@@ -86,8 +82,6 @@ def test_time_delay_node(time_delay):
 
     print(optimise_results.opt_status)
     grid = optimise_results.values(grid.ports["grid"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):
@@ -114,7 +108,7 @@ def test_feedback_loop():
 
     td = TimeDelayNode(input_port_unit=Units.KW, output_port_unit=Units.KW, time_delay=0)
 
-    load = Node()
+    load = TransformNode()
     l1 = ElectricalDemand()
     demand = [0] * 24 + [5] * 24
     l1.add_demand_profile_from_array(demand)
@@ -123,11 +117,12 @@ def test_feedback_loop():
     # excess.add_generation_profile_from_array([-1]*24)
     load.ports["load"] = l1
     load.ports["excess"] = excess
-    t = Transform()
-    t.add_lhs_term(l1, TransformRule.Both, 1)
-    t.add_lhs_term(excess, TransformRule.Both, 1)
+    lhs_terms = [
+        TransformTerm(var=l1, rule=TransformRule.Both, weight=1),
+        TransformTerm(var=excess, rule=TransformRule.Both, weight=1),
+    ]
+    t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)
-    load.node_rule = NodeRule.Transform
 
     system.add_node_obj([supply, cp, td, load])
 
@@ -156,8 +151,6 @@ def test_feedback_loop():
 
     print(optimise_results.opt_status)
     cp = optimise_results.values(cp.ports["supply"].port_name)
-    td_input = optimise_results.values(td.ports["input"].port_name)
-    td_output = optimise_results.values(td.ports["output"].port_name)
     load_import = optimise_results.values(l1.port_name, 0)
 
     for i in range(time_periods):

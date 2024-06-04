@@ -1,6 +1,6 @@
 import pyomo.environ as en
 
-from echo.configuration import Flows, NodeRule, Units
+from echo.configuration import Flows, Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
@@ -27,8 +27,6 @@ class CarbonSink(CarbonPort):
 class CarbonAggregation(Node):
     """This node has an additional variable, 'total', which equals the sum of all ports defined on the node."""
 
-    node_rule = NodeRule.Custom
-
     @property
     def total(self):
         return "total_CO2_" + self.node_name
@@ -36,15 +34,15 @@ class CarbonAggregation(Node):
     def verify_node(self):
         super(CarbonAggregation, self).verify_node()
 
-    def initialise_node(self, model: EchoConcreteModel, profile):
-        super(CarbonAggregation, self).initialise_node(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(CarbonAggregation, self).add_node_to_model(model, profile)
         # Create a variable for the total CO2
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         def sum_rule(model: EchoConcreteModel, p, t):
             a = 0
-            for _, port in self.ports.items():
+            for port in self.ports.values():
                 a += getattr(model, port.port_name)[p, t]
             return getattr(model, self.total)[p, t] == a
 
