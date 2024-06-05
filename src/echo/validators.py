@@ -129,41 +129,46 @@ def check_bound_order(cls, values):
 
 
 def node_unit_validator(cls, values):
-    """Checks that a tellegen node's ports all have the same units."""
+    """Checks that a tellegen and aggregation nodes' ports all have the same units."""
     ports = values.get("ports")
     u = None
+    nominal_units = values.get("port_units")
     if ports is not None:
-        for p in ports.values():
+        for port_key, p in ports.items():
             if u is not None:
-                validate(p.units == u, "Tellegen node ports must have the same units.")
+                validate(p.units == u, "Tellegen and Aggregation Node ports must have the same units.")
             else:
                 u = p.units
+            if nominal_units is not None:
+                validate(
+                    p.units == nominal_units, f"Port {port_key} units do not match nominal node units {nominal_units}."
+                )
 
     return values
 
 
 def validate_piecewise_arrays(cls, values):
-    input_pts = values.get("input_pts")
-    output_pts = values.get("output_pts")
-    if input_pts is not None and output_pts is not None:
-        validate(len(input_pts) == len(output_pts), "Mismatched indices for input and output dictionaries.")
-        for k, _ in input_pts.items():
+    input_points = values.get("input_points")
+    output_points = values.get("output_points")
+    if input_points is not None and output_points is not None:
+        validate(len(input_points) == len(output_points), "Mismatched indices for input and output dictionaries.")
+        for k, _ in input_points.items():
             validate(
-                len(input_pts[k]) == len(output_pts[k]),
+                len(input_points[k]) == len(output_points[k]),
                 "Input and output arrays are not equal lengths for index {}".format(k),
             )
 
     return values
 
 
-def set_bounds_from_piecewise_pts(cls, values):
-    input_pts = values.get("input_pts")
-    output_pts = values.get("output_pts")
-    if input_pts is not None and output_pts is not None:
-        values["input_ub"] = max(max(input_pts.values()))
-        values["input_lb"] = min(min(input_pts.values()))
-        values["output_ub"] = max(max(output_pts.values()))
-        values["output_lb"] = min(min(output_pts.values()))
+def set_bounds_from_piecewise_points(cls, values):
+    input_points = values.get("input_points")
+    output_points = values.get("output_points")
+    if input_points is not None and output_points is not None:
+        values["max_input"] = max(max(input_points.values()))
+        values["min_input"] = min(min(input_points.values()))
+        values["max_output"] = max(max(output_points.values()))
+        values["min_output"] = min(min(output_points.values()))
     return values
 
 
@@ -185,4 +190,36 @@ def validate_startup_efficiency(cls, values):
     eta = values.get("startup_cop")
     if eta is not None:
         validate(cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)")
+    return values
+
+
+def validate_partial_load_cop(cls, values):
+    partial_load_cop = values.get("partial_load_cop")
+    for k, v in partial_load_cop.items():
+        validate(
+            0 <= k <= 1,
+            f"All keys in partial load cop must be float values between 0 and 1, offending key {k}",
+        )
+        validate(
+            0 <= v <= 1,
+            f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
+        )
+    return values
+
+
+def validate_temperature_dependent_cop(cls, values):
+    """Validate temperature dependent cop dictionary"""
+    temperature_cop_coeff = values.get("temperature_dependent_cop")
+    for k, v in temperature_cop_coeff.items():
+        validate(
+            -10 <= k <= 50,
+            # TODO: reasonable value range is different between air cooled and water cooled chillers.
+            #  Do this validation better
+            f"All keys in temperature dependent cop must be float values representing ambient operational "
+            f"temperature expecting values between -10 and 50, offending key {k}",
+        )
+        validate(
+            0 <= v <= 1,
+            f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
+        )
     return values

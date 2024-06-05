@@ -1,13 +1,12 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, TellegenNode
+from echo.models.agnostic import FlexPort, TellegenNode, Sink
 from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import FlexGasPort, GasBoilerFixedCOP
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.models.thermal import FixedThermalPort, HeatSink, SimpleChiller
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
@@ -28,7 +27,7 @@ def test_gas_boiler_fixed_cop():
     boiler = GasBoilerFixedCOP(max_input=10, min_input=2, max_output=-10, min_output=-2, cop=0.5, startup_cop=0.5)
 
     heating_load = Node()
-    hl = HeatSink()
+    hl = Sink(units=Units.KWT)
     hl.add_sink_profile_from_array([5] * time_periods, expansion_periods)
     heating_load.ports["load"] = hl
 
@@ -71,7 +70,7 @@ def test_modulating_gas_boiler():
     boiler = GasBoilerFixedCOP(max_input=100, min_input=0, cop=0.8, startup_cop=0.8)
 
     heating_load = Node()
-    hl = HeatSink()
+    hl = Sink(units=Units.KWT)
     hl.add_sink_profile_from_array([5] * time_periods, expansion_periods)
     heating_load.ports["load"] = hl
 
@@ -94,63 +93,6 @@ def test_modulating_gas_boiler():
 
     for i in range(time_periods):
         assert boiler_input[i] * boiler.cop == -1 * boiler_output[i]
-
-
-def test_chiller_operation():
-    expansion_periods = 1
-    time_periods = 48
-    interval_duration = 30
-
-    system = OptimisationGraph()
-
-    grid = Node()
-    grid.ports["grid"] = ElectricalPort()
-
-    input_breakpoints = [0, 2, 3, 8]
-    output_values = [0, -3, -4, -8]
-    chiller = SimpleChiller()
-    chiller.add_input_pts(input_breakpoints, time_periods=time_periods)
-    chiller.add_output_pts(output_values, time_periods=time_periods)
-
-    cooling_load = Node()
-    cl = FixedThermalPort()
-    cl.set_initial_value_from_array([4] * time_periods, expansion_periods=expansion_periods)
-    cooling_load.ports["load"] = cl
-
-    system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports["grid"], chiller.ports["input"])
-    system.connect_ports_and_create_edge(chiller.ports["output"], cl)
-
-    optimise_results = optimise(
-        scenario_settings=ScenarioSettings(
-            interval_duration=interval_duration,
-            number_of_intervals=time_periods,
-            number_of_expansion_intervals=expansion_periods,
-        ),
-        engine_settings=engine_settings_from_environment(),
-        graph=system,
-    )
-
-    print("mains gas: ", optimise_results.values(grid.ports["grid"].port_name, 0))
-    print("chiller input (elec): ", optimise_results.values(chiller.ports["input"].port_name, 0))
-    print("chiller output (cooling): ", optimise_results.values(chiller.ports["output"].port_name, 0))
-    print("cooling load: ", cl.initial_value.values())
-    print(
-        "cop: ",
-        np.divide(
-            optimise_results.values(chiller.ports["output"].port_name, 0),
-            optimise_results.values(chiller.ports["input"].port_name, 0),
-        ),
-    )
-
-    chiller_input = optimise_results.values(chiller.ports["input"].port_name, 0)
-    # chiller_output = optimise_results.values(chiller.ports['output'].port_name, 0)
-    # grid_import = optimise_results.values(grid.ports['grid'].port_name, 0)
-    # cl_p = cl.initial_value
-    # cop = np.divide(optimise_results.values(chiller.ports['output'].port_name, 0), optimise_results.values(chiller.ports['input'].port_name, 0))
-
-    for i in range(time_periods):
-        assert chiller_input[i] == 3
 
 
 def test_carbon_aggregation():

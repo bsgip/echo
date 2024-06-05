@@ -1,79 +1,188 @@
 from typing import Optional
 
+import pandas as pd
+from pydantic import root_validator, validator
+
 import numpy as np
 import pyomo.environ as en
 
-from echo.configuration import Flows, Units
-from echo.exceptions import validate
+from echo.configuration import Units
 from echo.models.agnostic import (
-    FixedPort,
     FlexPort,
     FlexSink,
     FlexSource,
-    SinglePiecewiseIONode,
-    Sink,
-    Source,
     TimeVaryingPiecewiseIONode,
 )
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import create_input_output_pts_from_coefficients, set_var_bounds_from_dict
-from echo.validators import ArrayType
+from echo.utils import (
+    set_var_bounds_from_dict,
+    set_float_var_bounds,
+    to_initial_values,
+    TimeSeriesData,
+    expand_as_dict,
+    clamp,
+)
+from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop
 
 
-class SimpleChiller(SinglePiecewiseIONode):
-    """
-    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output
-    (+ve because it is a heat sink).
+class Chiller(TimeVaryingPiecewiseIONode):
+    """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
-    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints used for
-    all time periods.
-    """
-
-    input_port_unit = Units.KW
-    output_port_unit = Units.KWT
-
-
-class ParameterisedChiller(TimeVaryingPiecewiseIONode):
-    """
-    A chiller converts an electrical input (+ve because it is an electrical sink) to a thermal cooling output
-    (+ve because it is a heat sink).
-    A temperature
-    The conversion is defined by a piecewise constraint relating input/output.
-    This constraint can be different for different time periods, reflecting that chiller performance depends on
-    external air temperature which can be included as a parameter.
+    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
+    chiller COP (Coefficient Of Performance = Output/Input=Cooling_delivered/Electricity_consumed) used
+    for all time periods.
     """
 
-    input_port_unit = Units.KW
-    output_port_unit = Units.KWT
-    external_temp: Optional[ArrayType]  # array of external temperatures
-    input_coefficients: Optional[ArrayType]  # coefficients on the input power
-    temp_coefficients: Optional[ArrayType]  # coefficients on external temp
-    n_pts: Optional[int] = 5  # number of points per piecewise approximation
+    nominal_cop: float  # Nominal coefficient of performance COP = output/input
+    max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    partial_load_cop: dict = {
+        0: 0,
+        0.25: 0.8,
+        0.5: 0.9,
+        0.75: 1,
+        1: 0.85,
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    temperature_dependent_cop: dict = {
+        0: 0.7,
+        10: 1,
+        20: 0.5,
+        30: 0.35,
+        45: 0.2,
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on
+    # the ambient/condenser temperature value
+    ambient_temperature_dict: dict = (
+        None  # Condenser side temperature ambient air temperature or condenser
+        # water temperature for water cooled chiller
+    )
+    ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
+    constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
+    # when no array data is provided
+    input_port_unit: Units = Units.KW  # Input port units
+    output_port_unit: Units = Units.KWT  # Output port units TODO: implementation for output units JPS
+    heat_rejection_port: bool = False  # If True, add heat rejection port
+    heat_rejection_coefficient: float = 1  # Heat rejection coefficient cooling_delivered/heat_rejected
+
+    partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
+    temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
+
+    @property
+    def temperature_cop_param(self):
+        return f"temperature_cop_factor_{self.node_name}"
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.external_temp is not None:
-            validate(self.input_coefficients is not None, "If temp data is provided, temp coefficients are required.")
-            validate(self.temp_coefficients is not None, "If temp data is provided, input coefficients are required.")
-            self.generate_input_output_pts_from_coefficients()
+        # A chiller has one electrical input port and one cooling output (thermal sink) port
+        self.ports["input"] = FlexSink(units=self.input_port_unit)
+        self.ports["output"] = FlexSink(units=self.output_port_unit)
+        if self.heat_rejection_port:
+            self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
 
-    def generate_input_output_pts_from_coefficients(self):
-        xpts = np.linspace(0, self.max_input, self.n_pts)
-        time_periods = len(self.external_temp)
-        self.input_pts, self.output_pts = create_input_output_pts_from_coefficients(
-            self.temp_coefficients, self.input_coefficients, self.external_temp, xpts, time_periods
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        self.load_temperature_values_from_profile(model, profile)
+        self.define_temperature_dependent_cop_coefficient(model)
+        self.set_input_points(model)
+        self.set_output_points(model)
+        super(Chiller, self).add_node_to_model(model, profile)
+        if "heat_rejection" in self.ports:
+            self.add_heat_rejection_constraint(model)
+
+    def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
+        """Get COP (coefficient of performance) scaling factor for each interval.
+
+        Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
+        """
+
+        temperature_points = list(self.temperature_dependent_cop.keys())
+        cop_points = list(self.temperature_dependent_cop.values())
+
+        if self.ambient_temperature_dict:
+            temperature_dict = self.ambient_temperature_dict
+        else:
+            # Set default amb temp value to 10 >> no change to nominal COP
+            temperature_dict = expand_as_dict(
+                TimeSeriesData(
+                    value=self.constant_ambient_temperature,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
+            )
+
+        # Use numpy linear interpolation function to get temperature related cop (coefficient of performance)
+        # scaling factor based on the temperature values in the temperature dictionary
+        min_temp = min(self.temperature_dependent_cop.keys())
+        max_temp = max(self.temperature_dependent_cop.keys())
+        temperature_cop_dict = {
+            k: np.interp(clamp(v, min_temp, max_temp), temperature_points, cop_points)
+            for k, v in temperature_dict.items()
+        }
+
+        # Create a parameter holding ambient/condenser temperature dictionary
+        # (defaulting to self.constant_ambient_temperature)
+        setattr(
+            model,
+            self.temperature_cop_param,
+            en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict, domain=en.Reals),
         )
 
-    def get_cop(self, optimiser):
-        """Returns the coefficient of performance (output/input)"""
-        # todo not set up for expansion planning
-        _input = optimiser.values(self.ports["input"].port_name)
-        _output = optimiser.values(self.ports["output"].port_name)
-        cop = np.zeros(len(_input))
-        for i in range(len(_input)):
-            cop[i] = _output[i] / _input[i] * -1
-        return cop
+    def set_input_points(self, model: EchoConcreteModel):
+        """Input breakpoints are input electrical power values calculated as
+        cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
+
+        # get parameter holding temperature dependent COP (coefficient of performance) factor
+        temperature_cop_param = getattr(model, self.temperature_cop_param)
+
+        def input_point(k, v):
+            if v == 0:
+                return 0
+            else:
+                return k * self.max_cooling_capacity / (v * self.nominal_cop)
+
+        self.input_points = {
+            (p, t): [input_point(k, v) / temperature_cop_param[p, t] for k, v in self.partial_load_cop.items()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
+
+    def set_output_points(self, model: EchoConcreteModel):
+        """Outputs breakpoints are partial cooling load values (% of max capacity)"""
+        self.output_points = {
+            (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
+
+    def add_heat_rejection_constraint(self, model: EchoConcreteModel):
+        """Get vari    set_input_pointsables representing port flow values for cooling output (heat in) and
+        rejected heat flow, set the constraint."""
+        heat_in = getattr(model, self.ports["output"].port_name)
+        heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
+
+        def heat_reject_constraint(model: EchoConcreteModel, p, t):
+            """Amount of rejected heat at each interval equals amount of cooling delivered (heat in) multiplied by
+            heat rejection coefficient
+            """
+            return heat_reject[p, t] == -heat_in[p, t] * self.heat_rejection_coefficient
+
+        setattr(
+            model,
+            "heat_rejection_constraint_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
+        )
+
+    def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """When ambient temperature is set by str reference, load values from profile."""
+        if self.ambient_temperature_ref and self.ambient_temperature_ref in profile_df.columns:
+            self.ambient_temperature_dict = to_initial_values(
+                profile_df,
+                key=self.ambient_temperature_ref,
+                time_periods=len(model.Time),
+                expansion_periods=len(model.Expansion),
+            )
+        elif self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
+            raise ValueError(f"Could not find reference column name {self.ambient_temperature_ref} in the profile.")
+        else:
+            pass
 
 
 class ThermalNode(Node):
@@ -175,38 +284,220 @@ class ThermalNode(Node):
         setattr(model, "internal_temp_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=rule1))
 
 
+class ThermalStorage(Node):
+    """Model of sensible thermal storage with liquid or solid storage medium.
+
+    Thermal storage keeps track of its internal temperature value base. Assumes homogeneous temperature throughout the
+    storage volume.
+    """
+
+    max_temp: float  # Maximum operational temperature in degrees  Celsius
+    min_temp: float  # Minimum operational temperature in degrees  Celsius
+    storage_mass: float  # Mass of storage medium in kg
+    specific_heat: float  # Specific heat capacity in Joule/kg*C
+    ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
+    ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
+    ins_transmittance: float = 0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
+    surface_area: float = 0  # Surface area of Thermal Energy Storage in square meters, default value=0
+    # means zero heat loss/gain
+    initial_temp: float = None  # initial internal temperature in degrees  Celsius
+    optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
+    energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
+    separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        # TODO: Shall both ports be bi-directional?
+        if self.separate_in_out_ports:
+            self.ports["input"] = FlexSink(units=self.energy_flow_units)
+            self.ports["output"] = FlexSource(units=self.energy_flow_units)
+        else:
+            self.ports["input_output"] = FlexPort(units=self.energy_flow_units)
+
+        # Initial temperature is not defined set to mid-operation range
+        if not self.initial_temp:
+            self.initial_temp = self.min_temp + 0.5 * (self.max_temp - self.min_temp)
+
+    @root_validator
+    def _non_zero_temp_range(cls, values: dict) -> dict:
+        """Temperature range must be non-zero and positive for Thermal Energy Storage to be operational"""
+        if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
+            raise ValueError(
+                "Temperature range must be non-zero and positive for Thermal Energy Storage to be operational."
+                f"Was given max temperature {values['max_temp']} "
+                f"and min temperature {values['min_temp']}, "
+                f"resulting in range {values['max_temp'] - values['min_temp']}"
+            )
+        return values
+
+    @validator("energy_flow_units", allow_reuse=True)
+    def _units_are_allowed(cls, v: Units) -> Units:
+        if v and v not in {Units.JPS, Units.KWT}:
+            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS). Received {v}")
+        return v
+
+    @property
+    def internal_temp(self):
+        return "internal_temp_" + self.node_name
+
+    @property
+    def net_loss_gain(self):
+        return "net_loss_gain_" + self.node_name
+
+    @property
+    def soc_value(self):
+        return "storage_soc_" + self.node_name
+
+    @property
+    def soc_constraint(self):
+        return "soc_cons_" + self.node_name
+
+    @property
+    def lump_capacitance(self):
+        return self.storage_mass * self.specific_heat
+
+    @property
+    def lump_conductance(self):
+        return self.ins_transmittance * self.surface_area
+
+    @property
+    def energy_units_conversion(self):
+        if self.energy_flow_units == Units.KWT:
+            # If ports flow in KWT calculate energy in KWTh
+            return 1 / 3600000
+        elif self.energy_flow_units == Units.JPS:
+            # If ports flow in JPS calculate energy in Joules
+            return 1
+
+    @property
+    def max_heat_storage_capacity(self):
+        return self.lump_capacitance * (self.max_temp - self.min_temp) * self.energy_units_conversion
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        super(ThermalStorage, self).add_node_to_model(model, profile)
+        self.load_values_from_profile(model, profile)
+        self.create_and_bound_temp_variable(model)
+        self.create_soc_variable(model)
+        self.apply_net_loss_and_gain_constraint(model)
+        self.apply_energy_balance_constraint(model)
+        self.apply_soc_constraint(model)
+
+    def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """For all attributes set by str reference, load values from profile."""
+        if self.ambient_temp_ref and self.ambient_temp_ref in profile_df.columns:
+            self.ambient_temp = to_initial_values(
+                profile_df,
+                key=self.ambient_temp_ref,
+                time_periods=len(model.Time),
+                expansion_periods=len(model.Expansion),
+            )
+        elif self.ambient_temp_ref and self.ambient_temp_ref not in profile_df.columns:
+            raise ValueError(
+                f"Could find reference column name {self.ambient_temp_ref} " "for ambient temperature in the profile."
+            )
+        else:
+            pass
+
+    def create_and_bound_temp_variable(self, model: EchoConcreteModel):
+        # Create temperature variable
+        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        # Bound temp variable to be within range
+        set_float_var_bounds(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
+
+    def create_soc_variable(self, model: EchoConcreteModel):
+        # Calculate initial state of charge based on the initial internal temperature value
+        initial_soc = self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
+        # Create soc variable and bound it
+        setattr(
+            model,
+            self.soc_value,
+            en.Var(model.Expansion, model.Time, initialize=initial_soc, bounds=(0, self.max_heat_storage_capacity)),
+        )
+
+    def apply_net_loss_and_gain_constraint(self, model: EchoConcreteModel):
+        # Create variable for net losses and gains
+        setattr(model, self.net_loss_gain, en.Var(model.Expansion, model.Time, domain=en.Reals))
+
+        # Apply constraints on loss and gain variables
+        def net_loss_gain_constraint(model: EchoConcreteModel, p, t):
+            """Losses to /gains from environment equals to the temperature
+            difference between ambient and internal multiplied by lump_conductance.
+
+            If not ambient temperature values are provided, set loss to zero.
+            """
+            if not self.ambient_temp:
+                return getattr(model, self.net_loss_gain)[p, t] == 0
+
+            return (
+                getattr(model, self.net_loss_gain)[p, t]
+                == (self.ambient_temp[p, t] - getattr(model, self.internal_temp)[p, t]) * self.lump_conductance
+            )
+
+        # Loss/gain values calculated in Joules per sec!
+
+        setattr(
+            model,
+            "loss_gain_con1_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=net_loss_gain_constraint),
+        )
+
+    def apply_energy_balance_constraint(self, model: EchoConcreteModel):
+        # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
+        dt_sec = model.scenario_settings.interval_duration * 60
+        max_t = len(model.Time)
+        if self.energy_flow_units == Units.KWT:
+            # If ports flow in KWT transform to Joules
+            flow_units_scaler = 1000
+        elif self.energy_flow_units == Units.JPS:
+            # If ports flow in JPS calculate losses in JPS
+            flow_units_scaler = 1
+
+        def change_of_internal_temperature_constraint(model: EchoConcreteModel, p, t):
+            heat_in_out = 0
+            for v in self.ports.values():
+                heat_in_out += getattr(model, v.port_name)[p, t]  # sum together our thermal ports
+
+            heat_in_out *= flow_units_scaler
+            internal_temp = getattr(model, self.internal_temp)
+            loss_gain = getattr(model, self.net_loss_gain)[p, t]
+
+            if p == 0 and t == 0:
+                return (heat_in_out + loss_gain) * dt_sec == (
+                    internal_temp[p, t] - self.initial_temp
+                ) * self.lump_capacitance
+            elif t == 0:
+                # Constraint enforcing temperature (and thus SOC) at the beginning of each expansion
+                # periods be the same as at the end of previous expansion period
+                return (heat_in_out + loss_gain) * dt_sec == (
+                    internal_temp[p, t] - internal_temp[p - 1, max_t]
+                ) * self.lump_capacitance
+            else:
+                temp_diff = internal_temp[p, t] - internal_temp[p, t - 1]
+                return (heat_in_out + loss_gain) * dt_sec == temp_diff * self.lump_capacitance
+
+        setattr(
+            model,
+            "internal_temp_con_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=change_of_internal_temperature_constraint),
+        )
+
+    def apply_soc_constraint(self, model: EchoConcreteModel):
+        # State of charge in Joule or KWTh is a linear function of the internal temperature
+        def soc_rule(model: EchoConcreteModel, p, t):
+            soc = getattr(model, self.soc_value)
+            internal_temperature = getattr(model, self.internal_temp)
+            self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
+            return (
+                soc[p, t]
+                == self.lump_capacitance * (internal_temperature[p, t] - self.min_temp) * self.energy_units_conversion
+            )
+
+        setattr(model, "SOC_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=soc_rule))
+
+
 class ThermalPort(FlexPort):
     """Flexible thermal port, +ve if importing heat, -ve if exporting heat."""
-
-    units = Units.KWT
-
-
-class FlexHeatSource(ThermalPort):
-    flows = Flows.Export
-
-
-class FlexCoolingSource(ThermalPort):
-    flows = Flows.Import
-
-
-class FlexHeatSink(ThermalPort):
-    flows = Flows.Import
-
-
-class FlexCoolingSink(ThermalPort):
-    flows = Flows.Export
-
-
-class HeatSource(Source):
-    units = Units.KWT
-
-
-class HeatSink(Sink):
-    units = Units.KWT
-
-
-class FixedThermalPort(FixedPort):
-    """Fixed thermal port, +ve if importing heat, -ve if exporting heat."""
 
     units = Units.KWT
 
@@ -219,14 +510,8 @@ class HeatPump(Node):
     performance (cop) time series data.
     """
 
-    heating_cop_time_series: dict  # Formatted dict of heating COPs per time period
-    cooling_cop_time_series: dict  # Formatted dict of cooling COPs per time period
-
-    # pyomo vars/params
-    heating_cop: str
-    cooling_cop: str
-    heat_in: str
-    cool_in: str
+    heating_cop_time_series: dict  # Formatted dict of heating COPs (coefficients of performance) per time period
+    cooling_cop_time_series: dict  # Formatted dict of cooling COPs (coefficients of performance) per time period
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -234,10 +519,22 @@ class HeatPump(Node):
         self.ports["input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
 
         # Naming variables
-        self.heating_cop = "heating_cop_" + self.node_name
-        self.cooling_cop = "cooling_cop_" + self.node_name
-        self.heat_in = "heat_in_" + self.node_name
-        self.cool_in = "cool_in_" + self.node_name
+
+    @property
+    def heating_cop(self):
+        return "heating_cop_" + self.node_name
+
+    @property
+    def cooling_cop(self):
+        return "cooling_cop_" + self.node_name
+
+    @property
+    def heat_in(self):
+        return "heat_in_" + self.node_name
+
+    @property
+    def cool_in(self):
+        return "cool_in_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(HeatPump, self).add_node_to_model(model, profile)
@@ -310,13 +607,13 @@ class HeatPump(Node):
         )
 
     def get_heating_cop(self, optimiser):
-        """Returns the heating cop"""
+        """Returns the heating cop (coefficient of performance)"""
         _out = optimiser.values(self.ports["output"].pos)
         _in = optimiser.values(self.heat_in)
         return _out / _in
 
     def get_cooling_cop(self, optimiser):
-        """Returns the cooling cop"""
+        """Returns the cooling cop (coefficient of performance)"""
         _out = optimiser.values(self.ports["output"].neg)
         _in = optimiser.values(self.cool_in)
         return _out / _in
@@ -369,9 +666,3 @@ class HeatPumpDualOutput(HeatPump):
         self.apply_node_transformation_constraints(
             model, heating_out_var=h_out.port_name, cooling_out_var=c_out.port_name
         )
-
-
-class HeatPump4Pipe(Node):
-    """a 4 pipe heat pump can produce heating and cooling simultaneously"""
-
-    # todo implement this
