@@ -506,15 +506,20 @@ class HeatPumpParametrised(TimeVaryingPiecewiseIONode):
     pass
 
 
-class HeatPumpSingleOutput(Node):
+class HeatPumpTwoPipe(Node):
     """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
 
-    HeatPumpSingleOutput has one input electrical port, and one input/output thermal port. It can do heating or cooling,
-    but not both simultaneously.
+    HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
+    If dual_output attribute set to False, only one thermal bidirectional port is created.
+    If dual_output attribute set to True, two thermal ports are created cooling_output (thermal Sink) and heating_output
+    (thermal Source).
+    It can do heating or cooling, but not both simultaneously.
     The conversion of input electrical energy to heating or cooling output depends on provided coefficients of
     performance (COP) time series data.
     """
 
+    max_cooling_capacity: float = None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
+    max_heating_capacity: float = None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
     heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
     # per time period
     cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
@@ -522,7 +527,7 @@ class HeatPumpSingleOutput(Node):
     heating_cop_time_series_ref: Optional[str]
     cooling_cop_time_series_ref: Optional[str]
 
-    single_output: bool = True
+    dual_output: bool = False
 
     # heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(is_non_negative)
 
@@ -530,10 +535,13 @@ class HeatPumpSingleOutput(Node):
         super().__init__(**data)
         # Create input and output ports
         self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
-        self.ports["thermal_input_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+        if self.dual_output:
+            self.ports["cooling_output"] = FlexSink(units=Units.KWT)  # Heat pump has one cooling output port
+            self.ports["heating_output"] = FlexSource(units=Units.KWT)  # Heat pump has one heating output port
+        else:
+            self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
 
-        # Naming variables
-
+    # Naming variables
     @property
     def heating_cop(self):
         return "heating_cop_" + self.node_name
@@ -551,14 +559,20 @@ class HeatPumpSingleOutput(Node):
         return "power_to_cool_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(Node, self).add_node_to_model(model, profile)
+        super(HeatPumpTwoPipe, self).add_node_to_model(model, profile)
+        if self.dual_output:
+            # Split cooling output port into +ve and -ve components. +ve component will be cooling,
+            # -ve component will be heating
+            self.ports["cooling_output"].constrain_pos_neg(
+                model)
+        else:
+            # Split output port into +ve and -ve components. +ve component will be cooling,
+            # -ve component will be heating
+            self.ports["thermal_input_output"].constrain_pos_neg(model)
 
-        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
-        self.ports["thermal_input_output"].constrain_pos_neg(model)
-
-        """Create internal variables representing amount of electrical power used to produce heating or cooling 
-        at each interval. Both variables are non-negative, this is not the same as thermal port flow value. Intermediate helper variables.
-         """
+        # Create internal variables representing amount of electrical power used to produce heating or cooling
+        # at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
+        # Intermediate helper variables.
         setattr(model, self.power_to_heat, en.Var(model.Expansion, model.Time,
                                                   initialize=0, domain=en.NonNegativeReals))
         setattr(model, self.power_to_cool, en.Var(model.Expansion, model.Time,
@@ -568,18 +582,29 @@ class HeatPumpSingleOutput(Node):
         setattr(
             model,
             self.heating_cop,
-            en.Param(model.Expansion, model.Time, initialize=self.heating_cop_time_series, domain=en.NonNegativeReals),
+            en.Param(model.Expansion, model.Time, initialize=self.heating_cop_time_series,
+                     domain=en.NonNegativeReals),
         )
         setattr(
             model,
             self.cooling_cop,
-            en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series, domain=en.NonNegativeReals),
+            en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series,
+                     domain=en.NonNegativeReals),
         )
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        p_out = self.ports["thermal_input_output"]
-        self.apply_only_heat_or_cool_constraints(model, binary_var_name=p_out.is_pos)
-        self.apply_node_transformation_constraints(model, heating_out_var=p_out.neg, cooling_out_var=p_out.pos)
+        # Get variable names for heating and cooling output depending on thermal ports configuration
+        if self.dual_output:
+            h_out_var = self.ports["heating_output"].port_name
+            c_out_var = self.ports["cooling_output"].port_name
+        else:
+            h_out_var = self.ports["thermal_output"].is_neg
+            c_out_var = self.ports["thermal_output"].is_pos
+        # Apply heating_cooling constrains and transformation constraint
+        self.apply_only_heat_or_cool_constraints(model, binary_var_name=c_out_var)
+        self.apply_node_transformation_constraints(
+            model, heating_out_var=h_out_var, cooling_out_var=c_out_var
+        )
 
     def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
@@ -658,31 +683,8 @@ class HeatPumpSingleOutput(Node):
         return _out / _in
 
 
-class HeatPumpDualOutput(HeatPumpSingleOutput):
-    """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
-
-    HeatPumpSingleOutput has one input electrical port, and two thermal ports one for cooling and one for heating.
-    Dual output heatpump can do heating and cooling simultaneously.
-    The conversion of input electrical energy to heating and cooling output depends on provided coefficients of
-    performance (COP) time series data. If cop attribute is None, then COP values at each step default to 1.
+class HeatPumFourPipe(HeatPumpTwoPipe):
+    """ Four pipe heat pump can do simultaneous heating and cooling.
     """
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Create output port
-        self.ports["heating"] = FlexSource(units=Units.KWT)
-        self.ports["cooling"] = FlexSink(units=Units.KWT)
-
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(HeatPumpDualOutput, self).add_node_to_model(model, profile)
-        self.ports["cooling"].constrain_pos_neg(
-            model
-        )  # need to do this so we have a binary variable for the constraints
-
-    def apply_node_constraints(self, model: EchoConcreteModel):
-        h_out = self.ports["heating"]
-        c_out = self.ports["cooling"]
-        self.apply_only_heat_or_cool_constraints(model, binary_var=c_out.is_pos)
-        self.apply_node_transformation_constraints(
-            model, heating_out_var=h_out.port_name, cooling_out_var=c_out.port_name
-        )
+    dual_output: bool = True
+    waste_heat_recovery_coefficient: float = 1  # Coefficient of the waste heat recovery from the cooling loop in [0, 1]
