@@ -23,7 +23,7 @@ from echo.utils import (
     expand_as_dict,
     clamp,
 )
-from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop
+from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop, is_non_negative
 
 
 class Chiller(TimeVaryingPiecewiseIONode):
@@ -509,10 +509,10 @@ class HeatPumpParametrised(TimeVaryingPiecewiseIONode):
 class HeatPumpSingleOutput(Node):
     """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
 
-    HeatPumpSingleOutput has one input electrical port, and one output thermal port. It can do heating or cooling,
+    HeatPumpSingleOutput has one input electrical port, and one input/output thermal port. It can do heating or cooling,
     but not both simultaneously.
     The conversion of input electrical energy to heating or cooling output depends on provided coefficients of
-    performance (COP) time series data. If cop attribute is None, then COP values at each step default to 1.
+    performance (COP) time series data.
     """
 
     heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
@@ -522,11 +522,15 @@ class HeatPumpSingleOutput(Node):
     heating_cop_time_series_ref: Optional[str]
     cooling_cop_time_series_ref: Optional[str]
 
+    single_output: bool = True
+
+    # heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(is_non_negative)
+
     def __init__(self, **data):
         super().__init__(**data)
         # Create input and output ports
-        self.ports["input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
-        self.ports["output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+        self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
+        self.ports["thermal_input_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
 
         # Naming variables
 
@@ -539,19 +543,26 @@ class HeatPumpSingleOutput(Node):
         return "cooling_cop_" + self.node_name
 
     @property
-    def heat_in(self):
-        return "heat_in_" + self.node_name
+    def power_to_heat(self):
+        return "power_to_heat_" + self.node_name
 
     @property
-    def cool_in(self):
-        return "cool_in_" + self.node_name
+    def power_to_cool(self):
+        return "power_to_cool_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(HeatPump, self).add_node_to_model(model, profile)
+        super(Node, self).add_node_to_model(model, profile)
 
-        # Create variables for attributing the input to either heating or cooling
-        setattr(model, self.heat_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
-        setattr(model, self.cool_in, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals))
+        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
+        self.ports["thermal_input_output"].constrain_pos_neg(model)
+
+        """Create internal variables representing amount of electrical power used to produce heating or cooling 
+        at each interval. Both variables are non-negative, this is not the same as thermal port flow value. Intermediate helper variables.
+         """
+        setattr(model, self.power_to_heat, en.Var(model.Expansion, model.Time,
+                                                  initialize=0, domain=en.NonNegativeReals))
+        setattr(model, self.power_to_cool, en.Var(model.Expansion, model.Time,
+                                                  initialize=0, domain=en.NonNegativeReals))
 
         # Create params for heating and cooling coefficients of performance
         setattr(
@@ -565,13 +576,19 @@ class HeatPumpSingleOutput(Node):
             en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series, domain=en.NonNegativeReals),
         )
 
-    def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var):
-        is_cooling = getattr(model, binary_var)  # binary var for whether we are cooling
-        p_in = getattr(model, self.ports["input"].port_name)  # input electrical power
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        p_out = self.ports["thermal_input_output"]
+        self.apply_only_heat_or_cool_constraints(model, binary_var_name=p_out.is_pos)
+        self.apply_node_transformation_constraints(model, heating_out_var=p_out.neg, cooling_out_var=p_out.pos)
+
+    def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
+        is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
+        power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
 
         def only_heat_or_cool1(model: EchoConcreteModel, p, t):
-            """Can only have input used for heating if is_cooling = 0"""
-            return getattr(model, self.heat_in)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
+            """Constraint power_to_heat variable.
+            power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< bigM value when is_cooling=0"""
+            return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
 
         setattr(
             model,
@@ -580,8 +597,9 @@ class HeatPumpSingleOutput(Node):
         )
 
         def only_heat_or_cool2(model: EchoConcreteModel, p, t):
-            """Can only have input used for cooling if is_cooling = 1"""
-            return getattr(model, self.cool_in)[p, t] <= is_cooling[p, t] * model.bigM
+            """Constraint power_to_cool variable.
+            power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< bigM value when is_cooling=1"""
+            return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.bigM
 
         setattr(
             model,
@@ -590,24 +608,35 @@ class HeatPumpSingleOutput(Node):
         )
 
         def sum_rule(model: EchoConcreteModel, p, t):
-            """Input used for heating and input used for cooling must sum to total input"""
-            return p_in[p, t] == getattr(model, self.heat_in)[p, t] + getattr(model, self.cool_in)[p, t]
+            """Electrical power input used for heating and for cooling must sum to total electrical power input"""
+            return power_in[p, t] == getattr(model, self.power_to_heat)[p, t] + getattr(model, self.power_to_cool)[p, t]
 
-        setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+        setattr(model, "sum_heat_cool_" + self.node_name,
+                en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
-    def apply_node_transformation_constraints(self, model: EchoConcreteModel, heating_out_var, cooling_out_var):
-        heat_out = getattr(model, heating_out_var)  # heating delivered
-        cool_out = getattr(model, cooling_out_var)  # cooling delivered
+    def apply_node_transformation_constraints(self, model: EchoConcreteModel,
+                                              heating_out_var: str, cooling_out_var: str):
+        heating_out = getattr(model, heating_out_var)  # heating delivered at thermal port (heat exported)
+        cooling_out = getattr(model, cooling_out_var)  # cooling delivered at thermal port (heat absorbed)
         heating_cop = getattr(model, self.heating_cop)
         cooling_cop = getattr(model, self.cooling_cop)
 
         def heating_output_rule(model: EchoConcreteModel, p, t):
-            """Heat out = heat_in * heating cop * -1"""
-            return heat_out[p, t] == getattr(model, self.heat_in)[p, t] * heating_cop[p, t] * -1
+            """ When heatpump used for heating, thermal port is exporting energy, thus -1 scaling.
+
+            Thermal port flow values are negative in heating mode.
+            heating_out = power_to_heat * heating cop * -1.
+            """
+            return heating_out[p, t] == getattr(model, self.power_to_heat)[p, t] * heating_cop[p, t] * -1
 
         def cooling_output_rule(model: EchoConcreteModel, p, t):
-            """Cool out = cool_in * cooling cop"""
-            return cool_out[p, t] == getattr(model, self.cool_in)[p, t] * cooling_cop[p, t]
+            """ When heatpump used for cooling, thermal port is importing/absorbing.
+
+            Thermal port flow values are positive in cooling mode.
+            cooling_out = power_to_cool * cooling cop
+            """
+
+            return cooling_out[p, t] == getattr(model, self.power_to_cool)[p, t] * cooling_cop[p, t]
 
         setattr(
             model, "heat_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=heating_output_rule)
@@ -618,43 +647,24 @@ class HeatPumpSingleOutput(Node):
 
     def get_heating_cop(self, optimiser):
         """Returns the heating cop (coefficient of performance)"""
-        _out = optimiser.values(self.ports["output"].pos)
-        _in = optimiser.values(self.heat_in)
+        _out = optimiser.values(self.ports["thermal_input_output"].pos)
+        _in = optimiser.values(self.power_to_heat)
         return _out / _in
 
     def get_cooling_cop(self, optimiser):
         """Returns the cooling cop (coefficient of performance)"""
-        _out = optimiser.values(self.ports["output"].neg)
-        _in = optimiser.values(self.cool_in)
+        _out = optimiser.values(self.ports["thermal_input_output"].neg)
+        _in = optimiser.values(self.power_to_cool)
         return _out / _in
 
 
-class HeatPumpSingleOutput(HeatPump):
-    """
-    Heat pump with a single output port for bidirectional heating/cooling.
-    Can be used to connect to a thermal load that has heating and cooling.
-    """
+class HeatPumpDualOutput(HeatPumpSingleOutput):
+    """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Create output port
-        self.ports["output"] = FlexPort(units=Units.KWT)
-
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(HeatPumpSingleOutput, self).add_node_to_model(model, profile)
-        # Split output port into +ve and -ve components. +ve component will be cooling, -ve component will be heating
-        self.ports["output"].constrain_pos_neg(model)
-
-    def apply_node_constraints(self, model: EchoConcreteModel):
-        p_out = self.ports["output"]
-        self.apply_only_heat_or_cool_constraints(model, binary_var=p_out.is_pos)
-        self.apply_node_transformation_constraints(model, heating_out_var=p_out.neg, cooling_out_var=p_out.pos)
-
-
-class HeatPumpDualOutput(HeatPump):
-    """
-    Heat pump with separate output ports for heating and cooling.
-    Can be used to connect to separate heating and cooling nodes.
+    HeatPumpSingleOutput has one input electrical port, and two thermal ports one for cooling and one for heating.
+    Dual output heatpump can do heating and cooling simultaneously.
+    The conversion of input electrical energy to heating and cooling output depends on provided coefficients of
+    performance (COP) time series data. If cop attribute is None, then COP values at each step default to 1.
     """
 
     def __init__(self, **data):
