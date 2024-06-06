@@ -6,7 +6,7 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
 from echo.models.base import Node, OptimisationGraph
 
-from echo.models.thermal import ThermalStorage, ParametrisedChiller, HeatPumpTwoPipe
+from echo.models.thermal import ThermalStorage, ParametrisedChiller, SimpleHeatPumpTwoPipe
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ThroughputCost
