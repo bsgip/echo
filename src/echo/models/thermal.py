@@ -26,10 +26,14 @@ from echo.utils import (
 from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop, is_non_negative
 
 
-class Chiller(TimeVaryingPiecewiseIONode):
+class SimpleChiller(Node):
+    pass
+
+
+class ParametrisedChiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
-    A simple chiller is an input/output piecewise node, with a single set of input/output breakpoints representing
+    ParametrisedChiller is an input/output piecewise node, with a single set of input/output breakpoints representing
     chiller COP (Coefficient Of Performance = Output/Input=Cooling_delivered/Electricity_consumed) used
     for all time periods.
     """
@@ -83,7 +87,7 @@ class Chiller(TimeVaryingPiecewiseIONode):
         self.define_temperature_dependent_cop_coefficient(model)
         self.set_input_points(model)
         self.set_output_points(model)
-        super(Chiller, self).add_node_to_model(model, profile)
+        super(ParametrisedChiller, self).add_node_to_model(model, profile)
         if "heat_rejection" in self.ports:
             self.add_heat_rejection_constraint(model)
 
@@ -502,12 +506,12 @@ class ThermalPort(FlexPort):
     units = Units.KWT
 
 
-class HeatPumpParametrised(TimeVaryingPiecewiseIONode):
+class ParametrisedHeatPump(TimeVaryingPiecewiseIONode):
     pass
 
 
-class HeatPumpTwoPipe(Node):
-    """ A heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
+class SimpleHeatPumpTwoPipe(Node):
+    """ A simple heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
 
     HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
     If dual_output attribute set to False, only one thermal bidirectional port is created.
@@ -559,7 +563,7 @@ class HeatPumpTwoPipe(Node):
         return "power_to_cool_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(HeatPumpTwoPipe, self).add_node_to_model(model, profile)
+        super(SimpleHeatPumpTwoPipe, self).add_node_to_model(model, profile)
         if self.dual_output:
             # Split cooling output port into +ve and -ve components. +ve component will be cooling,
             # -ve component will be heating
@@ -683,7 +687,7 @@ class HeatPumpTwoPipe(Node):
         return _out / _in
 
 
-class HeatPumFourPipe(HeatPumpTwoPipe):
+class SimpleHeatPumFourPipe(SimpleHeatPumpTwoPipe):
     """ Four pipe heat pump can do simultaneous heating and cooling.
     """
     dual_output: bool = True

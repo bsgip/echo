@@ -6,7 +6,7 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
 from echo.models.base import Node, OptimisationGraph
 
-from echo.models.thermal import ThermalStorage, Chiller
+from echo.models.thermal import ThermalStorage, ParametrisedChiller, HeatPumpTwoPipe
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ThroughputCost
@@ -435,7 +435,7 @@ def test_chiller_operation():
 
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = Chiller(max_cooling_capacity=10, nominal_cop=2.5)
+    chiller = ParametrisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
     # Cooling demand is a heat source
     cooling_load_data = TimeSeriesData(
         value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
@@ -478,7 +478,7 @@ def test_chiller_with_heat_rejection():
 
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = Chiller(
+    chiller = ParametrisedChiller(
         max_cooling_capacity=10, nominal_cop=2.5, heat_rejection_port=True, heat_rejection_coefficient=0.8
     )
     assert "heat_rejection" in chiller.ports
@@ -535,7 +535,7 @@ def test_chiller_with_temperature_cop():
     ambient_temperature_dict = expand_as_dict(ambient_temperature_data)
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = Chiller(
+    chiller = ParametrisedChiller(
         max_cooling_capacity=10,
         nominal_cop=2.5,
         partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
