@@ -223,3 +223,8 @@ def validate_temperature_dependent_cop(cls, values):
             f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
         )
     return values
+
+
+def non_negative_cop_check(v):
+    v = is_non_negative(v, "Coefficient of performance for heating and cooling must be given as non_negative value")
+    return v

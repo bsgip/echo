@@ -1,7 +1,7 @@
 from typing import Optional
 
 import pandas as pd
-from pydantic import root_validator, validator
+from pydantic import root_validator, validator, PositiveFloat, NonNegativeFloat
 
 import numpy as np
 import pyomo.environ as en
@@ -23,7 +23,7 @@ from echo.utils import (
     expand_as_dict,
     clamp,
 )
-from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop, is_non_negative
+from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop, non_negative_cop_check
 
 
 class SimpleChiller(Node):
@@ -35,9 +35,12 @@ class SimpleChiller(Node):
     performance (COP) time series data.
     """
 
-    max_cooling_capacity: float = None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
+    max_cooling_capacity: PositiveFloat = None  # Max cooling load that can be serviced in KWT
+    # (if None, bounded by bigM value)
     cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
-    cooling_cop_time_series_ref: Optional[str]
+    cooling_cop_time_series: Optional[str]
+
+    cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -96,8 +99,8 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
     for all time periods.
     """
 
-    nominal_cop: float  # Nominal coefficient of performance COP = output/input
-    max_cooling_capacity: float  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    nominal_cop: PositiveFloat  # Nominal coefficient of performance COP = output/input
+    max_cooling_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
     partial_load_cop: dict = {
         0: 0,
         0.25: 0.8,
@@ -123,7 +126,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
     input_port_unit: Units = Units.KW  # Input port units
     output_port_unit: Units = Units.KWT  # Output port units TODO: implementation for output units JPS
     heat_rejection_port: bool = False  # If True, add heat rejection port
-    heat_rejection_coefficient: float = 1  # Heat rejection coefficient cooling_delivered/heat_rejected
+    heat_rejection_coefficient: PositiveFloat = 1  # Heat rejection coefficient cooling_delivered/heat_rejected
 
     partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
     temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
@@ -257,9 +260,9 @@ class ThermalNode(Node):
     temp_ub: dict  # Upper bound of acceptable temperature for each time interval: dict with expansion-time keys
     temp_lb: dict  # Lower bound of acceptable temperature for each time interval: dict with expansion-time keys
     external_temp: dict  # External (ambient) temp, formatted as dict with expansion-time keys
-    loss_factor: float = 0  # Losses due to ambient temp being lower than internal temp
-    gain_factor: float = 0  # Free gains due to ambient temp being higher than internal temp
-    temp_to_energy_coef: float = 1  # Conversion factor * temp change = added energy
+    loss_factor: NonNegativeFloat = 0  # Losses due to ambient temp being lower than internal temp
+    gain_factor: NonNegativeFloat = 0  # Free gains due to ambient temp being higher than internal temp
+    temp_to_energy_coef: PositiveFloat = 1  # Conversion factor * temp change = added energy
     initial_internal_temp: float = 0  # initial internal temperature
 
     # Pyomo vars/params
@@ -355,12 +358,14 @@ class ThermalStorage(Node):
 
     max_temp: float  # Maximum operational temperature in degrees  Celsius
     min_temp: float  # Minimum operational temperature in degrees  Celsius
-    storage_mass: float  # Mass of storage medium in kg
-    specific_heat: float  # Specific heat capacity in Joule/kg*C
+    storage_mass: PositiveFloat  # Mass of storage medium in kg
+    specific_heat: PositiveFloat  # Specific heat capacity in Joule/kg*C
     ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
     ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
-    ins_transmittance: float = 0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
-    surface_area: float = 0  # Surface area of Thermal Energy Storage in square meters, default value=0
+    ins_transmittance: NonNegativeFloat = (
+        0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
+    )
+    surface_area: NonNegativeFloat = 0  # Surface area of Thermal Energy Storage in square meters, default value=0
     # means zero heat loss/gain
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
@@ -580,8 +585,12 @@ class SimpleHeatPumpTwoPipe(Node):
     performance (COP) time series data.
     """
 
-    max_cooling_capacity: float = None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
-    max_heating_capacity: float = None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
+    max_cooling_capacity: PositiveFloat = (
+        None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
+    )
+    max_heating_capacity: PositiveFloat = (
+        None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
+    )
     heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
     # per time period
     cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
@@ -591,7 +600,8 @@ class SimpleHeatPumpTwoPipe(Node):
 
     dual_output: bool = False
 
-    # heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(is_non_negative)
+    heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(non_negative_cop_check)
+    cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -626,10 +636,18 @@ class SimpleHeatPumpTwoPipe(Node):
             # Split cooling output port into +ve and -ve components. +ve component will be cooling,
             # -ve component will be heating
             self.ports["cooling_output"].constrain_pos_neg(model)
+            set_float_var_bounds(model, self.ports["cooling_output"].port_name, lb=self.max_cooling_capacity)
+            set_float_var_bounds(model, self.ports["heating_output"].port_name, ub=self.max_heating_capacity)
         else:
             # Split output port into +ve and -ve components. +ve component will be cooling,
             # -ve component will be heating
             self.ports["thermal_input_output"].constrain_pos_neg(model)
+            set_float_var_bounds(
+                model,
+                self.ports["thermal_input_output"].port_name,
+                ub=self.max_heating_capacity,
+                lb=self.max_cooling_capacity,
+            )
 
         # Create internal variables representing amount of electrical power used to produce heating or cooling
         # at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
@@ -742,7 +760,7 @@ class SimpleHeatPumpTwoPipe(Node):
         return _out / _in
 
 
-class SimpleHeatPumFourPipe(SimpleHeatPumpTwoPipe):
+class SimpleHeatPumpFourPipe(SimpleHeatPumpTwoPipe):
     """Four pipe heat pump can do simultaneous heating and cooling."""
 
     dual_output: bool = True
