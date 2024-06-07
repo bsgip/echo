@@ -590,6 +590,37 @@ class ThermalPort(FlexPort):
 
 
 class ParametrisedHeatPump(TimeVaryingPiecewiseIONode):
+    """A parametrised heat pump model.
+
+
+     This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
+     (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
+     and cooling at each step.
+
+     HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
+     If dual_output attribute set to False, only one thermal bidirectional port is created. When one thermal port is
+     created the heat pump can do heating or cooling, but not both simultaneously.
+     If dual_output attribute set to True, two thermal ports are created cooling_output (thermal Sink) and
+     heating_output (thermal Source). When two thermal ports are created the heat pump can do simultaneous heating
+     and cooling (4 pipe system) with waste heat recovery from the cooling circuit (when running simultaneously).
+
+     The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
+     performance (COP) at each time step.
+     """
+    max_cooling_capacity: PositiveFloat = (
+        None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
+    )
+    max_heating_capacity: PositiveFloat = (
+        None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
+    )
+    heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
+    # per time period
+    cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
+    # per time period
+    heating_cop_time_series_ref: Optional[str]
+    cooling_cop_time_series_ref: Optional[str]
+
+    dual_output: bool = False
     pass
 
 
