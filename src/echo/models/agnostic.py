@@ -656,24 +656,21 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         input_points_ref/output_points_ref will override input_points/output_points values provided
         in the instance's attributes (if any) with values from profile dataframe.
         """
-        if self.input_points_ref and self.input_points_ref in profile_df.columns:
+        if self.input_points_ref:
             """Load input points array from profile dataframe and set the same array across all time points"""
-            input_points_array = profile_df[self.input_points_ref].to_list()
-            self.add_constant_input_points(input_points_array, len(model.Time), len(model.Expansion))
-        elif self.input_points_ref and self.input_points_ref not in profile_df.columns:
-            raise ValueError(f"Could not find reference column name {self.input_points_ref} in the profile.")
-        else:
-            """If not reference provided, skip this step"""
-            pass
+            if self.input_points_ref not in profile_df.columns:
+                raise ValueError(f"Could not find reference column name {self.input_points_ref} in the profile.")
+            else:
+                input_points_array = profile_df[self.input_points_ref].to_list()
+                self.add_constant_input_points(input_points_array, len(model.Time), len(model.Expansion))
 
-        if self.output_points_ref and self.output_points_ref in profile_df.columns:
+        if self.output_points_ref:
             """Load input points array from profile dataframe and set the same array across all time points"""
-            output_points_array = profile_df[self.output_points_ref].to_list()
-            self.add_constant_output_points(output_points_array, len(model.Time), len(model.Expansion))
-        elif self.output_points_ref and self.output_points_ref not in profile_df.columns:
-            raise ValueError(f"Could not find reference column name {self.output_points_ref} in the profile.")
-        else:
-            pass
+            if self.output_points_ref and self.output_points_ref not in profile_df.columns:
+                raise ValueError(f"Could not find reference column name {self.output_points_ref} in the profile.")
+            else:
+                output_points_array = profile_df[self.output_points_ref].to_list()
+                self.add_constant_output_points(output_points_array, len(model.Time), len(model.Expansion))
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         self.load_input_output_values_from_profile(model, profile)

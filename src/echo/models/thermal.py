@@ -38,7 +38,7 @@ class SimpleChiller(Node):
     max_cooling_capacity: PositiveFloat = None  # Max cooling load that can be serviced in KWT
     # (if None, bounded by bigM value)
     cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
-    cooling_cop_time_series: Optional[str]
+    cooling_cop_time_series_ref: Optional[str]
 
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
@@ -57,6 +57,8 @@ class SimpleChiller(Node):
         return "power_to_cool_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
+        # Load coefficient of performance values from profile (if provided by reference)
+        self.load_cop_values_from_profile(model, profile)
         super(SimpleChiller, self).add_node_to_model(model, profile)
         # Create internal variable representing amount of electrical power used to produce cooling
         # at each interval. This is not the same as thermal port flow value.
@@ -89,6 +91,22 @@ class SimpleChiller(Node):
         setattr(
             model, "cool_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule)
         )
+
+    def load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """When coefficient of performance timeseries is set by str reference, load values from profile."""
+
+        if self.cooling_cop_time_series_ref:
+            if self.cooling_cop_time_series_ref not in profile_df.columns:
+                raise ValueError(
+                    "Could not find reference column name " f"{self.cooling_cop_time_series_ref} in the profile."
+                )
+            else:
+                self.cooling_cop_time_series = to_initial_values(
+                    profile_df,
+                    key=self.cooling_cop_time_series_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
 
 
 class ParametrisedChiller(TimeVaryingPiecewiseIONode):
@@ -237,17 +255,16 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
 
     def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When ambient temperature is set by str reference, load values from profile."""
-        if self.ambient_temperature_ref and self.ambient_temperature_ref in profile_df.columns:
-            self.ambient_temperature_dict = to_initial_values(
-                profile_df,
-                key=self.ambient_temperature_ref,
-                time_periods=len(model.Time),
-                expansion_periods=len(model.Expansion),
-            )
-        elif self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
-            raise ValueError(f"Could not find reference column name {self.ambient_temperature_ref} in the profile.")
-        else:
-            pass
+        if self.ambient_temperature_ref:
+            if self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
+                raise ValueError(f"Could not find reference column name {self.ambient_temperature_ref} in the profile.")
+            else:
+                self.ambient_temperature_dict = to_initial_values(
+                    profile_df,
+                    key=self.ambient_temperature_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
 
 
 class ThermalNode(Node):
@@ -452,17 +469,20 @@ class ThermalStorage(Node):
 
     def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """For all attributes set by str reference, load values from profile."""
-        if self.ambient_temp_ref and self.ambient_temp_ref in profile_df.columns:
-            self.ambient_temp = to_initial_values(
-                profile_df,
-                key=self.ambient_temp_ref,
-                time_periods=len(model.Time),
-                expansion_periods=len(model.Expansion),
-            )
-        elif self.ambient_temp_ref and self.ambient_temp_ref not in profile_df.columns:
-            raise ValueError(
-                f"Could find reference column name {self.ambient_temp_ref} " "for ambient temperature in the profile."
-            )
+        if self.ambient_temp_ref:
+            if self.ambient_temp_ref not in profile_df.columns:
+                raise ValueError(
+                    f"Could find reference column name {self.ambient_temp_ref} "
+                    "for ambient temperature in the profile."
+                )
+            else:
+                self.ambient_temp = to_initial_values(
+                    profile_df,
+                    key=self.ambient_temp_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
+
         else:
             pass
 
@@ -631,7 +651,10 @@ class SimpleHeatPumpTwoPipe(Node):
         return "power_to_cool_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
+        # Load coefficient of performance values from profile (if be set ref)
+        self.load_cop_values_from_profile(model, profile)
         super(SimpleHeatPumpTwoPipe, self).add_node_to_model(model, profile)
+        # Set up Ports
         if self.dual_output:
             # Split cooling output port into +ve and -ve components. +ve component will be cooling,
             # -ve component will be heating
@@ -682,6 +705,34 @@ class SimpleHeatPumpTwoPipe(Node):
         # Apply heating_cooling constrains and transformation constraint
         self.apply_only_heat_or_cool_constraints(model, binary_var_name=c_out_var)
         self.apply_node_transformation_constraints(model, heating_out_var=h_out_var, cooling_out_var=c_out_var)
+
+    def load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """When coefficient of performance timeseries is set by str reference, load values from profile."""
+        if self.cooling_cop_time_series_ref:
+            if self.cooling_cop_time_series_ref not in profile_df.columns:
+                raise ValueError(
+                    "Could not find reference column name " f"{self.cooling_cop_time_series_ref} in the profile."
+                )
+            else:
+                self.cooling_cop_time_series = to_initial_values(
+                    profile_df,
+                    key=self.cooling_cop_time_series_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
+
+        if self.heating_cop_time_series_ref:
+            if self.heating_cop_time_series_ref not in profile_df.columns:
+                raise ValueError(
+                    "Could not find reference column name " f"{self.heating_cop_time_series_ref} in the profile."
+                )
+            else:
+                self.heating_cop_time_series = to_initial_values(
+                    profile_df,
+                    key=self.heating_cop_time_series_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
 
     def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
