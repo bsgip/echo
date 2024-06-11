@@ -8,7 +8,7 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
 from echo.models.base import Node, OptimisationGraph
 
-from echo.models.thermal import ThermalStorage, ParametrisedChiller, SimpleHeatPumpTwoPipe
+from echo.models.thermal import ThermalStorage, ParametrisedChiller, SimpleChiller, SimpleHeatPumpTwoPipe
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ThroughputCost
@@ -49,6 +49,49 @@ q_max_kwh = q_max_joules / 3600000
 th_load = [0.1] * 14 + [0.4] * 4 + [0.05] * 16 + [0.4] * 6 + [0.2] * 8
 th_load = list((np.array(th_load) * q_max_kwh).round())
 profile_df = pd.DataFrame({"thermal_load": th_load, "ambient_temp": [25] * NUMBER_INTERVALS})
+
+# Pre-defined arrays of heating and cooling coefficients of performance for simple chiller and HP models
+NUMBER_INTERVALS_SHORT = 6
+# Cooling demand is a heat source
+cooling_load_data = TimeSeriesData(
+    value=[0, 0, -2.5, -5, -7.5, -10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+)
+cooling_demand_dict = expand_as_dict(cooling_load_data)
+
+cooling_demand_dict_non_zero = expand_as_dict(
+    TimeSeriesData(
+        value=[-1, -1, -2.5, -5, -7.5, -10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+    )
+)
+
+heating_load_data = TimeSeriesData(
+    value=[5, 5, 3, 3, 0, 0], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+)
+heating_load_dict = expand_as_dict(cooling_load_data)
+
+cooling_cop_data = TimeSeriesData(
+    value=[4, 4, 2.5, 2, 1.5, 2.5],
+    num_time_intervals=NUMBER_INTERVALS_SHORT,
+    num_expansion_intervals=NUM_EXPANSION_PERIODS,
+)
+cooling_cop_dict = expand_as_dict(cooling_cop_data)
+
+heating_cop_data = TimeSeriesData(
+    value=[1.5, 1.5, 3.5, 3, 3.5, 2.5],
+    num_time_intervals=NUMBER_INTERVALS_SHORT,
+    num_expansion_intervals=NUM_EXPANSION_PERIODS,
+)
+heating_cop_dict = expand_as_dict(heating_cop_data)
+
+
+profile_short = pd.DataFrame(
+    {
+        "cooling_load": cooling_load_data.value,
+        "heating_load": heating_load_data.value,
+        "cooling_cop": cooling_cop_data.value,
+        "heating_cop": heating_cop_data.value,
+    }
+)
 
 
 def test_thermal_storage():
@@ -438,32 +481,32 @@ def test_chiller_operation():
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = ParametrisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
-    # Cooling demand is a heat source
-    cooling_load_data = TimeSeriesData(
-        value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
-    )
-    cooling_demand_dict = expand_as_dict(cooling_load_data)
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
-
     system.add_node_obj([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
     system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
-            interval_duration=30,
-            number_of_intervals=6,
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS_SHORT,
             number_of_expansion_intervals=1,
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
     )
 
-    chiller_actual_cop = np.divide(
+    chiller_actual_cop = list()
+    for _output, _input in zip(
         optimise_results.values(chiller.ports["output"].port_name, 0),
         optimise_results.values(chiller.ports["input"].port_name, 0),
-    )
+    ):
+        if _input == 0:
+            assert _output == 0
+        else:
+            assert _output != 0
+            chiller_actual_cop.append(round(_output / _input, 3))
 
     # Check that we observe variation in COP
     assert min(chiller_actual_cop) != max(chiller_actual_cop)
@@ -484,11 +527,6 @@ def test_chiller_with_heat_rejection():
         max_cooling_capacity=10, nominal_cop=2.5, heat_rejection_port=True, heat_rejection_coefficient=0.8
     )
     assert "heat_rejection" in chiller.ports
-    # Cooling demand is a heat source
-    cooling_load_data = TimeSeriesData(
-        value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
-    )
-    cooling_demand_dict = expand_as_dict(cooling_load_data)
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     waste_heat_agg = AggregationNode(port_units=Units.KWT)
@@ -501,18 +539,24 @@ def test_chiller_with_heat_rejection():
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
-            interval_duration=30,
-            number_of_intervals=6,
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS_SHORT,
             number_of_expansion_intervals=1,
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
     )
 
-    chiller_actual_cop = np.divide(
+    chiller_actual_cop = list()
+    for _output, _input in zip(
         optimise_results.values(chiller.ports["output"].port_name, 0),
         optimise_results.values(chiller.ports["input"].port_name, 0),
-    )
+    ):
+        if _input == 0:
+            assert _output == 0
+        else:
+            assert _output != 0
+            chiller_actual_cop.append(round(_output / _input, 3))
 
     # Check that we observe variation in COP
     assert min(chiller_actual_cop) != max(chiller_actual_cop)
@@ -543,11 +587,54 @@ def test_chiller_with_temperature_cop():
         partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
         ambient_temperature_dict=ambient_temperature_dict,
     )
-    # Cooling demand is a heat source
-    cooling_load_data = TimeSeriesData(
-        value=[-5, -1, -6, -2.5, -7.5, -10], num_time_intervals=6, num_expansion_intervals=1
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    # Need non zero
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
+
+    system.add_node_obj([grid, chiller, cooling_load])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
+    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS_SHORT,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
     )
-    cooling_demand_dict = expand_as_dict(cooling_load_data)
+
+    chiller_actual_cop = list()
+    for _output, _input in zip(
+        optimise_results.values(chiller.ports["output"].port_name, 0),
+        optimise_results.values(chiller.ports["input"].port_name, 0),
+    ):
+        if _input == 0:
+            assert _output == 0
+        else:
+            assert _output != 0
+            chiller_actual_cop.append(round(_output / _input, 3))
+
+    temperature_cop_factor = optimise_results.values(chiller.temperature_cop_param).tolist()
+
+    # Check that we observe variation in COP
+    assert min(chiller_actual_cop) != max(chiller_actual_cop)
+
+    # Check that observed COP values are within expected range
+    min_cop = min([v for v in temperature_cop_factor]) * chiller.nominal_cop
+    for cop_v in chiller_actual_cop:
+        i = chiller_actual_cop.index(cop_v)
+        assert cop_v >= min_cop
+        assert cop_v <= chiller.nominal_cop
+        assert round(cop_v, 3) == round(temperature_cop_factor[i] * chiller.nominal_cop, 3)
+
+
+def test_simple_chiller():
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    chiller = SimpleChiller(max_cooling_capacity=10, cooling_cop_time_series_ref="cooling_cop")
+    # Cooling demand is a heat source
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
@@ -563,22 +650,5 @@ def test_chiller_with_temperature_cop():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
+        profile=profile_short,
     )
-
-    chiller_actual_cop = np.divide(
-        optimise_results.values(chiller.ports["output"].port_name, 0),
-        optimise_results.values(chiller.ports["input"].port_name, 0),
-    ).tolist()
-
-    temperature_cop_factor = optimise_results.values(chiller.temperature_cop_param).tolist()
-
-    # Check that we observe variation in COP
-    assert min(chiller_actual_cop) != max(chiller_actual_cop)
-
-    # Check that observed COP values are within expected range
-    min_cop = min([v for v in temperature_cop_factor]) * chiller.nominal_cop
-    for cop_v in chiller_actual_cop:
-        i = chiller_actual_cop.index(cop_v)
-        assert cop_v >= min_cop
-        assert cop_v <= chiller.nominal_cop
-        assert round(cop_v, 3) == round(temperature_cop_factor[i] * chiller.nominal_cop, 3)

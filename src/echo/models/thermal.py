@@ -593,20 +593,21 @@ class ParametrisedHeatPump(TimeVaryingPiecewiseIONode):
     """A parametrised heat pump model.
 
 
-     This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
-     (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
-     and cooling at each step.
+    This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
+    (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
+    and cooling at each step.
 
-     HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
-     If dual_output attribute set to False, only one thermal bidirectional port is created. When one thermal port is
-     created the heat pump can do heating or cooling, but not both simultaneously.
-     If dual_output attribute set to True, two thermal ports are created cooling_output (thermal Sink) and
-     heating_output (thermal Source). When two thermal ports are created the heat pump can do simultaneous heating
-     and cooling (4 pipe system) with waste heat recovery from the cooling circuit (when running simultaneously).
+    HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
+    If dual_output attribute set to False, only one thermal bidirectional port is created. When one thermal port is
+    created the heat pump can do heating or cooling, but not both simultaneously.
+    If dual_output attribute set to True, two thermal ports are created cooling_output (thermal Sink) and
+    heating_output (thermal Source). When two thermal ports are created the heat pump can do simultaneous heating
+    and cooling (4 pipe system) with waste heat recovery from the cooling circuit (when running simultaneously).
 
-     The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
-     performance (COP) at each time step.
-     """
+    The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
+    performance (COP) at each time step.
+    """
+
     max_cooling_capacity: PositiveFloat = (
         None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
     )
