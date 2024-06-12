@@ -572,42 +572,6 @@ class ThermalStorage(Node):
         setattr(model, "SOC_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=soc_rule))
 
 
-class ParametrisedHeatPump(TimeVaryingPiecewiseIONode):
-    """A parametrised heat pump model.
-
-
-    This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
-    (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
-    and cooling at each step.
-
-    HeatPumpTwoPipe has one input electrical port, and one or two thermal ports.
-    If dual_output attribute set to False, only one thermal bidirectional port is created. When one thermal port is
-    created the heat pump can do heating or cooling, but not both simultaneously.
-    If dual_output attribute set to True, two thermal ports are created cooling_output (thermal Sink) and
-    heating_output (thermal Source). When two thermal ports are created the heat pump can do simultaneous heating
-    and cooling (4 pipe system) with waste heat recovery from the cooling circuit (when running simultaneously).
-
-    The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
-    performance (COP) at each time step.
-    """
-
-    max_cooling_capacity: PositiveFloat = (
-        None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
-    )
-    max_heating_capacity: PositiveFloat = (
-        None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
-    )
-    heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
-    # per time period
-    cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
-    # per time period
-    heating_cop_time_series_ref: Optional[str]
-    cooling_cop_time_series_ref: Optional[str]
-
-    dual_output: bool = False
-    pass
-
-
 class SimpleHeatPump(Node):
     """A simple heat pump model that uses predefined COP (coefficient of performance) values for heating and cooling.
 
@@ -660,7 +624,7 @@ class SimpleHeatPump(Node):
         self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
         self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
 
-    def set_ports_var_bounds(self, model):
+    def set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
 
         Split output port into non-positive and non-negative components.
@@ -677,14 +641,10 @@ class SimpleHeatPump(Node):
             lb=-1 * lower_bound,
         )
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        # Load coefficient of performance values from profile (if be set ref)
-        self.load_cop_values_from_profile(model, profile)
-        super(SimpleHeatPump, self).add_node_to_model(model, profile)
-        self.set_ports_var_bounds(model)
-        # Create internal variables representing amount of electrical power used to produce heating or cooling
-        # at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
-        # Intermediate helper variables.
+    def set_helper_variables(self, model: EchoConcreteModel):
+        """Create internal variables representing amount of electrical power used to produce heating or cooling
+        at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
+        Intermediate helper variables. """
         setattr(
             model, self.power_to_heat, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
         )
@@ -703,6 +663,13 @@ class SimpleHeatPump(Node):
             self.cooling_cop,
             en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series, domain=en.NonNegativeReals),
         )
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        # Load coefficient of performance values from profile (if be set ref)
+        self.load_cop_values_from_profile(model, profile)
+        super(SimpleHeatPump, self).add_node_to_model(model, profile)
+        self.set_ports_var_bounds(model)
+        self.set_helper_variables()
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
@@ -818,7 +785,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     performance (COP) time series data.
     """
 
-    waste_heat_recovery_coeff: NonNegativeFloat = 1  # FWaste heat recovery coefficient from cooling to heating loop
+    waste_heat_recovery_coeff: NonNegativeFloat = 1  # Waste heat recovery coefficient from cooling to heating loop
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -851,12 +818,15 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
         set_float_var_bounds(model, self.ports["cooling_output"].port_name, ub=upper_bound, lb=0)
         set_float_var_bounds(model, self.ports["heating_output"].port_name, ub=0, lb=-1 * lower_bound)
 
+    def create_heat_recovery_vars(self, model: EchoConcreteModel):
+        """Create variable for adjusted heat_output supplied by the heating loop"""
+        setattr(model, self.heating_out_adjusted, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
+        setattr(model, self.recovered_waste_heat, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Use parent class method
         super(SimpleHeatPumpDualOutput, self).add_node_to_model(model, profile)
-        # Create variable for adjusted heat_output supplied by the heating loop
-        setattr(model, self.heating_out_adjusted, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
-        setattr(model, self.recovered_waste_heat, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        self.create_heat_recovery_vars(model)
         self.create_delta_heat_flow_vars(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
@@ -960,3 +930,234 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
             return power_in[p, t] == getattr(model, self.power_to_heat)[p, t] + getattr(model, self.power_to_cool)[p, t]
 
         setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
+
+
+class ParametrisedHeatPump(TimeVaryingPiecewiseIONode):
+    """A parametrised heat pump model.
+
+    This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
+    (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
+    and cooling at each step.
+
+    HeatPumpTwoPipe has one input electrical port and one bidirectional thermal port.
+    The heat pump can do heating or cooling, but not both simultaneously.
+
+    The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
+    performance (COP) at each time step.
+    """
+
+    nominal_heating_cop: PositiveFloat  # Nominal coefficient of performance in heating mode COP = output/input
+    nominal_cooling_cop: PositiveFloat  # Nominal coefficient of performance in cooling mode COP = output/input
+    max_heating_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    max_cooling_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    partial_load_cop_heating: dict = {
+        0: 0,
+        0.25: 0.8,
+        0.5: 0.9,
+        0.75: 1,
+        1: 0.85,
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    partial_load_cop_cooling: dict = {
+        0: 0,
+        0.25: 0.8,
+        0.5: 0.9,
+        0.75: 1,
+        1: 0.85,
+    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    temperature_dependent_cop_heating: dict = {
+        -10: 0.4,
+        0: 0.6,
+        10: 0.7,
+        20: 0.9,
+        30: 1,
+        45: 1,
+    }  # Scaling factor for the nominal heating COP depending on
+    # the ambient/condenser temperature value
+    temperature_dependent_cop_cooling: dict = {
+        0: 0.7,
+        10: 1,
+        20: 0.5,
+        30: 0.35,
+        45: 0.2,
+    }  # Scaling factor for the nominal cooling COP depending on
+    # the ambient/condenser temperature value
+    ambient_temperature_dict: dict = (
+        None  # Condenser side temperature ambient air temperature or condenser
+        # water temperature for water cooled chiller
+    )
+    ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
+    constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
+    # when no array data is provided
+
+    # TODO: review the approach of scaling coefficients be between 0<cop_coeff<=1
+    partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
+    temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
+
+    @property
+    def temperature_cop_heating_param(self):
+        return f"temperature_cop_heating_factor_{self.node_name}"
+
+    @property
+    def temperature_cop_cooling_param(self):
+        return f"temperature_cop_cooling_factor_{self.node_name}"
+
+    # Naming variables
+    @property
+    def heating_cop(self):
+        return "heating_cop_" + self.node_name
+
+    @property
+    def cooling_cop(self):
+        return "cooling_cop_" + self.node_name
+
+    @property
+    def power_to_heat(self):
+        return "power_to_heat_" + self.node_name
+
+    @property
+    def power_to_cool(self):
+        return "power_to_cool_" + self.node_name
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.create_ports()
+
+    def create_ports(self):
+        # Create input and output ports
+        self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
+        self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        self.load_temperature_values_from_profile(model, profile)
+        self.define_temperature_dependent_cop_coefficient(model)
+
+    def set_ports_var_bounds(self, model):
+        """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
+
+        Split output port into non-positive and non-negative components.
+        """
+        # Split output port into +ve and -ve components. +ve component will be cooling,
+        # -ve component will be heating
+        self.ports["thermal_output"].constrain_pos_neg(model)
+        lower_bound = self.max_heating_capacity or model.bigM
+        upper_bound = self.max_cooling_capacity or model.bigM
+        set_float_var_bounds(
+            model,
+            self.ports["thermal_output"].port_name,
+            ub=upper_bound,
+            lb=-1 * lower_bound,
+        )
+
+    def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+        """When ambient temperature is set by str reference, load values from profile."""
+        if self.ambient_temperature_ref:
+            if self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
+                raise ValueError(f"Could not find reference column name {self.ambient_temperature_ref} in the profile.")
+            else:
+                self.ambient_temperature_dict = to_initial_values(
+                    profile_df,
+                    key=self.ambient_temperature_ref,
+                    time_periods=len(model.Time),
+                    expansion_periods=len(model.Expansion),
+                )
+
+    def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
+        """Get heating and cooling COP (coefficient of performance) scaling factor for each interval.
+
+        Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
+        """
+
+        temperature_points_heating = list(self.temperature_dependent_cop_heating.keys())
+        cop_points_heating = list(self.temperature_dependent_cop_heating.values())
+        temperature_points_cooling = list(self.temperature_dependent_cop_cooling.keys())
+        cop_points_cooling = list(self.temperature_dependent_cop_cooling.values())
+
+        if self.ambient_temperature_dict:
+            temperature_dict = self.ambient_temperature_dict
+        else:
+            # Set default amb temp value to 10 >> no change to nominal COP
+            temperature_dict = expand_as_dict(
+                TimeSeriesData(
+                    value=self.constant_ambient_temperature,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
+            )
+
+        # Use numpy linear interpolation function to get temperature related cop (coefficient of performance)
+        # scaling factor based on the temperature values in the temperature dictionary
+        min_temp_heating = min(self.temperature_dependent_cop_heating.keys())
+        max_temp_heating = max(self.temperature_dependent_cop_heating.keys())
+        temperature_cop_dict_heating = {
+            k: np.interp(clamp(v, min_temp_heating, max_temp_heating), temperature_points_heating, cop_points_heating)
+            for k, v in temperature_dict.items()
+        }
+
+        min_temp_cooling = min(self.temperature_dependent_cop_cooling.keys())
+        max_temp_cooling = max(self.temperature_dependent_cop_cooling.keys())
+        temperature_cop_dict_cooling = {
+            k: np.interp(clamp(v, min_temp_cooling, max_temp_cooling), temperature_points_cooling, cop_points_cooling)
+            for k, v in temperature_dict.items()
+        }
+
+        # Create a parameter holding ambient/condenser temperature dictionary
+        # (defaulting to self.constant_ambient_temperature)
+        setattr(
+            model,
+            self.temperature_cop_heating_param,
+            en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict_heating, domain=en.Reals),
+        )
+        setattr(
+            model,
+            self.temperature_cop_cooling_param,
+            en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict_cooling, domain=en.Reals),
+        )
+
+    def set_input_points_cooling(self, model: EchoConcreteModel):
+        """Input breakpoints are input electrical power values calculated as
+        cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
+
+        # get parameter holding temperature dependent COP (coefficient of performance) factor
+        temperature_cop_param = getattr(model, self.temperature_cop_cooling_param)
+
+        def input_point(k, v):
+            if v == 0:
+                return 0
+            else:
+                return k * self.max_cooling_capacity / (v * self.nominal_cooling_cop)
+
+        self.input_points = {
+            (p, t): [input_point(k, v) / temperature_cop_param[p, t] for k, v in self.partial_load_cop_cooling.items()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
+
+    def set_output_points_cooling(self, model: EchoConcreteModel):
+        """Outputs breakpoints are partial cooling load values (% of max capacity)"""
+        self.output_points = {
+            (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
+            for p in range(len(model.Expansion))
+            for t in range(len(model.Time))
+        }
+
+
+
+class ParametrisedHeatPumpDualOutput(ParametrisedHeatPump):
+    """A parametrised heat pump model with dual output (4-pipe).
+
+    This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
+    (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
+    and cooling at each step.
+
+    ParametrisedHeatPumpDualOutput has one input electrical port and two thermal ports: cooling_output (thermal Sink)
+    and heating_output (thermal Source).
+    In dual output configuration the heatpump can do heating and cooling simultaneously and independently.
+    When heating and cooling simultaneously, the waste heat from cooling loop can be used in the heating loop.
+
+    The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
+    performance (COP) at each time step.
+    """
+
+    waste_heat_recovery_coeff: NonNegativeFloat = 1  # Waste heat recovery coefficient from cooling to heating loop
+
+
