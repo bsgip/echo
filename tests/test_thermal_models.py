@@ -8,7 +8,13 @@ from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
 
 
-from echo.models.thermal import ThermalStorage, ParametrisedChiller, SimpleHeatPump, SimpleChiller
+from echo.models.thermal import (
+    ThermalStorage,
+    ParametrisedChiller,
+    SimpleHeatPump,
+    SimpleChiller,
+    SimpleHeatPumpDualOutput,
+)
 
 
 NUMBER_INTERVALS = 5
@@ -41,11 +47,14 @@ def test_simple_chiller_cop_error():
 
 
 def test_simple_heatpump():
-    """Test asset creation and default ports."""
+    """Test creation and assert default ports."""
     hp = SimpleHeatPump(cooling_cop_time_series=cooling_cop_dict, heating_cop_time_series=heating_cop_dict)
     assert len(hp.ports) == 2
 
-    hp_dual_output = SimpleHeatPump(
+
+def test_simple_heatpump_dual_output():
+    """Test creation and assert default ports."""
+    hp_dual_output = SimpleHeatPumpDualOutput(
         cooling_cop_time_series=cooling_cop_dict, heating_cop_time_series=heating_cop_dict, dual_output=True
     )
     assert len(hp_dual_output.ports) == 3

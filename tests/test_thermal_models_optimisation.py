@@ -8,7 +8,13 @@ from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
 from echo.models.base import Node, OptimisationGraph, Port
 
-from echo.models.thermal import ThermalStorage, ParametrisedChiller, SimpleChiller, SimpleHeatPump
+from echo.models.thermal import (
+    ThermalStorage,
+    ParametrisedChiller,
+    SimpleChiller,
+    SimpleHeatPump,
+    SimpleHeatPumpDualOutput,
+)
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ThroughputCost
@@ -67,7 +73,7 @@ cooling_demand_dict_non_zero = expand_as_dict(
 heating_load_data = TimeSeriesData(
     value=[5, 5, 3, 3, 0, 0], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
 )
-heating_load_dict = expand_as_dict(cooling_load_data)
+heating_load_dict = expand_as_dict(heating_load_data)
 
 combined_thermal_load_data = TimeSeriesData(
     value=[5, 3, -5, -3, 0, 10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
@@ -764,3 +770,86 @@ def test_simple_heatpump_single_output():
     total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)
+
+
+def test_simple_heatpump_dual_output():
+    """Test simple dual output heat pump operation with predefined coefficient of performance array"""
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    heatpump = SimpleHeatPumpDualOutput(
+        max_cooling_capacity=10,
+        max_heating_capacity=10,
+        cooling_cop_time_series_ref="cooling_cop",
+        heating_cop_time_series_ref="heating_cop",
+    )
+    # Cooling demand is a heat source
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
+    # Heating demand is a heat sink
+    heating_load = Node(node_name="heating_load", ports={"heating_demand_kwt": Sink(units=Units.KWT)})
+    heating_load.ports["heating_demand_kwt"].add_sink_profile(heating_load_dict)
+
+    system.add_node_obj([grid, heatpump, cooling_load, heating_load])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports["electrical_input"])
+    system.connect_ports_and_create_edge(heatpump.ports["cooling_output"], cooling_load.ports["cooling_demand_kwt"])
+    system.connect_ports_and_create_edge(heatpump.ports["heating_output"], heating_load.ports["heating_demand_kwt"])
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=30,
+            number_of_intervals=6,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        profile=profile_short,
+    )
+
+    # Coefficient of performance provided at initialisation
+    cooling_cop_array = optimise_results.values(heatpump.cooling_cop)
+    heating_cop_array = optimise_results.values(heatpump.heating_cop)
+
+    # Actual observed Coefficient of performance (output/input)
+    heating_cop_actual = list()
+    for _output, _input in zip(
+        optimise_results.values(heatpump.heating_out_adjusted),
+        optimise_results.values(heatpump.power_to_heat),
+    ):
+        if _input == 0:
+            assert _output == 0
+            heating_cop_actual.append(0)
+        else:
+            heating_cop_actual.append(-1 * round(_output / _input, 3))
+
+    # Assert that when output is non-zero, the actual COP equals provided COP
+    for _set_cop, _actual_cop in zip(heating_cop_array, heating_cop_actual):
+        if not _actual_cop == 0:
+            assert _set_cop == _actual_cop
+
+    cooling_cop_actual = list()
+    for _output, _input in zip(
+        optimise_results.values(heatpump.ports["cooling_output"].port_name),
+        optimise_results.values(heatpump.power_to_cool),
+    ):
+        if _input == 0:
+            assert _output == 0
+            cooling_cop_actual.append(0)
+        else:
+            cooling_cop_actual.append(round(_output / _input, 3))
+
+    # Assert that when output is non-zero, the actual COP equals provided COP
+    for _set_cop, _actual_cop in zip(cooling_cop_array, cooling_cop_actual):
+        if not _actual_cop == 0:
+            assert _set_cop == _actual_cop
+    # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
+    )
+    total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
+
+    assert all(power_to_heat_and_cool == total_power_consumed)
+
+    total_heat_delivered = optimise_results.values(heatpump.ports["heating_output"].port_name).sum()
+    total_adjusted_heat_from_source = optimise_results.values(heatpump.heating_out_adjusted).sum()
+    total_waste_heat_recovered = optimise_results.values(heatpump.recovered_waste_heat).sum()
+    assert round(total_heat_delivered - total_adjusted_heat_from_source, 2) == -1 * round(total_waste_heat_recovered, 2)
