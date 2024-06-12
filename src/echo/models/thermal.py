@@ -669,7 +669,7 @@ class SimpleHeatPump(Node):
         self.load_cop_values_from_profile(model, profile)
         super(SimpleHeatPump, self).add_node_to_model(model, profile)
         self.set_ports_var_bounds(model)
-        self.set_helper_variables()
+        self.set_helper_variables(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
@@ -1010,15 +1010,6 @@ class ParametrisedHeatPump(Node):
     def temperature_cop_heating_param(self):
         return f"temperature_cop_heating_factor_{self.node_name}"
 
-    # Naming variables
-    @property
-    def heating_cop(self):
-        return "heating_cop_" + self.node_name
-
-    @property
-    def cooling_cop(self):
-        return "cooling_cop_" + self.node_name
-
     @property
     def power_to_heat(self):
         return "power_to_heat_" + self.node_name
@@ -1046,7 +1037,7 @@ class ParametrisedHeatPump(Node):
         self.set_output_points_cooling(model)
         self.set_input_points_heating(model)
         self.set_output_points_heating(model)
-        self.set_ports_var_bounds(model)
+        self.set_var_bounds(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         """Set up constraints associated with the node"""
@@ -1065,7 +1056,7 @@ class ParametrisedHeatPump(Node):
             model, power_to_cool_var=self.power_to_cool, cooling_out_var=cool_out_var
         )
 
-    def set_ports_var_bounds(self, model: EchoConcreteModel):
+    def set_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
 
         Split output port into non-positive and non-negative components.
@@ -1100,7 +1091,7 @@ class ParametrisedHeatPump(Node):
         min_output_heating = min(min(self.output_points_heating.values()))
         set_float_var_bounds(
             model,
-            self.power_to_cool,
+            self.power_to_heat,
             ub=max_input_heating,
             lb=min_input_heating,
         )
@@ -1120,18 +1111,6 @@ class ParametrisedHeatPump(Node):
         )
         setattr(
             model, self.power_to_cool, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
-        )
-
-        # Create params for heating and cooling coefficients of performance
-        setattr(
-            model,
-            self.heating_cop,
-            en.Param(model.Expansion, model.Time, initialize=self.heating_cop_time_series, domain=en.NonNegativeReals),
-        )
-        setattr(
-            model,
-            self.cooling_cop,
-            en.Param(model.Expansion, model.Time, initialize=self.cooling_cop_time_series, domain=en.NonNegativeReals),
         )
         # Split output port into +ve and -ve components. +ve component will be cooling,
         # -ve component will be heating

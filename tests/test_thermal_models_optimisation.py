@@ -14,6 +14,7 @@ from echo.models.thermal import (
     SimpleChiller,
     SimpleHeatPump,
     SimpleHeatPumpDualOutput,
+    ParametrisedHeatPump,
 )
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
@@ -853,3 +854,92 @@ def test_simple_heatpump_dual_output():
     total_adjusted_heat_from_source = optimise_results.values(heatpump.heating_out_adjusted).sum()
     total_waste_heat_recovered = optimise_results.values(heatpump.recovered_waste_heat).sum()
     assert round(total_heat_delivered - total_adjusted_heat_from_source, 2) == -1 * round(total_waste_heat_recovered, 2)
+
+
+def test_parametrised_heatpump_single_output():
+    """Test parametrised heat pump operation"""
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    heatpump = ParametrisedHeatPump(
+        max_cooling_capacity=10, max_heating_capacity=10, nominal_heating_cop=5, nominal_cooling_cop=3
+    )
+    # Cooling demand is a heat source
+    thermal_load = Node(
+        node_name="thermal_load",
+        ports={
+            "thermal_demand_kwt": Port(
+                units=Units.KWT,
+                flows=Flows.Both,
+                import_constraint=FlowConstraint.NoConstraint,
+                export_constraint=FlowConstraint.NoConstraint,
+                flow_type=OptimisationType.Parameter,
+            )
+        },
+    )
+    thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
+
+    system.add_node_obj([grid, heatpump, thermal_load])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports["electrical_input"])
+    system.connect_ports_and_create_edge(heatpump.ports["thermal_output"], thermal_load.ports["thermal_demand_kwt"])
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=30,
+            number_of_intervals=6,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        profile=profile_short,
+    )
+
+    # Actual observed Coefficient of performance (output/input)
+    heating_cop_actual = list()
+    for _output, _input in zip(
+        optimise_results.values(heatpump.ports["thermal_output"].neg),
+        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+    ):
+        if _input == 0:
+            assert _output == 0
+            heating_cop_actual.append(0)
+        else:
+            heating_cop_actual.append(-1 * round(_output / _input, 3))
+
+    min_cop_heating = (
+        min([v for v in heatpump.temperature_dependent_cop_heating.values() if v != 0])
+        * min([v for v in heatpump.partial_load_cop_heating.values() if v != 0])
+        * heatpump.nominal_heating_cop
+    )
+    for cop_v in heating_cop_actual:
+        if cop_v:
+            assert cop_v >= min_cop_heating
+            assert cop_v <= heatpump.nominal_heating_cop
+
+    cooling_cop_actual = list()
+    for _output, _input in zip(
+        optimise_results.values(heatpump.ports["thermal_output"].pos),
+        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+    ):
+        if _input == 0:
+            assert _output == 0
+            cooling_cop_actual.append(0)
+        else:
+            cooling_cop_actual.append(round(_output / _input, 3))
+
+    min_cop_cooling = (
+        min([v for v in heatpump.temperature_dependent_cop_cooling.values() if v != 0])
+        * min([v for v in heatpump.partial_load_cop_cooling.values() if v != 0])
+        * heatpump.nominal_cooling_cop
+    )
+    for cop_v in cooling_cop_actual:
+        if cop_v:
+            assert cop_v >= min_cop_cooling
+            assert cop_v <= heatpump.nominal_cooling_cop
+
+    # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
+    )
+    total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
+
+    assert all(power_to_heat_and_cool == total_power_consumed)
