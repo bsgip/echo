@@ -1298,22 +1298,3 @@ class ParametrisedHeatPump(Node):
             for p in range(len(model.Expansion))
             for t in range(len(model.Time))
         }
-
-
-class ParametrisedHeatPumpDualOutput(ParametrisedHeatPump):
-    """A parametrised heat pump model with dual output (4-pipe).
-
-    This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
-    (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
-    and cooling at each step.
-
-    ParametrisedHeatPumpDualOutput has one input electrical port and two thermal ports: cooling_output (thermal Sink)
-    and heating_output (thermal Source).
-    In dual output configuration the heatpump can do heating and cooling simultaneously and independently.
-    When heating and cooling simultaneously, the waste heat from cooling loop can be used in the heating loop.
-
-    The conversion of input electrical energy to heating or cooling output depends on calculated coefficients of
-    performance (COP) at each time step.
-    """
-
-    waste_heat_recovery_coeff: NonNegativeFloat = 1  # Waste heat recovery coefficient from cooling to heating loop
