@@ -1007,10 +1007,6 @@ class ParametrisedHeatPump(Node):
         return f"temperature_cop_cooling_factor_{self.node_name}"
 
     @property
-    def temperature_cop_heating_param(self):
-        return f"temperature_cop_heating_factor_{self.node_name}"
-
-    @property
     def power_to_heat(self):
         return "power_to_heat_" + self.node_name
 
