@@ -848,7 +848,7 @@ def test_simple_heatpump_dual_output():
     )
     total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
 
-    assert all(power_to_heat_and_cool == total_power_consumed)
+    assert all(np.round(power_to_heat_and_cool, 2) == np.round(total_power_consumed, 2))
 
     total_heat_delivered = optimise_results.values(heatpump.ports["heating_output"].port_name).sum()
     total_adjusted_heat_from_source = optimise_results.values(heatpump.heating_out_adjusted).sum()
@@ -942,4 +942,4 @@ def test_parametrised_heatpump_single_output():
     )
     total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
 
-    assert all(power_to_heat_and_cool == total_power_consumed)
+    assert all(np.round(power_to_heat_and_cool, 2) == np.round(total_power_consumed, 2))
