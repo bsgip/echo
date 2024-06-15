@@ -316,9 +316,9 @@ class Storage(Port):
     max_capacity: float
     depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
     min_soc: float = 0
-    charging_power_limit: float
+    charging_power_limit: Union[float, ArrayType]
     discharging_power_limit: float
-    charging_efficiency: float = 1
+    charging_efficiency: Union[float, ArrayType] = 1
     discharging_efficiency: float = 1
     initial_state_of_charge: float
     fixed_storage_capacity: bool = True
@@ -362,7 +362,11 @@ class Storage(Port):
             ),
         )
         # Apply charging constraints as bounds on port_name variable
-        set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
+        ub_dict = generate_array_constraint(self.charging_power_limit, time_periods=len(model.Time), expansion_periods=1)
+        lb_dict = generate_array_constraint(self.discharging_power_limit, time_periods=len(model.Time), expansion_periods=1)
+        set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=ub_dict, lb=lb_dict)
+
+        # set_float_var_bounds(model, self.port_name, ub=self.charging_power_limit, lb=self.discharging_power_limit)
 
         if self.fixed_storage_capacity is False:
             setattr(model, self.optimised_capacity, en.Var(initialize=0, domain=en.NonNegativeReals))
@@ -386,21 +390,21 @@ class Storage(Port):
                 return (
                     soc[p, t]
                     == self.initial_state_of_charge
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency
+                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
                     + neg[p, t] * kw_to_kWh / self.discharging_efficiency
                 )
             elif t == 0:
                 return (
                     soc[p, t]
                     == soc[p - 1, max_t]
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency
+                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
                     + neg[p, t] * kw_to_kWh / self.discharging_efficiency
                 )
             else:
                 return (
                     soc[p, t]
                     == soc[p, t - 1]
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency
+                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
                     + neg[p, t] * kw_to_kWh / self.discharging_efficiency
                 )
 
@@ -412,7 +416,7 @@ class Storage(Port):
             else:
                 return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh
 
-        if (self.charging_efficiency == 1) and (self.discharging_efficiency == 1):
+        if ((self.charging_efficiency==1).all()) and (self.discharging_efficiency==1):
             setattr(
                 model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency)
             )
