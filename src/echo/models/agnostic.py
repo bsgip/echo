@@ -317,9 +317,9 @@ class Storage(Port):
     depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
     min_soc: float = 0
     charging_power_limit: Union[float, ArrayType]
-    discharging_power_limit: float
+    discharging_power_limit: Union[float, ArrayType]
     charging_efficiency: Union[float, ArrayType] = 1
-    discharging_efficiency: float = 1
+    discharging_efficiency: Union[float, ArrayType] = 1
     initial_state_of_charge: float
     fixed_storage_capacity: bool = True
     storage_capacity_cost: Optional[PositiveFloat]
@@ -344,6 +344,37 @@ class Storage(Port):
         self.import_constraint_value = self.charging_power_limit
         self.export_constraint_value = self.discharging_power_limit
 
+    def update(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        self.__init__(
+            node_name=self.node_name,
+            uid=self.uid,
+            charge_mode=self.charge_mode,
+            available=available if available is not None else self.available,
+            usage=usage if usage is not None else self.usage,
+            connection_port_name=self.connection_port_name,
+            tod_charging=self.tod_charging,
+            interval_duration=interval_duration if interval_duration is not None else self.interval_duration,
+            max_capacity=self.max_capacity,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            charging_efficiency=self.charging_efficiency,
+            discharging_efficiency=self.discharging_efficiency,
+            initial_state_of_charge=(
+                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
+            ),
+            trip_slack=self.trip_slack,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+            port_dict_name_to_port_uid_map=self.port_dict_name_to_port_uid_map,
+            port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
+        )
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
@@ -385,27 +416,39 @@ class Storage(Port):
         soc = getattr(model, self.soc_value)
         power = getattr(model, self.port_name)
 
+        charging_efficiency_array = generate_array_constraint(
+            self.charging_efficiency,
+            time_periods=len(model.Time),
+            expansion_periods=1
+        )
+
+        discharging_efficiency_array = generate_array_constraint(
+            self.discharging_efficiency,
+            time_periods=len(model.Time),
+            expansion_periods=1
+        )
+
         def SOC_rule(model: EchoConcreteModel, p, t):
             if p == 0 and t == 0:
                 return (
                     soc[p, t]
                     == self.initial_state_of_charge
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
-                    + neg[p, t] * kw_to_kWh / self.discharging_efficiency
+                    + pos[p, t] * kw_to_kWh * charging_efficiency_array[p, t]
+                    + neg[p, t] * kw_to_kWh / discharging_efficiency_array[p, t]
                 )
             elif t == 0:
                 return (
                     soc[p, t]
                     == soc[p - 1, max_t]
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
-                    + neg[p, t] * kw_to_kWh / self.discharging_efficiency
+                    + pos[p, t] * kw_to_kWh * charging_efficiency_array[p, t]
+                    + neg[p, t] * kw_to_kWh / discharging_efficiency_array[p, t]
                 )
             else:
                 return (
                     soc[p, t]
                     == soc[p, t - 1]
-                    + pos[p, t] * kw_to_kWh * self.charging_efficiency[t]
-                    + neg[p, t] * kw_to_kWh / self.discharging_efficiency
+                    + pos[p, t] * kw_to_kWh * charging_efficiency_array[p, t]
+                    + neg[p, t] * kw_to_kWh / discharging_efficiency_array[p, t]
                 )
 
         def SOC_rule_perfect_efficiency(model: EchoConcreteModel, p, t):
@@ -416,7 +459,7 @@ class Storage(Port):
             else:
                 return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh
 
-        if ((self.charging_efficiency==1).all()) and (self.discharging_efficiency==1):
+        if ((self.charging_efficiency == 1).all()) and ((self.discharging_efficiency==1).all()):
             setattr(
                 model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency)
             )
