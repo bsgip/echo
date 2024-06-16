@@ -137,12 +137,22 @@ battery = Node(node_name="battery")
 b = ElectricalStorage(
     max_capacity=15.0,  # max capacity of battery in kwh
     depth_of_discharge_limit=0,  # allowable depth of discharge in range [0,100] (i.e. percent)
-    charging_power_limit=1.25*np.array([10.0]*len(test_load)),  # max charging rate in kW
+    charging_power_limit=1.25,  # max charging rate in kW
     discharging_power_limit=-1.25,  # max discharging rate in kW
-    charging_efficiency=np.array([10.0]*len(test_load)),  # charging efficiency in range [0,1]
+    charging_efficiency=1,  # charging efficiency in range [0,1]
     discharging_efficiency=1,  # discharging efficiency in range [0,1]
     initial_state_of_charge=0.0,
 )  # initial state of charge in kWh
+
+b.update(
+    charging_power_limit=1.25*np.array([10.0]*len(test_load)),  # max charging rate in kW
+    discharging_power_limit=-1.25*np.array([10.0]*len(test_load)),  # max charging rate in kW
+    charging_efficiency=np.array([10.0]*len(test_load)),
+    discharging_efficiency=np.array([10.0]*len(test_load)),
+)  # initial state of charge in kWh
+
+
+
 # connect the electrical storage to a port on the battery node
 battery.ports["bess"] = b
 

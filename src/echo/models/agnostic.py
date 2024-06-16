@@ -344,37 +344,6 @@ class Storage(Port):
         self.import_constraint_value = self.charging_power_limit
         self.export_constraint_value = self.discharging_power_limit
 
-    def update(
-        self,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
-    ):
-        self.__init__(
-            node_name=self.node_name,
-            uid=self.uid,
-            charge_mode=self.charge_mode,
-            available=available if available is not None else self.available,
-            usage=usage if usage is not None else self.usage,
-            connection_port_name=self.connection_port_name,
-            tod_charging=self.tod_charging,
-            interval_duration=interval_duration if interval_duration is not None else self.interval_duration,
-            max_capacity=self.max_capacity,
-            depth_of_discharge_limit=self.depth_of_discharge_limit,
-            charging_power_limit=self.charging_power_limit,
-            discharging_power_limit=self.discharging_power_limit,
-            charging_efficiency=self.charging_efficiency,
-            discharging_efficiency=self.discharging_efficiency,
-            initial_state_of_charge=(
-                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
-            ),
-            trip_slack=self.trip_slack,
-            soc_conserv=self.soc_conserv,
-            soc_conserv_cost=self.soc_conserv_cost,
-            port_dict_name_to_port_uid_map=self.port_dict_name_to_port_uid_map,
-            port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
-        )
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)

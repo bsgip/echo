@@ -5,7 +5,7 @@ import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, conlist, constr
 
-from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
+from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units, Flows, FlowConstraint
 from echo.exceptions import validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
@@ -48,6 +48,35 @@ class ElectricalGeneration(Source):
 
 class ElectricalStorage(Storage):
     units = Units.KW
+
+    def update(
+        self,
+        charging_power_limit: Optional[Union[float, ArrayType]] = None,
+        discharging_power_limit: Optional[Union[float, ArrayType]] = None,
+        charging_efficiency: Optional[Union[float, ArrayType]] = None,
+        discharging_efficiency: Optional[Union[float, ArrayType]] = None,
+    ):
+        self.__init__(
+            flows=Flows.Both,
+            flow_type=OptimisationType.Variable,
+            import_constraint=FlowConstraint.Fixed,
+            export_constraint=FlowConstraint.Fixed,
+            max_capacity=self.max_capacity,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            min_soc=self.min_soc,
+            charging_power_limit=charging_power_limit if charging_power_limit is not None else
+            self.charging_power_limit,
+            discharging_power_limit=discharging_power_limit if discharging_power_limit is not None else
+            self.discharging_power_limit,
+            charging_efficiency=charging_efficiency if charging_efficiency is not None else self.charging_efficiency,
+            discharging_efficiency=discharging_efficiency if discharging_efficiency is not None else
+            self.discharging_efficiency,
+            initial_state_of_charge=self.initial_state_of_charge,
+            fixed_storage_capacity=self.fixed_storage_capacity,
+            storage_capacity_cost=self.storage_capacity_cost,
+            regularise=self.regularise,
+            uid=self.uid,
+            ),
 
 
 class MobileElectricalStorage(MobileStorage):
