@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, PositiveFloat, root_validator, validator
@@ -428,7 +429,7 @@ class Storage(Port):
             else:
                 return soc[p, t] == soc[p, t - 1] + power[p, t] * kw_to_kWh
 
-        if ((self.charging_efficiency == 1).all()) and ((self.discharging_efficiency==1).all()):
+        if ((np.array(charging_efficiency_array) == 1).all()) and ((np.array(discharging_efficiency_array)==1).all()):
             setattr(
                 model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_perfect_efficiency)
             )
