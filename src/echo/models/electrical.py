@@ -331,15 +331,20 @@ class Inverter(Node):
     ac_dc_efficiency: float = Field(default=1.0, ge=0, le=1)
     ac_port_name: constr(min_length=1)
     dc_port_names: conlist(str, min_items=1)
+    ac_port_uid: Optional[constr(min_length=1)] = None
+    dc_port_names_to_uids: Optional[Dict[str, str]] = None
 
     def __init__(
         self,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self._add_ac_port(port_name=self.ac_port_name)
+        self._add_ac_port(port_name=self.ac_port_name, uid=self.ac_port_uid)
         for port_name in self.dc_port_names:
-            self._add_port(port_name=port_name)
+            self._add_port(
+                port_name=port_name,
+                uid=self.dc_port_names_to_uids[port_name] if self.dc_port_names_to_uids is not None else None
+            )
 
     def _add_port(self, port_name: str, uid: Union[str, None] = None):
         p = ElectricalPort(port_name=port_name, uid=uid)
