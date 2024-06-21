@@ -225,7 +225,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
         }
 
     def add_heat_rejection_constraint(self, model: EchoConcreteModel):
-        """Get vari    set_input_pointsables representing port flow values for cooling output (heat in) and
+        """Get variables representing port flow values for cooling output (heat in) and
         rejected heat flow, set the constraint."""
         heat_in = getattr(model, self.ports["output"].port_name)
         heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
@@ -988,6 +988,10 @@ class ParametrisedHeatPump(Node):
     ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
     constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
     # when no array data is provided
+    heat_intake_rejection_port: bool = False  # If True, add heat intake_rejection port
+    heat_intake_rejection_coefficient: PositiveFloat = 1
+    # Heat intake coefficient  = heating_delivered_to_load/heat_intake_from_source
+    # Heat rejection coefficient = cooling_delivered_to_load/heat_rejected_to_source (environment)
 
     # TODO: We do not want user to ever provide these. Rewrite to be pyomo parameter
     input_points_cooling: dict = None
@@ -1022,6 +1026,8 @@ class ParametrisedHeatPump(Node):
         # Create input and output ports
         self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
         self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+        if self.heat_intake_rejection_port:
+            self.ports["heat_intake_rejection"] = FlexPort(units=self.Units.KWT)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
@@ -1050,6 +1056,28 @@ class ParametrisedHeatPump(Node):
         # set piecewise linear constraint for cooling output
         self.set_piecewise_linear_cooling_cop_constraint(
             model, power_to_cool_var=self.power_to_cool, cooling_out_var=cool_out_var
+        )
+        if "heat_intake_rejection" in self.ports:
+            self.add_heat_intake_rejection_constraint(model)
+
+    def add_heat_intake_rejection_constraint(self, model: EchoConcreteModel):
+        """Get variable representing port flow values for thermal output and
+        intake or rejection of heat flow, set the constraint."""
+        thermal_output = getattr(model, self.ports["thermal_output"].port_name)
+        heat_intake_reject = getattr(model, self.ports["heat_intake_rejection"].port_name)
+
+        def heat_reject_constraint(model: EchoConcreteModel, p, t):
+            """Amount of rejected heat to the environment at each interval equals amount of cooling delivered (heat in)
+            multiplied by heat rejection coefficient.
+            Amount of heat intake from source/ environment at each interval equals amount of heating delivered (heat out)
+            multiplied by heat rejection coefficient.
+            """
+            return heat_intake_reject[p, t] == -thermal_output[p, t] * self.heat_intake_rejection_coefficient
+
+        setattr(
+            model,
+            "heat_intake_rejection_constraint_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
     def set_var_bounds(self, model: EchoConcreteModel):
