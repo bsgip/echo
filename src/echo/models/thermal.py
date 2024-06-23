@@ -1069,8 +1069,8 @@ class ParametrisedHeatPump(Node):
         def heat_reject_constraint(model: EchoConcreteModel, p, t):
             """Amount of rejected heat to the environment at each interval equals amount of cooling delivered (heat in)
             multiplied by heat rejection coefficient.
-            Amount of heat intake from source/ environment at each interval equals amount of heating delivered (heat out)
-            multiplied by heat rejection coefficient.
+            Amount of heat intake from source/ environment at each interval equals amount of heating delivered
+            (heat out) multiplied by heat rejection coefficient.
             """
             return heat_intake_reject[p, t] == -thermal_output[p, t] * self.heat_intake_rejection_coefficient
 
