@@ -54,7 +54,7 @@ class SimpleChiller(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Load coefficient of performance values from profile (if provided by reference)
-        self.load_cop_values_from_profile(model, profile)
+        self._load_cop_values_from_profile(model, profile)
         super(SimpleChiller, self).add_node_to_model(model, profile)
         setattr(
             model,
@@ -64,9 +64,9 @@ class SimpleChiller(Node):
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
-        self.apply_node_transformation_constraints(model)
+        self._apply_node_transformation_constraints(model)
 
-    def apply_node_transformation_constraints(self, model: EchoConcreteModel):
+    def _apply_node_transformation_constraints(self, model: EchoConcreteModel):
         cooling_out = getattr(model, self.ports["output"].port_name)  # cooling delivered at thermal port
         cooling_cop = getattr(model, self.cooling_cop)
 
@@ -81,7 +81,7 @@ class SimpleChiller(Node):
             model, "cool_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule)
         )
 
-    def load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def _load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When coefficient of performance timeseries is set by str reference, load values from profile."""
 
         if self.cooling_cop_time_series_ref:
@@ -89,13 +89,12 @@ class SimpleChiller(Node):
                 raise ValueError(
                     "Could not find reference column name " f"{self.cooling_cop_time_series_ref} in the profile."
                 )
-            else:
-                self.cooling_cop_time_series = to_initial_values(
-                    profile_df,
-                    key=self.cooling_cop_time_series_ref,
-                    time_periods=len(model.Time),
-                    expansion_periods=len(model.Expansion),
-                )
+            self.cooling_cop_time_series = to_initial_values(
+                profile_df,
+                key=self.cooling_cop_time_series_ref,
+                time_periods=len(model.Time),
+                expansion_periods=len(model.Expansion),
+            )
 
 
 class ParametrisedChiller(TimeVaryingPiecewiseIONode):
@@ -638,7 +637,7 @@ class SimpleHeatPump(Node):
             model,
             self.ports["thermal_output"].port_name,
             ub=upper_bound,
-            lb=-1 * lower_bound,
+            lb=-lower_bound,
         )
 
     def set_helper_variables(self, model: EchoConcreteModel):
@@ -666,7 +665,7 @@ class SimpleHeatPump(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Load coefficient of performance values from profile (if be set ref)
-        self.load_cop_values_from_profile(model, profile)
+        self._load_cop_values_from_profile(model, profile)
         super(SimpleHeatPump, self).add_node_to_model(model, profile)
         self.set_ports_var_bounds(model)
         self.set_helper_variables(model)
@@ -680,7 +679,7 @@ class SimpleHeatPump(Node):
         self.apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
         self.apply_node_transformation_constraints(model, heating_out_var=h_out_var, cooling_out_var=c_out_var)
 
-    def load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def _load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When coefficient of performance timeseries is set by str reference, load values from profile."""
         if self.cooling_cop_time_series_ref:
             if self.cooling_cop_time_series_ref not in profile_df.columns:
