@@ -672,12 +672,14 @@ class SimpleHeatPump(Node):
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
-        h_out_var = self.ports["thermal_output"].neg
-        c_out_var = self.ports["thermal_output"].pos
+        heating_out_var = self.ports["thermal_output"].neg
+        cooling_out_var = self.ports["thermal_output"].pos
         is_cooling_var = self.ports["thermal_output"].is_pos
         # Apply heating_cooling constrains and transformation constraint
         self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
-        self._apply_node_transformation_constraints(model, heating_out_var=h_out_var, cooling_out_var=c_out_var)
+        self._apply_node_transformation_constraints(
+            model, heating_out_var=heating_out_var, cooling_out_var=cooling_out_var
+        )
 
     def _load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When coefficient of performance timeseries is set by str reference, load values from profile."""
@@ -789,7 +791,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     def __init__(self, **data):
         super().__init__(**data)
         # Create input and output ports: electrical input port, cooling output port and heating output port
-        # self.create_ports()
+        self.create_ports()
 
     @property
     def heating_out_adjusted(self):
