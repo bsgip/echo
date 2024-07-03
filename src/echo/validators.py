@@ -201,7 +201,7 @@ def validate_partial_load_cop(cls, values):
             f"All keys in partial load cop must be float values between 0 and 1, offending key {k}",
         )
         validate(
-            0 < v <= 1,
+            0 <= v <= 1,
             f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
         )
     return values
