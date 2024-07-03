@@ -150,15 +150,15 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
             self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        self.load_temperature_values_from_profile(model, profile)
-        self.define_temperature_dependent_cop_coefficient(model)
-        self.set_input_points(model)
-        self.set_output_points(model)
+        self._load_temperature_values_from_profile(model, profile)
+        self._define_temperature_dependent_cop_coefficient(model)
+        self._set_input_points(model)
+        self._set_output_points(model)
         super(ParametrisedChiller, self).add_node_to_model(model, profile)
         if "heat_rejection" in self.ports:
-            self.add_heat_rejection_constraint(model)
+            self._add_heat_rejection_constraint(model)
 
-    def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
+    def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get COP (coefficient of performance) scaling factor for each interval.
 
         Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
@@ -196,7 +196,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
             en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict, domain=en.Reals),
         )
 
-    def set_input_points(self, model: EchoConcreteModel):
+    def _set_input_points(self, model: EchoConcreteModel):
         """Input breakpoints are input electrical power values calculated as
         cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 
@@ -215,7 +215,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
             for t in range(len(model.Time))
         }
 
-    def set_output_points(self, model: EchoConcreteModel):
+    def _set_output_points(self, model: EchoConcreteModel):
         """Outputs breakpoints are partial cooling load values (% of max capacity)"""
         self.output_points = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
@@ -223,7 +223,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
             for t in range(len(model.Time))
         }
 
-    def add_heat_rejection_constraint(self, model: EchoConcreteModel):
+    def _add_heat_rejection_constraint(self, model: EchoConcreteModel):
         """Get variables representing port flow values for cooling output (heat in) and
         rejected heat flow, set the constraint."""
         heat_in = getattr(model, self.ports["output"].port_name)
@@ -241,7 +241,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
             en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
-    def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def _load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When ambient temperature is set by str reference, load values from profile."""
         if self.ambient_temperature_ref:
             if self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
@@ -448,14 +448,14 @@ class ThermalStorage(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(ThermalStorage, self).add_node_to_model(model, profile)
-        self.load_values_from_profile(model, profile)
-        self.create_and_bound_temp_variable(model)
-        self.create_soc_variable(model)
-        self.apply_net_loss_and_gain_constraint(model)
-        self.apply_energy_balance_constraint(model)
-        self.apply_soc_constraint(model)
+        self._load_values_from_profile(model, profile)
+        self._create_and_bound_temp_variable(model)
+        self._create_soc_variable(model)
+        self._apply_net_loss_and_gain_constraint(model)
+        self._apply_energy_balance_constraint(model)
+        self._apply_soc_constraint(model)
 
-    def load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def _load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """For all attributes set by str reference, load values from profile."""
         if self.ambient_temp_ref:
             if self.ambient_temp_ref not in profile_df.columns:
@@ -474,13 +474,13 @@ class ThermalStorage(Node):
         else:
             pass
 
-    def create_and_bound_temp_variable(self, model: EchoConcreteModel):
+    def _create_and_bound_temp_variable(self, model: EchoConcreteModel):
         # Create temperature variable
         setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
         # Bound temp variable to be within range
         set_float_var_bounds(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
 
-    def create_soc_variable(self, model: EchoConcreteModel):
+    def _create_soc_variable(self, model: EchoConcreteModel):
         # Calculate initial state of charge based on the initial internal temperature value
         initial_soc = self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
         # Create soc variable and bound it
@@ -490,7 +490,7 @@ class ThermalStorage(Node):
             en.Var(model.Expansion, model.Time, initialize=initial_soc, bounds=(0, self.max_heat_storage_capacity)),
         )
 
-    def apply_net_loss_and_gain_constraint(self, model: EchoConcreteModel):
+    def _apply_net_loss_and_gain_constraint(self, model: EchoConcreteModel):
         # Create variable for net losses and gains
         setattr(model, self.net_loss_gain, en.Var(model.Expansion, model.Time, domain=en.Reals))
 
@@ -517,7 +517,7 @@ class ThermalStorage(Node):
             en.Constraint(model.Expansion, model.Time, rule=net_loss_gain_constraint),
         )
 
-    def apply_energy_balance_constraint(self, model: EchoConcreteModel):
+    def _apply_energy_balance_constraint(self, model: EchoConcreteModel):
         # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         dt_sec = model.scenario_settings.interval_duration * 60
         max_t = len(model.Time)
@@ -557,7 +557,7 @@ class ThermalStorage(Node):
             en.Constraint(model.Expansion, model.Time, rule=change_of_internal_temperature_constraint),
         )
 
-    def apply_soc_constraint(self, model: EchoConcreteModel):
+    def _apply_soc_constraint(self, model: EchoConcreteModel):
         # State of charge in Joule or KWTh is a linear function of the internal temperature
         def soc_rule(model: EchoConcreteModel, p, t):
             soc = getattr(model, self.soc_value)
@@ -623,7 +623,7 @@ class SimpleHeatPump(Node):
         self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
         self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
 
-    def set_ports_var_bounds(self, model: EchoConcreteModel):
+    def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
 
         Split output port into non-positive and non-negative components.
@@ -640,7 +640,7 @@ class SimpleHeatPump(Node):
             lb=-lower_bound,
         )
 
-    def set_helper_variables(self, model: EchoConcreteModel):
+    def _set_helper_variables(self, model: EchoConcreteModel):
         """Create internal variables representing amount of electrical power used to produce heating or cooling
         at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
         Intermediate helper variables."""
@@ -667,8 +667,8 @@ class SimpleHeatPump(Node):
         # Load coefficient of performance values from profile (if be set ref)
         self._load_cop_values_from_profile(model, profile)
         super(SimpleHeatPump, self).add_node_to_model(model, profile)
-        self.set_ports_var_bounds(model)
-        self.set_helper_variables(model)
+        self._set_ports_var_bounds(model)
+        self._set_helper_variables(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
@@ -676,8 +676,8 @@ class SimpleHeatPump(Node):
         c_out_var = self.ports["thermal_output"].pos
         is_cooling_var = self.ports["thermal_output"].is_pos
         # Apply heating_cooling constrains and transformation constraint
-        self.apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
-        self.apply_node_transformation_constraints(model, heating_out_var=h_out_var, cooling_out_var=c_out_var)
+        self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
+        self._apply_node_transformation_constraints(model, heating_out_var=h_out_var, cooling_out_var=c_out_var)
 
     def _load_cop_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When coefficient of performance timeseries is set by str reference, load values from profile."""
@@ -707,7 +707,7 @@ class SimpleHeatPump(Node):
                     expansion_periods=len(model.Expansion),
                 )
 
-    def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
+    def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
         power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
 
@@ -739,7 +739,7 @@ class SimpleHeatPump(Node):
 
         setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
-    def apply_node_transformation_constraints(
+    def _apply_node_transformation_constraints(
         self, model: EchoConcreteModel, heating_out_var: str, cooling_out_var: str
     ):
         heating_out = getattr(model, heating_out_var)  # heating delivered at thermal port (heat exported)
@@ -810,14 +810,14 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
         self.ports["cooling_output"] = FlexSink(units=Units.KWT)  # Heat pump has one cooling output port
         self.ports["heating_output"] = FlexSource(units=Units.KWT)  # Heat pump has one heating output port
 
-    def set_ports_var_bounds(self, model: EchoConcreteModel):
+    def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given."""
         lower_bound = self.max_heating_capacity or model.bigM
         upper_bound = self.max_cooling_capacity or model.bigM
         set_float_var_bounds(model, self.ports["cooling_output"].port_name, ub=upper_bound, lb=0)
         set_float_var_bounds(model, self.ports["heating_output"].port_name, ub=0, lb=-1 * lower_bound)
 
-    def create_heat_recovery_vars(self, model: EchoConcreteModel):
+    def _create_heat_recovery_vars(self, model: EchoConcreteModel):
         """Create variable for adjusted heat_output supplied by the heating loop"""
         setattr(model, self.heating_out_adjusted, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
         setattr(model, self.recovered_waste_heat, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
@@ -825,18 +825,20 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Use parent class method
         super(SimpleHeatPumpDualOutput, self).add_node_to_model(model, profile)
-        self.create_heat_recovery_vars(model)
-        self.create_delta_heat_flow_vars(model)
+        self._create_heat_recovery_vars(model)
+        self._create_delta_heat_flow_vars(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
         h_out_adjusted_var = self.heating_out_adjusted
         c_out_var = self.ports["cooling_output"].port_name
         # Apply heating_cooling constrains and transformation constraint
-        self.apply_heat_recovery_constraints(model)
-        self.apply_node_transformation_constraints(model, heating_out_var=h_out_adjusted_var, cooling_out_var=c_out_var)
+        self._apply_heat_recovery_constraints(model)
+        self._apply_node_transformation_constraints(
+            model, heating_out_var=h_out_adjusted_var, cooling_out_var=c_out_var
+        )
 
-    def create_delta_heat_flow_vars(self, model: EchoConcreteModel):
+    def _create_delta_heat_flow_vars(self, model: EchoConcreteModel):
         """Create a delta heat flow variable, split in pos and negative components"""
         setattr(model, self.delta_heat_flow, en.Var(model.Expansion, model.Time, domain=en.Reals))
         setattr(model, f"{self.delta_heat_flow}_pos", en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
@@ -879,7 +881,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
             model, "is_neg_delta_rule_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=is_neg_rule)
         )
 
-    def apply_heat_recovery_constraints(self, model: EchoConcreteModel):
+    def _apply_heat_recovery_constraints(self, model: EchoConcreteModel):
         power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
         h_out_var = getattr(model, self.ports["heating_output"].port_name)
         c_out_var = getattr(model, self.ports["cooling_output"].port_name)
@@ -1031,14 +1033,14 @@ class ParametrisedHeatPump(Node):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
         super(ParametrisedHeatPump, self).add_node_to_model(model, profile)
-        self.set_helper_variables(model)
-        self.load_temperature_values_from_profile(model, profile)
-        self.define_temperature_dependent_cop_coefficient(model)
-        self.set_input_points_cooling(model)
-        self.set_output_points_cooling(model)
-        self.set_input_points_heating(model)
-        self.set_output_points_heating(model)
-        self.set_var_bounds(model)
+        self._set_helper_variables(model)
+        self._load_temperature_values_from_profile(model, profile)
+        self._define_temperature_dependent_cop_coefficient(model)
+        self._set_input_points_cooling(model)
+        self._set_output_points_cooling(model)
+        self._set_input_points_heating(model)
+        self._set_output_points_heating(model)
+        self._set_var_bounds(model)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         """Set up constraints associated with the node"""
@@ -1047,19 +1049,19 @@ class ParametrisedHeatPump(Node):
         cool_out_var = self.ports["thermal_output"].pos
         is_cooling_var = self.ports["thermal_output"].is_pos
         # Apply only heating or cooling constraint
-        self.apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
+        self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
         # set piecewise linear constraint for heating output
-        self.set_piecewise_linear_heating_cop_constraint(
+        self._set_piecewise_linear_heating_cop_constraint(
             model, power_to_heat_var=self.power_to_heat, heating_out_var=heat_out_var
         )
         # set piecewise linear constraint for cooling output
-        self.set_piecewise_linear_cooling_cop_constraint(
+        self._set_piecewise_linear_cooling_cop_constraint(
             model, power_to_cool_var=self.power_to_cool, cooling_out_var=cool_out_var
         )
         if "heat_intake_rejection" in self.ports:
             self.add_heat_intake_rejection_constraint(model)
 
-    def add_heat_intake_rejection_constraint(self, model: EchoConcreteModel):
+    def _add_heat_intake_rejection_constraint(self, model: EchoConcreteModel):
         """Get variable representing port flow values for thermal output and
         intake or rejection of heat flow, set the constraint."""
         thermal_output = getattr(model, self.ports["thermal_output"].port_name)
@@ -1079,7 +1081,7 @@ class ParametrisedHeatPump(Node):
             en.Constraint(model.Expansion, model.Time, rule=heat_reject_constraint),
         )
 
-    def set_var_bounds(self, model: EchoConcreteModel):
+    def _set_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
 
         Split output port into non-positive and non-negative components.
@@ -1125,7 +1127,7 @@ class ParametrisedHeatPump(Node):
             lb=min_output_heating,
         )
 
-    def set_helper_variables(self, model: EchoConcreteModel):
+    def _set_helper_variables(self, model: EchoConcreteModel):
         """Create internal variables representing amount of electrical power used to produce heating or cooling
         at each interval. Both variables are non-negative, this is not the same as thermal port flow value.
         Intermediate helper variables."""
@@ -1139,7 +1141,7 @@ class ParametrisedHeatPump(Node):
         # -ve component will be heating
         self.ports["thermal_output"].constrain_pos_neg(model)
 
-    def load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
+    def _load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When ambient temperature is set by str reference, load values from profile."""
         if self.ambient_temperature_ref:
             if self.ambient_temperature_ref and self.ambient_temperature_ref not in profile_df.columns:
@@ -1152,7 +1154,7 @@ class ParametrisedHeatPump(Node):
                     expansion_periods=len(model.Expansion),
                 )
 
-    def apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
+    def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
         power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
 
@@ -1184,7 +1186,7 @@ class ParametrisedHeatPump(Node):
 
         setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
-    def define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
+    def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get heating and cooling COP (coefficient of performance) scaling factor for each interval.
 
         Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
@@ -1236,7 +1238,7 @@ class ParametrisedHeatPump(Node):
             en.Param(model.Expansion, model.Time, initialize=temperature_cop_dict_cooling, domain=en.Reals),
         )
 
-    def set_piecewise_linear_cooling_cop_constraint(
+    def _set_piecewise_linear_cooling_cop_constraint(
         self, model: EchoConcreteModel, power_to_cool_var: str, cooling_out_var: str
     ):
         xvar = getattr(model, power_to_cool_var)
@@ -1252,7 +1254,7 @@ class ParametrisedHeatPump(Node):
             ),
         )
 
-    def set_piecewise_linear_heating_cop_constraint(
+    def _set_piecewise_linear_heating_cop_constraint(
         self, model: EchoConcreteModel, power_to_heat_var: str, heating_out_var: str
     ):
         xvar = getattr(model, power_to_heat_var)
@@ -1268,7 +1270,7 @@ class ParametrisedHeatPump(Node):
             ),
         )
 
-    def set_input_points_cooling(self, model: EchoConcreteModel):
+    def _set_input_points_cooling(self, model: EchoConcreteModel):
         """Input breakpoints are input electrical power values calculated as
         cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 
@@ -1287,7 +1289,7 @@ class ParametrisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def set_output_points_cooling(self, model: EchoConcreteModel):
+    def _set_output_points_cooling(self, model: EchoConcreteModel):
         """Outputs breakpoints are partial cooling load values (% of max capacity)"""
         self.output_points_cooling = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop_cooling.keys()]
@@ -1295,7 +1297,7 @@ class ParametrisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def set_input_points_heating(self, model: EchoConcreteModel):
+    def _set_input_points_heating(self, model: EchoConcreteModel):
         """Input breakpoints are input electrical power values calculated as
         heating_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 
@@ -1314,7 +1316,7 @@ class ParametrisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def set_output_points_heating(self, model: EchoConcreteModel):
+    def _set_output_points_heating(self, model: EchoConcreteModel):
         """Outputs breakpoints are partial heating load values (% of max capacity).
 
         Need to multiply by -1, heating is negative flow of the thermal port.
