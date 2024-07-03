@@ -216,7 +216,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
         }
 
     def _set_output_points(self, model: EchoConcreteModel):
-        """Outputs breakpoints are partial cooling load values (% of max capacity)"""
+        """Output breakpoints are partial cooling load values (% of max capacity)"""
         self.output_points = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop.keys()]
             for p in range(len(model.Expansion))
@@ -675,7 +675,7 @@ class SimpleHeatPump(Node):
         heating_out_var = self.ports["thermal_output"].neg
         cooling_out_var = self.ports["thermal_output"].pos
         is_cooling_var = self.ports["thermal_output"].is_pos
-        # Apply heating_cooling constrains and transformation constraint
+        # Apply heating_cooling constraints and transformation constraint
         self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
         self._apply_node_transformation_constraints(
             model, heating_out_var=heating_out_var, cooling_out_var=cooling_out_var
@@ -834,7 +834,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
         # Get variable names for heating and cooling output depending on thermal ports configuration
         h_out_adjusted_var = self.heating_out_adjusted
         c_out_var = self.ports["cooling_output"].port_name
-        # Apply heating_cooling constrains and transformation constraint
+        # Apply heating_cooling constraints and transformation constraint
         self._apply_heat_recovery_constraints(model)
         self._apply_node_transformation_constraints(
             model, heating_out_var=h_out_adjusted_var, cooling_out_var=c_out_var
