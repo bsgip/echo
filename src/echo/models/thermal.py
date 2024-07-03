@@ -1292,7 +1292,7 @@ class ParametrisedHeatPump(Node):
         }
 
     def _set_output_points_cooling(self, model: EchoConcreteModel):
-        """Outputs breakpoints are partial cooling load values (% of max capacity)"""
+        """Output breakpoints are partial cooling load values (% of max capacity)"""
         self.output_points_cooling = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop_cooling.keys()]
             for p in range(len(model.Expansion))
@@ -1319,7 +1319,7 @@ class ParametrisedHeatPump(Node):
         }
 
     def _set_output_points_heating(self, model: EchoConcreteModel):
-        """Outputs breakpoints are partial heating load values (% of max capacity).
+        """Output breakpoints are partial heating load values (% of max capacity).
 
         Need to multiply by -1, heating is negative flow of the thermal port.
 
