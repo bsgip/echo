@@ -1027,8 +1027,11 @@ class ParametrisedHeatPump(Node):
 
     def create_ports(self):
         # Create input and output ports
-        self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
-        self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+        # Heat pump has electrical input port
+        self.ports["electrical_input"] = FlexSink(units=Units.KW)
+        # Heat pump has one thermal output port
+        # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink
+        self.ports["thermal_output"] = FlexPort(units=Units.KWT)
         if self.heat_intake_rejection_port:
             self.ports["heat_intake_rejection"] = FlexPort(units=self.Units.KWT)
 
