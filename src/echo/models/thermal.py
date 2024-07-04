@@ -620,8 +620,11 @@ class SimpleHeatPump(Node):
 
     def create_ports(self):
         # Create input and output ports
-        self.ports["electrical_input"] = FlexSink(units=Units.KW)  # Heat pump has electrical input port
-        self.ports["thermal_output"] = FlexPort(units=Units.KWT)  # Heat pump has one thermal output port
+        # Heat pump has electrical input port
+        self.ports["electrical_input"] = FlexSink(units=Units.KW)
+        # Heat pump has one thermal output port
+        # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink"
+        self.ports["thermal_output"] = FlexPort(units=Units.KWT)
 
     def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
