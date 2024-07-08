@@ -1194,10 +1194,9 @@ class OptimisationGraph(BaseModel):
         }
         self._update_node(node_name=node_name, **node_attributes)
 
-
-def inject_data_into_heatpump(self, node_name: str, heating_cop_time_series, cooling_cop_time_series):
-    node_attributes = {
-        "heating_cop_time_series": heating_cop_time_series,
-        "cooling_cop_time_series": cooling_cop_time_series,
-    }
-    self._update_node(node_name=node_name, **node_attributes)
+    def inject_data_into_heatpump(self, node_name: str, heating_cop_time_series, cooling_cop_time_series):
+        node_attributes = {
+            "heating_cop_time_series": heating_cop_time_series,
+            "cooling_cop_time_series": cooling_cop_time_series,
+        }
+        self._update_node(node_name=node_name, **node_attributes)
