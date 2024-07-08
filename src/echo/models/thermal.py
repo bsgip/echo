@@ -598,6 +598,10 @@ class SimpleHeatPump(Node):
         super().__init__(**data)
         self.create_ports()
 
+    def update(self, heating_cop_time_series, cooling_cop_time_series):
+        self.heating_cop_time_series = heating_cop_time_series
+        self.cooling_cop_time_series = cooling_cop_time_series
+
     # Naming variables
     @property
     def heating_cop(self):
