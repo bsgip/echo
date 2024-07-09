@@ -39,8 +39,7 @@ profile_df = pd.DataFrame(
 
 
 def test_partitioned_bus_flows():
-    """Test that tellegen rule holds per partition per commodity when using PartitionedMultiCommodityTellegenNode
-    """
+    """Test that tellegen rule holds per partition per commodity when using PartitionedMultiCommodityTellegenNode"""
     thermal_mains_1 = Node(node_name="thermal_supply_1", ports={"supply_kwt": FlexPort(units=Units.KWT)})
     thermal_mains_2 = Node(node_name="thermal_supply_2", ports={"supply_kwt": FlexPort(units=Units.KWT)})
     electrical_mains_1 = Node(node_name="electrical_supply_1", ports={"supply_kw": FlexPort(units=Units.KW)})
