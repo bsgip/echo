@@ -25,8 +25,9 @@ class Units(Enum):
     kVAR = 7
     """Instantaneous electrical reactive power kVAR """
     LPS = 8
-    """Liquid commodity flow in Cubic meters per second """
+    """Liquid commodity flow in litres per second """
     CMS = 9
+    """Gas or liquid commodity flow in Cubic meters per second """
 
 
 class Flows(Enum):
