@@ -39,6 +39,7 @@ class SimpleChiller(Node):
     # (if None, bounded by bigM value)
     cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
     cooling_cop_time_series_ref: Optional[str]
+    cooling_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
 
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
@@ -94,6 +95,18 @@ class SimpleChiller(Node):
                 key=self.cooling_cop_time_series_ref,
                 time_periods=len(model.Time),
                 expansion_periods=len(model.Expansion),
+            )
+        self._set_constant_cop_values(model)
+
+    def _set_constant_cop_values(self, model: EchoConcreteModel):
+        """If cooling_cop_time_series dictionary is not defined otherwise, use constant cop value"""
+        if not self.cooling_cop_time_series:
+            self.cooling_cop_time_series = expand_as_dict(
+                TimeSeriesData(
+                    value=self.cooling_cop_constant,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
             )
 
 
@@ -594,6 +607,9 @@ class SimpleHeatPump(Node):
     heating_cop_time_series_ref: Optional[str]
     cooling_cop_time_series_ref: Optional[str]
 
+    cooling_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
+    heating_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
+
     heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(non_negative_cop_check)
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
@@ -711,6 +727,29 @@ class SimpleHeatPump(Node):
                     time_periods=len(model.Time),
                     expansion_periods=len(model.Expansion),
                 )
+
+        self._set_constant_cop_values(model)
+
+    def _set_constant_cop_values(self, model: EchoConcreteModel):
+        """If heating_cop_time_series and cooling_cop_time_series dictionary is not defined otherwise,
+        use constant cop values.
+        """
+        if not self.heating_cop_time_series:
+            self.heating_cop_time_series = expand_as_dict(
+                TimeSeriesData(
+                    value=self.heating_cop_constant,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
+            )
+        if not self.cooling_cop_time_series:
+            self.cooling_cop_time_series = expand_as_dict(
+                TimeSeriesData(
+                    value=self.cooling_cop_constant,
+                    num_time_intervals=len(model.Time),
+                    num_expansion_intervals=len(model.Expansion),
+                )
+            )
 
     def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
