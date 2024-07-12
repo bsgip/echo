@@ -946,7 +946,8 @@ def test_parametrised_heatpump_single_output():
 
 
 def test_simple_chiller_constant_cop():
-    """Test simple chiller operation with constant coefficient of performance array"""
+    """Test simple chiller operation with default constant coefficient of performance (no input from the user).
+    """
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = SimpleChiller(max_cooling_capacity=10)
@@ -977,7 +978,7 @@ def test_simple_chiller_constant_cop():
 
 
 def test_simple_heatpump_constant_cop():
-    """Test simple heat pump operation with predefined coefficient of performance array"""
+    """Test simple heat pump operation with default coefficient of performance value (no input from the user)"""
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     heatpump = SimpleHeatPump(
