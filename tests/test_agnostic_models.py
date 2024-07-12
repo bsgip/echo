@@ -51,7 +51,7 @@ def test_partitioned_node_add_port():
 
 
 def test_partitioned_node_error():
-    """Test only ports or partiotions validation error"""
+    """Test only ports or partitions validation error"""
     with pytest.raises(Exception):
         node = PartitionedMultiCommodityTellegenNode(
             partitions={
