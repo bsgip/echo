@@ -15,11 +15,14 @@ from echo.models.agnostic import (
 )
 
 
-def test_partitioned_muticommodity_tellegen_node():
-    """Test asset creation"""
+def test_partitioned_muticommodity_tellegen_node_default_partition():
+    """Test asset creation with default partition"""
     node = PartitionedMultiCommodityTellegenNode(ports={"port_1": FlexPort(units=Units.KW)})
     assert node.ports["port_1"] in node.partitions[node.default_partition]
 
+
+def test_partitioned_muticommodity_tellegen_node():
+    """Test asset creation with two partitions"""
     node = PartitionedMultiCommodityTellegenNode(
         partitions={
             "partition_1": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
@@ -28,9 +31,7 @@ def test_partitioned_muticommodity_tellegen_node():
     )
     all_partition_ports = [_port.uid for v in node.partitions.values() for _port in v]
     all_ports = [_port.uid for _port in node.ports.values()]
-    # TODO: Is this a correct way ?
     assert all_partition_ports == all_ports
-    # assert len(all_partition_ports) == len(all_ports)
 
 
 def test_partitioned_node_add_port():

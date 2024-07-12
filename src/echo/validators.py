@@ -231,7 +231,7 @@ def non_negative_cop_check(v):
 
 
 def validate_partition_ports(cls, values):
-    """Validate that set of ports defined across diferent partitions are unique"""
+    """Validate that set of ports defined across different partitions are unique"""
     partitions = values.get("partitions")
     port_name_list = [_port.port_name for v in partitions.values() for _port in v]
     port_uid_list = [_port.uid for v in partitions.values() for _port in v]
