@@ -228,3 +228,21 @@ def validate_temperature_dependent_cop(cls, values):
 def non_negative_cop_check(v):
     v = is_non_negative(v, "Coefficient of performance for heating and cooling must be given as non_negative value")
     return v
+
+
+def validate_partition_ports(cls, values):
+    """Validate that set of ports defined across different partitions are unique"""
+    partitions = values.get("partitions")
+    port_name_list = [_port.port_name for v in partitions.values() for _port in v]
+    port_uid_list = [_port.uid for v in partitions.values() for _port in v]
+    validate(
+        len(port_name_list) == len(set(port_name_list)),
+        "All ports defined across partitions of PartitionedMultiCommodityTellegenNode must have unique names."
+        f"Offending node {values.get('node_name')}",
+    )
+    validate(
+        len(port_uid_list) == len(set(port_uid_list)),
+        "All ports defined across partitions of PartitionedMultiCommodityTellegenNode must have unique uids."
+        f"Offending node {values.get('node_name')}",
+    )
+    return values
