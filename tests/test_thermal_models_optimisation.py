@@ -10,11 +10,11 @@ from echo.models.base import Node, OptimisationGraph, Port
 
 from echo.models.thermal import (
     ThermalStorage,
-    ParametrisedChiller,
+    ParameterisedChiller,
     SimpleChiller,
     SimpleHeatPump,
     SimpleHeatPumpDualOutput,
-    ParametrisedHeatPump,
+    ParameterisedHeatPump,
 )
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
@@ -493,7 +493,7 @@ def test_chiller_operation():
 
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = ParametrisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
+    chiller = ParameterisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     system.add_node_obj([grid, chiller, cooling_load])
@@ -536,7 +536,7 @@ def test_chiller_with_heat_rejection():
 
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = ParametrisedChiller(
+    chiller = ParameterisedChiller(
         max_cooling_capacity=10, nominal_cop=2.5, heat_rejection_port=True, heat_rejection_coefficient=0.8
     )
     assert "heat_rejection" in chiller.ports
@@ -594,7 +594,7 @@ def test_chiller_with_temperature_cop():
     ambient_temperature_dict = expand_as_dict(ambient_temperature_data)
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = ParametrisedChiller(
+    chiller = ParameterisedChiller(
         max_cooling_capacity=10,
         nominal_cop=2.5,
         partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
@@ -856,11 +856,11 @@ def test_simple_heatpump_dual_output():
     assert round(total_heat_delivered - total_adjusted_heat_from_source, 2) == -1 * round(total_waste_heat_recovered, 2)
 
 
-def test_parametrised_heatpump_single_output():
-    """Test parametrised heat pump operation"""
+def test_parameterised_heatpump_single_output():
+    """Test parameterised heat pump operation"""
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    heatpump = ParametrisedHeatPump(
+    heatpump = ParameterisedHeatPump(
         max_cooling_capacity=10, max_heating_capacity=10, nominal_heating_cop=5, nominal_cooling_cop=3
     )
     # Cooling demand is a heat source

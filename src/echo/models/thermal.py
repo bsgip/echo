@@ -110,10 +110,10 @@ class SimpleChiller(Node):
             )
 
 
-class ParametrisedChiller(TimeVaryingPiecewiseIONode):
+class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
-    ParametrisedChiller is an input/output piecewise node, with a single set of input/output breakpoints representing
+    ParameterisedChiller is an input/output piecewise node, with a single set of input/output breakpoints representing
     chiller COP (Coefficient Of Performance = Output/Input=Cooling_delivered/Electricity_consumed) used
     for all time periods.
     """
@@ -167,7 +167,7 @@ class ParametrisedChiller(TimeVaryingPiecewiseIONode):
         self._define_temperature_dependent_cop_coefficient(model)
         self._set_input_points(model)
         self._set_output_points(model)
-        super(ParametrisedChiller, self).add_node_to_model(model, profile)
+        super(ParameterisedChiller, self).add_node_to_model(model, profile)
         if "heat_rejection" in self.ports:
             self._add_heat_rejection_constraint(model)
 
@@ -977,8 +977,8 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
         setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
 
-class ParametrisedHeatPump(Node):
-    """A parametrised heat pump model.
+class ParameterisedHeatPump(Node):
+    """A Parameterised heat pump model.
 
     This model is different to simple heatpump model in that it uses piecewise linear partial load COP factor
     (coefficient of performance) and piecewise linear temperature COP factor to calculate actual values for heating
@@ -1079,7 +1079,7 @@ class ParametrisedHeatPump(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
-        super(ParametrisedHeatPump, self).add_node_to_model(model, profile)
+        super(ParameterisedHeatPump, self).add_node_to_model(model, profile)
         self._set_helper_variables(model)
         self._load_temperature_values_from_profile(model, profile)
         self._define_temperature_dependent_cop_coefficient(model)

@@ -10,7 +10,7 @@ from echo.configuration import Units
 
 from echo.models.thermal import (
     ThermalStorage,
-    ParametrisedChiller,
+    ParameterisedChiller,
     SimpleHeatPump,
     SimpleChiller,
     SimpleHeatPumpDualOutput,
