@@ -1132,7 +1132,7 @@ class OptimisationGraph(BaseModel):
 
         return G1, G2
 
-    def _update_node(self, node_name: str, **kwargs):
+    def update_node(self, node_name: str, **kwargs):
         # Update the edge associated with the EV
         found_edge = None
         for edge in self.edge_list():
@@ -1192,11 +1192,11 @@ class OptimisationGraph(BaseModel):
             "initial_state_of_charge": initial_state_of_charge,
             "interval_duration": interval_duration,
         }
-        self._update_node(node_name=node_name, **node_attributes)
+        self.update_node(node_name=node_name, **node_attributes)
 
     def inject_data_into_heatpump(self, node_name: str, heating_cop_time_series, cooling_cop_time_series):
         node_attributes = {
             "heating_cop_time_series": heating_cop_time_series,
             "cooling_cop_time_series": cooling_cop_time_series,
         }
-        self._update_node(node_name=node_name, **node_attributes)
+        self.update_node(node_name=node_name, **node_attributes)
