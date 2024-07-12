@@ -43,7 +43,7 @@ class TellegenNode(Node):
     tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        def reliability(model: EchoConcreteModel, p, t):  # Tellegen node rule
+        def tellegen_node_rule(model: EchoConcreteModel, p, t):
             a = 0
             for port in node_ports.values():
                 a += getattr(model, port.port_name)[p, t]
@@ -51,7 +51,7 @@ class TellegenNode(Node):
 
         node_ports = self.ports
         con_name = "reliability_con_" + self.node_name
-        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=reliability))
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule))
 
     def verify_node(self):
         super(TellegenNode, self).verify_node()
@@ -71,7 +71,7 @@ class MultiCommodityTellegenNode(Node):
     def apply_node_constraints(self, model):
         """Apply Tellegen constraint for same commodity ports."""
 
-        def tellegen(model, p, t):  # Tellegen node rule
+        def tellegen_node_rule(model, p, t):
             net_flow = 0
             for port in commodity_ports:
                 port_flow = getattr(model, port.port_name)
@@ -89,7 +89,7 @@ class MultiCommodityTellegenNode(Node):
             setattr(
                 model,
                 "node_con_" + str(commodity_type) + self.node_name,
-                en.Constraint(model.Expansion, model.Time, rule=tellegen),
+                en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule),
             )
 
 
@@ -139,7 +139,7 @@ class PartitionedMultiCommodityTellegenNode(Node):
     def apply_node_constraints(self, model):
         """Apply Tellegen constraint for same commodity ports within each partition."""
 
-        def tellegen(model, p, t):  # Tellegen node rule
+        def tellegen_node_rule(model, p, t):
             net_flow = 0
             for port in partition_ports:
                 port_flow = getattr(model, port.port_name)
@@ -159,7 +159,7 @@ class PartitionedMultiCommodityTellegenNode(Node):
             setattr(
                 model,
                 "node_con_" + str(partition_commodity_type) + self.node_name,
-                en.Constraint(model.Expansion, model.Time, rule=tellegen),
+                en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule),
             )
 
 
