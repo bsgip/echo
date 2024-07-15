@@ -6,7 +6,7 @@ from pydantic import root_validator, validator, PositiveFloat, NonNegativeFloat
 import numpy as np
 import pyomo.environ as en
 
-from echo.configuration import Units
+from echo.configuration import Units, FlowConstraint
 from echo.models.agnostic import (
     FlexPort,
     FlexSink,
@@ -45,9 +45,22 @@ class SimpleChiller(Node):
 
     def __init__(self, **data):
         super().__init__(**data)
+        # Constraint flow of the thermal port
+        if self.max_cooling_capacity:
+            thermal_import_constraint = FlowConstraint.Fixed
+            thermal_import_constraint_value = self.max_cooling_capacity
+        else:
+            thermal_import_constraint = FlowConstraint.NA
+            thermal_import_constraint_value = None
+
         # Create input and output ports
         self.ports["input"] = FlexSink(units=Units.KW)  # Simple Chiller has electrical input port
-        self.ports["output"] = FlexSink(units=Units.KWT)  # Simple Chiller has one cooling output port
+        # Simple Chiller has cooling output port (thermal sink)
+        self.ports["output"] = FlexSink(
+            units=Units.KWT,
+            import_constraint=thermal_import_constraint,
+            import_constraint_value=thermal_import_constraint_value,
+        )
 
     @property
     def cooling_cop(self):
@@ -635,12 +648,33 @@ class SimpleHeatPump(Node):
         return "power_to_cool_" + self.node_name
 
     def create_ports(self):
+        # Constraint import flow of the thermal port
+        if self.max_cooling_capacity:
+            thermal_import_constraint = FlowConstraint.Fixed
+            thermal_import_constraint_value = self.max_cooling_capacity
+        else:
+            thermal_import_constraint = FlowConstraint.NA
+            thermal_import_constraint_value = None
+        # Constraint export flow of the thermal port
+        if self.max_heating_capacity:
+            thermal_export_constraint = FlowConstraint.Fixed
+            thermal_export_constraint_value = -self.max_heating_capacity
+        else:
+            thermal_export_constraint = FlowConstraint.NA
+            thermal_export_constraint_value = None
+
         # Create input and output ports
         # Heat pump has electrical input port
         self.ports["electrical_input"] = FlexSink(units=Units.KW)
         # Heat pump has one thermal output port
         # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink"
-        self.ports["thermal_output"] = FlexPort(units=Units.KWT)
+        self.ports["thermal_output"] = FlexPort(
+            units=Units.KWT,
+            import_constraint=thermal_import_constraint,
+            import_constraint_value=thermal_import_constraint_value,
+            export_constraint=thermal_export_constraint,
+            export_constraint_value=thermal_export_constraint_value,
+        )
 
     def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
