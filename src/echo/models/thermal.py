@@ -37,6 +37,9 @@ class SimpleChiller(Node):
 
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
+    electrical_input_port_ref: str = "input"
+    thermal_output_port_ref: str = "output"
+
     def __init__(self, **data):
         super().__init__(**data)
         # Constraint flow of the thermal port
@@ -48,13 +51,28 @@ class SimpleChiller(Node):
             thermal_import_constraint_value = None
 
         # Create input and output ports
-        self.ports["input"] = FlexSink(units=Units.KW)  # Simple Chiller has electrical input port
+        self.ports[self.electrical_input_port_ref] = FlexSink(
+            units=Units.KW
+        )  # Simple Chiller has electrical input port
         # Simple Chiller has cooling output port (thermal sink)
-        self.ports["output"] = FlexSink(
+        self.ports[self.thermal_output_port_ref] = FlexSink(
             units=Units.KWT,
             import_constraint=thermal_import_constraint,
             import_constraint_value=thermal_import_constraint_value,
         )
+
+    def set_ports(self, electrical_input_port: FlexSink, thermal_output_port: FlexPort):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.electrical_input_port_ref = electrical_input_port.port_name
+        self.thermal_output_port_ref = thermal_output_port.port_name
+        self.ports[self.electrical_input_port_ref] = electrical_input_port
+        self.ports[self.thermal_output_port_ref] = thermal_output_port
+
+    def update(self, cooling_cop_time_series):
+        self.cooling_cop_time_series = cooling_cop_time_series
 
     @property
     def cooling_cop(self):
@@ -75,7 +93,9 @@ class SimpleChiller(Node):
         self._apply_node_transformation_constraints(model)
 
     def _apply_node_transformation_constraints(self, model: EchoConcreteModel):
-        cooling_out = getattr(model, self.ports["output"].port_name)  # cooling delivered at thermal port
+        cooling_out = getattr(
+            model, self.ports[self.thermal_output_port_ref].port_name
+        )  # cooling delivered at thermal port
         cooling_cop = getattr(model, self.cooling_cop)
 
         def cooling_output_rule(model: EchoConcreteModel, p, t):
@@ -83,7 +103,10 @@ class SimpleChiller(Node):
             cooling_out = power_input * cooling cop
             """
 
-            return cooling_out[p, t] == getattr(model, self.ports["input"].port_name)[p, t] * cooling_cop[p, t]
+            return (
+                cooling_out[p, t]
+                == getattr(model, self.ports[self.electrical_input_port_ref].port_name)[p, t] * cooling_cop[p, t]
+            )
 
         setattr(
             model, "cool_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule)
