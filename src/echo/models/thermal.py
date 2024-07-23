@@ -1109,7 +1109,7 @@ class ParameterisedHeatPump(Node):
         # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink
         self.ports["thermal_output"] = FlexPort(units=Units.KWT)
         if self.heat_intake_rejection_port:
-            self.ports["heat_intake_rejection"] = FlexPort(units=self.Units.KWT)
+            self.ports["heat_intake_rejection"] = FlexPort(units=Units.KWT)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
