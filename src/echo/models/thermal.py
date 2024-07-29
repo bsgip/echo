@@ -1140,7 +1140,7 @@ class ParameterisedHeatPump(Node):
             model, power_to_cool_var=self.power_to_cool, cooling_out_var=cool_out_var
         )
         if "heat_intake_rejection" in self.ports:
-            self.add_heat_intake_rejection_constraint(model)
+            self._add_heat_intake_rejection_constraint(model)
 
     def _add_heat_intake_rejection_constraint(self, model: EchoConcreteModel):
         """Get variable representing port flow values for thermal output and
