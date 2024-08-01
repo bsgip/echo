@@ -180,6 +180,9 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
     temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
 
+    # The input_port_ref and output_port_ref are defined on the parent class (TimeVaryingPiecewiseIONode)
+    heat_rejection_port_ref: str = "heat_rejection"
+
     @property
     def temperature_cop_param(self):
         return f"temperature_cop_factor_{self.node_name}"
@@ -187,10 +190,10 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def __init__(self, **data):
         super().__init__(**data)
         # A chiller has one electrical input port and one cooling output (thermal sink) port
-        self.ports["input"] = FlexSink(units=self.input_port_unit)
-        self.ports["output"] = FlexSink(units=self.output_port_unit)
+        self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
+        self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)
         if self.heat_rejection_port:
-            self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
+            self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         self._load_temperature_values_from_profile(model, profile)
@@ -198,8 +201,32 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         self._set_input_points(model)
         self._set_output_points(model)
         super(ParameterisedChiller, self).add_node_to_model(model, profile)
-        if "heat_rejection" in self.ports:
+        if self.heat_rejection_port_ref in self.ports:
             self._add_heat_rejection_constraint(model)
+
+    def set_ports(
+        self,
+        electrical_input_port: FlexSink,
+        cooling_output_port: FlexPort,
+        heat_rejection_port: Optional[FlexPort] = None,
+    ):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Update port references
+        self.input_port_ref = electrical_input_port.port_name
+        self.output_port_ref = cooling_output_port.port_name
+
+        # Add the new ports
+        self.ports[self.input_port_ref] = electrical_input_port
+        self.ports[self.output_port_ref] = cooling_output_port
+
+        # Handle heat intake rejection
+        self.heat_rejection_port = False  # clear if already set
+        if heat_rejection_port:
+            self.heat_rejection_port = True
+            self.heat_rejection_port_ref = heat_rejection_port.port_name
+            self.ports[self.heat_rejection_port_ref] = heat_rejection_port
 
     def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get COP (coefficient of performance) scaling factor for each interval.
@@ -269,8 +296,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def _add_heat_rejection_constraint(self, model: EchoConcreteModel):
         """Get variables representing port flow values for cooling output (heat in) and
         rejected heat flow, set the constraint."""
-        heat_in = getattr(model, self.ports["output"].port_name)
-        heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
+        heat_in = getattr(model, self.ports[self.output_port_ref].port_name)
+        heat_reject = getattr(model, self.ports[self.heat_rejection_port_ref].port_name)
 
         def heat_reject_constraint(model: EchoConcreteModel, p, t):
             """Amount of rejected heat at each interval equals amount of cooling delivered (heat in) multiplied by
