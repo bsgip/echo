@@ -447,19 +447,43 @@ class ThermalStorage(Node):
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
+    input_port_ref: str = "input"
+    output_port_ref: str = "output"
+    input_output_port_ref: str = "input_output"
+
     def __init__(self, **data):
         super().__init__(**data)
 
         # TODO: Shall both ports be bi-directional?
         if self.separate_in_out_ports:
-            self.ports["input"] = FlexSink(units=self.energy_flow_units)
-            self.ports["output"] = FlexSource(units=self.energy_flow_units)
+            self.ports[self.input_port_ref] = FlexSink(units=self.energy_flow_units)
+            self.ports[self.output_port_ref] = FlexSource(units=self.energy_flow_units)
         else:
-            self.ports["input_output"] = FlexPort(units=self.energy_flow_units)
+            self.ports[self.input_output_port_ref] = FlexPort(units=self.energy_flow_units)
 
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
             self.initial_temp = self.min_temp + 0.5 * (self.max_temp - self.min_temp)
+
+    def set_ports(self, input_port: FlexSink, output_port: FlexSource):
+        """Replaces any existing ports with separate input and output ports"""
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.input_port_ref = input_port.port_name
+        self.output_port_ref = output_port.port_name
+        self.ports[self.input_port_ref] = input_port
+        self.ports[self.output_port_ref] = output_port
+
+    def set_port(self, input_output_port: FlexPort):
+        """Replaces any existing ports with a combined input output port"""
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add new port
+        self.input_output_port_ref = input_output_port.port_name
+        self.ports[self.input_output_port_ref] = input_output_port
 
     @root_validator
     def _non_zero_temp_range(cls, values: dict) -> dict:
