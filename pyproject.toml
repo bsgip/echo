@@ -39,7 +39,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "echo"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
     "networkx>=3.1,<4",
     "numpy>=1.26,<2",
