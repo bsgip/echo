@@ -5,7 +5,7 @@ import pyomo.environ as en
 from pydantic import Field, PositiveFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.exceptions import validate, ConfigurationError
+from echo.exceptions import ConfigurationError, validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -26,8 +26,8 @@ from echo.validators import (
     nonnegative_load,
     nonpositive_generation,
     set_bounds_from_piecewise_points,
-    validate_piecewise_arrays,
     validate_partition_ports,
+    validate_piecewise_arrays,
 )
 
 """
@@ -709,6 +709,9 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         set_bounds_from_piecewise_points
     )  # set attributes max_output,  min_output, max_input, min_input from input points/output points
 
+    input_port_ref: str = "input"
+    output_port_ref: str = "output"
+
     def verify_points_values(self):
         validate(self.input_points is not None, "No input points defined")
         validate(self.output_points is not None, "No output points defined")
@@ -748,13 +751,15 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         # Bound input and output port variables, otherwise piecewise constraint will fail
         self.verify_points_values()
         set_float_var_bounds(
-            model=model, var_name=self.ports["output"].port_name, ub=self.max_output, lb=self.min_output
+            model=model, var_name=self.ports[self.output_port_ref].port_name, ub=self.max_output, lb=self.min_output
         )
-        set_float_var_bounds(model=model, var_name=self.ports["input"].port_name, ub=self.max_input, lb=self.min_input)
+        set_float_var_bounds(
+            model=model, var_name=self.ports[self.input_port_ref].port_name, ub=self.max_input, lb=self.min_input
+        )
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        xvar = getattr(model, self.ports["input"].port_name)
-        yvar = getattr(model, self.ports["output"].port_name)
+        xvar = getattr(model, self.ports[self.input_port_ref].port_name)
+        yvar = getattr(model, self.ports[self.output_port_ref].port_name)
         xdata = self.input_points
         ydata = self.output_points
         con_name = "piecewise_con_" + self.node_name
