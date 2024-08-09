@@ -1,29 +1,23 @@
 from typing import Optional
 
-import pandas as pd
-from pydantic import root_validator, validator, PositiveFloat, NonNegativeFloat
-
 import numpy as np
+import pandas as pd
 import pyomo.environ as en
+from pydantic import NonNegativeFloat, PositiveFloat, root_validator, validator
 
-from echo.configuration import Units, FlowConstraint
-from echo.models.agnostic import (
-    FlexPort,
-    FlexSink,
-    FlexSource,
-    TimeVaryingPiecewiseIONode,
-)
+from echo.configuration import FlowConstraint, Units
+from echo.models.agnostic import FlexPort, FlexSink, FlexSource, TimeVaryingPiecewiseIONode
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
-    set_var_bounds_from_dict,
-    set_float_var_bounds,
-    to_initial_values,
     TimeSeriesData,
-    expand_as_dict,
     clamp,
+    expand_as_dict,
+    set_float_var_bounds,
+    set_var_bounds_from_dict,
+    to_initial_values,
 )
-from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop, non_negative_cop_check
+from echo.validators import non_negative_cop_check, validate_partial_load_cop, validate_temperature_dependent_cop
 
 
 class SimpleChiller(Node):
@@ -43,6 +37,9 @@ class SimpleChiller(Node):
 
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
+    electrical_input_port_ref: str = "input"
+    thermal_output_port_ref: str = "output"
+
     def __init__(self, **data):
         super().__init__(**data)
         # Constraint flow of the thermal port
@@ -54,13 +51,28 @@ class SimpleChiller(Node):
             thermal_import_constraint_value = None
 
         # Create input and output ports
-        self.ports["input"] = FlexSink(units=Units.KW)  # Simple Chiller has electrical input port
+        self.ports[self.electrical_input_port_ref] = FlexSink(
+            units=Units.KW
+        )  # Simple Chiller has electrical input port
         # Simple Chiller has cooling output port (thermal sink)
-        self.ports["output"] = FlexSink(
+        self.ports[self.thermal_output_port_ref] = FlexSink(
             units=Units.KWT,
             import_constraint=thermal_import_constraint,
             import_constraint_value=thermal_import_constraint_value,
         )
+
+    def set_ports(self, electrical_input_port: FlexSink, thermal_output_port: FlexPort):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.electrical_input_port_ref = electrical_input_port.port_name
+        self.thermal_output_port_ref = thermal_output_port.port_name
+        self.ports[self.electrical_input_port_ref] = electrical_input_port
+        self.ports[self.thermal_output_port_ref] = thermal_output_port
+
+    def update(self, cooling_cop_time_series):
+        self.cooling_cop_time_series = cooling_cop_time_series
 
     @property
     def cooling_cop(self):
@@ -81,7 +93,9 @@ class SimpleChiller(Node):
         self._apply_node_transformation_constraints(model)
 
     def _apply_node_transformation_constraints(self, model: EchoConcreteModel):
-        cooling_out = getattr(model, self.ports["output"].port_name)  # cooling delivered at thermal port
+        cooling_out = getattr(
+            model, self.ports[self.thermal_output_port_ref].port_name
+        )  # cooling delivered at thermal port
         cooling_cop = getattr(model, self.cooling_cop)
 
         def cooling_output_rule(model: EchoConcreteModel, p, t):
@@ -89,7 +103,10 @@ class SimpleChiller(Node):
             cooling_out = power_input * cooling cop
             """
 
-            return cooling_out[p, t] == getattr(model, self.ports["input"].port_name)[p, t] * cooling_cop[p, t]
+            return (
+                cooling_out[p, t]
+                == getattr(model, self.ports[self.electrical_input_port_ref].port_name)[p, t] * cooling_cop[p, t]
+            )
 
         setattr(
             model, "cool_con_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=cooling_output_rule)
@@ -163,6 +180,9 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
     temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
 
+    # The input_port_ref and output_port_ref are defined on the parent class (TimeVaryingPiecewiseIONode)
+    heat_rejection_port_ref: str = "heat_rejection"
+
     @property
     def temperature_cop_param(self):
         return f"temperature_cop_factor_{self.node_name}"
@@ -170,10 +190,10 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def __init__(self, **data):
         super().__init__(**data)
         # A chiller has one electrical input port and one cooling output (thermal sink) port
-        self.ports["input"] = FlexSink(units=self.input_port_unit)
-        self.ports["output"] = FlexSink(units=self.output_port_unit)
+        self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
+        self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)
         if self.heat_rejection_port:
-            self.ports["heat_rejection"] = FlexSource(units=self.output_port_unit)
+            self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         self._load_temperature_values_from_profile(model, profile)
@@ -181,8 +201,32 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         self._set_input_points(model)
         self._set_output_points(model)
         super(ParameterisedChiller, self).add_node_to_model(model, profile)
-        if "heat_rejection" in self.ports:
+        if self.heat_rejection_port_ref in self.ports:
             self._add_heat_rejection_constraint(model)
+
+    def set_ports(
+        self,
+        electrical_input_port: FlexSink,
+        cooling_output_port: FlexPort,
+        heat_rejection_port: Optional[FlexPort] = None,
+    ):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Update port references
+        self.input_port_ref = electrical_input_port.port_name
+        self.output_port_ref = cooling_output_port.port_name
+
+        # Add the new ports
+        self.ports[self.input_port_ref] = electrical_input_port
+        self.ports[self.output_port_ref] = cooling_output_port
+
+        # Handle heat intake rejection
+        self.heat_rejection_port = False  # clear if already set
+        if heat_rejection_port:
+            self.heat_rejection_port = True
+            self.heat_rejection_port_ref = heat_rejection_port.port_name
+            self.ports[self.heat_rejection_port_ref] = heat_rejection_port
 
     def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
         """Get COP (coefficient of performance) scaling factor for each interval.
@@ -252,8 +296,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def _add_heat_rejection_constraint(self, model: EchoConcreteModel):
         """Get variables representing port flow values for cooling output (heat in) and
         rejected heat flow, set the constraint."""
-        heat_in = getattr(model, self.ports["output"].port_name)
-        heat_reject = getattr(model, self.ports["heat_rejection"].port_name)
+        heat_in = getattr(model, self.ports[self.output_port_ref].port_name)
+        heat_reject = getattr(model, self.ports[self.heat_rejection_port_ref].port_name)
 
         def heat_reject_constraint(model: EchoConcreteModel, p, t):
             """Amount of rejected heat at each interval equals amount of cooling delivered (heat in) multiplied by
@@ -403,19 +447,43 @@ class ThermalStorage(Node):
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
+    input_port_ref: str = "input"
+    output_port_ref: str = "output"
+    input_output_port_ref: str = "input_output"
+
     def __init__(self, **data):
         super().__init__(**data)
 
         # TODO: Shall both ports be bi-directional?
         if self.separate_in_out_ports:
-            self.ports["input"] = FlexSink(units=self.energy_flow_units)
-            self.ports["output"] = FlexSource(units=self.energy_flow_units)
+            self.ports[self.input_port_ref] = FlexSink(units=self.energy_flow_units)
+            self.ports[self.output_port_ref] = FlexSource(units=self.energy_flow_units)
         else:
-            self.ports["input_output"] = FlexPort(units=self.energy_flow_units)
+            self.ports[self.input_output_port_ref] = FlexPort(units=self.energy_flow_units)
 
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
             self.initial_temp = self.min_temp + 0.5 * (self.max_temp - self.min_temp)
+
+    def set_ports(self, input_port: FlexSink, output_port: FlexSource):
+        """Replaces any existing ports with separate input and output ports"""
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.input_port_ref = input_port.port_name
+        self.output_port_ref = output_port.port_name
+        self.ports[self.input_port_ref] = input_port
+        self.ports[self.output_port_ref] = output_port
+
+    def set_port(self, input_output_port: FlexPort):
+        """Replaces any existing ports with a combined input output port"""
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add new port
+        self.input_output_port_ref = input_output_port.port_name
+        self.ports[self.input_output_port_ref] = input_output_port
 
     @root_validator
     def _non_zero_temp_range(cls, values: dict) -> dict:
@@ -626,9 +694,16 @@ class SimpleHeatPump(Node):
     heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(non_negative_cop_check)
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
+    electrical_input_port_ref: str = "electrical_input"
+    thermal_output_port_ref: str = "thermal_output"
+
     def __init__(self, **data):
         super().__init__(**data)
         self.create_ports()
+
+    def update(self, heating_cop_time_series, cooling_cop_time_series):
+        self.heating_cop_time_series = heating_cop_time_series
+        self.cooling_cop_time_series = cooling_cop_time_series
 
     # Naming variables
     @property
@@ -665,16 +740,26 @@ class SimpleHeatPump(Node):
 
         # Create input and output ports
         # Heat pump has electrical input port
-        self.ports["electrical_input"] = FlexSink(units=Units.KW)
+        self.ports[self.electrical_input_port_ref] = FlexSink(units=Units.KW)
         # Heat pump has one thermal output port
         # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink"
-        self.ports["thermal_output"] = FlexPort(
+        self.ports[self.thermal_output_port_ref] = FlexPort(
             units=Units.KWT,
             import_constraint=thermal_import_constraint,
             import_constraint_value=thermal_import_constraint_value,
             export_constraint=thermal_export_constraint,
             export_constraint_value=thermal_export_constraint_value,
         )
+
+    def set_ports(self, electrical_input_port: FlexSink, thermal_output_port: FlexPort):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.electrical_input_port_ref = electrical_input_port.port_name
+        self.thermal_output_port_ref = thermal_output_port.port_name
+        self.ports[self.electrical_input_port_ref] = electrical_input_port
+        self.ports[self.thermal_output_port_ref] = thermal_output_port
 
     def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given.
@@ -683,12 +768,12 @@ class SimpleHeatPump(Node):
         """
         # Split output port into +ve and -ve components. +ve component will be cooling,
         # -ve component will be heating
-        self.ports["thermal_output"].constrain_pos_neg(model)
+        self.ports[self.thermal_output_port_ref].constrain_pos_neg(model)
         lower_bound = self.max_heating_capacity or model.bigM
         upper_bound = self.max_cooling_capacity or model.bigM
         set_float_var_bounds(
             model,
-            self.ports["thermal_output"].port_name,
+            self.ports[self.thermal_output_port_ref].port_name,
             ub=upper_bound,
             lb=-lower_bound,
         )
@@ -725,9 +810,9 @@ class SimpleHeatPump(Node):
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Get variable names for heating and cooling output depending on thermal ports configuration
-        heating_out_var = self.ports["thermal_output"].neg
-        cooling_out_var = self.ports["thermal_output"].pos
-        is_cooling_var = self.ports["thermal_output"].is_pos
+        heating_out_var = self.ports[self.thermal_output_port_ref].neg
+        cooling_out_var = self.ports[self.thermal_output_port_ref].pos
+        is_cooling_var = self.ports[self.thermal_output_port_ref].is_pos
         # Apply heating_cooling constraints and transformation constraint
         self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
         self._apply_node_transformation_constraints(
@@ -787,7 +872,7 @@ class SimpleHeatPump(Node):
 
     def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
-        power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
+        power_in = getattr(model, self.ports[self.electrical_input_port_ref].port_name)  # input electrical power
 
         def only_heat_or_cool1(model: EchoConcreteModel, p, t):
             """Constraint power_to_heat variable.
@@ -1078,6 +1163,10 @@ class ParameterisedHeatPump(Node):
     input_points_heating: dict = None
     output_points_heating: dict = None
 
+    electrical_input_port_ref: str = "electrical_input"
+    thermal_output_port_ref: str = "thermal_output"
+    heat_intake_rejection_port_ref: str = "heat_intake_rejection"
+
     # partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
     # temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
 
@@ -1104,12 +1193,36 @@ class ParameterisedHeatPump(Node):
     def create_ports(self):
         # Create input and output ports
         # Heat pump has electrical input port
-        self.ports["electrical_input"] = FlexSink(units=Units.KW)
+        self.ports[self.electrical_input_port_ref] = FlexSink(units=Units.KW)
         # Heat pump has one thermal output port
         # Thermal 'output' port is a two-way port: heating output = thermal source, cooling output = thermal sink
-        self.ports["thermal_output"] = FlexPort(units=Units.KWT)
+        self.ports[self.thermal_output_port_ref] = FlexPort(units=Units.KWT)
         if self.heat_intake_rejection_port:
-            self.ports["heat_intake_rejection"] = FlexPort(units=Units.KWT)
+            self.ports[self.heat_intake_rejection_port_ref] = FlexPort(units=Units.KWT)
+
+    def set_ports(
+        self,
+        electrical_input_port: FlexSink,
+        thermal_output_port: FlexPort,
+        heat_intake_rejection_port: Optional[FlexPort] = None,
+    ):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Update port references
+        self.electrical_input_port_ref = electrical_input_port.port_name
+        self.thermal_output_port_ref = thermal_output_port.port_name
+
+        # Add the new ports
+        self.ports[self.electrical_input_port_ref] = electrical_input_port
+        self.ports[self.thermal_output_port_ref] = thermal_output_port
+
+        # Handle heat intake rejection
+        self.heat_intake_rejection_port = False  # clear if already set
+        if heat_intake_rejection_port:
+            self.heat_intake_rejection_port = True
+            self.heat_intake_rejection_port_ref = heat_intake_rejection_port.port_name
+            self.ports[self.heat_intake_rejection_port_ref] = heat_intake_rejection_port
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
@@ -1126,9 +1239,9 @@ class ParameterisedHeatPump(Node):
     def apply_node_constraints(self, model: EchoConcreteModel):
         """Set up constraints associated with the node"""
         # Get variable names for heating and cooling output depending on thermal ports configuration
-        heat_out_var = self.ports["thermal_output"].neg
-        cool_out_var = self.ports["thermal_output"].pos
-        is_cooling_var = self.ports["thermal_output"].is_pos
+        heat_out_var = self.ports[self.thermal_output_port_ref].neg
+        cool_out_var = self.ports[self.thermal_output_port_ref].pos
+        is_cooling_var = self.ports[self.thermal_output_port_ref].is_pos
         # Apply only heating or cooling constraint
         self._apply_only_heat_or_cool_constraints(model, binary_var_name=is_cooling_var)
         # set piecewise linear constraint for heating output
@@ -1139,14 +1252,14 @@ class ParameterisedHeatPump(Node):
         self._set_piecewise_linear_cooling_cop_constraint(
             model, power_to_cool_var=self.power_to_cool, cooling_out_var=cool_out_var
         )
-        if "heat_intake_rejection" in self.ports:
-            self.add_heat_intake_rejection_constraint(model)
+        if self.heat_intake_rejection_port_ref in self.ports:
+            self._add_heat_intake_rejection_constraint(model)
 
     def _add_heat_intake_rejection_constraint(self, model: EchoConcreteModel):
         """Get variable representing port flow values for thermal output and
         intake or rejection of heat flow, set the constraint."""
-        thermal_output = getattr(model, self.ports["thermal_output"].port_name)
-        heat_intake_reject = getattr(model, self.ports["heat_intake_rejection"].port_name)
+        thermal_output = getattr(model, self.ports[self.thermal_output_port_ref].port_name)
+        heat_intake_reject = getattr(model, self.ports[self.heat_intake_rejection_port_ref].port_name)
 
         def heat_reject_constraint(model: EchoConcreteModel, p, t):
             """Amount of rejected heat to the environment at each interval equals amount of cooling delivered (heat in)
@@ -1171,7 +1284,7 @@ class ParameterisedHeatPump(Node):
         upper_bound = self.max_cooling_capacity or model.bigM
         set_float_var_bounds(
             model,
-            self.ports["thermal_output"].port_name,
+            self.ports[self.thermal_output_port_ref].port_name,
             ub=upper_bound,
             lb=-1 * lower_bound,
         )
@@ -1187,7 +1300,7 @@ class ParameterisedHeatPump(Node):
         )
         set_float_var_bounds(
             model,
-            self.ports["thermal_output"].pos,
+            self.ports[self.thermal_output_port_ref].pos,
             ub=max_output_cooling,
             lb=min_output_cooling,
         )
@@ -1203,7 +1316,7 @@ class ParameterisedHeatPump(Node):
         )
         set_float_var_bounds(
             model,
-            self.ports["thermal_output"].neg,
+            self.ports[self.thermal_output_port_ref].neg,
             ub=max_output_heating,
             lb=min_output_heating,
         )
@@ -1220,7 +1333,7 @@ class ParameterisedHeatPump(Node):
         )
         # Split output port into +ve and -ve components. +ve component will be cooling,
         # -ve component will be heating
-        self.ports["thermal_output"].constrain_pos_neg(model)
+        self.ports[self.thermal_output_port_ref].constrain_pos_neg(model)
 
     def _load_temperature_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """When ambient temperature is set by str reference, load values from profile."""
@@ -1237,7 +1350,7 @@ class ParameterisedHeatPump(Node):
 
     def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
-        power_in = getattr(model, self.ports["electrical_input"].port_name)  # input electrical power
+        power_in = getattr(model, self.ports[self.electrical_input_port_ref].port_name)  # input electrical power
 
         def only_heat_or_cool1(model: EchoConcreteModel, p, t):
             """Constraint power_to_heat variable.

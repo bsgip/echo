@@ -1132,6 +1132,35 @@ class OptimisationGraph(BaseModel):
 
         return G1, G2
 
+    def update_node(self, node_name: str, **kwargs):
+        # Update the edge associated with the EV
+        found_edge = None
+        for edge in self.edge_list():
+            if node_name in edge:
+                found_edge = edge
+                edge_node_1_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[0])
+                edge_node_2_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[1])
+                edge_node_1_port_name = self.get_edge(edge).vertices[0].port_name
+                edge_node_2_port_name = self.get_edge(edge).vertices[1].port_name
+
+        if found_edge is None:
+            raise ValueError(f"No edges contain node: {node_name}")
+
+        # Inject stateful data
+        self.get_node(node_name).update(**kwargs)
+
+        # Get the correct port objects to build a new edge
+        node1 = self.node_obj[edge_node_1_name]
+        node2 = self.node_obj[edge_node_2_name]
+        edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
+        edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
+        port1 = node1.ports[edge_node_1_port_dict_name]
+        port2 = node2.ports[edge_node_2_port_dict_name]
+
+        # Update the edge
+        self.delete_edge(found_edge)
+        self.connect_ports_and_create_edge(port1, port2)
+
     def inject_data_into_ev(
         self,
         node_name: str,
@@ -1157,35 +1186,10 @@ class OptimisationGraph(BaseModel):
             None
 
         """
-        # Update the edge associated with the EV
-        ev_edge = None
-        for edge in self.edge_list():
-            if node_name in edge:
-                ev_edge = edge
-                edge_node_1_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[0])
-                edge_node_2_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[1])
-                edge_node_1_port_name = self.get_edge(edge).vertices[0].port_name
-                edge_node_2_port_name = self.get_edge(edge).vertices[1].port_name
-
-        if ev_edge is None:
-            raise ValueError(f"No edges contain node: {node_name}")
-
-        # Inject stateful data
-        self.get_node(node_name).update(
-            available=available,
-            usage=usage,
-            initial_state_of_charge=initial_state_of_charge,
-            interval_duration=interval_duration,
-        )
-
-        # Get the correct port objects to build a new edge
-        node1 = self.node_obj[edge_node_1_name]
-        node2 = self.node_obj[edge_node_2_name]
-        edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
-        edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
-        port1 = node1.ports[edge_node_1_port_dict_name]
-        port2 = node2.ports[edge_node_2_port_dict_name]
-
-        # Update the edge
-        self.delete_edge(ev_edge)
-        self.connect_ports_and_create_edge(port1, port2)
+        node_attributes = {
+            "available": available,
+            "usage": usage,
+            "initial_state_of_charge": initial_state_of_charge,
+            "interval_duration": interval_duration,
+        }
+        self.update_node(node_name=node_name, **node_attributes)
