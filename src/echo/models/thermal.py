@@ -198,8 +198,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     def __init__(self, **data):
         super().__init__(**data)
         # A chiller has one electrical input port and one cooling output (thermal sink) port
-        self.ports[self.electrical_input_port_ref] = FlexSink(units=self.input_port_unit)
-        self.ports[self.thermal_output_port_ref] = FlexSink(units=self.output_port_unit)
+        self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
+        self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)
         if self.heat_rejection_port:
             self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
@@ -226,8 +226,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         self.output_port_ref = cooling_output_port.port_name
 
         # Add the new ports
-        self.ports[self.electrical_input_port_ref] = electrical_input_port
-        self.ports[self.thermal_output_port_ref] = cooling_output_port
+        self.ports[self.input_port_ref] = electrical_input_port
+        self.ports[self.output_port_ref] = cooling_output_port
 
         # Handle heat intake rejection
         self.heat_rejection_port = False  # clear if already set
