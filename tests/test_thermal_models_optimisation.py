@@ -497,8 +497,10 @@ def test_chiller_operation():
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
-    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -512,8 +514,8 @@ def test_chiller_operation():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(chiller.ports["output"].port_name, 0),
-        optimise_results.values(chiller.ports["input"].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -539,16 +541,20 @@ def test_chiller_with_heat_rejection():
     chiller = ParameterisedChiller(
         max_cooling_capacity=10, nominal_cop=2.5, heat_rejection_port=True, heat_rejection_coefficient=0.8
     )
-    assert "heat_rejection" in chiller.ports
+    assert chiller.heat_rejection_port_ref in chiller.ports
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     waste_heat_agg = AggregationNode(port_units=Units.KWT)
     waste_heat_agg.add_port("chiller_waste_heat")
 
     system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
-    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
-    system.connect_ports_and_create_edge(chiller.ports["heat_rejection"], waste_heat_agg.ports["chiller_waste_heat"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+    )
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.heat_rejection_port_ref], waste_heat_agg.ports["chiller_waste_heat"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -562,8 +568,8 @@ def test_chiller_with_heat_rejection():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(chiller.ports["output"].port_name, 0),
-        optimise_results.values(chiller.ports["input"].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -605,8 +611,10 @@ def test_chiller_with_temperature_cop():
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
-    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -620,8 +628,8 @@ def test_chiller_with_temperature_cop():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(chiller.ports["output"].port_name, 0),
-        optimise_results.values(chiller.ports["input"].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -963,7 +971,7 @@ def test_simple_chiller_constant_cop():
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
     optimise_results = optimise(

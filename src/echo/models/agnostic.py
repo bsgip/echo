@@ -679,12 +679,14 @@ class InputOutputNode(Node):
     min_output: Optional[float]
     max_input: Optional[float]
     min_input: Optional[float]
+    input_port_ref: str = "input"
+    output_port_ref: str = "output"
 
     def __init__(self, **data):
         super().__init__(**data)
         # Create an input port and an output port with the correct units
-        self.ports["input"] = FlexPort(units=self.input_port_unit)
-        self.ports["output"] = FlexPort(units=self.output_port_unit)
+        self.ports[self.input_port_ref] = FlexPort(units=self.input_port_unit)
+        self.ports[self.output_port_ref] = FlexPort(units=self.output_port_unit)
 
 
 class TimeVaryingPiecewiseIONode(InputOutputNode):
@@ -708,9 +710,6 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     populate_bounds = root_validator(allow_reuse=True)(
         set_bounds_from_piecewise_points
     )  # set attributes max_output,  min_output, max_input, min_input from input points/output points
-
-    input_port_ref: str = "input"
-    output_port_ref: str = "output"
 
     def verify_points_values(self):
         validate(self.input_points is not None, "No input points defined")
