@@ -976,6 +976,20 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
         self.ports[self.cooling_output_port_ref] = FlexSink(units=Units.KWT)  # Heat pump has one cooling output port
         self.ports[self.heating_output_port_ref] = FlexSource(units=Units.KWT)  # Heat pump has one heating output port
 
+    def set_ports(
+        self, electrical_input_port: FlexSink, cooling_output_port: FlexSink, heating_output_port: FlexSource
+    ):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Add the new ports
+        self.electrical_input_port_ref = electrical_input_port.port_name
+        self.cooling_output_port_ref = cooling_output_port.port_name
+        self.heating_output_port_ref = heating_output_port.port_name
+        self.ports[self.electrical_input_port_ref] = electrical_input_port
+        self.ports[self.cooling_output_port_ref] = cooling_output_port.port_name
+        self.ports[self.heating_output_port_ref] = heating_output_port.port_name
+
     def _set_ports_var_bounds(self, model: EchoConcreteModel):
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given."""
         lower_bound = self.max_heating_capacity or model.bigM
