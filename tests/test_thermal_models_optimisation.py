@@ -714,8 +714,10 @@ def test_simple_heatpump_single_output():
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports["electrical_input"])
-    system.connect_ports_and_create_edge(heatpump.ports["thermal_output"], thermal_load.ports["thermal_demand_kwt"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -735,8 +737,8 @@ def test_simple_heatpump_single_output():
     # Actual observed Coefficient of performance (output/input)
     heating_cop_actual = list()
     for _output, _input in zip(
-        optimise_results.values(heatpump.ports["thermal_output"].neg),
-        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+        optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -751,8 +753,8 @@ def test_simple_heatpump_single_output():
 
     cooling_cop_actual = list()
     for _output, _input in zip(
-        optimise_results.values(heatpump.ports["thermal_output"].pos),
-        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+        optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -768,7 +770,7 @@ def test_simple_heatpump_single_output():
     power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
         heatpump.power_to_heat
     )
-    total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)
 
@@ -879,8 +881,10 @@ def test_parameterised_heatpump_single_output():
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports["electrical_input"])
-    system.connect_ports_and_create_edge(heatpump.ports["thermal_output"], thermal_load.ports["thermal_demand_kwt"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -896,8 +900,8 @@ def test_parameterised_heatpump_single_output():
     # Actual observed Coefficient of performance (output/input)
     heating_cop_actual = list()
     for _output, _input in zip(
-        optimise_results.values(heatpump.ports["thermal_output"].neg),
-        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+        optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -917,8 +921,8 @@ def test_parameterised_heatpump_single_output():
 
     cooling_cop_actual = list()
     for _output, _input in zip(
-        optimise_results.values(heatpump.ports["thermal_output"].pos),
-        optimise_results.values(heatpump.ports["electrical_input"].port_name),
+        optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -940,7 +944,7 @@ def test_parameterised_heatpump_single_output():
     power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
         heatpump.power_to_heat
     )
-    total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(np.round(power_to_heat_and_cool, 2) == np.round(total_power_consumed, 2))
 
@@ -1000,8 +1004,10 @@ def test_simple_heatpump_constant_cop():
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports["electrical_input"])
-    system.connect_ports_and_create_edge(heatpump.ports["thermal_output"], thermal_load.ports["thermal_demand_kwt"])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -1023,6 +1029,6 @@ def test_simple_heatpump_constant_cop():
     power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
         heatpump.power_to_heat
     )
-    total_power_consumed = optimise_results.values(heatpump.ports["electrical_input"].port_name)
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)

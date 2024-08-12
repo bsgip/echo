@@ -1163,8 +1163,8 @@ class ParameterisedHeatPump(Node):
     input_points_heating: dict = None
     output_points_heating: dict = None
 
-    electrical_input_port_ref: str = "electrical_input"
-    thermal_output_port_ref: str = "thermal_output"
+    electrical_input_port_ref: str = "input"
+    thermal_output_port_ref: str = "output"
     heat_intake_rejection_port_ref: str = "heat_intake_rejection"
 
     # partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
