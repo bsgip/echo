@@ -181,19 +181,23 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
 
     # The input_port_ref and output_port_ref are defined on the parent class (TimeVaryingPiecewiseIONode)
-    electrical_input_port_ref: str = "input"
-    thermal_output_port_ref: str = "output"
     heat_rejection_port_ref: str = "heat_rejection"
 
     @property
     def temperature_cop_param(self):
         return f"temperature_cop_factor_{self.node_name}"
 
+    @property
+    def electrical_input_port_ref(self):
+        return self.input_port_ref
+
+    @property
+    def thermal_output_port_ref(self):
+        return self.output_port_ref
+
     def __init__(self, **data):
         super().__init__(**data)
         # A chiller has one electrical input port and one cooling output (thermal sink) port
-        self.input_port_ref = self.electrical_input_port_ref
-        self.output_port_ref = self.thermal_output_port_ref
         self.ports[self.electrical_input_port_ref] = FlexSink(units=self.input_port_unit)
         self.ports[self.thermal_output_port_ref] = FlexSink(units=self.output_port_unit)
         if self.heat_rejection_port:
@@ -220,8 +224,6 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         # Update port references
         self.input_port_ref = electrical_input_port.port_name
         self.output_port_ref = cooling_output_port.port_name
-        self.electrical_input_port_ref = electrical_input_port.port_name
-        self.thermal_output_port_ref = cooling_output_port.port_name
 
         # Add the new ports
         self.ports[self.electrical_input_port_ref] = electrical_input_port
