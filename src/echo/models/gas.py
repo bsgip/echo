@@ -40,17 +40,17 @@ class GasBoilerFixedCOP(InputOutputNode):
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # Add an input and output node, and create the appropriate transformation object
-        self.ports["input"] = OffOrConstrainedPort(
+        self.ports[self.input_port_ref] = OffOrConstrainedPort(
             upper_bound=self.max_input, lower_bound=self.min_input, units=self.input_port_unit
         )
-        self.ports["output"] = FlexPort(units=self.output_port_unit)
+        self.ports[self.output_port_ref] = FlexPort(units=self.output_port_unit)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         super(GasBoilerFixedCOP, self).apply_node_constraints(model)
 
         def node_constraint(model: EchoConcreteModel, p, t):
-            p_in = getattr(model, self.ports["input"].port_name)
-            p_out = getattr(model, self.ports["output"].port_name)
+            p_in = getattr(model, self.ports[self.input_port_ref].port_name)
+            p_out = getattr(model, self.ports[self.output_port_ref].port_name)
             if p == 0 and t == 0:
                 weighted_inputs = p_in[p, t] * self.startup_cop
                 weighted_outputs = 0
@@ -94,10 +94,10 @@ class TempControlledBoiler(InputOutputNode):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.ports["input"] = OffOrConstrainedPort(
+        self.ports[self.input_port_ref] = OffOrConstrainedPort(
             units=self.input_port_unit, lower_bound=self.min_input, upper_bound=self.max_input
         )
-        self.ports["output"] = OffOrConstrainedPort(
+        self.ports[self.output_port_ref] = OffOrConstrainedPort(
             units=self.output_port_unit, lower_bound=self.max_output, upper_bound=self.min_output
         )
 
@@ -120,8 +120,8 @@ class TempControlledBoiler(InputOutputNode):
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         # Retrieve some variables
-        input_kw = getattr(model, self.ports["input"].port_name)
-        output_kw = getattr(model, self.ports["output"].port_name)
+        input_kw = getattr(model, self.ports[self.input_port_ref].port_name)
+        output_kw = getattr(model, self.ports[self.output_port_ref].port_name)
 
         def constraint2(model: EchoConcreteModel, p, t):
             """return temp at time t - exiting temp at time t == energy removed at t"""
