@@ -45,6 +45,15 @@ class GasBoilerFixedCOP(InputOutputNode):
         )
         self.ports[self.output_port_ref] = FlexPort(units=self.output_port_unit)
 
+    def set_ports(self, gas_input_port: OffOrConstrainedPort, thermal_output_port: FlexPort):
+        # Discard existing ports
+        self.ports.clear()
+        # Add the new ports
+        self.input_port_ref = gas_input_port.port_name
+        self.output_port_ref = thermal_output_port.port_name
+        self.ports[self.input_port_ref] = gas_input_port
+        self.ports[self.output_port_ref] = thermal_output_port
+
     def apply_node_constraints(self, model: EchoConcreteModel):
         super(GasBoilerFixedCOP, self).apply_node_constraints(model)
 
