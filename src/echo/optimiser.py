@@ -1,6 +1,7 @@
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
 from typing import Collection, Optional, Union
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,8 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
         TerminationCondition.globallyOptimal,
         TerminationCondition.locallyOptimal,
         TerminationCondition.optimal,
+        TerminationCondition.maxIterations,
+        TerminationCondition.maxTimeLimit,
     ]
 )
 
@@ -38,7 +41,8 @@ def logged_stdout(logfile: Optional[str], mode: str = "w"):
 @dataclass
 class OptimisationResult:
     """Describes the set of results from a successful optimisation run. It will provide a set of utilities
-    for accessing result data for the scenario that created this result"""
+    for accessing result data for the scenario that created this result
+    """
 
     scenario_settings: ScenarioSettings
     objective: en.numeric_expr.NumericExpression
@@ -269,6 +273,7 @@ def optimise(
     profile: Optional[pd.DataFrame] = None,
     verbose: bool = False,
     logfile: Optional[str] = None,
+    time_limit: int = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
@@ -278,7 +283,9 @@ def optimise(
 
     verbose: If set to True the solver will operate in verbose mode and print additional output to stdout
     logfile: If set to a file path - the stdout will be redirected to this file (for the duration of this run)
-    acceptable_conditions: OptimiserResultError will be raised if the pyomo termination condition is not in this set"""
+    acceptable_conditions: OptimiserResultError will be raised if the pyomo termination condition is not in this set
+    time_limit: optional time_limit in seconds after which the solver should return a solution if
+     other termination conditions have not already been reached."""
 
     validate_network_graph(graph)
 
@@ -302,6 +309,19 @@ def optimise(
     else:
         opt = SolverFactory(engine_settings.engine)
 
+    if time_limit is not None:
+        solver_name = engine_settings.engine
+        if "cplex" in solver_name:
+            opt.options["timelimit"] = time_limit
+        elif "glpk" in solver_name:
+            opt.options["tmlim"] = time_limit
+        elif "gurobi" in solver_name:
+            opt.options["TimeLimit"] = time_limit
+        elif "xpress" in solver_name:
+            # Use the below instead for XPRESS versions before 9.0
+            # self.solver.options['maxtime'] = TIME_LIMIT
+            opt.options["soltimelimit"] = time_limit
+
     # Run the optimisation, logging everything to the specified file
     with logged_stdout(logfile):
         if verbose:
@@ -313,7 +333,10 @@ def optimise(
     solver_status: SolverStatus = results.solver.status
 
     if solver_status != SolverStatus.ok:
-        raise OptimiserResultError(f"Solver status returned as {solver_status}")
+        if solver_status == SolverStatus.aborted:
+            warnings.warn(f"Solver status returned as {solver_status}")
+        else:
+            raise OptimiserResultError(f"Solver status returned as {solver_status}")
 
     if termination_condition not in acceptable_conditions:
         raise OptimiserResultError(
