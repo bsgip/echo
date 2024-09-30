@@ -285,7 +285,7 @@ def optimise(
     logfile: If set to a file path - the stdout will be redirected to this file (for the duration of this run)
     acceptable_conditions: OptimiserResultError will be raised if the pyomo termination condition is not in this set
     time_limit: optional time_limit in seconds after which the solver should return a solution if
-     other termination vcondition is not reached before that"""
+     other termination conditions have not already been reached."""
 
     validate_network_graph(graph)
 
