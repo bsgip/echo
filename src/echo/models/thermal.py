@@ -203,6 +203,9 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         if self.heat_rejection_port:
             self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
+    def update(self, ambient_temperature_dict):
+        self.ambient_temperature_dict = ambient_temperature_dict
+
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         self._load_temperature_values_from_profile(model, profile)
         self._define_temperature_dependent_cop_coefficient(model)
@@ -472,6 +475,9 @@ class ThermalStorage(Node):
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
             self.initial_temp = self.min_temp + 0.5 * (self.max_temp - self.min_temp)
+
+    def update(self, ambient_temp):
+        self.ambient_temp = ambient_temp
 
     def set_ports(self, input_port: FlexSink, output_port: FlexSource):
         """Replaces any existing ports with separate input and output ports"""
@@ -1214,6 +1220,9 @@ class ParameterisedHeatPump(Node):
     def __init__(self, **data):
         super().__init__(**data)
         self.create_ports()
+
+    def update(self, ambient_temperature_dict):
+        self.ambient_temperature_dict = ambient_temperature_dict
 
     def create_ports(self):
         # Create input and output ports
