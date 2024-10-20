@@ -62,6 +62,65 @@ class TellegenNode(Node):
         )
 
 
+class ParameterisedTellegenNode(TellegenNode):
+    """A node that implements a Tellegen constraint requiring that port values sum to zero.
+
+    Parameterised Tellegen node implements additional constraints between ports.
+    """
+
+    mutually_exclusive_port_flows: list[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        super(ParameterisedTellegenNode, self).apply_node_constraints(model)
+        self._apply_mutually_exclusive_port_flow_constraint(model)
+
+    def _apply_mutually_exclusive_port_flow_constraint(self, model: EchoConcreteModel):
+
+        if not all([_p in self.ports for _p in self.mutually_exclusive_port_flows]):
+            raise ValueError(
+                f"Can not find port reference in node {self.node_name} ports"
+                f"{[_p for _p in self.mutually_exclusive_port_flows if not _p in self.ports]}"
+            )
+        _port_name_1 = self.ports[self.mutually_exclusive_port_flows[0]].port_name
+        _port_name_2 = self.ports[self.mutually_exclusive_port_flows[0]].port_name
+        _binary_var_name = f"{self.node_name}_{_port_name_1}_is_non_zero"
+        _binary_var = getattr(model, _binary_var_name)
+
+        setattr(model, _binary_var_name, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
+
+        def mutual_exclusivity_rule(model: EchoConcreteModel, p, t):
+            return (
+                _binary_var[p, t] * -1 * model.bigM
+                <= getattr(model, _port_name_1)[p, t]
+                <= _binary_var[p, t] * model.bigM
+            )
+
+        con_name = "port_flow_mutual_exclusivity_rule_1_" + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule))
+
+        def mutual_exclusivity_rule_2(model: EchoConcreteModel, p, t):
+            return (
+                (1 - _binary_var[p, t]) * -1 * model.bigM
+                <= getattr(model, _port_name_2)[p, t]
+                <= (1 - _binary_var[p, t]) * model.bigM
+            )
+
+        con_name = "port_flow_mutual_exclusivity_rule_2_" + self.node_name
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_2))
+
+    def verify_node(self):
+        super(ParameterisedTellegenNode, self).verify_node()
+        if self.mutually_exclusive_port_flows:
+            validate(
+                len(self.ports) >= 3,
+                "A Parameterised Tellegen node with mutually exclusive port flows must have at least three ports "
+                f"to avoid infeasible conditions. Offending node name: {self.node_name}",
+            )
+
+
 class MultiCommodityTellegenNode(Node):
     """
     A node with ports that have multiple commodities.
