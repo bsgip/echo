@@ -116,7 +116,6 @@ class ParameterisedTellegenNode(TellegenNode):
             )
         _port_name_1 = self.ports.get(self.mutually_exclusive_port_flows[0]).port_name
         _port_name_2 = self.ports.get(self.mutually_exclusive_port_flows[1]).port_name
-        _binary_var_name = f"{self.node_name}_{_port_name_1}_is_non_zero"
         _binary_var = getattr(model, self.binary_variable_flow_through_mutually_exclusive_port_1)
 
         def mutual_exclusivity_rule_11(model: EchoConcreteModel, p, t):
