@@ -62,6 +62,101 @@ class TellegenNode(Node):
         )
 
 
+class ParameterisedTellegenNode(TellegenNode):
+    """A node that implements a Tellegen constraint requiring that port values sum to zero.
+
+    Parameterised Tellegen node implements additional constraints between ports,
+    allowing only flows through one of two selsected ports at time.
+    """
+
+    # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
+    mutually_exclusive_port_flows: tuple[str, str] = None
+
+    @property
+    def binary_variable_flow_through_mutually_exclusive_port_1(self):
+        return "binary_variable_flow_through_mutually_exclusive_port_1" + self.node_name
+
+    @property
+    def constraint_neg_flow_mutually_exclusive_port_1(self):
+        return "constraint_neg_flow_mutually_exclusive_port_1_" + self.node_name
+
+    @property
+    def constraint_pos_flow_mutually_exclusive_port_1(self):
+        return "constraint_pos_flow_mutually_exclusive_port_1_" + self.node_name
+
+    @property
+    def constraint_neg_flow_mutually_exclusive_port_2(self):
+        return "constraint_neg_flow_mutually_exclusive_port_2_" + self.node_name
+
+    @property
+    def constraint_pos_flow_mutually_exclusive_port_2(self):
+        return "constraint_pos_flow_mutually_exclusive_port_2_" + self.node_name
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        # Load coefficient of performance values from profile (if provided by reference)
+        setattr(
+            model,
+            self.binary_variable_flow_through_mutually_exclusive_port_1,
+            en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
+        )
+        super(ParameterisedTellegenNode, self).add_node_to_model(model, profile)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        super(ParameterisedTellegenNode, self).apply_node_constraints(model)
+        self._apply_mutually_exclusive_port_flow_constraint(model)
+
+    def _apply_mutually_exclusive_port_flow_constraint(self, model: EchoConcreteModel):
+
+        if not all([_p in self.ports for _p in self.mutually_exclusive_port_flows]):
+            raise ValueError(
+                f"Can not find port reference in node {self.node_name} ports"
+                f"{[_p for _p in self.mutually_exclusive_port_flows if not _p in self.ports]}"
+            )
+        _port_name_1 = self.ports.get(self.mutually_exclusive_port_flows[0]).port_name
+        _port_name_2 = self.ports.get(self.mutually_exclusive_port_flows[1]).port_name
+        _binary_var = getattr(model, self.binary_variable_flow_through_mutually_exclusive_port_1)
+
+        def mutual_exclusivity_rule_11(model: EchoConcreteModel, p, t):
+            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            return _binary_var[p, t] * -1 * model.bigM <= getattr(model, _port_name_1)[p, t]
+
+        con_name = self.constraint_neg_flow_mutually_exclusive_port_1
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_11))
+
+        def mutual_exclusivity_rule_12(model: EchoConcreteModel, p, t):
+            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            return getattr(model, _port_name_1)[p, t] <= _binary_var[p, t] * model.bigM
+
+        con_name = self.constraint_pos_flow_mutually_exclusive_port_1
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_12))
+
+        def mutual_exclusivity_rule_21(model: EchoConcreteModel, p, t):
+            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            return (1 - _binary_var[p, t]) * -1 * model.bigM <= getattr(model, _port_name_2)[p, t]
+
+        con_name = self.constraint_neg_flow_mutually_exclusive_port_2
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_21))
+
+        def mutual_exclusivity_rule_22(model: EchoConcreteModel, p, t):
+            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            return getattr(model, _port_name_2)[p, t] <= (1 - _binary_var[p, t]) * model.bigM
+
+        con_name = self.constraint_pos_flow_mutually_exclusive_port_2
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_22))
+
+    def verify_node(self):
+        super(ParameterisedTellegenNode, self).verify_node()
+        if self.mutually_exclusive_port_flows:
+            validate(
+                len(self.ports) >= 3,
+                "A Parameterised Tellegen node with mutually exclusive port flows must have at least three ports "
+                f"to avoid infeasible conditions. Offending node name: {self.node_name}",
+            )
+
+
 class MultiCommodityTellegenNode(Node):
     """
     A node with ports that have multiple commodities.
@@ -828,11 +923,18 @@ class AggregationNode(Node):
     def verify_node(self):
         super(AggregationNode, self).verify_node()
 
-    def add_port(self, port_name: str):
-        if self.ports.get(port_name) is None:
-            self.ports[port_name] = FlexSink(units=self.port_units)
+    def add_port(self, name: str, port=FlexSink()):
+        if self.ports.get(name) is None:
+            if port.units == Units.NA:
+                port.units = self.port_units
+            if port.units != self.port_units:
+                raise ValueError(
+                    f"All ports on Aggregation node must match the node units {self.port_units}."
+                    f"Received new port with units {port.units} for node {self.node_name}"
+                )
+            self.ports[name] = port
         else:
-            raise ConfigurationError(f"Port with name {port_name} is already defined on node {self.node_name}")
+            raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super(AggregationNode, self).add_node_to_model(model, profile)
