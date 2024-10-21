@@ -65,7 +65,8 @@ class TellegenNode(Node):
 class ParameterisedTellegenNode(TellegenNode):
     """A node that implements a Tellegen constraint requiring that port values sum to zero.
 
-    Parameterised Tellegen node implements additional constraints between ports.
+    Parameterised Tellegen node implements additional constraints between ports,
+    allowing only flows through one of two selsected ports at time.
     """
 
     # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
