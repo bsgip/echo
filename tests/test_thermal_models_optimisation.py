@@ -5,7 +5,7 @@ import pandas as pd
 
 from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode
+from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode, ParameterisedTellegenNode
 from echo.models.base import Node, OptimisationGraph, Port
 
 from echo.models.thermal import (
@@ -1044,3 +1044,70 @@ def test_simple_heatpump_constant_cop():
     total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)
+
+
+def test_chiller_with_parametrised_tellegen_heat_rejection():
+    """Test Chiller operation with heat rejection port"""
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    chiller = ParameterisedChiller(
+        node_name="chiller",
+        max_cooling_capacity=10,
+        nominal_cop=2.5,
+        heat_rejection_port=True,
+        heat_rejection_coefficient=1,
+    )
+    waste_heat_tellegen = ParameterisedTellegenNode(
+        node_name="waste_heat_tellegen",
+        ports={
+            "to_chiller_heat_rejection": FlexPort(units=Units.KWT),
+            "to_waste_heat_aggregation_1": FlexPort(units=Units.KWT),
+            "to_waste_heat_aggregation_2": FlexPort(units=Units.KWT),
+        },
+        mutually_exclusive_port_flows=("to_waste_heat_aggregation_1", "to_waste_heat_aggregation_2"),
+    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
+    waste_heat_agg = AggregationNode(node_name="waste_heat_aggregation_1", port_units=Units.KWT)
+    waste_heat_agg.add_port("chiller_waste_heat_1")
+    waste_heat_agg_2 = AggregationNode(node_name="waste_heat_aggregation_2", port_units=Units.KWT)
+    waste_heat_agg_2_max_flow = 7
+    waste_heat_agg_2.add_port(
+        name="chiller_waste_heat_2",
+        port=FlexPort(
+            units=Units.KWT, import_constraint=FlowConstraint.Fixed, import_constraint_value=waste_heat_agg_2_max_flow
+        ),
+    )
+    system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg, waste_heat_agg_2, waste_heat_tellegen])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+    )
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.heat_rejection_port_ref], waste_heat_tellegen.ports["to_chiller_heat_rejection"]
+    )
+    system.connect_ports_and_create_edge(
+        waste_heat_tellegen.ports["to_waste_heat_aggregation_1"], waste_heat_agg.ports["chiller_waste_heat_1"]
+    )
+    system.connect_ports_and_create_edge(
+        waste_heat_tellegen.ports["to_waste_heat_aggregation_2"], waste_heat_agg_2.ports["chiller_waste_heat_2"]
+    )
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS_SHORT,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+    )
+    total_chiller_waste_heat = optimise_results.df_by_port().to_chiller_heat_rejection
+    waste_heat_aggregation_1 = optimise_results.df_by_port().chiller_waste_heat_1[0]
+    waste_heat_aggregation_2 = optimise_results.df_by_port().chiller_waste_heat_2[0]
+    assert round(total_chiller_waste_heat.sum()) == round(
+        waste_heat_aggregation_1.sum() + waste_heat_aggregation_2.sum()
+    )
+    for i in waste_heat_aggregation_2.index:
+        assert round(waste_heat_aggregation_2[i]) <= waste_heat_agg_2_max_flow
+        if round(waste_heat_aggregation_2[i]) != 0:
+            assert round(waste_heat_aggregation_1[i]) == 0
