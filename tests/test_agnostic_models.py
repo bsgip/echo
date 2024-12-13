@@ -13,7 +13,7 @@ from echo.models.agnostic import (
     MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
     FlexPort,
-    ParameterisedTellegenNode,
+    ThreeWayValveNode,
 )
 from echo.exceptions import ConfigurationError
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings, engine_settings_from_environment
@@ -89,17 +89,15 @@ def test_partitioned_node_error():
         )
 
 
-def test_parameterised_tellegen_node():
+def test_threeway_tellegen_node():
     """Test asset creation and pyomo constraints"""
 
-    node = ParameterisedTellegenNode(
-        node_name="parameterised_tellegen",
-        ports={
-            "port_1": FlexPort(units=Units.KW),
-            "port_2": FlexPort(units=Units.KW),
-            "port_3": FlexPort(units=Units.KW),
-        },
-        mutually_exclusive_port_flows=("port_1", "port_3"),
+    node = ThreeWayValveNode(
+        node_name="three_way_valve",
+        units=Units.KW,
+        input_port_name="port_1",
+        output_port_name_1="port_2",
+        output_port_name_2="port_3",
     )
     model = empty_model()
     node.add_node_to_model(model, profile=None)
@@ -110,16 +108,18 @@ def test_parameterised_tellegen_node():
     assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
 
 
-def test_parameterised_tellegen_node_add_port():
+def test_threeway_tellegen_node_add_port():
     """Test asset creation, add ports and pyomo constraints"""
 
-    node = ParameterisedTellegenNode(
-        node_name="parameterised_tellegen",
-        ports={"port_1": FlexPort(units=Units.KW)},
-        mutually_exclusive_port_flows=("port_2", "port_3"),
+    node = ThreeWayValveNode(
+        node_name="three_way_valve",
+        units=Units.KW,
+        input_port_name="port_1",
+        output_port_name_1="port_2",
+        output_port_name_2="port_3",
     )
-    node.add_port(name="port_2", port=FlexPort(units=Units.KW))
-    node.add_port(name="port_3", port=FlexPort(units=Units.KW))
+    node.add_port(name="port_4", port=FlexPort(units=Units.KW))
+    node.add_port(name="port_5", port=FlexPort(units=Units.KW))
     model = empty_model()
     node.add_node_to_model(model, profile=None)
     node.apply_node_constraints(model)
@@ -127,31 +127,3 @@ def test_parameterised_tellegen_node_add_port():
     assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
     assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
     assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
-
-
-def test_parameterised_tellegen_node_error_port_number():
-    """Test at least three ports error"""
-    node = ParameterisedTellegenNode(
-        node_name="parameterised_tellegen",
-        ports={"port_1": FlexPort(units=Units.KW), "port_2": FlexPort(units=Units.KW)},
-        mutually_exclusive_port_flows=("port_1", "port_2"),
-    )
-    with pytest.raises(ConfigurationError):
-        node.verify_node()
-
-
-def test_parameterised_tellegen_node_error_port_name():
-    """Test wrong port name error"""
-    node = ParameterisedTellegenNode(
-        node_name="parameterised_tellegen",
-        ports={
-            "port_1": FlexPort(units=Units.KW),
-            "port_2": FlexPort(units=Units.KW),
-            "port_3": FlexPort(units=Units.KW),
-        },
-        mutually_exclusive_port_flows=("port_1", "port_4"),
-    )
-    model = empty_model()
-    node.add_node_to_model(model, profile=None)
-    with pytest.raises(ValueError):
-        node.apply_node_constraints(model)
