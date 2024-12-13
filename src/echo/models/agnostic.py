@@ -157,6 +157,107 @@ class ParameterisedTellegenNode(TellegenNode):
             )
 
 
+class ThreeWayValveNode(TellegenNode):
+    """A node that implements a Tellegen constraint requiring that port values sum to zero.
+
+    ThreeWayValveNode node implements additional constraints between ports,
+    there is one input (import) port and two output (export) ports.
+    At each time the flow is allowed through only one output port.
+    """
+
+    commodity: Units
+    input_port_name: str
+    output_port_name_1: str
+    output_port_name_2: str
+
+    # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
+    mutually_exclusive_port_flows: tuple[str, str] = None
+
+    @property
+    def binary_variable_flow_through_mutually_exclusive_port_1(self):
+        return f"binary_variable_flow_through_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
+
+    @property
+    def constraint_neg_flow_mutually_exclusive_port_1(self):
+        return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
+
+    @property
+    def constraint_pos_flow_mutually_exclusive_port_1(self):
+        return f"constraint_pos_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
+
+    @property
+    def constraint_neg_flow_mutually_exclusive_port_2(self):
+        return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_2}_{self.node_name}"
+
+    @property
+    def constraint_pos_flow_mutually_exclusive_port_2(self):
+        return f"constraint_pos_flow_mutually_exclusive_port_{self.output_port_name_2}_{self.node_name}"
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+    def add_node_to_model(self, model: EchoConcreteModel, profile):
+        # Load coefficient of performance values from profile (if provided by reference)
+        setattr(
+            model,
+            self.binary_variable_flow_through_mutually_exclusive_port_1,
+            en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
+        )
+        super(ParameterisedTellegenNode, self).add_node_to_model(model, profile)
+
+    def apply_node_constraints(self, model: EchoConcreteModel):
+        super(ParameterisedTellegenNode, self).apply_node_constraints(model)
+        self._apply_mutually_exclusive_port_flow_constraint(model)
+
+    def _apply_mutually_exclusive_port_flow_constraint(self, model: EchoConcreteModel):
+
+        if not all([_p in self.ports for _p in self.mutually_exclusive_port_flows]):
+            raise ValueError(
+                f"Can not find port reference in node {self.node_name} ports"
+                f"{[_p for _p in self.mutually_exclusive_port_flows if not _p in self.ports]}"
+            )
+        _port_name_1 = self.ports.get(self.mutually_exclusive_port_flows[0]).port_name
+        _port_name_2 = self.ports.get(self.mutually_exclusive_port_flows[1]).port_name
+        _binary_var = getattr(model, self.binary_variable_flow_through_mutually_exclusive_port_1)
+
+        def mutual_exclusivity_rule_11(model: EchoConcreteModel, p, t):
+            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            return _binary_var[p, t] * -1 * model.bigM <= getattr(model, _port_name_1)[p, t]
+
+        con_name = self.constraint_neg_flow_mutually_exclusive_port_1
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_11))
+
+        def mutual_exclusivity_rule_12(model: EchoConcreteModel, p, t):
+            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            return getattr(model, _port_name_1)[p, t] <= _binary_var[p, t] * model.bigM
+
+        con_name = self.constraint_pos_flow_mutually_exclusive_port_1
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_12))
+
+        def mutual_exclusivity_rule_21(model: EchoConcreteModel, p, t):
+            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            return (1 - _binary_var[p, t]) * -1 * model.bigM <= getattr(model, _port_name_2)[p, t]
+
+        con_name = self.constraint_neg_flow_mutually_exclusive_port_2
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_21))
+
+        def mutual_exclusivity_rule_22(model: EchoConcreteModel, p, t):
+            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            return getattr(model, _port_name_2)[p, t] <= (1 - _binary_var[p, t]) * model.bigM
+
+        con_name = self.constraint_pos_flow_mutually_exclusive_port_2
+        setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_22))
+
+    def verify_node(self):
+        super(ParameterisedTellegenNode, self).verify_node()
+        if self.mutually_exclusive_port_flows:
+            validate(
+                len(self.ports) >= 3,
+                "A Parameterised Tellegen node with mutually exclusive port flows must have at least three ports "
+                f"to avoid infeasible conditions. Offending node name: {self.node_name}",
+            )
+
+
 class MultiCommodityTellegenNode(Node):
     """
     A node with ports that have multiple commodities.
