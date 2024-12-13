@@ -148,9 +148,9 @@ class ThreeWayValveNode(TellegenNode):
     """
 
     units: Units
-    input_port_name: str
-    output_port_name_1: str
-    output_port_name_2: str
+    input_port_name: str = "input_port"
+    output_port_name_1: str = "output_port_1"
+    output_port_name_2: str = "output_port_2"
 
     # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
     mutually_exclusive_port_flows: tuple[str, str] = None
