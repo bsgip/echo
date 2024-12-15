@@ -37,6 +37,83 @@ from echo.validators import (
 """
 
 
+class FlexPort(Port):
+    """Flexible variable port, which can import and export without constraints."""
+
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Variable
+
+
+class FlexSink(FlexPort):
+    """Flexible port, imports only"""
+
+    flows = Flows.Import
+
+
+class FlexSource(FlexPort):
+    """Flexible ports, exports only"""
+
+    flows = Flows.Export
+
+
+class FixedPort(Port):
+    """Fixed port (parameter), can either import or export."""
+
+    flows = Flows.Both
+    import_constraint = FlowConstraint.NoConstraint
+    export_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
+
+
+class Source(Port):
+    """A fixed source of a commodity."""
+
+    flows = Flows.Export
+    export_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
+
+    # Source should have non positive initial values
+    non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
+
+    def add_source_profile(self, source_values: dict):
+        self.set_initial_value(source_values)
+
+    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
+        self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
+
+
+class Sink(Port):
+    """A fixed sink for a commodity."""
+
+    flows = Flows.Import
+    import_constraint = FlowConstraint.NoConstraint
+    flow_type = OptimisationType.Parameter
+
+    non_neg_check = validator("initial_value", allow_reuse=True)(
+        nonnegative_load
+    )  # Sink should have non negative initial values
+
+    def add_sink_profile(self, sink_values: dict):
+        self.set_initial_value(sink_values)
+
+    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
+        self.set_initial_value_from_array(
+            array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
+        )
+
+
+class Demand(Sink):
+    def add_demand_profile(self, demand: dict):
+        self.set_initial_value(demand)
+
+    def add_demand_profile_from_array(
+        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
+    ):
+        self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
+
+
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
 
@@ -62,38 +139,70 @@ class TellegenNode(Node):
         )
 
 
-class ParameterisedTellegenNode(TellegenNode):
+class ThreeWayValveNode(TellegenNode):
     """A node that implements a Tellegen constraint requiring that port values sum to zero.
 
-    Parameterised Tellegen node implements additional constraints between ports,
-    allowing only flows through one of two selsected ports at time.
+    ThreeWayValveNode node implements additional constraints between ports,
+    there is one input (import) port and two output (export) ports.
+    At each time the flow is allowed through only one output port.
     """
+
+    units: Units
+    input_port_name: str = "input_port"
+    output_port_name_1: str = "output_port_1"
+    output_port_name_2: str = "output_port_2"
 
     # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
     mutually_exclusive_port_flows: tuple[str, str] = None
 
     @property
     def binary_variable_flow_through_mutually_exclusive_port_1(self):
-        return "binary_variable_flow_through_mutually_exclusive_port_1" + self.node_name
+        return f"binary_variable_flow_through_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
     def constraint_neg_flow_mutually_exclusive_port_1(self):
-        return "constraint_neg_flow_mutually_exclusive_port_1_" + self.node_name
+        return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
     def constraint_pos_flow_mutually_exclusive_port_1(self):
-        return "constraint_pos_flow_mutually_exclusive_port_1_" + self.node_name
+        return f"constraint_pos_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
     def constraint_neg_flow_mutually_exclusive_port_2(self):
-        return "constraint_neg_flow_mutually_exclusive_port_2_" + self.node_name
+        return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_2}_{self.node_name}"
 
     @property
     def constraint_pos_flow_mutually_exclusive_port_2(self):
-        return "constraint_pos_flow_mutually_exclusive_port_2_" + self.node_name
+        return f"constraint_pos_flow_mutually_exclusive_port_{self.output_port_name_2}_{self.node_name}"
 
     def __init__(self, **data):
         super().__init__(**data)
+        self.create_ports()
+
+    def create_ports(self):
+        # Create input and output ports
+        self.ports[self.input_port_name] = FlexSink(units=self.units)
+        self.ports[self.output_port_name_1] = FlexSource(units=self.units)
+        self.ports[self.output_port_name_2] = FlexSource(units=self.units)
+
+    def set_ports(
+        self,
+        input_port: FlexSink,
+        output_port_1: FlexSource,
+        output_port_2: FlexSource,
+    ):
+        # Discard existing ports
+        self.ports.clear()
+
+        # Update port references
+        self.input_port_name = input_port.port_name
+        self.output_port_name_1 = output_port_1.port_name
+        self.output_port_name_2 = output_port_2.port_name
+
+        # Add the new ports
+        self.ports[self.input_port_name] = input_port
+        self.ports[self.output_port_name_1] = output_port_1
+        self.ports[self.output_port_name_2] = output_port_2
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Load coefficient of performance values from profile (if provided by reference)
@@ -102,59 +211,45 @@ class ParameterisedTellegenNode(TellegenNode):
             self.binary_variable_flow_through_mutually_exclusive_port_1,
             en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
         )
-        super(ParameterisedTellegenNode, self).add_node_to_model(model, profile)
+        super(ThreeWayValveNode, self).add_node_to_model(model, profile)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        super(ParameterisedTellegenNode, self).apply_node_constraints(model)
+        super(ThreeWayValveNode, self).apply_node_constraints(model)
         self._apply_mutually_exclusive_port_flow_constraint(model)
 
     def _apply_mutually_exclusive_port_flow_constraint(self, model: EchoConcreteModel):
 
-        if not all([_p in self.ports for _p in self.mutually_exclusive_port_flows]):
-            raise ValueError(
-                f"Can not find port reference in node {self.node_name} ports"
-                f"{[_p for _p in self.mutually_exclusive_port_flows if not _p in self.ports]}"
-            )
-        _port_name_1 = self.ports.get(self.mutually_exclusive_port_flows[0]).port_name
-        _port_name_2 = self.ports.get(self.mutually_exclusive_port_flows[1]).port_name
+        _port_name_1 = self.ports.get(self.output_port_name_1).port_name
+        _port_name_2 = self.ports.get(self.output_port_name_2).port_name
         _binary_var = getattr(model, self.binary_variable_flow_through_mutually_exclusive_port_1)
 
         def mutual_exclusivity_rule_11(model: EchoConcreteModel, p, t):
-            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            """When _binary_var is 0, flow through output port 1 is constrained to be zero"""
             return _binary_var[p, t] * -1 * model.bigM <= getattr(model, _port_name_1)[p, t]
 
         con_name = self.constraint_neg_flow_mutually_exclusive_port_1
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_11))
 
         def mutual_exclusivity_rule_12(model: EchoConcreteModel, p, t):
-            """When _binary_var is 0, flow through port 1 in the tuple is constrained to be zero"""
+            """When _binary_var is 0, flow through output port 1 is constrained to be zero"""
             return getattr(model, _port_name_1)[p, t] <= _binary_var[p, t] * model.bigM
 
         con_name = self.constraint_pos_flow_mutually_exclusive_port_1
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_12))
 
         def mutual_exclusivity_rule_21(model: EchoConcreteModel, p, t):
-            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            """When _binary_var is 1, flow through output port 2 is constrained to be zero"""
             return (1 - _binary_var[p, t]) * -1 * model.bigM <= getattr(model, _port_name_2)[p, t]
 
         con_name = self.constraint_neg_flow_mutually_exclusive_port_2
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_21))
 
         def mutual_exclusivity_rule_22(model: EchoConcreteModel, p, t):
-            """When _binary_var is 1, flow through port 2 in the tuple is constrained to be zero"""
+            """When _binary_var is 1, flow through output port 2 is constrained to be zero"""
             return getattr(model, _port_name_2)[p, t] <= (1 - _binary_var[p, t]) * model.bigM
 
         con_name = self.constraint_pos_flow_mutually_exclusive_port_2
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_22))
-
-    def verify_node(self):
-        super(ParameterisedTellegenNode, self).verify_node()
-        if self.mutually_exclusive_port_flows:
-            validate(
-                len(self.ports) >= 3,
-                "A Parameterised Tellegen node with mutually exclusive port flows must have at least three ports "
-                f"to avoid infeasible conditions. Offending node name: {self.node_name}",
-            )
 
 
 class MultiCommodityTellegenNode(Node):
@@ -256,83 +351,6 @@ class PartitionedMultiCommodityTellegenNode(Node):
                 "node_con_" + str(partition_commodity_type) + self.node_name,
                 en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule),
             )
-
-
-class FlexPort(Port):
-    """Flexible variable port, which can import and export without constraints."""
-
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Variable
-
-
-class FlexSink(FlexPort):
-    """Flexible port, imports only"""
-
-    flows = Flows.Import
-
-
-class FlexSource(FlexPort):
-    """Flexible ports, exports only"""
-
-    flows = Flows.Export
-
-
-class FixedPort(Port):
-    """Fixed port (parameter), can either import or export."""
-
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
-
-
-class Source(Port):
-    """A fixed source of a commodity."""
-
-    flows = Flows.Export
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
-
-    # Source should have non positive initial values
-    non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
-
-    def add_source_profile(self, source_values: dict):
-        self.set_initial_value(source_values)
-
-    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
-
-
-class Sink(Port):
-    """A fixed sink for a commodity."""
-
-    flows = Flows.Import
-    import_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
-
-    non_neg_check = validator("initial_value", allow_reuse=True)(
-        nonnegative_load
-    )  # Sink should have non negative initial values
-
-    def add_sink_profile(self, sink_values: dict):
-        self.set_initial_value(sink_values)
-
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
-        self.set_initial_value_from_array(
-            array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
-        )
-
-
-class Demand(Sink):
-    def add_demand_profile(self, demand: dict):
-        self.set_initial_value(demand)
-
-    def add_demand_profile_from_array(
-        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
-    ):
-        self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
 class ControlledLoadOrGen(FlexPort):

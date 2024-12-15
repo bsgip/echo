@@ -5,7 +5,7 @@ import pandas as pd
 
 from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode, ParameterisedTellegenNode
+from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode, ThreeWayValveNode
 from echo.models.base import Node, OptimisationGraph, Port
 
 from echo.models.thermal import (
@@ -1057,14 +1057,12 @@ def test_chiller_with_parametrised_tellegen_heat_rejection():
         heat_rejection_port=True,
         heat_rejection_coefficient=1,
     )
-    waste_heat_tellegen = ParameterisedTellegenNode(
+    waste_heat_tellegen = ThreeWayValveNode(
         node_name="waste_heat_tellegen",
-        ports={
-            "to_chiller_heat_rejection": FlexPort(units=Units.KWT),
-            "to_waste_heat_aggregation_1": FlexPort(units=Units.KWT),
-            "to_waste_heat_aggregation_2": FlexPort(units=Units.KWT),
-        },
-        mutually_exclusive_port_flows=("to_waste_heat_aggregation_1", "to_waste_heat_aggregation_2"),
+        units=Units.KWT,
+        input_port_name="to_chiller_heat_rejection",
+        output_port_name_1="to_waste_heat_aggregation_1",
+        output_port_name_2="to_waste_heat_aggregation_2",
     )
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
