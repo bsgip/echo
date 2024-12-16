@@ -1478,7 +1478,15 @@ class ParameterisedHeatPump(Node):
             model,
             con_name,
             en.Piecewise(
-                model.Expansion, model.Time, yvar, xvar, pw_pts=xdata, pw_constr_type="EQ", f_rule=ydata, pw_repn="SOS2"
+                model.Expansion,
+                model.Time,
+                yvar,
+                xvar,
+                pw_pts=xdata,
+                pw_constr_type="EQ",
+                f_rule=ydata,
+                pw_repn="SOS2",
+                warn_domain_coverage=False,
             ),
         )
 
@@ -1494,7 +1502,15 @@ class ParameterisedHeatPump(Node):
             model,
             con_name,
             en.Piecewise(
-                model.Expansion, model.Time, yvar, xvar, pw_pts=xdata, pw_constr_type="EQ", f_rule=ydata, pw_repn="SOS2"
+                model.Expansion,
+                model.Time,
+                yvar,
+                xvar,
+                pw_pts=xdata,
+                pw_constr_type="EQ",
+                f_rule=ydata,
+                pw_repn="SOS2",
+                warn_domain_coverage=False,
             ),
         )
 
