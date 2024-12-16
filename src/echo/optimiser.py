@@ -272,6 +272,7 @@ def optimise(
     objective_set: Optional[ObjectiveSet] = None,
     profile: Optional[pd.DataFrame] = None,
     verbose: bool = False,
+    show_solver_output: bool = False,
     logfile: Optional[str] = None,
     time_limit: int = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
@@ -326,7 +327,7 @@ def optimise(
     with logged_stdout(logfile):
         if verbose:
             model.pprint(verbose=True)
-        results: SolverResults = opt.solve(model, tee=False, symbolic_solver_labels=True)
+        results: SolverResults = opt.solve(model, tee=show_solver_output, symbolic_solver_labels=True)
 
     # Extract the optimisation result
     termination_condition: TerminationCondition = results.solver.termination_condition
