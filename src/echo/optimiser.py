@@ -49,7 +49,8 @@ class OptimisationResult:
     model: EchoConcreteModel
     objective_set: Optional[ObjectiveSet]
     graph: OptimisationGraph
-    opt_status: str
+    opt_status: SolverStatus
+    termination_condition: TerminationCondition
 
     def df(self):
         """
@@ -343,7 +344,6 @@ def optimise(
         raise OptimiserResultError(
             f"Termination condition '{termination_condition}' is not in acceptable set  of {acceptable_conditions}"
         )
-    opt_status = results["Solver"][0]
 
     return OptimisationResult(
         scenario_settings=scenario_settings,
@@ -351,5 +351,6 @@ def optimise(
         model=model,
         objective_set=objective_set,
         graph=graph,
-        opt_status=opt_status,
+        opt_status=solver_status,
+        termination_condition=termination_condition,
     )
