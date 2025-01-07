@@ -51,12 +51,11 @@ dependencies = [
     "scikit-learn>=1.3,<2",
     "seaborn>=0.12,<1",
     "shortuuid>=1.0.11,<2",
-    "tqdm>=4.66,<5",
     "typing-extensions>=4.7,<5",
 ]
 
 [project.optional-dependencies]
-dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz", "types-tqdm"]
+dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
 docs = ["sphinx", "sphinx-rtd-theme"]
 
