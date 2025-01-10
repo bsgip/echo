@@ -455,6 +455,8 @@ class ThermalStorage(Node):
     # means zero heat loss/gain
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
+    enforce_end_temperature_value: bool = True  # If True, the internal temperature value at the end of the
+    # last optimisation interval is required to be equal initial value
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
@@ -561,8 +563,9 @@ class ThermalStorage(Node):
         self._create_soc_variable(model)
         self._apply_net_loss_and_gain_constraint(model)
         self._apply_energy_balance_constraint(model)
-        self._apply_final_temperature_constraint(model)
         self._apply_soc_constraint(model)
+        if self.enforce_end_temperature_value:
+            self._apply_final_temperature_constraint(model)
 
     def _load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """For all attributes set by str reference, load values from profile."""
