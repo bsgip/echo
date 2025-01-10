@@ -455,6 +455,8 @@ class ThermalStorage(Node):
     # means zero heat loss/gain
     initial_temp: float = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
+    enforce_end_temperature_value: bool = True  # If True, the internal temperature value at the end of the
+    # last optimisation interval is required to be equal initial value
     energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
@@ -562,6 +564,8 @@ class ThermalStorage(Node):
         self._apply_net_loss_and_gain_constraint(model)
         self._apply_energy_balance_constraint(model)
         self._apply_soc_constraint(model)
+        if self.enforce_end_temperature_value:
+            self._apply_final_temperature_constraint(model)
 
     def _load_values_from_profile(self, model: EchoConcreteModel, profile_df: pd.DataFrame):
         """For all attributes set by str reference, load values from profile."""
@@ -584,7 +588,11 @@ class ThermalStorage(Node):
 
     def _create_and_bound_temp_variable(self, model: EchoConcreteModel):
         # Create temperature variable
-        setattr(model, self.internal_temp, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
+        setattr(
+            model,
+            self.internal_temp,
+            en.Var(model.Expansion, model.Time, initialize=self.initial_temp, domain=en.NonNegativeReals),
+        )
         # Bound temp variable to be within range
         set_float_var_bounds(model=model, var_name=self.internal_temp, ub=self.max_temp, lb=self.min_temp)
 
@@ -628,7 +636,7 @@ class ThermalStorage(Node):
     def _apply_energy_balance_constraint(self, model: EchoConcreteModel):
         # Constraint relating internal, ambient temp, heat in, heat out, losses, and gains
         dt_sec = model.scenario_settings.interval_duration * 60
-        max_t = len(model.Time)
+        max_t = len(model.Time) - 1
         if self.energy_flow_units == Units.KWT:
             # If ports flow in KWT transform to Joules
             flow_units_scaler = 1000
@@ -665,12 +673,29 @@ class ThermalStorage(Node):
             en.Constraint(model.Expansion, model.Time, rule=change_of_internal_temperature_constraint),
         )
 
+    def _apply_final_temperature_constraint(self, model: EchoConcreteModel):
+        # Storage internal temperature at the last optimisation interval must equal initial temperatur
+        max_t = len(model.Time) - 1
+        internal_temperature = getattr(model, self.internal_temp)
+
+        def final_temperature_rule(model: EchoConcreteModel, p, t):
+            if t == max_t:
+                return internal_temperature[p, t] == self.initial_temp
+            else:
+                return internal_temperature[p, t] >= self.min_temp
+
+        setattr(
+            model,
+            "final_temp_con_" + self.node_name,
+            en.Constraint(model.Expansion, model.Time, rule=final_temperature_rule),
+        )
+
     def _apply_soc_constraint(self, model: EchoConcreteModel):
         # State of charge in Joule or KWTh is a linear function of the internal temperature
+        soc = getattr(model, self.soc_value)
+        internal_temperature = getattr(model, self.internal_temp)
+
         def soc_rule(model: EchoConcreteModel, p, t):
-            soc = getattr(model, self.soc_value)
-            internal_temperature = getattr(model, self.internal_temp)
-            self.lump_capacitance * (self.initial_temp - self.min_temp) * self.energy_units_conversion
             return (
                 soc[p, t]
                 == self.lump_capacitance * (internal_temperature[p, t] - self.min_temp) * self.energy_units_conversion
