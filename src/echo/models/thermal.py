@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NonNegativeFloat, PositiveFloat, root_validator, validator
+from pydantic import NonNegativeFloat, PositiveFloat, NegativeFloat, root_validator, validator
 
 from echo.configuration import FlowConstraint, Units
 from echo.models.agnostic import FlexPort, FlexSink, FlexSource, TimeVaryingPiecewiseIONode
@@ -446,6 +446,12 @@ class ThermalStorage(Node):
     min_temp: float  # Minimum operational temperature in degrees  Celsius
     storage_mass: PositiveFloat  # Mass of storage medium in kg
     specific_heat: PositiveFloat  # Specific heat capacity in Joule/kg*C
+    charging_power_limit: PositiveFloat = (
+        None  # Maximum energy flow into the storage at each interval, in energy_flow_units
+    )
+    discharging_power_limit: NegativeFloat = (
+        None  # Maximum energy flow out of the storage at each interval, in energy_flow_units
+    )
     ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
     ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
     ins_transmittance: NonNegativeFloat = (
@@ -467,16 +473,35 @@ class ThermalStorage(Node):
     def __init__(self, **data):
         super().__init__(**data)
 
-        # TODO: Shall both ports be bi-directional?
         if self.separate_in_out_ports:
             self.ports[self.input_port_ref] = FlexSink(units=self.energy_flow_units)
             self.ports[self.output_port_ref] = FlexSource(units=self.energy_flow_units)
+            # Set flow constraints if defined
+            self.set_flow_constraints_separate_ports()
         else:
             self.ports[self.input_output_port_ref] = FlexPort(units=self.energy_flow_units)
+            # Set flow constraints if defined
+            self.set_flow_constraints_one_port()
 
         # Initial temperature is not defined set to mid-operation range
         if not self.initial_temp:
             self.initial_temp = self.min_temp + 0.5 * (self.max_temp - self.min_temp)
+
+    def set_flow_constraints_separate_ports(self):
+        if self.charging_power_limit:
+            self.ports[self.input_port_ref].import_constraint = FlowConstraint.Fixed
+            self.ports[self.input_port_ref].import_constraint_value = self.charging_power_limit
+        if self.discharging_power_limit:
+            self.ports[self.input_port_ref].export_constraint = FlowConstraint.Fixed
+            self.ports[self.input_port_ref].export_constraint_value = self.discharging_power_limit
+
+    def set_flow_constraints_one_port(self):
+        if self.charging_power_limit:
+            self.ports[self.input_output_port_ref].import_constraint = FlowConstraint.Fixed
+            self.ports[self.input_output_port_ref].import_constraint_value = self.charging_power_limit
+        if self.discharging_power_limit:
+            self.ports[self.input_output_port_ref].export_constraint = FlowConstraint.Fixed
+            self.ports[self.input_output_port_ref].export_constraint_value = self.discharging_power_limit
 
     def update(self, ambient_temp):
         self.ambient_temp = ambient_temp
@@ -491,6 +516,12 @@ class ThermalStorage(Node):
         self.output_port_ref = output_port.port_name
         self.ports[self.input_port_ref] = input_port
         self.ports[self.output_port_ref] = output_port
+        if self.charging_power_limit:
+            self.ports[self.input_port_ref].import_constraint = FlowConstraint.Fixed
+            self.ports[self.input_port_ref].import_constraint_value = self.charging_power_limit
+        if self.discharging_power_limit:
+            self.ports[self.input_port_ref].export_constraint = FlowConstraint.Fixed
+            self.ports[self.input_port_ref].export_constraint_value = self.discharging_power_limit
 
     def set_port(self, input_output_port: FlexPort):
         """Replaces any existing ports with a combined input output port"""
@@ -500,6 +531,12 @@ class ThermalStorage(Node):
         # Add new port
         self.input_output_port_ref = input_output_port.port_name
         self.ports[self.input_output_port_ref] = input_output_port
+        if self.charging_power_limit:
+            self.ports[self.input_output_port_ref].import_constraint = FlowConstraint.Fixed
+            self.ports[self.input_output_port_ref].import_constraint_value = self.charging_power_limit
+        if self.discharging_power_limit:
+            self.ports[self.input_output_port_ref].export_constraint = FlowConstraint.Fixed
+            self.ports[self.input_output_port_ref].export_constraint_value = self.discharging_power_limit
 
     @root_validator
     def _non_zero_temp_range(cls, values: dict) -> dict:
