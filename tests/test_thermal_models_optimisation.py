@@ -779,14 +779,22 @@ def test_chiller_with_temperature_cop():
     """Test Chiller operation with piecewise linear COP dependent on partial load value and ambient temperature"""
 
     ambient_temperature_data = TimeSeriesData(
-        value=[10, 0, 7, 20, 5, 15], num_time_intervals=6, num_expansion_intervals=1
+        value=[0, 5, 10, 15, 20, 40], num_time_intervals=6, num_expansion_intervals=1
     )
     ambient_temperature_dict = expand_as_dict(ambient_temperature_data)
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = ParameterisedChiller(
         max_cooling_capacity=10,
-        nominal_cop=2.5,
+        nominal_cop=10,
+        temperature_dependent_cop={
+            0: 0.7,
+            10: 1,
+            20: 0.5,
+            30: 0.35,
+            45: 0.2,
+        },
+        # Fix the partial load COP to check the temperature COP scaling factor is calculated correctly
         partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
         ambient_temperature_dict=ambient_temperature_dict,
     )
@@ -822,6 +830,23 @@ def test_chiller_with_temperature_cop():
             chiller_actual_cop.append(round(_output / _input, 3))
 
     temperature_cop_factor = optimise_results.values(chiller.temperature_cop_param).tolist()
+    for _cop_factor in temperature_cop_factor:
+        i = temperature_cop_factor.index(_cop_factor)
+        ref_temperature = list(chiller.ambient_temperature_dict.values())[i]
+        expected_cop = chiller.temperature_dependent_cop.get(ref_temperature, None)
+        if expected_cop:
+            assert round(_cop_factor, 2) == round(expected_cop, 2)
+        elif ref_temperature == 5:
+            assert _cop_factor > chiller.temperature_dependent_cop[0]
+            assert _cop_factor < chiller.temperature_dependent_cop[10]
+        elif ref_temperature == 15:
+            assert _cop_factor < chiller.temperature_dependent_cop[10]
+            assert _cop_factor > chiller.temperature_dependent_cop[20]
+        elif ref_temperature == 40:
+            assert _cop_factor < chiller.temperature_dependent_cop[30]
+            assert _cop_factor > chiller.temperature_dependent_cop[45]
+        else:
+            pass
 
     # Check that we observe variation in COP
     assert min(chiller_actual_cop) != max(chiller_actual_cop)
@@ -833,6 +858,80 @@ def test_chiller_with_temperature_cop():
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
         assert round(cop_v, 3) == round(temperature_cop_factor[i] * chiller.nominal_cop, 3)
+
+
+def test_chiller_with_pl_cop():
+    """Test Chiller operation with piecewise linear COP dependent on partial load value and ambient temperature"""
+
+    system = OptimisationGraph()
+    grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
+    chiller = ParameterisedChiller(
+        max_cooling_capacity=10,
+        nominal_cop=1,
+        partial_load_cop={0: 0, 0.0001: 0.75, 0.25: 0.8, 0.5: 0.9, 0.75: 1, 1: 0.95},
+        temperature_dependent_cop={
+            0: 1,
+            10: 1,
+            20: 1,
+            30: 1,
+            45: 1,
+        },
+    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
+    # Need non zero
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
+
+    system.add_node_obj([grid, chiller, cooling_load])
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(
+        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+    )
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=INTERVAL_DURATION,
+            number_of_intervals=NUMBER_INTERVALS_SHORT,
+            number_of_expansion_intervals=1,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+    )
+
+    chiller_actual_cop = list()
+    chiller_part_load_value = list()
+    for _output, _input in zip(
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
+    ):
+        if _input == 0:
+            assert _output == 0
+            chiller_actual_cop.append(0)
+        else:
+            assert _output != 0
+            chiller_actual_cop.append(round(_output / _input, 3))
+        chiller_part_load_value.append(round(_output / chiller.max_cooling_capacity, 2))
+
+    for _cop in chiller_actual_cop:
+        i = chiller_actual_cop.index(_cop)
+        part_load_value_cop = chiller_part_load_value[i]
+        expected_cop = chiller.partial_load_cop.get(part_load_value_cop, None)
+        if expected_cop:
+            assert round(chiller_actual_cop[i], 2) == round(expected_cop, 2)
+        elif part_load_value_cop == 0.1:
+            assert chiller_actual_cop[i] > chiller.partial_load_cop[0.0001]
+            assert chiller_actual_cop[i] <= chiller.partial_load_cop[0.25]
+        else:
+            pass
+
+    # Check that we observe variation in COP
+    assert min(chiller_actual_cop) != max(chiller_actual_cop)
+
+    # Check that observed COP values are within expected range
+    min_cop = min([v for v in chiller_part_load_value]) * chiller.nominal_cop
+    for cop_v in chiller_actual_cop:
+        i = chiller_actual_cop.index(cop_v)
+        assert cop_v >= min_cop
+        assert cop_v <= chiller.nominal_cop
 
 
 def test_simple_chiller():
