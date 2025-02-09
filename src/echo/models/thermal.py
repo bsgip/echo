@@ -262,10 +262,12 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
 
         # Use numpy linear interpolation function to get temperature related cop (coefficient of performance)
         # scaling factor based on the temperature values in the temperature dictionary
-        # min_temp = min(self.temperature_dependent_cop.keys())
-        # max_temp = max(self.temperature_dependent_cop.keys())
+        min_temp = min(self.temperature_dependent_cop.keys())
+        max_temp = max(self.temperature_dependent_cop.keys())
+        clamped_temp_values = [clamp(v, min_temp, max_temp) for v in temperature_dict.values()]
+
         cop_scaling_interpolated = interpolate.interp1d(temperature_points, cop_points, assume_sorted=False)(
-            list(temperature_dict.values())
+            list(clamped_temp_values)
         ).round(2)
         temperature_cop_dict = {k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated)}
         # Create a parameter holding ambient/condenser temperature dictionary
@@ -1502,11 +1504,6 @@ class ParameterisedHeatPump(Node):
         # scaling factor based on the temperature values in the temperature dictionary
         min_temp_heating = min(self.temperature_dependent_cop_heating.keys())
         max_temp_heating = max(self.temperature_dependent_cop_heating.keys())
-        # temperature_cop_dict_heating = {
-        #     k: np.interp(clamp(v, min_temp_heating, max_temp_heating), temperature_points_heating, cop_points_heating)
-        #     for k, v in temperature_dict.items()
-        # }
-
         clamped_temp_values_heating = [clamp(v, min_temp_heating, max_temp_heating) for v in temperature_dict.values()]
 
         cop_scaling_interpolated_heating = interpolate.interp1d(
@@ -1516,10 +1513,6 @@ class ParameterisedHeatPump(Node):
 
         min_temp_cooling = min(self.temperature_dependent_cop_cooling.keys())
         max_temp_cooling = max(self.temperature_dependent_cop_cooling.keys())
-        # temperature_cop_dict_cooling = {
-        #     k: np.interp(clamp(v, min_temp_cooling, max_temp_cooling), temperature_points_cooling, cop_points_cooling)
-        #     for k, v in temperature_dict.items()
-        # }
         clamped_temp_values_cooling = [clamp(v, min_temp_cooling, max_temp_cooling) for v in temperature_dict.values()]
 
         cop_scaling_interpolated_cooling = interpolate.interp1d(
