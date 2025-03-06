@@ -1,6 +1,5 @@
-""" TODO: This test file is to be deprecated. It is currently replicated with the new EV objects in test_new_ev.py
+""" TODO: This test file is to be renamed to test_ev.py when the EV object and test_evs.py are deprecated.
 """
-
 from __future__ import division
 
 from typing import List, Tuple
@@ -8,14 +7,13 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from echo.configuration import EVChargeMode, Units
+from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import EV, ElectricalDemand, ElectricalGeneration, Inverter
+from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalDemand, ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.power import PeakNegativePower
 from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
@@ -45,8 +43,7 @@ def test_v0g():
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
 
-    ev_cp = EV(
-        charge_mode=EVChargeMode.V0G,
+    ev_cp = EVV0G(
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -105,9 +102,8 @@ def test_v0g_2():
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    ev = EV(
+    ev = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -170,9 +166,8 @@ def test_v0g_3():
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    ev = EV(
+    ev = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -250,9 +245,8 @@ def test_v0g_with_stateful_data_injection():
         available = np.array([1] * 48 + [0] * 48)  # bool when at charger
         usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
 
-        ev_cp = EV(
+        ev_cp = EVV0G(
             node_name="ev",
-            charge_mode=EVChargeMode.V0G,
             available=available,
             usage=usage,
             connection_port_name="cp",
@@ -333,9 +327,8 @@ def test_v0g_output_matches_expectation():
     available = [1] * 24 + [0] * 24  # bool when at charger
     usage = [0.0] * 24 + [5] * 24  # kw average during use
 
-    ev = EV(
+    ev = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -473,9 +466,8 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    ev = EV(
+    ev = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -632,9 +624,8 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    ev = EV(
+    ev = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -741,13 +732,12 @@ def test_v1g_no_objective():
     connection_point = TellegenNode()
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-
+    # Create timeseries data
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
 
-    ev_cp = EV(
-        charge_mode=EVChargeMode.V1G,
+    # Create V1G vehicle
+    ev_cp = EVV1G(
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -805,10 +795,9 @@ def test_v1g_no_objective_2():
     connection_point = TellegenNode()
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-    ev = EV(
+    # Create V1G vehicle
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -870,10 +859,9 @@ def test_v1g_no_objective_3():
     connection_point = TellegenNode()
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-    ev = EV(
+    # Create V1G vehicle
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -934,13 +922,12 @@ def test_v2g_no_objective():
     connection_point = TellegenNode()
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-
+    # Create timeseries data
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
 
-    ev_cp = EV(
-        charge_mode=EVChargeMode.V2G,
+    # Create V2G vehicle
+    ev_cp = EVV2G(
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -998,10 +985,9 @@ def test_v2g_no_objective_2():
     connection_point = TellegenNode()
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-    ev = EV(
+    # Create V2G vehicle
+    ev = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -1064,9 +1050,8 @@ def test_v2g_no_objective_3():
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    ev = EV(
+    ev = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -1134,9 +1119,8 @@ def test_simple_v1g_with_stateful_data_injection():
     # Create V1G vehicle
     available = np.array([0] * 2)
     usage = np.array([5] * 2)
-    ev_cp = EV(
+    ev_cp = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -1226,12 +1210,13 @@ def test_simple_v2g_with_stateful_data_injection_2():
     connection_point = TellegenNode(node_name="cp")
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-    # Create V1G vehicle
+    # Create timeseries data
     available = np.array([0] * 2)
     usage = np.array([5] * 2)
-    ev_cp = EV(
+
+    # Create V2G vehicle
+    ev_cp = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -1343,12 +1328,13 @@ def test_simple_v1g_with_stateful_data_injection_2():
         connection_point = TellegenNode(node_name="cp")
         connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-        # Create V1G vehicle
+        # Create timeseries data
         available = np.array([0] * 2)
         usage = np.array([5] * 2)
-        ev_cp = EV(
+
+        # Create V1G vehicle
+        ev_cp = EVV1G(
             node_name="ev",
-            charge_mode=EVChargeMode.V1G,
             available=available,
             usage=usage,
             connection_port_name="cp",
@@ -1462,12 +1448,13 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
         connection_point = TellegenNode(node_name="cp")
         connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-        # Create V1G vehicle
+        # Create timeseries data
         available = np.array([0] * 2)
         usage = np.array([5] * 2)
-        ev_cp = EV(
+
+        # Create V0G vehicle
+        ev_cp = EVV0G(
             node_name="ev",
-            charge_mode=EVChargeMode.V0G,
             available=available,
             usage=usage,
             connection_port_name="cp",
@@ -1575,9 +1562,8 @@ def test_v1g_with_objective():
     )
 
     # Create V1G vehicle
-    ev = EV(
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -1687,9 +1673,8 @@ def test_v1g_with_load_with_objective():
     )
 
     # Create V1G vehicle
-    ev = EV(
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -1799,10 +1784,9 @@ def test_v2g_with_load_with_objective():
         dc_port_names=["inverter_to_solar"],
     )
 
-    # Create V1G vehicle
-    ev = EV(
+    # Create V2G vehicle
+    ev = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -1916,10 +1900,9 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
         dc_port_names=["inverter_to_solar"],
     )
 
-    # Create V1G vehicle
-    ev = EV(
+    # Create V2G vehicle
+    ev = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -2032,9 +2015,8 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     )
 
     # Create V1G vehicle
-    ev = EV(
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -2164,10 +2146,9 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
         dc_port_names=["inverter_to_solar"],
     )
 
-    # Create V1G vehicle
-    ev = EV(
+    # Create V2G vehicle
+    ev = EVV2G(
         node_name="ev",
-        charge_mode=EVChargeMode.V2G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
@@ -2272,14 +2253,13 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     connection_point = TellegenNode(node_name="cp")
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
-    # Create V0G vehicle
-
+    # Create timeseries data
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
 
-    ev_cp = EV(
+    # Create V0G vehicle
+    ev_cp = EVV0G(
         node_name="ev",
-        charge_mode=EVChargeMode.V0G,
         available=available,
         usage=usage,
         connection_port_name="cp",
@@ -2395,9 +2375,8 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     )
 
     # Create V1G vehicle
-    ev = EV(
+    ev = EVV1G(
         node_name="ev",
-        charge_mode=EVChargeMode.V1G,
         available=available,
         usage=usage,
         connection_port_name="ev_to_cp",
