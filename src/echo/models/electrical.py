@@ -1,3 +1,4 @@
+import inspect
 from typing import Dict, Optional, Union, cast
 
 import numpy as np
@@ -80,14 +81,6 @@ class EVBase(TransformNode):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
-        for i in self.usage:
-            if i > self.discharging_power_limit * -1:
-                raise ValueError(
-                    "Usage requirement of {} exceeds battery discharge limit of {}.".format(
-                        i, self.discharging_power_limit
-                    )
-                )
 
         # Initialise port_name_to_port_uid_map
         if self.port_dict_name_to_port_uid_map is None:
@@ -97,63 +90,37 @@ class EVBase(TransformNode):
         if self.port_dict_name_to_port_name_map is None:
             self.port_dict_name_to_port_name_map = {}
 
-        # Preserve uid and port_name if present on port
-        if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
-            vehicle = MobileElectricalStorage(
-                uid=self.port_dict_name_to_port_uid_map["vehicle"],
-                port_name=self.port_dict_name_to_port_name_map["vehicle"],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
-            )
-        else:
-            vehicle = MobileElectricalStorage(**data)
+    def check_usage_less_than_max_discharge(self):
+        # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
+        max_usage = np.max(np.array(self.usage))
+        if max_usage > self.discharging_power_limit * -1:
+            raise ValueError(f"Usage requirement of {max_usage} exceeds battery discharge limit of "
+                             f"{self.discharging_power_limit}.")
 
-        vehicle.enable_trip_slack = self.trip_slack  # Apply trip slack
-        self.ports["vehicle"] = vehicle  # EV always has a storage port
-
+    def create_usage_port(self, **data):
         # Preserve uid if present on port
         if "usage" in self.port_dict_name_to_port_uid_map.keys():
-            usage_port = ElectricalDemand(
+            self.ports["usage"] = ElectricalDemand(
                 uid=self.port_dict_name_to_port_uid_map["usage"],
                 port_name=self.port_dict_name_to_port_name_map["usage"],
                 **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
             )
         else:
-            usage_port = ElectricalDemand()
+            self.ports["usage"] = ElectricalDemand()
 
-        usage_port.add_demand_profile_from_array(self.usage, expansion_periods=1)
-        self.ports["usage"] = usage_port  # EV always has a fixed trip port
+    def create_vehicle_port(self, **data):
+        # Preserve uid and port_name if present on port
+        if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
+            self.ports["vehicle"] = MobileElectricalStorage(
+                uid=self.port_dict_name_to_port_uid_map["vehicle"],
+                port_name=self.port_dict_name_to_port_name_map["vehicle"],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+            )
+        else:
+            self.ports["vehicle"] = MobileElectricalStorage(**data)
 
-    def update(
-        self,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
-    ):
-        self.__init__(
-            node_name=self.node_name,
-            uid=self.uid,
-            charge_mode=self.charge_mode,
-            available=available if available is not None else self.available,
-            usage=usage if usage is not None else self.usage,
-            connection_port_name=self.connection_port_name,
-            tod_charging=self.tod_charging,
-            interval_duration=interval_duration if interval_duration is not None else self.interval_duration,
-            max_capacity=self.max_capacity,
-            depth_of_discharge_limit=self.depth_of_discharge_limit,
-            charging_power_limit=self.charging_power_limit,
-            discharging_power_limit=self.discharging_power_limit,
-            charging_efficiency=self.charging_efficiency,
-            discharging_efficiency=self.discharging_efficiency,
-            initial_state_of_charge=(
-                initial_state_of_charge if initial_state_of_charge is not None else self.initial_state_of_charge
-            ),
-            trip_slack=self.trip_slack,
-            soc_conserv=self.soc_conserv,
-            soc_conserv_cost=self.soc_conserv_cost,
-            port_dict_name_to_port_uid_map=self.port_dict_name_to_port_uid_map,
-            port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
-        )
+        # Add the usage port to the ports dict
+        self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
 
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
@@ -192,27 +159,58 @@ class EVV0G(EVBase):
         # Set the charge_mode
         self.charge_mode = EVChargeMode.V0G
 
+        # Create ports
+        self.create_usage_port(**data)
+        self.create_vehicle_port(**data)
+        self.create_connection_point_port(**data)
+
         # Customise connection point port type based on the charge mode
+        # TODO: Understand what these two lines are doing. Do we want to make them settable in set_stateful_attrs?
         self.trip_slack = True  # Set slack to true
         self.ports["vehicle"].enable_trip_slack = self.trip_slack
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            electrical_demand = ElectricalDemand(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
-            )
 
-        else:
-            electrical_demand = ElectricalDemand()
-        self.ports[self.connection_port_name] = electrical_demand
-        self.process_v0g_charging(self.interval_duration)
-        electrical_demand.add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
+        self.set_stateful_attrs()
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
 
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
+
+    def create_connection_point_port(self, **data):
+        # Preserve attributes if they already exist
+        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+            self.ports[self.connection_port_name] = ElectricalDemand(
+                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+            )
+        else:
+            self.ports[self.connection_port_name] = ElectricalDemand()
+
+
+    def set_stateful_attrs(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        self.available = available if available is not None else self.available
+        self.usage = usage if usage is not None else self.usage
+        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
+            self.initial_state_of_charge)
+        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+
+        # Set stateful attributes for usage port
+        self.check_usage_less_than_max_discharge()
+        self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
+
+        # Calculate demand
+        self.process_v0g_charging(self.interval_duration)
+
+        # Set stateful attrs for the connection point port
+        self.ports[self.connection_port_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
 
     def process_v0g_charging(self, interval_duration: float):
         success, ev_soc, ev_delta, trip_infeasibility = self.v0g_charging(interval_duration)
@@ -260,7 +258,7 @@ class EVV0G(EVBase):
         return success, soc[1:], delta, trip_infeasibility
 
     def verify_node(self):
-        super(EVV0G, self).verify_node()
+        super().verify_node()
         validate(
             self.ports[self.connection_port_name].initial_value != 0,
             "V0G connection pt port needs demand profile added.",
@@ -268,7 +266,7 @@ class EVV0G(EVBase):
         validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(EVV0G, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
             vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
@@ -285,18 +283,17 @@ class EVV1G(EVBase):
         # Set the charge_mode
         self.charge_mode = EVChargeMode.V1G
 
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            electrical_port = ElectricalPort(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-            )
-        else:
-            electrical_port = ElectricalPort()
-        electrical_port.set_active_periods_from_array(self.available, expansion_periods=1)
-        self.ports[self.connection_port_name] = electrical_port
+        # Create the ports
+        self.create_usage_port(**data)
+        self.create_vehicle_port(**data)
+        self.create_connection_point_port()
 
-        # For V1G EVs, need to set max_export constraint to 0.
-        electrical_port.set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
+        self.set_stateful_attrs(
+            available=self.available,
+            usage=self.usage,
+            initial_state_of_charge=self.initial_state_of_charge,
+            interval_duration=self.interval_duration,
+        )
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
@@ -304,8 +301,43 @@ class EVV1G(EVBase):
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
 
+    def create_connection_point_port(self):
+        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+            self.ports[self.connection_port_name] = ElectricalPort(
+                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+            )
+        else:
+            self.ports[self.connection_port_name] = ElectricalPort()
+
+        # For V1G EVs, need to set max_export constraint to 0.
+        self.ports[self.connection_port_name].set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
+
+    def set_stateful_attrs(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        self.available = available if available is not None else self.available
+        self.usage = usage if usage is not None else self.usage
+        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
+            self.initial_state_of_charge)
+        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+
+        # Set stateful attributes for usage port
+        self.check_usage_less_than_max_discharge()
+        self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
+
+        # Set stateful data for the connection point port
+        self.ports[self.connection_port_name].set_active_periods_from_array(self.available, expansion_periods=1)
+
+        # Set the initial_state_of_charge on the vehicle port
+        self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
+
     def verify_node(self):
-        super(EVV1G, self).verify_node()
+        super().verify_node()
         validate(
             self.ports[self.connection_port_name].active_periods is not None,
             "Add available periods to EV connection pt port",
@@ -319,15 +351,17 @@ class EVV2G(EVBase):
         # Set the charge_mode
         self.charge_mode = EVChargeMode.V2G
 
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            electrical_port = ElectricalPort(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-            )
-        else:
-            electrical_port = ElectricalPort()
-        electrical_port.set_active_periods_from_array(self.available, expansion_periods=1)
-        self.ports[self.connection_port_name] = electrical_port
+        # Create the ports
+        self.create_usage_port(**data)
+        self.create_vehicle_port(**data)
+        self.create_connection_point_port()
+
+        self.set_stateful_attrs(
+            available=self.available,
+            usage=self.usage,
+            initial_state_of_charge=self.initial_state_of_charge,
+            interval_duration=self.interval_duration,
+        )
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
@@ -335,8 +369,40 @@ class EVV2G(EVBase):
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
 
+    def create_connection_point_port(self):
+        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+            self.ports[self.connection_port_name] = ElectricalPort(
+                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+            )
+        else:
+            self.ports[self.connection_port_name] = ElectricalPort()
+
+    def set_stateful_attrs(
+        self,
+        available: Optional[Union[ArrayType, list, str]] = None,
+        usage: Optional[Union[ArrayType, list, str]] = None,
+        initial_state_of_charge: Optional[float] = None,
+        interval_duration: Optional[int] = None,
+    ):
+        self.available = available if available is not None else self.available
+        self.usage = usage if usage is not None else self.usage
+        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
+            self.initial_state_of_charge)
+        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+
+        # Set stateful attributes for usage port
+        self.check_usage_less_than_max_discharge()
+        self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
+
+        # Set stateful data for the connection point port
+        self.ports[self.connection_port_name].set_active_periods_from_array(self.available, expansion_periods=1)
+
+        # Set the initial_state_of_charge on the vehicle port
+        self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
+
     def verify_node(self):
-        super(EVV2G, self).verify_node()
+        super().verify_node()
         validate(
             self.ports[self.connection_port_name].active_periods is not None,
             "Add available periods to EV connection pt port",
