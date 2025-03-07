@@ -1147,7 +1147,7 @@ class OptimisationGraph(BaseModel):
             raise ValueError(f"No edges contain node: {node_name}")
 
         # Inject stateful data
-        self.get_node(node_name).update(**kwargs)
+        self.get_node(node_name).set_stateful_attrs(**kwargs)
 
         # Get the correct port objects to build a new edge
         node1 = self.node_obj[edge_node_1_name]
