@@ -1147,7 +1147,12 @@ class OptimisationGraph(BaseModel):
             raise ValueError(f"No edges contain node: {node_name}")
 
         # Inject stateful data
-        self.get_node(node_name).set_stateful_attrs(**kwargs)
+        # TODO - isinstance comparison is for backwards compatibility - to be removed upon EV object deprecation.
+        # TODO - the hacky comparison is to avoid circular imports
+        if str(type(self.get_node(node_name))) == "<class 'echo.models.electrical.EV'>":
+            self.get_node(node_name).update(**kwargs)
+        else:
+            self.get_node(node_name).set_stateful_attrs(**kwargs)
 
         # Get the correct port objects to build a new edge
         node1 = self.node_obj[edge_node_1_name]
