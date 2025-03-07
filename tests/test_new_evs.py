@@ -276,7 +276,7 @@ def test_v0g_with_stateful_data_injection():
         new_time_periods = 6
 
         # Inject stateful data
-        system.node_obj["ev"].update(
+        system.node_obj["ev"].set_stateful_attrs(
             available=available_usages[0],
             usage=available_usages[1],
             initial_state_of_charge=new_initial_state_of_charge,
@@ -376,7 +376,7 @@ def test_v0g_output_matches_expectation():
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
@@ -508,7 +508,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     time_periods = len(available)
 
     # Inject stateful data
-    system.node_obj["ev"].update(available=available, usage=usage, interval_duration=interval_duration)
+    system.node_obj["ev"].set_stateful_attrs(available=available, usage=usage, interval_duration=interval_duration)
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
@@ -666,7 +666,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     interval_duration = 10
     time_periods = len(available)
 
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -1150,7 +1150,7 @@ def test_simple_v1g_with_stateful_data_injection():
     new_time_periods = 6
 
     # Update ev with stateful parameters
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=good_available_usage[0],
         usage=good_available_usage[1],
         initial_state_of_charge=new_initial_state_of_charge,
@@ -1246,7 +1246,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     new_time_periods = 6
 
     # Update ev with stateful parameters
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=good_available_usage[0],
         usage=good_available_usage[1],
         initial_state_of_charge=new_initial_state_of_charge,
@@ -1285,7 +1285,6 @@ def test_simple_v2g_with_stateful_data_injection_2():
     assert any(np.not_equal(soc, np.array([50] * 6)))
     assert any(np.not_equal(soc, np.array([20] * 6)))
     assert any(np.not_equal(soc, np.array([0] * 6)))
-
 
 def test_simple_v1g_with_stateful_data_injection_2():
     """Get V1G to behave properly"""
@@ -1364,7 +1363,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
         new_time_periods = 6
 
         # Update ev with stateful parameters
-        system.node_obj["ev"].update(
+        system.node_obj["ev"].set_stateful_attrs(
             available=available_usage[0],
             usage=available_usage[1],
             initial_state_of_charge=new_initial_state_of_charge,
@@ -1485,7 +1484,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
 
         with pytest.raises(Exception):
             # Update ev with stateful parameters
-            system.node_obj["ev"].update(
+            system.node_obj["ev"].set_stateful_attrs(
                 available=available_usage[0],
                 usage=available_usage[1],
                 initial_state_of_charge=new_initial_state_of_charge,
@@ -2058,7 +2057,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     initial_state_of_charge = 0
     interval_duration = 60
 
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2190,7 +2189,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     initial_state_of_charge = 0
     interval_duration = 60
 
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2296,7 +2295,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     old_port_uids = {port.uid for port in system.get_node("ev").ports.values()}
 
     # Inject stateful data
-    system.node_obj["ev"].update(
+    system.node_obj["ev"].set_stateful_attrs(
         available=np.array([1, 1, 0, 0, 1, 1]),
         usage=np.array([0, 0, 10, 10, 0, 0]),
         initial_state_of_charge=new_initial_state_of_charge,
@@ -2452,3 +2451,363 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     expected_soc = np.array([4, 8, 12, 16, 26, 36, 36, 40, 20, 0])
 
     assert np.allclose(soc, expected_soc, rtol=10**-5)
+
+
+def test_set_state_attrs_does_not_add_new_attrs_v0g():
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
+
+    Uses setup fromtest_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
+    attributes.
+    """
+
+    # Set up hyper params
+    available = [1, 1]
+    usage = [0, 0]
+    interval_duration = 1
+    initial_state_of_charge = 40
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Set up data to inject
+    solar_data = [-5, -5, -5, -5, 0, 0, 0, -5, -5, -5]  # kw generated
+    load_data = [1] * 10  # kw load
+    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create a load object
+    load = Node(node_name="load")
+    load.ports["load_to_cp"] = ElectricalDemand()
+
+    # create a node for the solar
+    solar = Node(node_name="solar")
+    solar.ports["solar_to_inverter"] = ElectricalGeneration()
+    solar.ports["solar_to_inverter"].curtailable = False
+
+    # Create an inverter to attach the solar to
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
+
+    # Create V0G vehicle
+    ev = EVV0G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
+    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+
+    # Inject data into load
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+
+    # Inject data into solar
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [20] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    n_vehicle_attrs_old = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_old = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    # Inject data into the EV
+    system.inject_data_into_ev(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    n_vehicle_attrs_new = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_new = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_new = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    assert n_vehicle_attrs_old == n_vehicle_attrs_new
+    assert n_usage_attrs_old == n_usage_attrs_new
+    assert n_demand_attrs_old == n_demand_attrs_new
+
+
+def test_set_state_attrs_does_not_add_new_attrs_v1g():
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
+
+    Uses setup fromtest_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
+    attributes.
+    """
+
+    # Set up hyper params
+    available = [1, 1]
+    usage = [0, 0]
+    interval_duration = 1
+    initial_state_of_charge = 40
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Set up data to inject
+    solar_data = [-5, -5, -5, -5, 0, 0, 0, -5, -5, -5]  # kw generated
+    load_data = [1] * 10  # kw load
+    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create a load object
+    load = Node(node_name="load")
+    load.ports["load_to_cp"] = ElectricalDemand()
+
+    # create a node for the solar
+    solar = Node(node_name="solar")
+    solar.ports["solar_to_inverter"] = ElectricalGeneration()
+    solar.ports["solar_to_inverter"].curtailable = False
+
+    # Create an inverter to attach the solar to
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
+
+    # Create V1G vehicle
+    ev = EVV1G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
+    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+
+    # Inject data into load
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+
+    # Inject data into solar
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [20] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    n_vehicle_attrs_old = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_old = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    # Inject data into the EV
+    system.inject_data_into_ev(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    n_vehicle_attrs_new = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_new = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_new = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    assert n_vehicle_attrs_old == n_vehicle_attrs_new
+    assert n_usage_attrs_old == n_usage_attrs_new
+    assert n_demand_attrs_old == n_demand_attrs_new
+
+
+def test_set_state_attrs_does_not_add_new_attrs_v2g():
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
+
+    Uses setup fromtest_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
+    attributes.
+    """
+
+    # Set up hyper params
+    available = [1, 1]
+    usage = [0, 0]
+    interval_duration = 1
+    initial_state_of_charge = 40
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Set up data to inject
+    solar_data = [-5, -5, -5, -5, 0, 0, 0, -5, -5, -5]  # kw generated
+    load_data = [1] * 10  # kw load
+    import_tariff = [10, 10, 10, 1, 1, 1, 10, 10, 10, 10]  # $/kw
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create a load object
+    load = Node(node_name="load")
+    load.ports["load_to_cp"] = ElectricalDemand()
+
+    # create a node for the solar
+    solar = Node(node_name="solar")
+    solar.ports["solar_to_inverter"] = ElectricalGeneration()
+    solar.ports["solar_to_inverter"].curtailable = False
+
+    # Create an inverter to attach the solar to
+    inverter = Inverter(
+        node_name="inverter",
+        max_import=None,
+        max_export=None,
+        dc_ac_efficiency=1,
+        ac_dc_efficiency=1,
+        ac_port_name="inverter_to_cp",
+        dc_port_names=["inverter_to_solar"],
+    )
+
+    # Create V2G vehicle
+    ev = EVV2G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
+    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+
+    # Inject data into load
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+
+    # Inject data into solar
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [20] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    n_vehicle_attrs_old = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_old = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    # Inject data into the EV
+    system.inject_data_into_ev(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    n_vehicle_attrs_new = len(dir(system.get_node("ev").ports["vehicle"]))
+    n_usage_attrs_new = len(dir(system.get_node("ev").ports["usage"]))
+    n_demand_attrs_new = len(dir(system.get_node("ev").ports["ev_to_cp"]))
+
+    assert n_vehicle_attrs_old == n_vehicle_attrs_new
+    assert n_usage_attrs_old == n_usage_attrs_new
+    assert n_demand_attrs_old == n_demand_attrs_new
