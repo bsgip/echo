@@ -4,6 +4,7 @@ from typing import Dict, Optional, Union, cast
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import Field
 
 from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
@@ -408,6 +409,34 @@ class EVV2G(EVBase):
             "Add available periods to EV connection pt port",
         )
         validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
+
+
+class EVDemandProfile(Node):
+    charge_mode: Optional[EVChargeMode] = None
+    port_name: Optional[str] = "demand"
+    port_uid:Optional[str] = Field(default_factory=shortuuid.uuid)
+
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+
+        # Set the EV charge mode
+        self.charge_mode == EVChargeMode.DemandProfile
+
+        # Create the demand port
+        self.ports[self.port_name] = ElectricalDemand(
+            port_name=self.port_name,
+            uid=self.port_uid,
+        )
+
+    def set_stateful_attrs(
+        self,
+        profile: Union[dict, ArrayType, list]
+    ):
+        # Set profile values of the demand port
+        if type(profile) is dict:
+            self.ports[self.port_name].set_initial_value(profile)
+        else:
+            self.ports[self.port_name].set_initial_value_from_array(profile)
 
 
 # TODO: To be deprecated

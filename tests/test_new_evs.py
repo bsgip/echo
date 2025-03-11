@@ -7,10 +7,11 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from echo.configuration import Units
+from echo.configuration import Units, Flows
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalDemand, ElectricalGeneration, Inverter
+from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalDemand, ElectricalGeneration, Inverter, \
+    EVDemandProfile
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
@@ -2811,3 +2812,21 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
     assert n_vehicle_attrs_old == n_vehicle_attrs_new
     assert n_usage_attrs_old == n_usage_attrs_new
     assert n_demand_attrs_old == n_demand_attrs_new
+
+
+def test_simple_ev_demand_profile():
+    ev = EVDemandProfile()
+
+    assert isinstance(ev.uid, str)
+    assert isinstance(ev.node_name, str)
+    assert isinstance(ev.ports["demand"].uid, str)
+    assert isinstance(ev.ports["demand"].port_name, str)
+    assert ev.ports["demand"].port_name == "demand"
+    assert ev.ports["demand"].flows == Flows.Import
+
+    ev.set_stateful_attrs([1, 2, 3, 4, 5])
+    assert ev.ports["demand"].initial_value == [[0,1], [0,2], [0,3], [0,4], [0,5]]
+
+    ev.set_stateful_attrs(np.array([1, 2, 3, 4, 5]))
+    assert ev.ports["demand"].initial_value == np.array([1, 2, 3, 4, 5])
+
