@@ -505,10 +505,11 @@ class Storage(Port):
     discharging_power_limit: float
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-    initial_state_of_charge: float
     fixed_storage_capacity: bool = True
     storage_capacity_cost: Optional[PositiveFloat]
     regularise: bool = False
+    set_stateful_attrs_at_init: bool = True
+    initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
