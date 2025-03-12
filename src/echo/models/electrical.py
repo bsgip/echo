@@ -112,9 +112,7 @@ class EVBase(TransformNode):
 
         if self.interval_duration is None:
             raise ConfigurationError(f"The interval_duration attribute for {self.node_name} has not been set. "
-                         f"Please use set_stateful_attrs().")
-
-
+                                     f"Please use set_stateful_attrs().")
 
     def check_usage_less_than_max_discharge(self):
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
@@ -193,7 +191,6 @@ class EVBase(TransformNode):
             f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
         )
 
-
     def set_port_uid_maps(self):
         # Set port_dict_name_to_port_uid_map
         if len(self.port_dict_name_to_port_uid_map.keys()) == 0:
@@ -250,7 +247,6 @@ class EVV0G(EVBase):
             )
         else:
             self.ports[self.connection_port_name] = ElectricalDemand()
-
 
     def set_stateful_attrs(
         self,
@@ -496,7 +492,6 @@ class EVDemandProfile(Node):
         else:
             self.ports[self.port_name].set_initial_value_from_array(self.demand)
 
-
     def verify_node(self):
         super().verify_node()
 
@@ -512,7 +507,6 @@ class EVDemandProfile(Node):
             raise ConfigurationError(f"The demand attribute for {self.node_name} has not been set."
                          f"Please use set_stateful_attrs().")
 
-
     def check_demand_is_not_more_than_max_import(self):
         if self.charging_power_limit is not None:
             max_demand = np.max(np.array(self.demand))
@@ -524,8 +518,7 @@ class EVDemandProfile(Node):
         validate(
             self.ports["usage"].initial_value != 0,
             f"{self.node_name} demand port '{self.port_name}' does not have a demand profile set. "
-            f"Please use set_stateful_attrs() to set it."
-        )
+            f"Please use set_stateful_attrs() to set it.")
 
 
 # TODO: To be deprecated
