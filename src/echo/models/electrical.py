@@ -5,15 +5,15 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field
+from pydantic import Field, NonNegativeFloat, root_validator
 
 from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
-from echo.exceptions import validate
+from echo.exceptions import validate, ConfigurationError
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
-from echo.validators import ArrayType
+from echo.validators import ArrayType, dod_checks, check_initial_state_of_charge_within_bounds
 
 
 class ElectricalDemand(Demand):
@@ -57,11 +57,9 @@ class MobileElectricalStorage(MobileStorage):
 
 class EVBase(TransformNode):
     charge_mode: Optional[EVChargeMode] = None
-    available: Union[ArrayType, list, str]
-    usage: Union[ArrayType, list]
     connection_port_name: str = "cp"
     tod_charging: Union[ArrayType, list, str, None] = None
-    interval_duration: int
+
     # Battery attributes
     max_capacity: float
     depth_of_discharge_limit: float = 0
@@ -69,14 +67,20 @@ class EVBase(TransformNode):
     discharging_power_limit: float
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-    initial_state_of_charge: float
-
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     soc_conserv: Optional[TimeExpandableType] = None
     soc_conserv_cost: Union[float, None] = None
 
+    # Stateful attributes
+    set_stateful_attrs_at_init: bool = True
+    available: Optional[Union[ArrayType, list, str]]
+    usage: Optional[Union[ArrayType, list]]
+    initial_state_of_charge: Optional[float]
+    interval_duration: Optional[int]
+
+    # Helpful mappings
     port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
     port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
 
@@ -91,9 +95,32 @@ class EVBase(TransformNode):
         if self.port_dict_name_to_port_name_map is None:
             self.port_dict_name_to_port_name_map = {}
 
+    def check_stateful_attrs_are_not_none(self):
+
+        if self.available is None:
+            raise ConfigurationError(f"The available attribute for {self.node_name} has not been set. "
+                                     f"Please use set_stateful_attrs().")
+
+        if self.usage is None:
+            raise ConfigurationError(f"The usage attribute for {self.node_name} has not been set. "
+                                     f"Please use set_stateful_attrs().")
+
+
+        if self.initial_state_of_charge is None:
+            raise ConfigurationError(f"The initial_state_of_charge attribute for {self.node_name} has not been set. "
+                                     f"Please use set_stateful_attrs().")
+
+        if self.interval_duration is None:
+            raise ConfigurationError(f"The interval_duration attribute for {self.node_name} has not been set. "
+                         f"Please use set_stateful_attrs().")
+
+
+
     def check_usage_less_than_max_discharge(self):
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         max_usage = np.max(np.array(self.usage))
+        print(max_usage)
+        print(self.discharging_power_limit)
         if max_usage > self.discharging_power_limit * -1:
             raise ValueError(f"Usage requirement of {max_usage} exceeds battery discharge limit of "
                              f"{self.discharging_power_limit}.")
@@ -123,6 +150,15 @@ class EVBase(TransformNode):
         # Add the usage port to the ports dict
         self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
 
+    def create_connection_point_port(self):
+        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+            self.ports[self.connection_port_name] = ElectricalPort(
+                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+            )
+        else:
+            self.ports[self.connection_port_name] = ElectricalPort()
+
     def create_ev_transformation(self):
         # Create appropriate transformation: vehicle = cp - usage
         lhs_terms = [
@@ -137,6 +173,26 @@ class EVBase(TransformNode):
 
     def verify_node(self):
         super(EVBase, self).verify_node()
+
+        # Check node properties
+        self.check_stateful_attrs_are_not_none()
+        self.verify_ports()
+
+    def verify_ports(self):
+        # Check port properties
+        validate(
+            self.ports["usage"].initial_value != 0,
+            f"{self.node_name} usage port needs does not have a usage profile set."
+        )
+        validate(
+            self.ports[self.connection_port_name].active_periods is not None,
+            f"{self.node_name} connection_point port does not have available set.",
+        )
+        validate(
+            self.ports["vehicle"].initial_state_of_charge is not None,
+            f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
+        )
+
 
     def set_port_uid_maps(self):
         # Set port_dict_name_to_port_uid_map
@@ -170,7 +226,13 @@ class EVV0G(EVBase):
         self.trip_slack = True  # Set slack to true
         self.ports["vehicle"].enable_trip_slack = self.trip_slack
 
-        self.set_stateful_attrs()
+        if self.set_stateful_attrs_at_init:
+            self.set_stateful_attrs(
+                available=self.available,
+                usage=self.usage,
+                initial_state_of_charge=self.initial_state_of_charge,
+                interval_duration=self.interval_duration,
+            )
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
@@ -192,16 +254,15 @@ class EVV0G(EVBase):
 
     def set_stateful_attrs(
         self,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
+        available: Union[ArrayType, list, str],
+        usage: Union[ArrayType, list, str],
+        initial_state_of_charge: float,
+        interval_duration: int,
     ):
-        self.available = available if available is not None else self.available
-        self.usage = usage if usage is not None else self.usage
-        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
-            self.initial_state_of_charge)
-        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+        self.available = available
+        self.usage = usage
+        self.initial_state_of_charge = initial_state_of_charge
+        self.interval_duration = interval_duration
 
         # Set stateful attributes for usage port
         self.check_usage_less_than_max_discharge()
@@ -258,13 +319,20 @@ class EVV0G(EVBase):
 
         return success, soc[1:], delta, trip_infeasibility
 
-    def verify_node(self):
-        super().verify_node()
+    def verify_ports(self):
+        # Check port properties
         validate(
             self.ports[self.connection_port_name].initial_value != 0,
-            "V0G connection pt port needs demand profile added.",
+            f"{self.node_name} connection point port does not have a demand profile set.",
         )
-        validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
+        validate(
+            self.ports["usage"].initial_value != 0,
+            f"{self.node_name} usage port needs does not have a usage profile set."
+        )
+        validate(
+            self.ports["vehicle"].initial_state_of_charge is not None,
+            f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
+        )
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         super().add_node_to_model(model, profile)
@@ -289,12 +357,13 @@ class EVV1G(EVBase):
         self.create_vehicle_port(**data)
         self.create_connection_point_port()
 
-        self.set_stateful_attrs(
-            available=self.available,
-            usage=self.usage,
-            initial_state_of_charge=self.initial_state_of_charge,
-            interval_duration=self.interval_duration,
-        )
+        if self.set_stateful_attrs_at_init:
+            self.set_stateful_attrs(
+                available=self.available,
+                usage=self.usage,
+                initial_state_of_charge=self.initial_state_of_charge,
+                interval_duration=self.interval_duration,
+            )
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
@@ -302,30 +371,20 @@ class EVV1G(EVBase):
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
 
-    def create_connection_point_port(self):
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            self.ports[self.connection_port_name] = ElectricalPort(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-            )
-        else:
-            self.ports[self.connection_port_name] = ElectricalPort()
-
         # For V1G EVs, need to set max_export constraint to 0.
         self.ports[self.connection_port_name].set_flow_constraints(max_import=self.charging_power_limit, max_export=0.0)
 
     def set_stateful_attrs(
         self,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
+        available: Union[ArrayType, list, str],
+        usage: Union[ArrayType, list, str],
+        initial_state_of_charge: float,
+        interval_duration: int,
     ):
-        self.available = available if available is not None else self.available
-        self.usage = usage if usage is not None else self.usage
-        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
-            self.initial_state_of_charge)
-        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+        self.available = available
+        self.usage = usage
+        self.initial_state_of_charge = initial_state_of_charge
+        self.interval_duration = interval_duration
 
         # Set stateful attributes for usage port
         self.check_usage_less_than_max_discharge()
@@ -336,16 +395,16 @@ class EVV1G(EVBase):
 
         # Set the initial_state_of_charge on the vehicle port
         self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
-
-    def verify_node(self):
-        super().verify_node()
-        validate(
-            self.ports[self.connection_port_name].active_periods is not None,
-            "Add available periods to EV connection pt port",
+        # Check that the initial_state_of_charge is between the min_soc and max_capacity
+        check_initial_state_of_charge_within_bounds(
+            initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
+            min_soc=self.ports["vehicle"].min_soc,
+            max_capacity=self.ports["vehicle"].max_capacity
         )
-        validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
+
 
 class EVV2G(EVBase):
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
@@ -357,12 +416,16 @@ class EVV2G(EVBase):
         self.create_vehicle_port(**data)
         self.create_connection_point_port()
 
-        self.set_stateful_attrs(
-            available=self.available,
-            usage=self.usage,
-            initial_state_of_charge=self.initial_state_of_charge,
-            interval_duration=self.interval_duration,
-        )
+        print("self.set_stateful_attrs_at_init")
+        print(self.set_stateful_attrs_at_init)
+
+        if self.set_stateful_attrs_at_init:
+            self.set_stateful_attrs(
+                available=self.available,
+                usage=self.usage,
+                initial_state_of_charge=self.initial_state_of_charge,
+                interval_duration=self.interval_duration,
+            )
 
         # EV needs a custom transformation because of the positive load convention
         self.add_transformation(self.create_ev_transformation())
@@ -370,27 +433,17 @@ class EVV2G(EVBase):
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
 
-    def create_connection_point_port(self):
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            self.ports[self.connection_port_name] = ElectricalPort(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-            )
-        else:
-            self.ports[self.connection_port_name] = ElectricalPort()
-
     def set_stateful_attrs(
         self,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
+        available: Union[ArrayType, list, str],
+        usage: Union[ArrayType, list, str],
+        initial_state_of_charge: float,
+        interval_duration: int,
     ):
-        self.available = available if available is not None else self.available
-        self.usage = usage if usage is not None else self.usage
-        self.initial_state_of_charge = initial_state_of_charge if initial_state_of_charge is not None else (
-            self.initial_state_of_charge)
-        self.interval_duration = interval_duration if interval_duration is not None else self.interval_duration
+        self.available = available
+        self.usage = usage
+        self.initial_state_of_charge = initial_state_of_charge
+        self.interval_duration = interval_duration
 
         # Set stateful attributes for usage port
         self.check_usage_less_than_max_discharge()
@@ -401,26 +454,28 @@ class EVV2G(EVBase):
 
         # Set the initial_state_of_charge on the vehicle port
         self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
-
-    def verify_node(self):
-        super().verify_node()
-        validate(
-            self.ports[self.connection_port_name].active_periods is not None,
-            "Add available periods to EV connection pt port",
+        # Check that the initial_state_of_charge is between the min_soc and max_capacity
+        check_initial_state_of_charge_within_bounds(
+            initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
+            min_soc=self.ports["vehicle"].min_soc,
+            max_capacity=self.ports["vehicle"].max_capacity
         )
-        validate(self.ports["usage"].initial_value != 0, "EV usage port needs usage profile added.")
-
 
 class EVDemandProfile(Node):
-    charge_mode: Optional[EVChargeMode] = None
+    charge_mode: EVChargeMode = EVChargeMode.DemandProfile
     port_name: Optional[str] = "demand"
-    port_uid:Optional[str] = Field(default_factory=shortuuid.uuid)
+    port_uid: Optional[str] = Field(default_factory=shortuuid.uuid)
+    charging_power_limit: Optional[NonNegativeFloat]
+
+    # Stateful attributes
+    set_stateful_attrs_at_init: bool = True
+    demand: Optional[Union[dict, ArrayType, list]]
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
         # Set the EV charge mode
-        self.charge_mode == EVChargeMode.DemandProfile
+        self.charge_mode: EVChargeMode = EVChargeMode.DemandProfile
 
         # Create the demand port
         self.ports[self.port_name] = ElectricalDemand(
@@ -428,15 +483,49 @@ class EVDemandProfile(Node):
             uid=self.port_uid,
         )
 
-    def set_stateful_attrs(
-        self,
-        profile: Union[dict, ArrayType, list]
-    ):
+        # Set stateful attribtutes if required
+        if self.set_stateful_attrs_at_init:
+            self.set_stateful_attrs(demand=self.demand)
+
+    def set_stateful_attrs(self, demand: Union[dict, ArrayType, list]):
+        self.demand = demand
+
         # Set profile values of the demand port
-        if type(profile) is dict:
-            self.ports[self.port_name].set_initial_value(profile)
+        if type(self.demand) is dict:
+            self.ports[self.port_name].set_initial_value(self.demand)
         else:
-            self.ports[self.port_name].set_initial_value_from_array(profile)
+            self.ports[self.port_name].set_initial_value_from_array(self.demand)
+
+
+    def verify_node(self):
+        super().verify_node()
+
+        # Check node properties
+        self.check_stateful_attrs_are_not_none()
+        self.check_demand_is_not_more_than_max_import()
+
+        # Check ports
+        self.verify_ports()
+
+    def check_stateful_attrs_are_not_none(self):
+        if self.demand is None:
+            raise ConfigurationError(f"The demand attribute for {self.node_name} has not been set."
+                         f"Please use set_stateful_attrs().")
+
+
+    def check_demand_is_not_more_than_max_import(self):
+        if self.charging_power_limit is not None:
+            max_demand = np.max(np.array(self.demand))
+            if max_demand > self.charging_power_limit:
+                raise ValueError(f"Demand requirement of {max_demand} exceeds maximum charging rate of "
+                                 f"{self.charging_power_limit}.")
+
+    def verify_ports(self):
+        validate(
+            self.ports["usage"].initial_value != 0,
+            f"{self.node_name} demand port '{self.port_name}' does not have a demand profile set. "
+            f"Please use set_stateful_attrs() to set it."
+        )
 
 
 # TODO: To be deprecated
