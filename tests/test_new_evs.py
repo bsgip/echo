@@ -2958,13 +2958,6 @@ def test_ev_demand_profile_in_simple_network():
 
     # Inject data into the EV
     system.get_node("ev").set_stateful_attrs(demand=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    # system.inject_data_into_ev(
-    #     node_name="ev",
-    #     available=available,
-    #     usage=usage,
-    #     initial_state_of_charge=initial_state_of_charge,
-    #     interval_duration=interval_duration,
-    # )
 
     # Get port names and uids sets
     new_port_names = {port_name for port_name in system.get_node("ev").ports.keys()}
