@@ -781,7 +781,7 @@ class EV(TransformNode):
         super().__init__(**data)
 
         # Display deprecation warning
-        warn("Class EV will be deprication in future versions. Please use EVV0G, EVV1G, EVV2G or EVDemandProfile.")
+        warn("Class EV will be deprecated in future versions. Please use EVV0G, EVV1G, EVV2G or EVDemandProfile.")
 
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         for i in self.usage:
