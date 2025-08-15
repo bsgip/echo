@@ -61,7 +61,6 @@ class EVBase(TransformNode):
     """
     charge_mode: Optional[EVChargeMode] = None
     connection_port_name: str = "cp"
-    tod_charging: Union[ArrayType, list, str, None] = None
 
     # Battery attributes
     max_capacity: float
@@ -309,6 +308,7 @@ class EVV0G(EVBase):
                 usage=self.usage,
                 initial_state_of_charge=self.initial_state_of_charge,
                 interval_duration=self.interval_duration,
+                tod_charging=self.tod_charging,
             )
 
         # EV needs a custom transformation because of the positive load convention
@@ -346,14 +346,15 @@ class EVV0G(EVBase):
         usage: Union[ArrayType, list, str],
         initial_state_of_charge: float,
         interval_duration: int,
+        tod_charging: Union[ArrayType, list, str, None] = None,
     ) -> None:
         """Injects attributes with state into EV node and ports.
 
         Args:
-            available: Boolean timeseries data specifying if the EV is available (1) or not available (0) for charging.
-            usage: Timeseries data specifying the energy consumption of the vehicle.
+            available: Boolean timeseries data specifying if the EV is available (1) or not available (0) for charging
+            usage: Timeseries data specifying the energy consumption of the vehicle
             initial_state_of_charge: The initial state of charge of the battery
-            interval_duration: The duration between timestamps.
+            interval_duration: The duration between timestamps
 
         Returns:
             None
@@ -364,6 +365,7 @@ class EVV0G(EVBase):
         self.usage = usage
         self.initial_state_of_charge = initial_state_of_charge
         self.interval_duration = interval_duration
+        self.tod_charging = tod_charging
 
         # Set the initial_state_of_charge on the vehicle port
         self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
@@ -671,7 +673,7 @@ class EVDemandProfile(Node):
             uid=self.port_uid,
         )
 
-        # Set stateful attribtutes if required
+        # Set stateful attributes if required
         if self.set_stateful_attrs_at_init:
             self.set_stateful_attrs(demand=self.demand)
 
@@ -741,7 +743,7 @@ class EVDemandProfile(Node):
 
         """
         validate(
-            self.ports["usage"].initial_value != 0,
+            self.ports[self.node_name].initial_value != 0,
             f"{self.node_name} demand port '{self.port_name}' does not have a demand profile set. "
             f"Please use set_stateful_attrs() to set it.")
 
