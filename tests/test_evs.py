@@ -364,7 +364,7 @@ def test_v0g_output_matches_expectation():
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Invoke the optimiser and optimise
@@ -383,7 +383,7 @@ def test_v0g_output_matches_expectation():
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
@@ -506,7 +506,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Set new values for these parameters
@@ -526,7 +526,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Check that ev has 3 ports
@@ -666,7 +666,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Set new values for these parameters
@@ -690,7 +690,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Check that ev has 3 ports
@@ -1181,7 +1181,7 @@ def test_simple_v1g_with_stateful_data_injection():
     # cp and ev
     assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Optimise
@@ -1276,7 +1276,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     # cp and ev
     assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Optimise
@@ -1395,7 +1395,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
             system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
         )
 
-        # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+        # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
         assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
         # Optimise
@@ -1516,7 +1516,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
                 == system.get_node("ev").ports["cp"].active_periods
             )
 
-            # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+            # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
             assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
             # Optimise

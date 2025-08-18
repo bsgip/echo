@@ -109,17 +109,14 @@ def dod_checks(cls, values):
     # Check initial soc is within bounds
     if set_stateful_attrs_at_init:
         check_initial_state_of_charge_within_bounds(
-            initial_state_of_charge=init_soc,
-            min_soc=min_soc,
-            max_capacity=max_cap
+            initial_state_of_charge=init_soc, min_soc=min_soc, max_capacity=max_cap
         )
 
     return values
 
+
 def check_initial_state_of_charge_within_bounds(
-        initial_state_of_charge: float,
-        min_soc: float,
-        max_capacity: float
+    initial_state_of_charge: float, min_soc: float, max_capacity: float
 ) -> None:
     # Check initial soc is within bounds
     if (initial_state_of_charge < min_soc) or (initial_state_of_charge > max_capacity):

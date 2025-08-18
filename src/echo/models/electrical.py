@@ -1,20 +1,19 @@
-import inspect
-from typing import Dict, Optional, Union, cast, Tuple
+from typing import Dict, Optional, Tuple, Union, cast
 from warnings import warn
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field, NonNegativeFloat, root_validator
+from pydantic import Field, NonNegativeFloat
 
 from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
-from echo.exceptions import validate, ConfigurationError
+from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
-from echo.validators import ArrayType, dod_checks, check_initial_state_of_charge_within_bounds
+from echo.validators import ArrayType, check_initial_state_of_charge_within_bounds
 
 
 class ElectricalDemand(Demand):
@@ -56,9 +55,10 @@ class ElectricalStorage(Storage):
 class MobileElectricalStorage(MobileStorage):
     units = Units.KW
 
+
 class EVBase(TransformNode):
-    """Base class for EVs
-    """
+    """Base class for EVs"""
+
     charge_mode: Optional[EVChargeMode] = None
     connection_port_name: str = "cp"
 
@@ -101,7 +101,7 @@ class EVBase(TransformNode):
             self.port_dict_name_to_port_name_map = {}
 
     def _check_stateful_attrs_are_not_none(self) -> None:
-        """ Checks that the stateful attributes for EVBase and children are not None.
+        """Checks that the stateful attributes for EVBase and children are not None.
 
         To be used node verifification before building a network.
 
@@ -110,21 +110,26 @@ class EVBase(TransformNode):
 
         """
         if self.available is None:
-            raise ConfigurationError(f"The available attribute for {self.node_name} has not been set. "
-                                     f"Please use set_stateful_attrs().")
+            raise ConfigurationError(
+                f"The available attribute for {self.node_name} has not been set. " f"Please use set_stateful_attrs()."
+            )
 
         if self.usage is None:
-            raise ConfigurationError(f"The usage attribute for {self.node_name} has not been set. "
-                                     f"Please use set_stateful_attrs().")
-
+            raise ConfigurationError(
+                f"The usage attribute for {self.node_name} has not been set. " f"Please use set_stateful_attrs()."
+            )
 
         if self.initial_state_of_charge is None:
-            raise ConfigurationError(f"The initial_state_of_charge attribute for {self.node_name} has not been set. "
-                                     f"Please use set_stateful_attrs().")
+            raise ConfigurationError(
+                f"The initial_state_of_charge attribute for {self.node_name} has not been set. "
+                f"Please use set_stateful_attrs()."
+            )
 
         if self.interval_duration is None:
-            raise ConfigurationError(f"The interval_duration attribute for {self.node_name} has not been set. "
-                                     f"Please use set_stateful_attrs().")
+            raise ConfigurationError(
+                f"The interval_duration attribute for {self.node_name} has not been set. "
+                f"Please use set_stateful_attrs()."
+            )
 
     def _check_usage_less_than_max_discharge(self) -> None:
         """Check that the maximum value in usage is not larger than the maximum discharge rate.
@@ -137,8 +142,10 @@ class EVBase(TransformNode):
         """
         max_usage = np.max(np.array(self.usage))
         if max_usage > self.discharging_power_limit * -1:
-            raise ValueError(f"Usage requirement of {max_usage} exceeds battery discharge limit of "
-                             f"{self.discharging_power_limit}.")
+            raise ValueError(
+                f"Usage requirement of {max_usage} exceeds battery discharge limit of "
+                f"{self.discharging_power_limit}."
+            )
 
     def _create_usage_port(self, **data) -> None:
         """Create a usage port using existing values if they exist.
@@ -247,7 +254,7 @@ class EVBase(TransformNode):
         """
         validate(
             self.ports["usage"].initial_value != 0,
-            f"{self.node_name} usage port needs does not have a usage profile set."
+            f"{self.node_name} usage port needs does not have a usage profile set.",
         )
         validate(
             self.ports[self.connection_port_name].active_periods is not None,
@@ -374,7 +381,7 @@ class EVV0G(EVBase):
         check_initial_state_of_charge_within_bounds(
             initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
             min_soc=self.ports["vehicle"].min_soc,
-            max_capacity=self.ports["vehicle"].max_capacity
+            max_capacity=self.ports["vehicle"].max_capacity,
         )
 
         # Set stateful attributes for usage port
@@ -386,7 +393,6 @@ class EVV0G(EVBase):
 
         # Set stateful attrs for the connection point port
         self.ports[self.connection_port_name].add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
-
 
     def _process_v0g_charging(self, interval_duration: float) -> None:
         """Calculate the convenience charging profile for the EV.
@@ -434,9 +440,10 @@ class EVV0G(EVBase):
             trip_infeasibility: The timeseries profile of the feasibility of each timestep.
         """
 
+        # Determine the availability of the EV to charge accounting for the time of day charging preferences
         if (self.tod_charging is not None) and (not force_conv):
             self.available = list(np.array(self.available) * np.array(self.tod_charging))
-            # self.available = self.available * self.tod_charging
+
         T = len(self.available)
         soc = np.zeros((T + 1,))
         vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
@@ -475,7 +482,7 @@ class EVV0G(EVBase):
         )
         validate(
             self.ports["usage"].initial_value != 0,
-            f"{self.node_name} usage port needs does not have a usage profile set."
+            f"{self.node_name} usage port needs does not have a usage profile set.",
         )
         validate(
             self.ports["vehicle"].initial_state_of_charge is not None,
@@ -504,8 +511,8 @@ class EVV0G(EVBase):
 
 
 class EVV1G(EVBase):
-    """An EV with demand managed charging.
-    """
+    """An EV with demand managed charging."""
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
@@ -572,7 +579,7 @@ class EVV1G(EVBase):
         check_initial_state_of_charge_within_bounds(
             initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
             min_soc=self.ports["vehicle"].min_soc,
-            max_capacity=self.ports["vehicle"].max_capacity
+            max_capacity=self.ports["vehicle"].max_capacity,
         )
 
 
@@ -580,6 +587,7 @@ class EVV2G(EVBase):
     """An EV with demand managed charging and generation managed discharging for purposes of providing energy to an
     electrical network.
     """
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
@@ -643,8 +651,9 @@ class EVV2G(EVBase):
         check_initial_state_of_charge_within_bounds(
             initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
             min_soc=self.ports["vehicle"].min_soc,
-            max_capacity=self.ports["vehicle"].max_capacity
+            max_capacity=self.ports["vehicle"].max_capacity,
         )
+
 
 class EVDemandProfile(Node):
     """A convenience charging EV defined primarily through a demand timeseries profile.
@@ -720,8 +729,9 @@ class EVDemandProfile(Node):
 
         """
         if self.demand is None:
-            raise ConfigurationError(f"The demand attribute for {self.node_name} has not been set."
-                         f"Please use set_stateful_attrs().")
+            raise ConfigurationError(
+                f"The demand attribute for {self.node_name} has not been set." f"Please use set_stateful_attrs()."
+            )
 
     def _check_demand_is_not_more_than_max_import(self) -> None:
         """Check that the demand does not breach the maximum import limit of the EV.
@@ -733,8 +743,10 @@ class EVDemandProfile(Node):
         if self.charging_power_limit is not None:
             max_demand = np.max(np.array(self.demand))
             if max_demand > self.charging_power_limit:
-                raise ValueError(f"Demand requirement of {max_demand} exceeds maximum charging rate of "
-                                 f"{self.charging_power_limit}.")
+                raise ValueError(
+                    f"Demand requirement of {max_demand} exceeds maximum charging rate of "
+                    f"{self.charging_power_limit}."
+                )
 
     def _verify_ports(self) -> None:
         """Check that port attributes with state have been set.
@@ -746,7 +758,8 @@ class EVDemandProfile(Node):
         validate(
             self.ports[self.port_name].initial_value != 0,
             f"{self.node_name} demand port '{self.port_name}' does not have a demand profile set. "
-            f"Please use set_stateful_attrs() to set it.")
+            f"Please use set_stateful_attrs() to set it.",
+        )
 
 
 # TODO: To be deprecated

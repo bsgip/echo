@@ -1,5 +1,6 @@
 """ TODO: This test file is to be renamed to test_ev.py when the EV object and test_evs.py are deprecated.
 """
+
 from __future__ import division
 
 from typing import List, Tuple
@@ -7,12 +8,19 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from echo.configuration import Units, Flows, EVChargeMode
+from echo.configuration import EVChargeMode, Flows, Units
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalDemand, ElectricalGeneration, Inverter, \
-    EVDemandProfile
+from echo.models.electrical import (
+    EVV0G,
+    EVV1G,
+    EVV2G,
+    ElectricalDemand,
+    ElectricalGeneration,
+    EVDemandProfile,
+    Inverter,
+)
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
@@ -364,7 +372,7 @@ def test_v0g_output_matches_expectation():
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Invoke the optimiser and optimise
@@ -503,7 +511,7 @@ def test_v0g_output_matches_expectation_with_tod_charging():
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Invoke the optimiser and optimise
@@ -645,7 +653,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Set new values for these parameters
@@ -659,7 +667,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
-        interval_duration=interval_duration
+        interval_duration=interval_duration,
     )
 
     # Update the edge
@@ -670,7 +678,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Check that ev has 3 ports
@@ -809,7 +817,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Set new values for these parameters
@@ -833,7 +841,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Check that ev has 3 ports
@@ -1317,7 +1325,7 @@ def test_simple_v1g_with_stateful_data_injection():
     # cp and ev
     assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Optimise
@@ -1413,7 +1421,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     # cp and ev
     assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
 
-    # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+    # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
     assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
     # Optimise
@@ -1437,6 +1445,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     assert any(np.not_equal(soc, np.array([50] * 6)))
     assert any(np.not_equal(soc, np.array([20] * 6)))
     assert any(np.not_equal(soc, np.array([0] * 6)))
+
 
 def test_simple_v1g_with_stateful_data_injection_2():
     """Get V1G to behave properly"""
@@ -1532,7 +1541,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
             system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
         )
 
-        # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+        # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
         assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
         # Optimise
@@ -1654,7 +1663,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
                 == system.get_node("ev").ports["cp"].active_periods
             )
 
-            # Check tha that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
+            # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
             assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
             # Optimise
@@ -3127,8 +3136,9 @@ def test_ev_demand_profile_in_simple_network():
         (0, 6): 6,
         (0, 7): 7,
         (0, 8): 8,
-        (0, 9): 9
+        (0, 9): 9,
     }
+
 
 def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
@@ -3220,8 +3230,7 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data,
-                                                                                          expansion_periods)
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3293,6 +3302,7 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
 
     # Asset interval_duration on the EVV2G object has been updated
     assert ev.interval_duration == 60
+
 
 def test_set_state_attrs_without_dummy_variables_for_v2g():
     """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
@@ -3384,8 +3394,7 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data,
-                                                                                          expansion_periods)
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3433,12 +3442,11 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-)
+    )
 
 
 def test_set_state_attrs_without_dummy_variables_for_v1g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
-    """
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
 
     # Set up hyper params
     # available = [1, 1]
@@ -3523,8 +3531,7 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data,
-                                                                                          expansion_periods)
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3576,8 +3583,7 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
 
 
 def test_set_state_attrs_without_dummy_variables_for_v0g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
-    """
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
 
     # Set up hyper params
     # available = [1, 1]
@@ -3662,8 +3668,7 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
     system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data,
-                                                                                          expansion_periods)
+    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger

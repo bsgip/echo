@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NonNegativeFloat, PositiveFloat, NegativeFloat, root_validator, validator
+from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
 from scipy import interpolate
 
 from echo.configuration import FlowConstraint, Units
@@ -712,7 +712,7 @@ class ThermalStorage(Node):
         )
 
     def _apply_final_temperature_constraint(self, model: EchoConcreteModel):
-        # Storage internal temperature at the last optimisation interval must equal initial temperatur
+        # Storage internal temperature at the last optimisation interval must equal initial temperature
         max_t = len(model.Time) - 1
         internal_temperature = getattr(model, self.internal_temp)
 

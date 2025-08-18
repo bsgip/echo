@@ -2,21 +2,20 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 import pyomo.environ as en
+import pytest
 
-from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
-
+from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (
-    TellegenNode,
+    FlexPort,
     MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
-    FlexPort,
+    TellegenNode,
     ThreeWayValveNode,
 )
-from echo.exceptions import ConfigurationError
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings, engine_settings_from_environment
+from echo.utils import TimeSeriesData, expand_as_dict
 
 
 def empty_model():

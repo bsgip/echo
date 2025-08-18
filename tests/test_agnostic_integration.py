@@ -4,21 +4,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
-
 from echo.models.agnostic import (
-    TellegenNode,
+    FlexPort,
     MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
-    FlexPort,
     Sink,
+    TellegenNode,
 )
-
-from echo.models.base import Node, Port, OptimisationGraph
-
+from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise
+from echo.utils import TimeSeriesData, expand_as_dict
 
 NUMBER_INTERVALS = 10
 INTERVAL_DURATION = 30
