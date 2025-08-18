@@ -81,6 +81,7 @@ class EVBase(TransformNode):
     set_stateful_attrs_at_init: bool = True
     available: Optional[Union[ArrayType, list, str]]
     usage: Optional[Union[ArrayType, list]]
+    tod_charging: Optional[Union[ArrayType, list, str, None]]
     initial_state_of_charge: Optional[float]
     interval_duration: Optional[int]
 
@@ -743,7 +744,7 @@ class EVDemandProfile(Node):
 
         """
         validate(
-            self.ports[self.node_name].initial_value != 0,
+            self.ports[self.port_name].initial_value != 0,
             f"{self.node_name} demand port '{self.port_name}' does not have a demand profile set. "
             f"Please use set_stateful_attrs() to set it.")
 
