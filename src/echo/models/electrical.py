@@ -432,11 +432,11 @@ class EVV0G(EVBase):
             ev_soc: The timeseries profile of the state of charge of the EV
             ev_delta: The timeseries profile of the energy added to the EV
             trip_infeasibility: The timeseries profile of the feasibility of each timestep.
-
         """
 
         if (self.tod_charging is not None) and (not force_conv):
-            self.available = self.available * self.tod_charging
+            self.available = list(np.array(self.available) * np.array(self.tod_charging))
+            # self.available = self.available * self.tod_charging
         T = len(self.available)
         soc = np.zeros((T + 1,))
         vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
