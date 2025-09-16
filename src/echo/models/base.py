@@ -9,7 +9,13 @@ import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import FlowConstraint, Flows, OptimisationType, TransformRule, Units
+from echo.configuration import (
+    FlowConstraint,
+    Flows,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
@@ -1149,10 +1155,18 @@ class OptimisationGraph(BaseModel):
         # Inject stateful data
         # TODO - isinstance comparison is for backwards compatibility - to be removed upon EV object deprecation.
         # TODO - the hacky comparison is to avoid circular imports
-        if str(type(self.get_node(node_name))) == "<class 'echo.models.electrical.EV'>":
-            self.get_node(node_name).update(**kwargs)
-        else:
+        
+        classes_with_set_stateful_attrs_function = [
+            "<class 'echo.models.electrical.EVV0G'>",
+            "<class 'echo.models.electrical.EVV1G'>",
+            "<class 'echo.models.electrical.EVV2G'>",
+            "<class 'echo.models.electrical.EVDemandProfile'>",
+        ]
+
+        if str(type(self.get_node(node_name))) in classes_with_set_stateful_attrs_function:
             self.get_node(node_name).set_stateful_attrs(**kwargs)
+        else:
+            self.get_node(node_name).update(**kwargs)
 
         # Get the correct port objects to build a new edge
         node1 = self.node_obj[edge_node_1_name]
