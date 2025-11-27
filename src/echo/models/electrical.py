@@ -505,7 +505,11 @@ class EVV0G(EVBase):
 
         vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
         fix_port_variable(model, vehicle.soc_value, self.V0G_SOC, expansion_periods=1)
-        fix_port_variable(model, vehicle.trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
+
+        # If there is a trip slack, add the port variable to the model
+        if self.trip_slack:
+            fix_port_variable(model, vehicle.trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
+
         power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
         fix_port_variable(model, vehicle.port_name, power_profile, expansion_periods=1)
 
