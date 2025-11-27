@@ -1155,7 +1155,7 @@ class OptimisationGraph(BaseModel):
         # Inject stateful data
         # TODO - isinstance comparison is for backwards compatibility - to be removed upon EV object deprecation.
         # TODO - the hacky comparison is to avoid circular imports
-        
+
         classes_with_set_stateful_attrs_function = [
             "<class 'echo.models.electrical.EVV0G'>",
             "<class 'echo.models.electrical.EVV1G'>",
