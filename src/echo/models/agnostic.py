@@ -663,7 +663,10 @@ class MobileStorage(Storage):
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
-        self.apply_modified_soc_constraints(model)
+        if self.enable_trip_slack:
+            self.apply_modified_soc_constraints(model)
+        else:
+            self.apply_soc_constraints(model)
         self.apply_conserv_soc_constraints(model)
 
     def apply_conserv_soc_constraints(self, model: EchoConcreteModel):
