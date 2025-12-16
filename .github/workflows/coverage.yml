@@ -53,6 +53,14 @@ jobs:
         with:
           ref: ${{ github.base_ref }}
 
+      - name: Download CPLEX installer from Azure storage account
+        uses: armanrahman22/azblob-download-action@v0.0.4
+        with:
+          connection-string: ${{ secrets.BLDDEPS_STORAGE_ACCOUNT_CONN_STR }}
+          container-name: "solver-blobs"
+          blob-name: "cplex_22.1.1.0-1_amd64.deb"
+          download-path: "."
+
       - name: Install Dependencies
         run: |
           pip install .[dev,test]
