@@ -56,7 +56,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["bandit[toml]", "flake8", "mypy", "black", "types-pytz"]
+dev = ["bandit[toml]", "coverage", "flake8", "mypy", "black", "types-pytz"]
 test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
 docs = ["sphinx", "sphinx-rtd-theme"]
 
