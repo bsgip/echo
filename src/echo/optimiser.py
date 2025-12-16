@@ -1,7 +1,7 @@
+import warnings
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
 from typing import Collection, Optional, Union
-import warnings
 
 import numpy as np
 import pandas as pd

@@ -3,25 +3,23 @@
 import numpy as np
 import pandas as pd
 
-from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink, Source, AggregationNode, ThreeWayValveNode
+from echo.models.agnostic import AggregationNode, FlexPort, Sink, Source, TellegenNode, ThreeWayValveNode
 from echo.models.base import Node, OptimisationGraph, Port
-
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import (
-    ThermalStorage,
     ParameterisedChiller,
+    ParameterisedHeatPump,
     SimpleChiller,
     SimpleHeatPump,
     SimpleHeatPumpDualOutput,
-    ParameterisedHeatPump,
+    ThermalStorage,
 )
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import ThroughputCost
 from echo.objectives.power import PeakPositivePower
+from echo.objectives.tariff import ThroughputCost
 from echo.optimiser import optimise
-
+from echo.utils import TimeSeriesData, expand_as_dict
 
 NUMBER_INTERVALS = 48
 INTERVAL_DURATION = 30

@@ -4,18 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
-
-
 from echo.models.thermal import (
-    ThermalStorage,
     ParameterisedChiller,
-    SimpleHeatPump,
     SimpleChiller,
+    SimpleHeatPump,
     SimpleHeatPumpDualOutput,
+    ThermalStorage,
 )
-
+from echo.utils import TimeSeriesData, expand_as_dict
 
 NUMBER_INTERVALS = 5
 INTERVAL_DURATION = 30
