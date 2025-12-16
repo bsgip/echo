@@ -1,7 +1,7 @@
 import numpy as np
 
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink
+from echo.models.agnostic import FlexPort, Sink, TellegenNode
 from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
 from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage

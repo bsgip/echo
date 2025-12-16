@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NonNegativeFloat, PositiveFloat, NegativeFloat, root_validator, validator
+from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
 from scipy import interpolate
 
 from echo.configuration import FlowConstraint, Units

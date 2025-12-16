@@ -1,17 +1,16 @@
 import numpy as np
+import pandas as pd
 
-from echo.utils import TimeSeriesData, expand_as_dict
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, TellegenNode, Sink
+from echo.models.agnostic import FlexPort, Sink, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-
-from echo.models.thermal import ThermalStorage
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.thermal import ThermalStorage
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakPositivePower
 from echo.objectives.tariff import ThroughputCost
 from echo.optimiser import optimise
-import pandas as pd
+from echo.utils import TimeSeriesData, expand_as_dict
 
 pd.options.plotting.backend = "plotly"
 
