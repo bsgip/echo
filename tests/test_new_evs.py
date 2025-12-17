@@ -28,6 +28,7 @@ from echo.optimiser import optimise
 
 
 def test_v0g():
+    """Instantiate an EVV0G and optimise it"""
     # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -218,7 +219,10 @@ def test_v0g_3():
 
 
 def test_v0g_with_stateful_data_injection():
-    # Extends off test_v0g()
+    """Check that an EVV0G object can be instantiated and then have stateful data injected.
+
+    Uses the test_v0g() scenario.
+    """
 
     # Available and usage combinations that work
     good_available_usages: List[Tuple[np.array, np.array]] = [
@@ -313,10 +317,9 @@ def test_v0g_with_stateful_data_injection():
 
 
 def test_v0g_output_matches_expectation():
-    """This example if taken from scripts/manual_examples/ev_example.
+    """This example is adapted from scripts/manual_examples/ev_example.
 
-    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
-    look right?
+    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations.
     """
 
     # Define parameters
@@ -451,10 +454,9 @@ def test_v0g_output_matches_expectation():
 
 
 def test_v0g_output_matches_expectation_with_tod_charging():
-    """This example if taken from scripts/manual_examples/ev_example.
+    """This example if adapted from scripts/manual_examples/ev_example.
 
-    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
-    look right?
+    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations.
     """
 
     # Define parameters
@@ -592,8 +594,8 @@ def test_v0g_output_matches_expectation_with_tod_charging():
 def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset():
     """This example builds on test_v0g_output_matches_expectation.
 
-    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
-    look right, after initialise_data has been used to decrease the number of time periods
+    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations after
+    set_stateful_attrs has been used to increase the number of time periods
 
     Uses test_v0g_2 inputs, then test_v0g inputs
     """
@@ -756,7 +758,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     """This example builds on test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset
 
     The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
-    look right, after initialise_data has been used to decrease the number of time periods
+    look right, after set_stateful_attrs has been used to decrease the number of time periods
 
     Uses test_v0g inputs, then test_v0g_2 inputs
     """
@@ -866,6 +868,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
 
 
 def test_v1g_no_objective():
+    """Instantiate and optimise an EVV1G object."""
     # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -1056,6 +1059,7 @@ def test_v1g_no_objective_3():
 
 
 def test_v2g_no_objective():
+    """Instantiate and optimise a EVV2G object."""
     # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
@@ -1118,7 +1122,7 @@ def test_v2g_no_objective():
 
 
 def test_v2g_no_objective_2():
-    """Like test_v1g, just different parameters."""
+    """Like test_v2g, just different parameters."""
 
     # Define parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
@@ -1182,7 +1186,7 @@ def test_v2g_no_objective_2():
 
 
 def test_v2g_no_objective_3():
-    """Like test_v1g_2, just different parameters, but discharge first, then charge."""
+    """Like test_v2g_2, just different parameters, but discharge first, then charge."""
 
     # Define parameters
     available = [0] * 3 + [1] * 7  # bool when at charger
@@ -1246,7 +1250,7 @@ def test_v2g_no_objective_3():
 
 
 def test_simple_v1g_with_stateful_data_injection():
-    """Get V1G to behave properly"""
+    """Ensure stateful data injection behaves appropriately for EVV1G."""
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
     good_soc = np.array([50, 50, 40, 30, 30, 30])
 
@@ -1340,8 +1344,8 @@ def test_simple_v1g_with_stateful_data_injection():
     assert np.allclose(soc, good_soc, rtol=10**-5)
 
 
-def test_simple_v2g_with_stateful_data_injection_2():
-    """Get V1G to behave properly"""
+def test_simple_v2g_with_stateful_data_injection():
+    """Ensure stateful data injection behaves appropriately for EVV2G."""
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
 
     # Define parameters
@@ -1440,7 +1444,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
 
 
 def test_simple_v1g_with_stateful_data_injection_2():
-    """Get V1G to behave properly"""
+    """Ensure stateful data injection behaves appropriately for EVV1G with different parameters."""
 
     # Available and usage combinations that work
     good_available_usages: List[Tuple[np.array, np.array]] = [
@@ -1882,7 +1886,7 @@ def test_v1g_with_load_with_objective():
 
 
 def test_v2g_with_load_with_objective():
-    """Like test_v1g_with_load_with_objective, but with a load.
+    """Like test_v1g_with_load_with_objective, but with a EVV2G.
 
     Expect delayed charging behaviour.
     """
@@ -2114,7 +2118,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
 
 
 def test_v1g_with_load_with_objective_with_stateful_data_injection():
-    """Like test_v1g_with_load_with_objective, now using the initialise data function.
+    """Like test_v1g_with_load_with_objective, now using the set_stateful_attrs function.
 
     This test is a bit different to the V0G tests with initialise data in that this will just replicate the procedure
     used to build a network in MES: build the echo network, then inject data into the network, then optimise.
@@ -2246,7 +2250,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
 
 
 def test_v2g_with_load_with_objective_with_stateful_data_injection():
-    """Like test_v2g_with_load_with_objective, now using the initialise data function.
+    """Like test_v2g_with_load_with_objective, now using the set_stateful_attrs function.
 
     This test is a bit different to the V0G tests with initialise data in that this will just replicate the procedure
     used to build a network in MES: build the echo network, then inject data into the network, then optimise.
@@ -2382,7 +2386,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
 
 def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
-    """Check that node uid and port uids are preserved when injecting stateful data into an ev"""
+    """Check that node uid and port uids are preserved when injecting stateful data into an EV."""
 
     # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
@@ -2601,11 +2605,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
 
 
 def test_set_state_attrs_does_not_add_new_attrs_v0g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
-
-    Uses setup fromtest_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
-    attributes.
-    """
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
 
     # Define parameters
     available = [1, 1]
@@ -2718,11 +2718,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
 
 
 def test_set_state_attrs_does_not_add_new_attrs_v1g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
-
-    Uses setup fromtest_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
-    attributes.
-    """
+    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
 
     # Define parameters
     available = [1, 1]
@@ -2950,7 +2946,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
 
 
 def test_ev_demand_profile_defaults():
-    # Build an EVDemandProfile object with defaults
+    """Build an EVDemandProfile object with defaults."""
     ev = EVDemandProfile(set_stateful_attrs_at_init=False)
     assert isinstance(ev.uid, str)
     assert isinstance(ev.node_name, str)
@@ -2964,7 +2960,7 @@ def test_ev_demand_profile_defaults():
 
 
 def test_ev_demand_profile_passing_variables():
-    # Build an EVDemandProfile object with specific node/port names and uids
+    """Build an EVDemandProfile object with specific node/port names and uids."""
     ev = EVDemandProfile(
         node_name="ev_demand_profile",
         uid="2501",
@@ -2982,7 +2978,7 @@ def test_ev_demand_profile_passing_variables():
 
 
 def test_ev_demand_profile_set_stateful_attrs():
-    # Build an EVDemandProfile object with defaults
+    """Build an EVDemandProfile object with defaults."""
     ev = EVDemandProfile(set_stateful_attrs_at_init=False)
     assert isinstance(ev.uid, str)
     assert isinstance(ev.node_name, str)
@@ -3003,9 +2999,7 @@ def test_ev_demand_profile_set_stateful_attrs():
 
 
 def test_ev_demand_profile_in_simple_network():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes in a simple
-    network.
-    """
+    """Instantiate and optimise a EVDemandProfile object."""
 
     # Define parameters
     expansion_periods = 1  # not yet implemented leave as 1
@@ -3109,10 +3103,8 @@ def test_ev_demand_profile_in_simple_network():
 
 
 def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes.
-
-    Uses setup from test_v2g_with_load_with_objective_with_stateful_data_injection but with mes defaults for initial ev
-    attributes.
+    """It took a long time to understand that pydantic was creating (almost) identical new ports when stateful data is
+    set. Ensure that it is not making a copy.
     """
 
     # Define parameters
@@ -3407,7 +3399,7 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
 
 
 def test_set_state_attrs_without_dummy_variables_for_v1g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
+    """This test ensures that stateful attributes do not need dummy values to be instantiated."""
 
     # Define parameters
     interval_duration = 1
@@ -3541,8 +3533,7 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
 
 
 def test_set_state_attrs_without_dummy_variables_for_v0g():
-    """This test ensures that set_state_attrs overrides existing attributes and does not add new attributes."""
-
+    """This test ensures that stateful attributes do not need dummy values to be instantiated."""
     # Define parameters
     interval_duration = 1
     initial_state_of_charge = 40
@@ -3676,6 +3667,7 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
 
 def test_usage_less_than_max_discharge():
     """The absolute value of discharging_power_limit should not be less than the max usage."""
+
     # Create timeseries data
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [50] * 48)  # kw average during use
