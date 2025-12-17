@@ -168,3 +168,11 @@ class EVChargeMode(Enum):
     V1G = "V1G"
     V2G = "V2G"
     DemandProfile = "demand_profile"
+
+
+class EVChargeStatus(Enum):
+    """Feasability of EV charging."""
+
+    Feasible = "feasible"
+    Infeasible = "Infeasible"
+    TimeOfDayInfeasibleConvenienceFeasible = "time of day infeasible, convenience feasible"

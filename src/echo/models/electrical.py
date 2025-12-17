@@ -7,7 +7,7 @@ import pyomo.environ as en
 import shortuuid
 from pydantic import Field, NonNegativeFloat
 
-from echo.configuration import EVChargeMode, OptimisationType, TransformRule, Units
+from echo.configuration import EVChargeMode, EVChargeStatus, OptimisationType, TransformRule, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
@@ -292,7 +292,7 @@ class EVV0G(EVBase):
     V0G_delta: Optional[Union[ArrayType, list]]
     V0G_SOC: Optional[Union[ArrayType, list]]
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
-    charge_status: Optional[str]
+    charge_status: Optional[EVChargeStatus]
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -413,15 +413,17 @@ class EVV0G(EVBase):
         # Check for time of day charging
         if self.tod_charging is not None:
             if success:
-                self.charge_status = "success"
+                self.charge_status = EVChargeStatus.Feasible
             else:
                 # If there are any infeasibilities, force convenience charging
                 success, ev_soc, ev_delta, trip_infeasibility = self._v0g_charging(interval_duration, force_conv=True)
-                self.charge_status = "time of day infeasible, convenience success" if success else "infeasible"
+                self.charge_status = (
+                    EVChargeStatus.TimeOfDayInfeasibleConvenienceFeasible if success else EVChargeStatus.Infeasible
+                )
                 self.V0G_delta = ev_delta
                 self.V0G_SOC = ev_soc
         else:
-            self.charge_status = "success" if success else "infeasible"
+            self.charge_status = EVChargeStatus.Feasible if success else EVChargeStatus.Infeasible
 
         # Set nodes V0G_trip_infeasibility
         self.V0G_trip_infeasibility = trip_infeasibility
@@ -792,7 +794,7 @@ class EV(TransformNode):
     V0G_delta: Optional[Union[ArrayType, list]]
     V0G_SOC: Optional[Union[ArrayType, list]]
     V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
-    charge_status: Optional[str]
+    charge_status: Optional[EVChargeStatus]
 
     port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
     port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
@@ -934,15 +936,17 @@ class EV(TransformNode):
         self.V0G_SOC = ev_soc
         if self.tod_charging is not None:
             if success:
-                self.charge_status = "success"
+                self.charge_status = EVChargeStatus.Feasible
             else:  # force convenience charging
                 success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
-                self.charge_status = "time of day infeasible, convenience success" if success else "infeasible"
+                self.charge_status = (
+                    EVChargeStatus.TimeOfDayInfeasibleConvenienceFeasible if success else EVChargeStatus.Infeasible
+                )
                 self.V0G_delta = ev_delta
                 self.V0G_SOC = ev_soc
 
         else:
-            self.charge_status = "success" if success else "infeasible"
+            self.charge_status = EVChargeStatus.Feasible if success else EVChargeStatus.Infeasible
         self.V0G_trip_infeasibility = trip_infeasibility
 
     def V0G_charging(self, interval_duration: float, force_conv=False):
