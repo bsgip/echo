@@ -1,6 +1,4 @@
-""" Enumerations of possible configurations for echo model components.
-
-"""
+"""Enumerations of possible configurations for echo model components."""
 
 from enum import Enum
 

@@ -1,0 +1,64 @@
+name: Post Coverage Comment
+
+on:
+  workflow_run:
+    workflows: [Coverage Comparison]
+    types:
+      - completed
+
+permissions:
+  issues: write
+  actions: read
+
+jobs:
+  post-comment:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+
+      # Cant get this working with actions/download-artifact due to permissions quirks - using the API directly instead
+      - name: Download Coverage Report Artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ARTIFACT_NAME: code-coverage-report
+        run: |
+          echo "Fetching artifact list for run ID: $RUN_ID"
+
+          artifacts=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts)
+
+          artifact_id=$(echo "$artifacts" | jq -r --arg NAME "$ARTIFACT_NAME" '.artifacts[] | select(.name == $NAME) | .id')
+
+          if [ -z "$artifact_id" ]; then
+            echo "Artifact '$ARTIFACT_NAME' not found."
+            exit 1
+          fi
+
+          echo "Found artifact ID: $artifact_id"
+
+          curl -L -H "Authorization: token $GITHUB_TOKEN" \
+            -o artifact.zip \
+            https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$artifact_id/zip
+
+          unzip artifact.zip -d extracted-artifact
+
+          echo "Extracted contents:"
+          ls -R extracted-artifact
+
+      - name: Create Issue Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ISSUE_COMMENT_PAT }}
+          script: |
+            const fs = require('fs');
+            const comment_body = fs.readFileSync('./extracted-artifact/coverage-report.txt', 'utf8');
+            const issue_number = Number(fs.readFileSync('./extracted-artifact/issue-number.txt', 'utf8'));
+
+            github.rest.issues.createComment({
+              issue_number: issue_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment_body
+            })
