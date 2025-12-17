@@ -868,10 +868,6 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-# def test_v2g_soc_conserv():
-#     pass
-
-
 def test_v1g_no_objective():
     # Set up hyper params
     time_periods = 96  # number of time periods to run the optimisation for
@@ -3717,3 +3713,31 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
         engine_settings=engine_settings_from_environment(),
         graph=system,
     )
+
+
+def test_usage_less_than_max_discharge():
+    """The absolute value of discharging_power_limit should not be less than the max usage.
+    """
+    # Create timeseries data
+    available = np.array([1] * 48 + [0] * 48)  # bool when at charger
+    usage = np.array([0.0] * 48 + [50] * 48)  # kw average during use
+
+    with pytest.raises(Exception):
+        # Create V1G vehicle
+        EVV1G(
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-10,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=15.0,
+            tod_charging=False,
+            trip_slack=True,
+        )
