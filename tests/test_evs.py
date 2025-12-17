@@ -14,13 +14,12 @@ from echo.models.electrical import EV, ElectricalDemand, ElectricalGeneration, I
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.power import PeakNegativePower
 from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
 
 def test_v0g():
-    # Set up hyper params
+    # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
@@ -41,8 +40,8 @@ def test_v0g():
 
     # Create V0G vehicle
 
-    available = np.array([1] * 48 + [0] * 48)  # bool when at charger
-    usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
+    available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
+    usage = np.array([0.0] * time_periods // 2 + [5] * time_periods // 2)  # kw average during use
 
     ev_cp = EV(
         charge_mode=EVChargeMode.V0G,
@@ -85,7 +84,7 @@ def test_v0g():
 def test_v0g_2():
     """Like test_v0g, just different parameters."""
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
     usage = [0.0] * 7 + [5] * 3  # kw average during use
     interval_duration = 10
@@ -135,7 +134,7 @@ def test_v0g_2():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -150,7 +149,7 @@ def test_v0g_2():
 def test_v0g_3():
     """Like test_v0g_2, just different parameters, but discharge first, then charge."""
 
-    # Set up hyper params
+    # Define parameters
     available = [0] * 3 + [1] * 7  # bool when at charger
     usage = [5] * 3 + [0] * 7  # kw average during use
     interval_duration = 10
@@ -200,7 +199,7 @@ def test_v0g_3():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -225,7 +224,7 @@ def test_v0g_with_stateful_data_injection():
     ]
 
     for available_usages in good_available_usages:
-        # Set up hyper params
+        # Define parameters
         time_periods = 96  # number of time periods to run the optimisation for
         interval_duration = 15  # each time period is 15 mins long
         expansion_periods = 1  # not yet implemented leave as 1
@@ -246,8 +245,8 @@ def test_v0g_with_stateful_data_injection():
 
         # Create V0G vehicle
 
-        available = np.array([1] * 48 + [0] * 48)  # bool when at charger
-        usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
+        available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
+        usage = np.array([0.0] * time_periods//2 + [5] * time_periods // 2)  # kw average during use
 
         ev_cp = EV(
             node_name="ev",
@@ -299,6 +298,7 @@ def test_v0g_with_stateful_data_injection():
                 number_of_intervals=new_time_periods,
                 number_of_expansion_intervals=expansion_periods,
                 discount_rate=discount_rate,
+                interval_duration=interval_duration,
             ),
             engine_settings=engine_settings_from_environment(),
             graph=system,
@@ -312,7 +312,7 @@ def test_v0g_output_matches_expectation():
     look right?
     """
 
-    ##Set up hyper params
+    # Define parameters
     time_periods = 48  # number of time periods to run the optimisation for
     interval_duration = 30  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
@@ -453,7 +453,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     Uses test_v0g_2 inputs, then test_v0g inputs
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
     usage = [0.0] * 7 + [2] * 3  # kw average during use
     interval_duration = 10
@@ -611,7 +611,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     Uses test_v0g inputs, then test_v0g_2 inputs
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 24 + [0] * 24  # bool when at charger
     usage = [0.0] * 24 + [5] * 24  # kw average during use
     interval_duration = 30
@@ -716,12 +716,8 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     assert np.allclose(soc, expected_soc, rtol=10**-5)
 
 
-# def test_v2g_soc_conserv():
-#     pass
-
-
 def test_v1g_no_objective():
-    # Set up hyper params
+    # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
@@ -786,7 +782,7 @@ def test_v1g_no_objective():
 def test_v1g_no_objective_2():
     """Like test_v1g, just different parameters."""
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
     usage = [0.0] * 7 + [5] * 3  # kw average during use
     interval_duration = 10
@@ -836,7 +832,7 @@ def test_v1g_no_objective_2():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -851,7 +847,7 @@ def test_v1g_no_objective_2():
 def test_v1g_no_objective_3():
     """Like test_v1g_2, just different parameters, but discharge first, then charge."""
 
-    # Set up hyper params
+    # Define parameters
     available = [0] * 3 + [1] * 7  # bool when at charger
     usage = [5] * 3 + [0] * 7  # kw average during use
     interval_duration = 10
@@ -901,7 +897,7 @@ def test_v1g_no_objective_3():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -914,7 +910,7 @@ def test_v1g_no_objective_3():
 
 
 def test_v2g_no_objective():
-    # Set up hyper params
+    # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
@@ -979,7 +975,7 @@ def test_v2g_no_objective():
 def test_v2g_no_objective_2():
     """Like test_v1g, just different parameters."""
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
     usage = [0.0] * 7 + [5] * 3  # kw average during use
     interval_duration = 10
@@ -1029,7 +1025,7 @@ def test_v2g_no_objective_2():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -1044,7 +1040,7 @@ def test_v2g_no_objective_2():
 def test_v2g_no_objective_3():
     """Like test_v1g_2, just different parameters, but discharge first, then charge."""
 
-    # Set up hyper params
+    # Define parameters
     available = [0] * 3 + [1] * 7  # bool when at charger
     usage = [5] * 3 + [0] * 7  # kw average during use
     interval_duration = 10
@@ -1094,7 +1090,7 @@ def test_v2g_no_objective_3():
     system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Invoke the optimiser and optimise
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -1111,7 +1107,7 @@ def test_simple_v1g_with_stateful_data_injection():
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
     good_soc = np.array([50, 50, 40, 30, 30, 30])
 
-    # Set up hyper params
+    # Define parameters
     time_periods = 2  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
@@ -1131,8 +1127,8 @@ def test_simple_v1g_with_stateful_data_injection():
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
     # Create V1G vehicle
-    available = np.array([0] * 2)
-    usage = np.array([5] * 2)
+    available = np.array([0] * time_periods)
+    usage = np.array([5] * time_periods)
     ev_cp = EV(
         node_name="ev",
         charge_mode=EVChargeMode.V1G,
@@ -1148,7 +1144,7 @@ def test_simple_v1g_with_stateful_data_injection():
         initial_state_of_charge=20,
         soc_conserv=None,
         soc_conserv_cost=0.0,
-        interval_duration=1,
+        interval_duration=interval_duration,
         tod_charging=False,
         trip_slack=True,
     )
@@ -1207,7 +1203,7 @@ def test_simple_v2g_with_stateful_data_injection_2():
     """Get V1G to behave properly"""
     good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
 
-    # Set up hyper params
+    # Define parameters
     interval_duration = 1  # each time period is 15 mins long
     expansion_periods = 1  # not yet implemented leave as 1
     discount_rate = 0  # not yet implemented leave as 0
@@ -1324,7 +1320,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
     i = 0
 
     for available_usage in good_available_usages:
-        # Set up hyper params
+        # Define parameters
         interval_duration = 1  # each time period is 15 mins long
         expansion_periods = 1  # not yet implemented leave as 1
         discount_rate = 0  # not yet implemented leave as 0
@@ -1360,7 +1356,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
             initial_state_of_charge=20,
             soc_conserv=None,
             soc_conserv_cost=0.0,
-            interval_duration=1,
+            interval_duration=interval_duration,
             tod_charging=False,
             trip_slack=True,
         )
@@ -1443,7 +1439,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
     ]
 
     for available_usage in bad_available_usages:
-        # Set up hyper params
+        # Define parameters
         interval_duration = 1  # each time period is 15 mins long
         expansion_periods = 1  # not yet implemented leave as 1
         discount_rate = 0  # not yet implemented leave as 0
@@ -1479,7 +1475,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             initial_state_of_charge=20,
             soc_conserv=None,
             soc_conserv_cost=0.0,
-            interval_duration=1,
+            interval_duration=interval_duration,
             tod_charging=False,
             trip_slack=True,
         )
@@ -1508,8 +1504,8 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             system.delete_edge(("cp", "ev"))
             system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
-            # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
-            # cp and ev
+            # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp"
+            # connection cp and ev
             assert (
                 system.get_edge(("cp", "ev")).vertices[1].active_periods
                 == system.get_node("ev").ports["cp"].active_periods
@@ -1519,7 +1515,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
 
             # Optimise
-            optimise_results = optimise(
+            optimise(
                 scenario_settings=ScenarioSettings(
                     interval_duration=new_interval_duration,
                     number_of_intervals=new_time_periods,
@@ -1535,7 +1531,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
 def test_v1g_with_objective():
     """Like test_v1g_no_objective_2, but with objective"""
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, 0, 0, 0, 0, 0, -5, -5, -5]  # kw load
@@ -1638,7 +1634,7 @@ def test_v1g_with_load_with_objective():
     Expect delayed charging behaviour.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, 0, 0, 0, 0, 0, -5, -5, -5]  # kw generated
@@ -1751,7 +1747,7 @@ def test_v2g_with_load_with_objective():
     Expect delayed charging behaviour.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, 0, 0, 0, 0, 0, -5, -5, -5]  # kw generated
@@ -1868,7 +1864,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     Expect delayed EV to supply some power to load behaviour.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
     solar_data = [-5, -5, -15, -15, 0, 0, -15, -15, -5, -5]  # kw generated
@@ -1986,7 +1982,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     used to build a network in MES: build the echo network, then inject data into the network, then optimise.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [5] * 2  # kw average during use
     initial_state_of_charge = 0
@@ -2119,7 +2115,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     used to build a network in MES: build the echo network, then inject data into the network, then optimise.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [5] * 2  # kw average during use
     initial_state_of_charge = 0
@@ -2252,11 +2248,9 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data():
     """Check that node uid and port uids are preserved when injecting stateful data into an ev"""
 
-    # Set up hyper params
+    # Define parameters
     time_periods = 96  # number of time periods to run the optimisation for
     interval_duration = 15  # each time period is 15 mins long
-    expansion_periods = 1  # not yet implemented leave as 1
-    discount_rate = 0  # not yet implemented leave as 0
 
     # Create graph
     system = OptimisationGraph()
@@ -2273,8 +2267,8 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
 
     # Create V0G vehicle
 
-    available = np.array([1] * 48 + [0] * 48)  # bool when at charger
-    usage = np.array([0.0] * 48 + [5] * 48)  # kw average during use
+    available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
+    usage = np.array([0.0] * time_periods // 2 + [5] * time_periods // 2)  # kw average during use
 
     ev_cp = EV(
         node_name="ev",
@@ -2291,7 +2285,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
         initial_state_of_charge=20,
         soc_conserv=None,
         soc_conserv_cost=0.0,
-        interval_duration=15.0,
+        interval_duration=interval_duration,
         tod_charging=False,
         trip_slack=True,
     )
@@ -2305,7 +2299,6 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     # Define new stateful parameters
     new_interval_duration = 30
     new_initial_state_of_charge = 50
-    new_time_periods = 6
 
     # Get node uid
     old_node_uid = system.get_node("ev").uid
@@ -2347,7 +2340,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     used to build a network in MES: build the echo network, then inject data into the network, then optimise.
     """
 
-    # Set up hyper params
+    # Define parameters
     available = [1, 1]
     usage = [0, 0]
     interval_duration = 1
