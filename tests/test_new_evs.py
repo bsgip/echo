@@ -1,5 +1,4 @@
-""" TODO: This test file is to be renamed to test_ev.py when the EV object and test_evs.py are deprecated.
-"""
+"""TODO: This test file is to be renamed to test_ev.py when the EV object and test_evs.py are deprecated."""
 
 from __future__ import division
 
@@ -3716,8 +3715,7 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
 
 
 def test_usage_less_than_max_discharge():
-    """The absolute value of discharging_power_limit should not be less than the max usage.
-    """
+    """The absolute value of discharging_power_limit should not be less than the max usage."""
     # Create timeseries data
     available = np.array([1] * 48 + [0] * 48)  # bool when at charger
     usage = np.array([0.0] * 48 + [50] * 48)  # kw average during use
