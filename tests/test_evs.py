@@ -40,8 +40,8 @@ def test_v0g():
 
     # Create V0G vehicle
 
-    available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
-    usage = np.array([0.0] * time_periods // 2 + [5] * time_periods // 2)  # kw average during use
+    available = np.array([1] * (time_periods // 2) + [0] * (time_periods // 2))  # bool when at charger
+    usage = np.array([0.0] * (time_periods // 2) + [5] * (time_periods // 2))  # kw average during use
 
     ev_cp = EV(
         charge_mode=EVChargeMode.V0G,
@@ -226,7 +226,6 @@ def test_v0g_with_stateful_data_injection():
     for available_usages in good_available_usages:
         # Define parameters
         time_periods = 96  # number of time periods to run the optimisation for
-        interval_duration = 15  # each time period is 15 mins long
         expansion_periods = 1  # not yet implemented leave as 1
         discount_rate = 0  # not yet implemented leave as 0
 
@@ -245,8 +244,8 @@ def test_v0g_with_stateful_data_injection():
 
         # Create V0G vehicle
 
-        available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
-        usage = np.array([0.0] * time_periods//2 + [5] * time_periods // 2)  # kw average during use
+        available = np.array([1] * (time_periods // 2) + [0] * (time_periods // 2))  # bool when at charger
+        usage = np.array([0.0] * (time_periods // 2) + [5] * (time_periods // 2))  # kw average during use
 
         ev_cp = EV(
             node_name="ev",
@@ -298,7 +297,6 @@ def test_v0g_with_stateful_data_injection():
                 number_of_intervals=new_time_periods,
                 number_of_expansion_intervals=expansion_periods,
                 discount_rate=discount_rate,
-                interval_duration=interval_duration,
             ),
             engine_settings=engine_settings_from_environment(),
             graph=system,
@@ -605,8 +603,8 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
 def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_dataset():
     """This example builds on test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dataset
 
-    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the graph
-    look right, after initialise_data has been used to decrease the number of time periods
+    The aim of this test is to determine if the output of a v0g ev optimisation matches expectations, ie. does the
+    graph look right, after initialise_data has been used to decrease the number of time periods.
 
     Uses test_v0g inputs, then test_v0g_2 inputs
     """
@@ -2267,8 +2265,8 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
 
     # Create V0G vehicle
 
-    available = np.array([1] * time_periods // 2 + [0] * time_periods // 2)  # bool when at charger
-    usage = np.array([0.0] * time_periods // 2 + [5] * time_periods // 2)  # kw average during use
+    available = np.array([1] * (time_periods // 2) + [0] * (time_periods // 2))  # bool when at charger
+    usage = np.array([0.0] * (time_periods // 2) + [5] * (time_periods // 2))  # kw average during use
 
     ev_cp = EV(
         node_name="ev",
