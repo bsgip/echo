@@ -1,5 +1,4 @@
-""" TODO: This test file is to be deprecated. It is currently replicated with the new EV objects in test_new_ev.py
-"""
+"""TODO: This test file is to be deprecated. It is currently replicated with the new EV objects in test_new_ev.py"""
 
 from __future__ import division
 
