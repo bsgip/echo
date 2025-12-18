@@ -1163,22 +1163,24 @@ class OptimisationGraph(BaseModel):
             "<class 'echo.models.electrical.EVDemandProfile'>",
         ]
 
+        # If the node is of a class in classes_with_set_stateful_attrs_function, call set_stateful_attrs.
+        # If it is not, use node.update(), create a new edge object with the updated ports and delete the old edge.
         if str(type(self.get_node(node_name))) in classes_with_set_stateful_attrs_function:
             self.get_node(node_name).set_stateful_attrs(**kwargs)
         else:
             self.get_node(node_name).update(**kwargs)
 
-        # Get the correct port objects to build a new edge
-        node1 = self.node_obj[edge_node_1_name]
-        node2 = self.node_obj[edge_node_2_name]
-        edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
-        edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
-        port1 = node1.ports[edge_node_1_port_dict_name]
-        port2 = node2.ports[edge_node_2_port_dict_name]
+            # Get the correct port objects to build a new edge
+            node1 = self.node_obj[edge_node_1_name]
+            node2 = self.node_obj[edge_node_2_name]
+            edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
+            edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
+            port1 = node1.ports[edge_node_1_port_dict_name]
+            port2 = node2.ports[edge_node_2_port_dict_name]
 
-        # Update the edge
-        self.delete_edge(found_edge)
-        self.connect_ports_and_create_edge(port1, port2)
+            # Update the edge
+            self.delete_edge(found_edge)
+            self.connect_ports_and_create_edge(port1, port2)
 
     def inject_data_into_ev(
         self,
