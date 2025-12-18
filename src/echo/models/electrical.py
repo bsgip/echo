@@ -736,7 +736,7 @@ class EVDemandProfile(Node):
         """
         if self.demand is None:
             raise ConfigurationError(
-                f"The demand attribute for {self.node_name} has not been set." f"Please use set_stateful_attrs()."
+                f"The demand attribute for {self.node_name} has not been set. Please use set_stateful_attrs()."
             )
 
     def _check_demand_is_not_more_than_max_import(self) -> None:
