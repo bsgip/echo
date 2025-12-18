@@ -3736,9 +3736,7 @@ def test_update_node_EVV0G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
-    )
+    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
 
     # Create V0G vehicle
     ev = EVV0G(
@@ -3865,9 +3863,7 @@ def test_update_node_EVV1G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
-    )
+    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
 
     # Create V1G vehicle
     ev = EVV1G(
@@ -3994,9 +3990,7 @@ def test_update_node_EVV2G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
-    )
+    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
 
     # Create V2G vehicle
     ev = EVV2G(
