@@ -17,6 +17,7 @@ from echo.models.electrical import (
     EVV2G,
     ElectricalDemand,
     ElectricalGeneration,
+    ElectricalPort,
     EVDemandProfile,
     Inverter,
 )
@@ -3377,7 +3378,7 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
             interval_duration=interval_duration,
         )
 
-    # Inject data into the EV without providing all stateful variables should throw an error
+    # Inject all stateful data into the EV
     system.get_node("ev").set_stateful_attrs(
         available=available,
         usage=usage,
@@ -3385,7 +3386,9 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
         interval_duration=interval_duration,
     )
 
-    # Optimising with setting stateful parameters should be work
+    # Ensure the ports on the edge connecting the ev and the connection_point
+    system.get_node("ev").ports
+    # Optimising after setting stateful parameters will work now
     optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
@@ -3691,3 +3694,418 @@ def test_usage_less_than_max_discharge():
             tod_charging=False,
             trip_slack=True,
         )
+
+
+def _get_ev_node_and_edge_ports(
+    system: OptimisationGraph,
+    ev_node_name: str = "ev",
+    ev_node_port_name: str = "ev_to_cp",
+    connection_point_node_name: str = "connection_point",
+) -> tuple[ElectricalDemand, ElectricalDemand]:
+    ev_cp_port = system.get_node(ev_node_name).ports[ev_node_port_name]
+    cp_ev_edge = [vertex for vertex in system.get_edge((connection_point_node_name, ev_node_name)).vertices]
+
+    for port in cp_ev_edge:
+        print(type(port))
+        if isinstance(port, ElectricalDemand):
+            # V0G case
+            edge_port = port
+        elif isinstance(port, ElectricalPort):
+            # V1G, V2G case
+            edge_port = port
+    return ev_cp_port, edge_port
+
+
+def test_update_node_EVV0G():
+    """Test the OptimisationGraph's update_node function for EVV0G"""
+    # Define parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [5] * 2  # kw average during use
+    initial_state_of_charge = 0
+    import_tariff = [11, 10, 19, 1, 2, 3, 11, 10, 9, 8]  # $/kw
+    interval_duration = 60
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create V0G vehicle
+    ev = EVV0G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [15] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    # Get the port on the EV node that connects to the connection_point node, and the ev port on the
+    # (ev, connection_point) edge.
+    old_ev_cp_port, old_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert old_edge_port == old_ev_cp_port
+    assert id(old_edge_port) != id(old_ev_cp_port)
+
+    system.update_node(
+        "ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    # Get the updated port on the EV node that connects to the connection_point node, and the updated ev port on the
+    # (ev, connection_point) edge.
+    new_ev_cp_port, new_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert new_edge_port == new_ev_cp_port
+    assert id(new_edge_port) != id(new_ev_cp_port)
+
+    # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
+    # and after update_node is called. We need to also assert that the memory location is the same as all attribute
+    # names could be potentially identical (if they've been copied into a new instance completely for example).
+    assert old_ev_cp_port == new_ev_cp_port
+    assert id(old_edge_port) == id(new_edge_port)
+
+    # Test that the update EV node will still work in an optimisation problem.
+    # Create objectives/tariffs
+    import_cost = ImportTariff(
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+    )
+
+    # assign a throughput cost to the ev's battery
+    throughput_cost = ThroughputCost(component=ev.ports["ev_to_cp"], rate=0.000001)
+
+    objective_set = ObjectiveSet(objective_list=[import_cost, throughput_cost])
+
+    # Invoke the optimiser and optimise
+    optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+    )
+
+
+def test_update_node_EVV1G():
+    """Test the OptimisationGraph's update_node function for EVV1G"""
+    # Define parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [5] * 2  # kw average during use
+    initial_state_of_charge = 0
+    import_tariff = [11, 10, 19, 1, 2, 3, 11, 10, 9, 8]  # $/kw
+    interval_duration = 60
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create V1G vehicle
+    ev = EVV1G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [15] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    # Get the port on the EV node that connects to the connection_point node, and the ev port on the
+    # (ev, connection_point) edge.
+    old_ev_cp_port, old_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert old_edge_port == old_ev_cp_port
+    assert id(old_edge_port) != id(old_ev_cp_port)
+
+    system.update_node(
+        "ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    # Get the updated port on the EV node that connects to the connection_point node, and the updated ev port on the
+    # (ev, connection_point) edge.
+    new_ev_cp_port, new_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert new_edge_port == new_ev_cp_port
+    assert id(new_edge_port) != id(new_ev_cp_port)
+
+    # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
+    # and after update_node is called. We need to also assert that the memory location is the same as all attribute
+    # names could be potentially identical (if they've been copied into a new instance completely for example).
+    assert old_ev_cp_port == new_ev_cp_port
+    assert id(old_edge_port) == id(new_edge_port)
+
+    # Test that the update EV node will still work in an optimisation problem.
+    # Create objectives/tariffs
+    import_cost = ImportTariff(
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+    )
+
+    # assign a throughput cost to the ev's battery
+    throughput_cost = ThroughputCost(component=ev.ports["ev_to_cp"], rate=0.000001)
+
+    objective_set = ObjectiveSet(objective_list=[import_cost, throughput_cost])
+
+    # Invoke the optimiser and optimise
+    optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+    )
+
+
+def test_update_node_EVV2G():
+    """Test the OptimisationGraph's update_node function for EVV2G"""
+    # Define parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [5] * 2  # kw average during use
+    initial_state_of_charge = 0
+    import_tariff = [11, 10, 19, 1, 2, 3, 11, 10, 9, 8]  # $/kw
+    interval_duration = 60
+    time_periods = len(available)
+    expansion_periods = 1  # not yet implemented leave as 1
+    discount_rate = 0  # not yet implemented leave as 0
+
+    # Create graph
+    system = OptimisationGraph()
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="grid_to_cp")
+
+    # Create a connection point
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
+
+    # Create V2G vehicle
+    ev = EVV2G(
+        node_name="ev",
+        available=available,
+        usage=usage,
+        connection_port_name="ev_to_cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-20,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=initial_state_of_charge,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=True,
+    )
+
+    # Check that ev has 3 ports
+    assert len(ev.ports.keys()) == 3
+
+    # Add nodes to the OptimisationGraph
+    system.add_node_obj([grid, ev, connection_point])
+
+    # Create edge objects and add to graph
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+
+    # Update ev with stateful parameters
+    available = [1] * 8 + [0] * 2  # bool when at charger
+    usage = [0.0] * 8 + [15] * 2  # kw average during use
+    initial_state_of_charge = 0
+    interval_duration = 60
+
+    # Get the port on the EV node that connects to the connection_point node, and the ev port on the
+    # (ev, connection_point) edge.
+    old_ev_cp_port, old_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert old_edge_port == old_ev_cp_port
+    assert id(old_edge_port) != id(old_ev_cp_port)
+
+    system.update_node(
+        "ev",
+        available=available,
+        usage=usage,
+        initial_state_of_charge=initial_state_of_charge,
+        interval_duration=interval_duration,
+    )
+
+    # Get the updated port on the EV node that connects to the connection_point node, and the updated ev port on the
+    # (ev, connection_point) edge.
+    new_ev_cp_port, new_edge_port = _get_ev_node_and_edge_ports(
+        system=system,
+        ev_node_name="ev",
+        ev_node_port_name="ev_to_cp",
+        connection_point_node_name="connection_point",
+    )
+
+    # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
+    # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
+    # when constructing the edges.
+    assert new_edge_port == new_ev_cp_port
+    assert id(new_edge_port) != id(new_ev_cp_port)
+
+    # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
+    # and after update_node is called. We need to also assert that the memory location is the same as all attribute
+    # names could be potentially identical (if they've been copied into a new instance completely for example).
+    assert old_ev_cp_port == new_ev_cp_port
+    assert id(old_edge_port) == id(new_edge_port)
+
+    # Test that the update EV node will still work in an optimisation problem.
+    # Create objectives/tariffs
+    import_cost = ImportTariff(
+        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+    )
+
+    # assign a throughput cost to the ev's battery
+    throughput_cost = ThroughputCost(component=ev.ports["ev_to_cp"], rate=0.000001)
+
+    objective_set = ObjectiveSet(objective_list=[import_cost, throughput_cost])
+
+    # Invoke the optimiser and optimise
+    optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+            discount_rate=discount_rate,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+    )
+
+
+def test_update_node_EVDemandProfile():
+    pass
+
+
+def test_trip_slack_false():
+    pass
