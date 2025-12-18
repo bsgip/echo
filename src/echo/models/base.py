@@ -1153,19 +1153,9 @@ class OptimisationGraph(BaseModel):
             raise ValueError(f"No edges contain node: {node_name}")
 
         # Inject stateful data
-        # TODO - isinstance comparison is for backwards compatibility - to be removed upon EV object deprecation.
-        # TODO - the hacky comparison is to avoid circular imports
-
-        classes_with_set_stateful_attrs_function = [
-            "<class 'echo.models.electrical.EVV0G'>",
-            "<class 'echo.models.electrical.EVV1G'>",
-            "<class 'echo.models.electrical.EVV2G'>",
-            "<class 'echo.models.electrical.EVDemandProfile'>",
-        ]
-
-        # If the node is of a class in classes_with_set_stateful_attrs_function, call set_stateful_attrs.
+        # If the node has a set_stateful_attrs() function, use that function.
         # If it is not, use node.update(), create a new edge object with the updated ports and delete the old edge.
-        if str(type(self.get_node(node_name))) in classes_with_set_stateful_attrs_function:
+        if hasattr(self.get_node(node_name), "set_stateful_attrs"):
             self.get_node(node_name).set_stateful_attrs(**kwargs)
         else:
             self.get_node(node_name).update(**kwargs)
