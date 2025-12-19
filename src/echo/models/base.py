@@ -1155,6 +1155,9 @@ class OptimisationGraph(BaseModel):
         # Inject stateful data
         # If the node has a set_stateful_attrs() function, use that function.
         # If it is not, use node.update(), create a new edge object with the updated ports and delete the old edge.
+        # The creation of a new edge and the deletion of the old edge is required as pydantic creates copies of objects
+        # upon data injection (under the old way of doing it), which would mean the port on the node and the port
+        # defining the edge are no longer the same port, even if they share identical sets of attributes.
         if hasattr(self.get_node(node_name), "set_stateful_attrs"):
             self.get_node(node_name).set_stateful_attrs(**kwargs)
         else:
