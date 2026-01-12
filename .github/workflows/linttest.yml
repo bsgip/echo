@@ -38,7 +38,7 @@ jobs:
       - name: Lint with flake8
         if: always()
         run: |
-          pip install flake8
+          pip install flake8 Flake8-pyproject
           flake8 . --count --statistics
 
   black_formatting:
@@ -68,7 +68,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install .[test]
+          pip install --group test .
           # Install CPLEX
           sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
@@ -108,7 +108,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install .[test]
+          pip install --group test .
           # Install CPLEX
           sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 

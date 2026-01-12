@@ -13,7 +13,7 @@ To install this package you need to:
 ``cd echo``
 
 3. with your virtual environment active install using pip
-``pip install .[test,validation]``
+``pip install --group all .``
 
 .. note::
    This package is not on pypi. Doing ``pip install echo`` will NOT install this package. It will install a different package.
