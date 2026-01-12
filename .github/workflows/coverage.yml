@@ -63,7 +63,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install .[dev]
+          pip install --group dev .
           # Install CPLEX
           sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
