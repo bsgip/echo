@@ -1,17 +1,113 @@
-[tool.black]
-line-length = 120
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
 
-[tool.pytest.ini_options]
-pythonpath = ["src/"]
-testpaths = "tests"
-filterwarnings = ["error::DeprecationWarning"]
 
-[tool.isort]
-profile = "black"
-line_length=120
+[project]
+dynamic = ["version", "readme"]
+name = "echo"
+description = "The Energy and Commodity Holistic Optimiser (ECHO)."
+keywords = ["energy", "commodity", "modelling", "optimization"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: Pydantic :: 1",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering",
+
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "networkx>=3.1,<4",
+    "numpy>=1.26,<2",
+    "orjson>=3.9,<4",
+    "pandas>=2.1,<3",
+    "plotly>=5.22,<6",
+    "pydantic>=1.10,<2",
+    "pyomo>=6.6,<7",
+    "scikit-learn>=1.3,<2",
+    "seaborn>=0.12,<1",
+    "shortuuid>=1.0.11,<2",
+    "typing-extensions>=4.7,<5",
+    "scipy>=1.14.1,<2",
+]
+requires-python = ">= 3.10"
+authors = [
+  {name = "Ruth Kravis"},
+  {name = "Johannes Hendriks"},
+  {name = "Anna Skobleva"},
+  {name = "Dora He"},
+  {name = "Benjamin Weise"},
+  {name = "Josh Vote"},
+  {name = "Antoine Desmet"},
+  {name = "Michael Thomas", email = "michael.thomas@anu.edu.au"},
+  {name = "Mike Turner", email = "mike.turner@anu.edu.au"}
+]
+maintainers = [
+  {name = "Michael Thomas", email = "michael.thomas@anu.edu.au"},
+  {name = "Mike Turner", email = "mike.turner@anu.edu.au"}
+]
+
+
+[project.urls]
+#Homepage = "https://pypi.org/project/PROJECTNAME"
+#Documentation = "https://PROJECTNAME.readthedocs.io"
+Repository = "https://github.com/bsip/echo"
+Issues = "https://github.com/bsgip/echo/issues"
+Changelog = "https://github.com/bsgip/echo/blob/master/CHANGELOG.md"
+
+
+[dependency-groups]
+linters = ["bandit[toml]", "black", "coverage", "flake8", "Flake8-pyproject", "mypy", "pytest-cov","types-pytz" ]
+test = ["hypothesis[numpy]", "pytest", "pytest-timeout"]
+docs = ["sphinx", "sphinx-rtd-theme"]
+dev = [
+    {include-group = "linters"},
+    {include-group = "test"},
+]
+all = [
+    {include-group = "dev"},
+    {include-group = "docs"},
+]
+
+
+[tool.setuptools.package-data]
+"echo" = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "echo.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
 
 [tool.bandit]
 exclude_dirs = ["tests"]
+
+
+[tool.black]
+line-length = 120
+
+
+# flake8 configuration permitted in pyproject.toml with "Flake8-pyproject".
+[tool.flake8]
+max-line-length = 120
+max-complexity = 20
+exclude = [
+    ".*/", # all hidden folders
+    "build",
+    "docs",
+    "tests",
+    "scripts",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
 
 [tool.mypy]
 exclude = ["docs/", "scripts/"]
@@ -33,32 +129,11 @@ module = "networkx.*"
 ignore_missing_imports = true
 
 
-[build-system]
-requires = ["setuptools >= 40.9.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
+testpaths = "tests"
+filterwarnings = ["error::DeprecationWarning"]
 
-[project]
-name = "echo"
-version = "2.1.13"
-dependencies = [
-    "networkx>=3.1,<4",
-    "numpy>=1.26,<2",
-    "orjson>=3.9,<4",
-    "pandas>=2.1,<3",
-    "plotly>=5.22,<6",
-    "pydantic>=1.10,<2",
-    "pyomo>=6.6,<7",
-    "scikit-learn>=1.3,<2",
-    "seaborn>=0.12,<1",
-    "shortuuid>=1.0.11,<2",
-    "typing-extensions>=4.7,<5",
-    "scipy>=1.14.1,<2",
-]
 
-[project.optional-dependencies]
-dev = ["bandit[toml]", "coverage", "flake8", "mypy", "black", "types-pytz"]
-test = ["pytest", "pytest-timeout", "hypothesis[numpy]"]
-docs = ["sphinx", "sphinx-rtd-theme"]
 
-[tool.setuptools.package-data]
-"echo" = ["py.typed"]
+
