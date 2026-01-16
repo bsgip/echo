@@ -69,9 +69,7 @@ class EVBase(TransformNode):
     discharging_power_limit: float
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-
-    # trip_slack=True allows soc to go below min to avoid optimisation failing due to infeasible ev trips
-    trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
+    enable_trip_slack: bool = False
 
     # soc_conserv and soc_conserv_cost for having a 'conservative' ev user lower bound on the soc while it is plugged in
     soc_conserv: Optional[TimeExpandableType] = None
@@ -172,7 +170,7 @@ class EVBase(TransformNode):
         """Create a usage port and add it to the EV's ports list.
 
         Args:
-
+            None
 
         Returns:
             None
@@ -181,77 +179,80 @@ class EVBase(TransformNode):
         # Create the usage port and assign it to the EV object
         self.ports["usage"] = ElectricalDemand()
 
-    def _create_vehicle_port(self, **data) -> None:
-        """Create a vehicle port using existing values if they exist.
+        # TODO: Set demand here if set_stateful_attrs_at_init is True
 
-        TODO: Determine whether using existing values is a hangover from the old implementation of EV (which required a
-        TODO: complete re__init__ for injection of stateful data in EVs, or is needed for network building.
+    def _create_vehicle_port(
+        self,
+        available: ArrayType | list | None if set_stateful_attrs_at_init else ArrayType | list,
+        charging_power_limit: float,
+        discharging_power_limit: float,
+        initial_state_of_charge: float | None if set_stateful_attrs_at_init else float,
+        max_capacity: float,
+        charging_efficiency: float = 1,
+        depth_of_discharge_limit: float = 0,  # DoD limit is the percent soc to which you can discharge the storage
+        discharging_efficiency: float = 1,
+        enable_trip_slack: bool = False,
+        set_stateful_attrs_at_init: bool = True,
+        soc_conserv: Optional[TimeExpandableType] = None,
+        soc_conserv_cost: Union[float, None] = None,
+    ) -> None:
+        """Create a vehicle port and add it to the EV's ports list.
 
         Args:
-            **data:
+            available (Union[ArrayType, list, None] | ): A List or ArrayType of bools representing the ability for the
+                EV to charge. The bools can have values of [False, True] or [0, 1]. 0 and False indicate the EV is not
+                available for charging, 1 and True indicate the EV is available for charging. If
+                set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it may
+                be provided upon EV instantiation or later using set_stateful_attrs().
+            charging_power_limit (float): The maximum charging rate of the EV's battery. Positive float in power units.
+            discharging_power_limit (float): The maximum discharging rate of the EV's battery. This includes
+                discharging for travelling and V2G actions. Negative float in power units.
+            initial_state_of_charge (Optional[float] | float): The initial charge present in the EV's battery. Positive
+                float of energy units, not percentage. If set_state_attrs_at_init is True, this must be supplied. If
+                set_stateful_attrs_at_init is False, it may be provided upon EV instantiation or later using
+                set_stateful_attrs(). Positive float with units of energy.
+            max_capacity (float): The storage capacity of the EV's battery. Positive float in energy units.
+            charging_efficiency (float, optional): The efficiency of the battery charging process for the EV. Float as
+                a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
+            depth_of_discharge_limit (float, optional): The minimum value of the state of charge of the EV. Same as
+                min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
+                and 100.0. Unitless. Defaults to 0.0.
+            enable_trip_slack (bool, optional): Enabling trip slack allows the EV to meet usage requirements even if
+                other constraints/requirments are breached. That is, it allows the state of charge of the EV's battery
+                to go below min to avoid the optimisation failing due to infeasible EV trips. For example, an EV can
+                complete a journey requiring 20 kWh of energy if though there is only 15 kWh of energy in the EV
+                battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
+                there is a cost to do so. This can cause issues when conducting analysis on systems with
+                enable_trip_slack=True, so use with caution. Defaults to False.
+            set_stateful_attrs_at_init (bool, optional): Set attributes with state at object instantiation (True) or
+                defer to later (False). If defering to later, self.set_stateful_attrs must be used to set these
+                attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
+            soc_conserv (Optional[TimeExpandableType], optional): _description_. Defaults to None.
+            soc_conserv_cost (Union[float, None], optional): _description_. Defaults to None.
 
         Returns:
             None
-
         """
 
-        # Preserve uid and port_name if present on port
-        if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
-            self.ports["vehicle"] = MobileElectricalStorage(
-                uid=self.port_dict_name_to_port_uid_map["vehicle"],
-                port_name=self.port_dict_name_to_port_name_map["vehicle"],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
-            )
-        else:
-            self.ports["vehicle"] = MobileElectricalStorage(**data)
+        # Check that attributes with state are not None if set_state_attrs_at_init is True
+        if set_stateful_attrs_at_init:
+            self._check_stateful_attrs_are_not_none()
 
-        # Add the usage port to the ports dict
-        self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
-
-    # def _create_vehicle_port(
-    #     self,
-    #     charging_power_limit: float,
-    #     discharging_power_limit: float,
-    #     initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float,
-    #     max_capacity: float,
-    #     available: Union[ArrayType, list, None] = None,
-    #     charging_efficiency: float = 1,
-    #     depth_of_discharge_limit: float = 0,  # DoD limit is the percent soc to which you can discharge the storage
-    #     discharging_efficiency: float = 1,
-    #     enable_trip_slack: bool = False,
-    #     min_soc: float = 0,
-    #     set_stateful_attrs_at_init: bool = True,
-    #     soc_conserv: Optional[TimeExpandableType] = None,
-    #     soc_conserv_cost: Union[float, None] = None,
-    # ) -> None:
-    #     """Create a vehicle port and add it to the EV's ports list.
-
-    #     Args:
-    #         **data:
-
-    #     Returns:
-    #         None
-
-    #     """
-
-    #     self.ports["vehicle"] = MobileElectricalStorage(**data)
-
-    #     # Add the usage port to the ports dict
-    #     self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
-
-    #     enable_trip_slack: bool = False
-    #     soc_conserv: Optional[TimeExpandableType] = None
-    #     soc_conserv_cost: Union[float, None] = None
-    #     available: Union[ArrayType, list, None] = None
-    #     max_capacity: float
-    #     depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
-    #     min_soc: float = 0
-    #     charging_power_limit: float
-    #     discharging_power_limit: float
-    #     charging_efficiency: float = 1
-    #     discharging_efficiency: float = 1
-    #     set_stateful_attrs_at_init: bool = True
-    #     initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float
+        # Create the usage port and assign it to the EV object
+        self.ports["vehicle"] = MobileElectricalStorage(
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            initial_state_of_charge=self.initial_state_of_charge,
+            max_capacity=self.max_capacity,
+            available=self.available,
+            charging_efficiency=self.charging_efficiency,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            discharging_efficiency=self.discharging_efficiency,
+            enable_trip_slack=self.enable_trip_slack,
+            set_stateful_attrs_at_init=self.set_stateful_attrs_at_init,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+        )
 
     def _create_connection_point_port(self) -> None:
         """Create a connection point port  and add it to the EV's ports list.
@@ -349,14 +350,23 @@ class EVV0G(EVBase):
 
         # Create ports
         self._create_usage_port()
-        self._create_vehicle_port(**data)
+        self._create_vehicle_port(
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            initial_state_of_charge=self.initial_state_of_charge,
+            max_capacity=self.max_capacity,
+            available=self.available,
+            charging_efficiency=self.charging_efficiency,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            discharging_efficiency=self.discharging_efficiency,
+            enable_trip_slack=self.enable_trip_slack,
+            set_stateful_attrs_at_init=self.set_stateful_attrs_at_init,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+        )
         self._create_connection_point_port(**data)
 
-        # Customise connection point port type based on the charge mode
-        # TODO: Understand what these two lines are doing. Do we want to make them settable in set_stateful_attrs?
-        self.trip_slack = True  # Set slack to true
-        self.ports["vehicle"].enable_trip_slack = self.trip_slack
-
+        # If setting attributes with state at instantiation, set them now.
         if self.set_stateful_attrs_at_init:
             self.set_stateful_attrs(
                 available=self.available,
@@ -373,7 +383,7 @@ class EVV0G(EVBase):
         self.set_port_uid_maps()
 
     def _create_connection_point_port(self, **data):
-        """Creates a connection point port for the EV.
+        """Creates a connection point port for the EV.min_soc
 
         Overwrites EVBase._create_connection_point_port as V0G uses an ElectricalDemand port instead of a
         ElectricalPort.
@@ -424,6 +434,7 @@ class EVV0G(EVBase):
 
         # Set the initial_state_of_charge on the vehicle port
         self.ports["vehicle"].initial_state_of_charge = self.initial_state_of_charge
+
         # Check that the initial_state_of_charge is between the min_soc and max_capacity
         check_initial_state_of_charge_within_bounds(
             initial_state_of_charge=self.ports["vehicle"].initial_state_of_charge,
@@ -556,7 +567,7 @@ class EVV0G(EVBase):
         fix_port_variable(model, vehicle.soc_value, self.V0G_SOC, expansion_periods=1)
 
         # If there is a trip slack, add the port variable to the model
-        if self.trip_slack:
+        if self.enable_trip_slack:
             fix_port_variable(model, vehicle.trip_slack, self.V0G_trip_infeasibility, expansion_periods=1)
 
         power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
@@ -574,7 +585,20 @@ class EVV1G(EVBase):
 
         # Create the ports
         self._create_usage_port()
-        self._create_vehicle_port(**data)
+        self._create_vehicle_port(
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            initial_state_of_charge=self.initial_state_of_charge,
+            max_capacity=self.max_capacity,
+            available=self.available,
+            charging_efficiency=self.charging_efficiency,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            discharging_efficiency=self.discharging_efficiency,
+            enable_trip_slack=self.enable_trip_slack,
+            set_stateful_attrs_at_init=self.set_stateful_attrs_at_init,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+        )
         self._create_connection_point_port()
 
         if self.set_stateful_attrs_at_init:
@@ -649,7 +673,20 @@ class EVV2G(EVBase):
 
         # Create the ports
         self._create_usage_port()
-        self._create_vehicle_port(**data)
+        self._create_vehicle_port(
+            charging_power_limit=self.charging_power_limit,
+            discharging_power_limit=self.discharging_power_limit,
+            initial_state_of_charge=self.initial_state_of_charge,
+            max_capacity=self.max_capacity,
+            available=self.available,
+            charging_efficiency=self.charging_efficiency,
+            depth_of_discharge_limit=self.depth_of_discharge_limit,
+            discharging_efficiency=self.discharging_efficiency,
+            enable_trip_slack=self.enable_trip_slack,
+            set_stateful_attrs_at_init=self.set_stateful_attrs_at_init,
+            soc_conserv=self.soc_conserv,
+            soc_conserv_cost=self.soc_conserv_cost,
+        )
         self._create_connection_point_port()
 
         if self.set_stateful_attrs_at_init:
