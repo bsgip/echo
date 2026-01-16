@@ -69,7 +69,7 @@ def test_v0g():
         soc_conserv_cost=0.0,
         interval_duration=15.0,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -129,7 +129,7 @@ def test_v0g_2():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -193,7 +193,7 @@ def test_v0g_3():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -275,7 +275,7 @@ def test_v0g_with_stateful_data_injection():
             soc_conserv_cost=0.0,
             interval_duration=15.0,
             tod_charging=tod_charging,
-            trip_slack=True,
+            enable_trip_slack=True,
         )
 
         system.add_node_obj([grid, ev_cp, connection_point])
@@ -359,7 +359,7 @@ def test_v0g_output_matches_expectation():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Add nodes to the OptimisationGraph
@@ -497,7 +497,7 @@ def test_v0g_output_matches_expectation_with_tod_charging():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=tod_charging,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Add nodes to the OptimisationGraph
@@ -637,7 +637,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
     # Check that ev has 3 ports
     assert len(ev.ports.keys()) == 3
@@ -800,7 +800,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -909,7 +909,7 @@ def test_v1g_no_objective():
         soc_conserv_cost=0.0,
         interval_duration=15.0,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -969,7 +969,7 @@ def test_v1g_no_objective_2():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1033,7 +1033,7 @@ def test_v1g_no_objective_3():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1100,7 +1100,7 @@ def test_v2g_no_objective():
         soc_conserv_cost=0.0,
         interval_duration=15.0,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -1160,7 +1160,7 @@ def test_v2g_no_objective_2():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1224,7 +1224,7 @@ def test_v2g_no_objective_3():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1292,7 +1292,7 @@ def test_simple_v1g_with_stateful_data_injection():
         soc_conserv_cost=0.0,
         interval_duration=1,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -1388,7 +1388,7 @@ def test_simple_v2g_with_stateful_data_injection():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -1505,7 +1505,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
             soc_conserv_cost=0.0,
             interval_duration=1,
             tod_charging=False,
-            trip_slack=True,
+            enable_trip_slack=True,
         )
 
         system.add_node_obj([grid, ev_cp, connection_point])
@@ -1624,7 +1624,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             soc_conserv_cost=0.0,
             interval_duration=1,
             tod_charging=False,
-            trip_slack=True,
+            enable_trip_slack=True,
         )
 
         system.add_node_obj([grid, ev_cp, connection_point])
@@ -1733,7 +1733,7 @@ def test_v1g_with_objective():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1844,7 +1844,7 @@ def test_v1g_with_load_with_objective():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -1956,7 +1956,7 @@ def test_v2g_with_load_with_objective():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2072,7 +2072,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2186,7 +2186,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2318,7 +2318,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2426,7 +2426,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
         soc_conserv_cost=0.0,
         interval_duration=15.0,
         tod_charging=False,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     system.add_node_obj([grid, ev_cp, connection_point])
@@ -2542,7 +2542,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2668,7 +2668,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2781,7 +2781,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v1g():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -2895,7 +2895,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -3168,7 +3168,7 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -3327,7 +3327,7 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
         soc_conserv=None,
         soc_conserv_cost=0.0,
         # interval_duration=interval_duration,  # Deliberately leaving this comment in
-        trip_slack=True,
+        enable_trip_slack=True,
         set_stateful_attrs_at_init=False,
     )
 
@@ -3463,7 +3463,7 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
         soc_conserv_cost=0.0,
         # interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
         set_stateful_attrs_at_init=False,
     )
 
@@ -3596,7 +3596,7 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
         soc_conserv_cost=0.0,
         # interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
         set_stateful_attrs_at_init=False,
     )
 
@@ -3692,7 +3692,7 @@ def test_usage_less_than_max_discharge():
             soc_conserv_cost=0.0,
             interval_duration=15.0,
             tod_charging=False,
-            trip_slack=True,
+            enable_trip_slack=True,
         )
 
 
@@ -3755,7 +3755,7 @@ def test_update_node_EVV0G():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -3882,7 +3882,7 @@ def test_update_node_EVV1G():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
@@ -4009,7 +4009,7 @@ def test_update_node_EVV2G():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=True,
+        enable_trip_slack=True,
     )
 
     # Check that ev has 3 ports
