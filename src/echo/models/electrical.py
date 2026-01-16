@@ -166,7 +166,6 @@ class EVBase(TransformNode):
             )
 
     def _create_usage_port(self) -> None:
-
         """Create a usage port and add it to the EV's ports list.
 
         Args:
@@ -218,14 +217,14 @@ class EVBase(TransformNode):
                 min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
                 and 100.0. Unitless. Defaults to 0.0.
             enable_trip_slack (bool, optional): Enabling trip slack allows the EV to meet usage requirements even if
-                other constraints/requirments are breached. That is, it allows the state of charge of the EV's battery
+                other constraints/requirements are breached. That is, it allows the state of charge of the EV's battery
                 to go below min to avoid the optimisation failing due to infeasible EV trips. For example, an EV can
                 complete a journey requiring 20 kWh of energy if though there is only 15 kWh of energy in the EV
                 battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
                 there is a cost to do so. This can cause issues when conducting analysis on systems with
                 enable_trip_slack=True, so use with caution. Defaults to False.
             set_stateful_attrs_at_init (bool, optional): Set attributes with state at object instantiation (True) or
-                defer to later (False). If defering to later, self.set_stateful_attrs must be used to set these
+                defer to later (False). If deferring to later, self.set_stateful_attrs must be used to set these
                 attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
             soc_conserv (Optional[TimeExpandableType], optional): _description_. Defaults to None.
             soc_conserv_cost (Union[float, None], optional): _description_. Defaults to None.

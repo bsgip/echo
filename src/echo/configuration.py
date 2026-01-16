@@ -171,7 +171,7 @@ class EVChargeMode(Enum):
 
 
 class EVChargeStatus(Enum):
-    """Feasability of EV charging."""
+    """Feasibility of EV charging."""
 
     Feasible = "feasible"
     Infeasible = "Infeasible"
