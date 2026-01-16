@@ -105,10 +105,21 @@ class EVBase(TransformNode):
 
         To be used node verifification before building a network.
 
+        Checks: self.available, self.usage, self.initial_state_of_charge, self.interval_duration.
+
+        Args:
+            None
+
         Returns:
             None
 
+        Raises:
+            ConfigurationError: if self.available is None.
+            ConfigurationError: if self.usage is None.
+            ConfigurationError: if self.initial_state_of_charge is None.
+            ConfigurationError: if self.interval_duration is None.
         """
+
         if self.available is None:
             raise ConfigurationError(
                 f"The available attribute for {self.node_name} has not been set. " f"Please use set_stateful_attrs()."
@@ -136,39 +147,39 @@ class EVBase(TransformNode):
 
         If a value of usage is larger than max_discharge_rate for an ev, this will result in an infeasible solution.
 
+        Args:
+            None
+
         Returns:
             None
 
+        Raises:
+            ValueError: if the maximum power usage is greater than max_discharge_rate.
         """
+
+        # Get the maximum power usage
         max_usage = np.max(np.array(self.usage))
+
+        # If the maximum power usage is larger than the discharging power limit, raise an error.
         if max_usage > self.discharging_power_limit * -1:
             raise ValueError(
                 f"Usage requirement of {max_usage} exceeds battery discharge limit of "
                 f"{self.discharging_power_limit}."
             )
 
-    def _create_usage_port(self, **data) -> None:
-        """Create a usage port using existing values if they exist.
+    def _create_usage_port(self) -> None:
 
-        TODO: Determine whether using existing values is a hangover from the old implementation of EV (which required a
-        TODO: complete re__init__ for injection of stateful data in EVs, or is needed for network building.
+        """Create a usage port and add it to the EV's ports list.
 
         Args:
-            **data:
+
 
         Returns:
             None
-
         """
-        # Preserve uid if present on port
-        if "usage" in self.port_dict_name_to_port_uid_map.keys():
-            self.ports["usage"] = ElectricalDemand(
-                uid=self.port_dict_name_to_port_uid_map["usage"],
-                port_name=self.port_dict_name_to_port_name_map["usage"],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
-            )
-        else:
-            self.ports["usage"] = ElectricalDemand()
+
+        # Create the usage port and assign it to the EV object
+        self.ports["usage"] = ElectricalDemand()
 
     def _create_vehicle_port(self, **data) -> None:
         """Create a vehicle port using existing values if they exist.
@@ -197,26 +208,62 @@ class EVBase(TransformNode):
         # Add the usage port to the ports dict
         self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
 
-    def _create_connection_point_port(self) -> None:
-        """Create a connection point port using existing values if they exist.
+    # def _create_vehicle_port(
+    #     self,
+    #     charging_power_limit: float,
+    #     discharging_power_limit: float,
+    #     initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float,
+    #     max_capacity: float,
+    #     available: Union[ArrayType, list, None] = None,
+    #     charging_efficiency: float = 1,
+    #     depth_of_discharge_limit: float = 0,  # DoD limit is the percent soc to which you can discharge the storage
+    #     discharging_efficiency: float = 1,
+    #     enable_trip_slack: bool = False,
+    #     min_soc: float = 0,
+    #     set_stateful_attrs_at_init: bool = True,
+    #     soc_conserv: Optional[TimeExpandableType] = None,
+    #     soc_conserv_cost: Union[float, None] = None,
+    # ) -> None:
+    #     """Create a vehicle port and add it to the EV's ports list.
 
-        TODO: Determine whether using existing values is a hangover from the old implementation of EV (which required a
-        TODO: complete re__init__ for injection of stateful data in EVs, or is needed for network building.
+    #     Args:
+    #         **data:
+
+    #     Returns:
+    #         None
+
+    #     """
+
+    #     self.ports["vehicle"] = MobileElectricalStorage(**data)
+
+    #     # Add the usage port to the ports dict
+    #     self.ports["vehicle"].enable_trip_slack = self.trip_slack  # Apply trip slack
+
+    #     enable_trip_slack: bool = False
+    #     soc_conserv: Optional[TimeExpandableType] = None
+    #     soc_conserv_cost: Union[float, None] = None
+    #     available: Union[ArrayType, list, None] = None
+    #     max_capacity: float
+    #     depth_of_discharge_limit: float = 0  # DoD limit is the percent soc to which you can discharge the storage
+    #     min_soc: float = 0
+    #     charging_power_limit: float
+    #     discharging_power_limit: float
+    #     charging_efficiency: float = 1
+    #     discharging_efficiency: float = 1
+    #     set_stateful_attrs_at_init: bool = True
+    #     initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float
+
+    def _create_connection_point_port(self) -> None:
+        """Create a connection point port  and add it to the EV's ports list.
 
         Args:
-            **data:
+            None
 
         Returns:
             None
-
         """
-        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
-            self.ports[self.connection_port_name] = ElectricalPort(
-                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
-                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-            )
-        else:
-            self.ports[self.connection_port_name] = ElectricalPort()
+
+        self.ports[self.connection_port_name] = ElectricalPort()
 
     def _create_ev_transformation(self) -> TransformTerm:
         """Creates the appropriate transformation for EV objects: vehicle = connection_point - usage.
@@ -301,7 +348,7 @@ class EVV0G(EVBase):
         self.charge_mode = EVChargeMode.V0G
 
         # Create ports
-        self._create_usage_port(**data)
+        self._create_usage_port()
         self._create_vehicle_port(**data)
         self._create_connection_point_port(**data)
 
@@ -526,7 +573,7 @@ class EVV1G(EVBase):
         self.charge_mode = EVChargeMode.V1G
 
         # Create the ports
-        self._create_usage_port(**data)
+        self._create_usage_port()
         self._create_vehicle_port(**data)
         self._create_connection_point_port()
 
@@ -601,7 +648,7 @@ class EVV2G(EVBase):
         self.charge_mode = EVChargeMode.V2G
 
         # Create the ports
-        self._create_usage_port(**data)
+        self._create_usage_port()
         self._create_vehicle_port(**data)
         self._create_connection_point_port()
 
