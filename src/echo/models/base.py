@@ -1,3 +1,4 @@
+import copy
 import warnings
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Type, Union, cast
@@ -876,7 +877,7 @@ class OptimisationGraph(BaseModel):
 
         for edge_node_names in self.edge_list():
             # Get the port names from the edge
-            port_names = [port.port_name for port in self.get_edge(nodes=edge_node_names).vertices].deepcopy()
+            port_names = copy.deepcopy([port.port_name for port in self.get_edge(nodes=edge_node_names).vertices])
 
             # Remove the old edge
             self.delete_edge(self, edge_node_names)
