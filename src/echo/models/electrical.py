@@ -262,8 +262,13 @@ class EVBase(TransformNode):
         Returns:
             None
         """
-
-        self.ports[self.connection_port_name] = ElectricalPort()
+        if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
+            self.ports[self.connection_port_name] = ElectricalPort(
+                uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
+                port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
+            )
+        else:
+            self.ports[self.connection_port_name] = ElectricalPort()
 
     def _create_ev_transformation(self) -> TransformTerm:
         """Creates the appropriate transformation for EV objects: vehicle = connection_point - usage.
