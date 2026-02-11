@@ -872,6 +872,22 @@ class OptimisationGraph(BaseModel):
         e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge(e)
 
+    def rebuild_all_edges(self):
+
+        for edge_node_names in self.edge_list():
+            # Get the port names from the edge
+            port_names = [port.port_name for port in self.get_edge(nodes=edge_node_names).vertices].deepcopy()
+
+            # Remove the old edge
+            self.delete_edge(self, edge_node_names)
+
+            # Find the ports to build the new edges
+            new_port_1 = self.get_node[edge_node_names[0]].ports[port_names[0]]
+            new_port_2 = self.get_node[edge_node_names[1]].ports[port_names[1]]
+
+            # Build the new edges
+            self.connect_ports_and_create_edge(new_port_1, new_port_2, edge_node_names)
+
     def lookup_node_names_from_port(self, port: Port) -> str:
         """Returns node name of the node that a specified port belongs to, if the port belongs to a node."""
         for node_name, node in self.node_obj.items():
