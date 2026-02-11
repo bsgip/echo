@@ -883,8 +883,8 @@ class OptimisationGraph(BaseModel):
             self.delete_edge(edge_node_names)
 
             # Find the ports to build the new edges
-            new_port_1 = self.get_node[edge_node_names[0]].ports[port_names[0]]
-            new_port_2 = self.get_node[edge_node_names[1]].ports[port_names[1]]
+            new_port_1 = self.get_node(edge_node_names[0]).ports[port_names[0]]
+            new_port_2 = self.get_node(edge_node_names[1]).ports[port_names[1]]
 
             # Build the new edges
             self.connect_ports_and_create_edge(new_port_1, new_port_2, edge_node_names)
