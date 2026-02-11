@@ -887,7 +887,7 @@ class OptimisationGraph(BaseModel):
             new_port_2 = self.get_node(edge_node_names[1]).ports[port_names[1]]
 
             # Build the new edges
-            self.connect_ports_and_create_edge(new_port_1, new_port_2, edge_node_names)
+            self.connect_ports_and_create_edge(port1=new_port_1, port2=new_port_2, nodes=edge_node_names)
 
     def lookup_node_names_from_port(self, port: Port) -> str:
         """Returns node name of the node that a specified port belongs to, if the port belongs to a node."""
