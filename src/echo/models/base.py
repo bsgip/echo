@@ -873,7 +873,17 @@ class OptimisationGraph(BaseModel):
         e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge(e)
 
-    def rebuild_all_edges(self):
+    def rebuild_all_edges(self) -> None:
+        """Deletes and rebuilds all edges.
+
+        To be used after stateful data has been injected into ports. Injecting stateful data into ports alters the
+        port. The new altered port correctly remains associated with the node, but does not remain associated with
+        any edges this port may be associated with. This method builds new edges for each old edge based on the port
+        name associated with each end of the edge. The original edge is deleted.
+
+        Returns:
+            None
+        """
 
         for edge_node_names in self.edge_list():
             # Get the port names from the edge
@@ -882,9 +892,12 @@ class OptimisationGraph(BaseModel):
             # Remove the old edge
             self.delete_edge(edge_node_names)
 
+            port_name_in_dict_1 = self.get_node(edge_node_names[0]).get_port_name_to_port_dict_name_map()[port_names[0]]
+            port_name_in_dict_2 = self.get_node(edge_node_names[1]).get_port_name_to_port_dict_name_map()[port_names[1]]
+
             # Find the ports to build the new edges
-            new_port_1 = self.get_node(edge_node_names[0]).ports[port_names[0]]
-            new_port_2 = self.get_node(edge_node_names[1]).ports[port_names[1]]
+            new_port_1 = self.get_node(edge_node_names[0]).ports[port_name_in_dict_1]
+            new_port_2 = self.get_node(edge_node_names[1]).ports[port_name_in_dict_2]
 
             # Build the new edges
             self.connect_ports_and_create_edge(port1=new_port_1, port2=new_port_2, nodes=edge_node_names)
