@@ -2,16 +2,14 @@ from __future__ import division
 
 import pytest
 
-from echo.configuration import Units
+from echo.configuration import EVChargeMode, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
+from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
-
-from echo.objectives.base import ObjectiveSet
-from echo.models.electrical import Inverter, ElectricalGeneration, EVV0G, EVV1G, EVV2G
-from echo.configuration import EVChargeMode
-from echo.objectives.tariff import ImportTariff
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.objectives.base import ObjectiveSet
+from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
 
 
@@ -48,8 +46,7 @@ def test_port_reference_is_made_in_edge():
 
 
 def test_rebuild_all_edges():
-    """Tests the rebuild_all_edges function usage after stateful data has been injected.
-    """
+    """Tests the rebuild_all_edges function usage after stateful data has been injected."""
 
     def assert_node_edge_port_values(
         v0g_node_port_value: float,
@@ -141,7 +138,7 @@ def test_rebuild_all_edges():
             component=connection_point.ports["cp_to_grid"],
             tariff_array=import_tariff,
             expansion_periods=expansion_periods,
-            )
+        )
         objective_set = ObjectiveSet(objective_list=[import_cost])
 
         # Set solar stateful attrs

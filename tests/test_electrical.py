@@ -12,7 +12,7 @@ from echo.optimiser import optimise
 
 
 def test_efficiency():
-    """Ensure that efficiency attributes on nodes functional """
+    """Ensure that efficiency attributes on nodes functional"""
 
     # Define parameters
     solar_data = [-1, -1, -1, -1]  # kw load
@@ -137,7 +137,6 @@ def test_efficiency():
     )
 
     ac_flow_2 = optimise_results.values(inverter.ports["inverter_to_cp"].port_name, 0)
-
 
     # --- System 3: efficiency of 0.5 ---
     # Create graph
