@@ -19,7 +19,7 @@ cd echo
 
 3. With your virtual environment active install using pip:
 ```
-pip install .[dev,test,docs]
+pip install --group all .
 ```
 
 NOTE: This package is not on pypi - `pip install echo` will NOT install this package. It will install a different package with the same name.
@@ -50,7 +50,7 @@ Open source:
 Make sure you have the documentation dependencies installed
 
 ```
-pip install .[docs]
+pip install --group docs .
 ```
 
 1. Generate the documentation for the echo package (from docstrings)
