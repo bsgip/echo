@@ -1,0 +1,65 @@
+site_name: echo
+site_url: https://bsgip.github.io/echo/
+theme:
+  name: material
+  font:
+    text: Merriweather Sans
+    code: Red Hat Mono
+  logo: assets/icons/logo.png
+  favicon: assets/icons/favicon.ico
+  features:
+    - navigation.footer
+  palette:
+    # dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Dark mode
+      primary: indigo
+      accent: amber
+
+    # light mode
+    - scheme: material
+      toggle:
+        icon: material/weather-night
+        name: Light mode
+      primary: indigo
+      accent: amber
+nav:
+  - Home: index.md
+  - getting-started.md
+  - concepts.md
+  - solvers.md
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/bsgip
+    - icon: fontawesome/brands/youtube
+      link: https://www.youtube.com/channel/UChIa9YsjjYfog8rhFnAFc0g
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/anu-centre-for-energy-systems
+
+copyright: Copyright &copy; 2026 <a href="https://energysystems.anu.edu.au/"  target="_blank" rel="noopener">ANU Centre for Energy Systems</a>

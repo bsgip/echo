@@ -65,7 +65,7 @@ Changelog = "https://github.com/bsgip/echo/blob/master/CHANGELOG.md"
 [dependency-groups]
 linters = ["bandit[toml]", "black", "coverage", "flake8", "Flake8-pyproject", "mypy", "pytest-cov","types-pytz" ]
 test = ["hypothesis[numpy]", "pytest", "pytest-timeout"]
-docs = ["sphinx", "sphinx-rtd-theme"]
+docs = ["mkdocs-material", "sphinx", "sphinx-rtd-theme"]
 dev = [
     {include-group = "linters"},
     {include-group = "test"},
