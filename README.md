@@ -75,5 +75,13 @@ Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.m
 ## Issues
 Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issues).
 
+## Roadmap
 
+| Item | Status | Completion Date | 
+|------|--------|-----------------|
+| Documentation update | Underway | June 2026 |
+| Examples update | Underway | June 2026 |
+| Standardise data injection process | Planning | Aug 2026 |
+| Upgrade to pydantic v2 ([github issue](https://github.com/bsgip/echo/issues/101)) | Not Started | Oct 2026 |
+| Add [linopy](https://github.com/PyPSA/linopy) as parser option | Planning | Dec 2026 |
 
