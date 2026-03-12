@@ -82,6 +82,6 @@ Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issue
 | Documentation update | Underway | | June 2026 |
 | Examples update | Underway | | June 2026 |
 | Standardise data injection process | Planning | https://github.com/bsgip/echo/issues/103 |  Aug 2026 |
-| Upgrade to pydantic v2 | Not Started | [#101](https://github.com/bsgip/echo/issues/101) | Oct 2026 |
-| Add [linopy](https://github.com/PyPSA/linopy) as parser option | Planning | [#102](https://github.com/bsgip/echo/issues/102) | Dec 2026 |
+| Upgrade to pydantic v2 | Not Started | https://github.com/bsgip/echo/issues/101 | Oct 2026 |
+| Add linopy as parser option | Planning | https://github.com/bsgip/echo/issues/102 | Dec 2026 |
 
