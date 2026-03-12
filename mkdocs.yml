@@ -15,7 +15,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Dark mode
-      primary: indigo
+      primary: blue
       accent: amber
 
     # light mode
@@ -23,7 +23,7 @@ theme:
       toggle:
         icon: material/weather-night
         name: Light mode
-      primary: indigo
+      primary: blue
       accent: amber
 nav:
   - Home: index.md
@@ -62,4 +62,4 @@ extra:
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/anu-centre-for-energy-systems
 
-copyright: Copyright &copy; 2026 <a href="https://energysystems.anu.edu.au/"  target="_blank" rel="noopener">ANU Centre for Energy Systems</a>
+copyright: <b>echo</b> was developed by the <a href="https://energysystems.anu.edu.au/"  target="_blank" rel="noopener">ANU Centre for Energy Systems</a>
