@@ -86,20 +86,20 @@ class EVBase(TransformNode):
     enable_trip_slack: bool = False
 
     # soc_conserv and soc_conserv_cost for having a 'conservative' ev user lower bound on the soc while it is plugged in
-    soc_conserv: Optional[TimeExpandableType] = None
+    soc_conserv: TimeExpandableType | None = None
     soc_conserv_cost: Union[float, None] = None
 
     # Stateful attributes
     set_stateful_attrs_at_init: bool = True
-    available: Optional[Union[ArrayType, list, str]]
-    usage: Optional[Union[ArrayType, list]]
-    tod_charging: Optional[Union[ArrayType, list, str, None]]
-    initial_state_of_charge: Optional[float]
-    interval_duration: Optional[int]
+    available: ArrayType | list | str | None
+    usage: ArrayType | list | None
+    tod_charging: ArrayType | list | str | None
+    initial_state_of_charge: float | None
+    interval_duration: int | None
 
     # Helpful mappings for port names and uids
-    port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
-    port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
+    port_dict_name_to_port_uid_map: Dict[str, str] | None = None
+    port_dict_name_to_port_name_map: Dict[str, str] | None = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -199,18 +199,18 @@ class EVBase(TransformNode):
 
     def _create_vehicle_port(
         self,
-        available: ArrayType | list | None if set_stateful_attrs_at_init else ArrayType | list,
+        available: ArrayType | list | None,
         charging_power_limit: float,
         discharging_power_limit: float,
-        initial_state_of_charge: float | None if set_stateful_attrs_at_init else float,
+        initial_state_of_charge: float | None,
         max_capacity: float,
         charging_efficiency: float = 1,
         depth_of_discharge_limit: float = 0,  # DoD limit is the percent soc to which you can discharge the storage
         discharging_efficiency: float = 1,
         enable_trip_slack: bool = False,
         set_stateful_attrs_at_init: bool = True,
-        soc_conserv: Optional[TimeExpandableType] = None,
-        soc_conserv_cost: Union[float, None] = None,
+        soc_conserv: TimeExpandableType | None = None,
+        soc_conserv_cost: float | None = None,
     ) -> None:
         """Create a vehicle port and add it to the EV's ports list.
 
@@ -360,10 +360,10 @@ class EVV0G(EVBase):
 
     """
 
-    V0G_delta: Optional[Union[ArrayType, list]]
-    V0G_SOC: Optional[Union[ArrayType, list]]
-    V0G_trip_infeasibility: Optional[Union[ArrayType, list]]
-    charge_status: Optional[EVChargeStatus]
+    V0G_delta: ArrayType | list | None
+    V0G_SOC: ArrayType | list | None
+    V0G_trip_infeasibility: ArrayType | list | None
+    charge_status: EVChargeStatus | None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -423,11 +423,11 @@ class EVV0G(EVBase):
 
     def set_stateful_attrs(
         self,
-        available: Union[ArrayType, list, str],
-        usage: Union[ArrayType, list, str],
+        available: ArrayType | list | str,
+        usage: ArrayType | list | str,
         initial_state_of_charge: float,
         interval_duration: int,
-        tod_charging: Union[ArrayType, list, str, None] = None,
+        tod_charging: ArrayType | list | str | None = None,
     ) -> None:
         """Injects attributes with state into EV node and ports.
 
@@ -771,12 +771,12 @@ class EVDemandProfile(Node):
     charge_mode: EVChargeMode = EVChargeMode.DemandProfile
     port_name: Optional[str] = "demand"
     port_uid: Optional[str] = Field(default_factory=shortuuid.uuid)
-    charging_power_limit: Optional[NonNegativeFloat]
+    charging_power_limit: NonNegativeFloat | None
 
     # Stateful attributes
     set_stateful_attrs_at_init: bool = True
-    demand: Optional[Union[dict, ArrayType, list]]
-
+    demand: dict | ArrayType | list | None
+    
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
