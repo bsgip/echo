@@ -508,8 +508,7 @@ class Storage(Port):
     fixed_storage_capacity: bool = True
     storage_capacity_cost: Optional[PositiveFloat]
     regularise: bool = False
-    set_stateful_attrs_at_init: bool = True
-    initial_state_of_charge: Optional[float] if set_stateful_attrs_at_init else float
+    initial_state_of_charge: Optional[float]
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
