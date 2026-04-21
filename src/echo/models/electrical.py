@@ -776,7 +776,7 @@ class EVDemandProfile(Node):
     # Stateful attributes
     set_stateful_attrs_at_init: bool = True
     demand: dict | ArrayType | list | None
-    
+
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
