@@ -3706,7 +3706,6 @@ def _get_ev_node_and_edge_ports(
     cp_ev_edge = [vertex for vertex in system.get_edge((connection_point_node_name, ev_node_name)).vertices]
 
     for port in cp_ev_edge:
-        print(type(port))
         if isinstance(port, ElectricalDemand):
             # V0G case
             edge_port = port
