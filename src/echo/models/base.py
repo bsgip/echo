@@ -887,7 +887,7 @@ class OptimisationGraph(BaseModel):
 
         for edge_node_names in self.edge_list():
             # Get the port names from the edge
-            port_names = copy.deepcopy([port.port_name for port in self.get_edge(nodes=edge_node_names).vertices])
+            port_names = copy.copy([port.port_name for port in self.get_edge(nodes=edge_node_names).vertices])
 
             # Remove the old edge
             self.delete_edge(edge_node_names)
