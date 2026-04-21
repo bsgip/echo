@@ -1,4 +1,3 @@
-from deprecated import deprecated
 from typing import Dict, Optional, Tuple, Union, cast
 from warnings import warn
 
@@ -6,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
+from deprecated import deprecated
 from pydantic import Field, NonNegativeFloat
 
 from echo.configuration import (
