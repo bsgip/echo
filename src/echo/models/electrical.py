@@ -1,3 +1,4 @@
+from deprecated import deprecated
 from typing import Dict, Optional, Tuple, Union, cast
 from warnings import warn
 
@@ -7,7 +8,15 @@ import pyomo.environ as en
 import shortuuid
 from pydantic import Field, NonNegativeFloat
 
-from echo.configuration import EVChargeMode, EVChargeStatus, OptimisationType, TransformRule, Units
+from echo.configuration import (
+    EVChargeMode,
+    EVChargeStatus,
+    FlowConstraint,
+    Flows,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.exceptions import ConfigurationError, validate
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
@@ -66,7 +75,12 @@ class EVBase(TransformNode):
     max_capacity: float
     depth_of_discharge_limit: float = 0
     charging_power_limit: float
+    # If usage_power_limit is not set, dischanging_power_limit describes the max discharge limit of the ev's battery.
+    # If usage_power_limit is set, dischanging_power_limit describes the max.
     discharging_power_limit: float
+    # usage_power_limit is the maximum power that can be used for powering a trip. This can be different from
+    # discharging_power_limit.
+    usage_power_limit: float | None = None
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
     enable_trip_slack: bool = False
@@ -97,6 +111,10 @@ class EVBase(TransformNode):
         # Initialise port_name_to_port_name_map
         if self.port_dict_name_to_port_name_map is None:
             self.port_dict_name_to_port_name_map = {}
+
+        # If usage_power_limit isn't specified, set it to discharging_power_limit. This is for backwards compatability
+        if self.usage_power_limit is None:
+            self.usage_power_limit = self.discharging_power_limit
 
     def _check_stateful_attrs_are_not_none(self) -> None:
         """Checks that the stateful attributes for EVBase and children are not None.
@@ -140,10 +158,10 @@ class EVBase(TransformNode):
                 f"Please use set_stateful_attrs()."
             )
 
-    def _check_usage_less_than_max_discharge(self) -> None:
-        """Check that the maximum value in usage is not larger than the maximum discharge rate.
+    def _check_usage_less_than_max_usage(self) -> None:
+        """Check that the maximum value in usage is not larger than the maximum usage rate.
 
-        If a value of usage is larger than max_discharge_rate for an ev, this will result in an infeasible solution.
+        If a value of usage is larger than max_usage_rate for an ev, this will result in an infeasible solution.
 
         Args:
             None
@@ -158,11 +176,10 @@ class EVBase(TransformNode):
         # Get the maximum power usage
         max_usage = np.max(np.array(self.usage))
 
-        # If the maximum power usage is larger than the discharging power limit, raise an error.
-        if max_usage > self.discharging_power_limit * -1:
+        # If the maximum power usage is larger than the usage power limit, raise an error.
+        if max_usage > self.usage_power_limit * -1:
             raise ValueError(
-                f"Usage requirement of {max_usage} exceeds battery discharge limit of "
-                f"{self.discharging_power_limit}."
+                f"Usage requirement of {max_usage} exceeds battery discharge limit of " f"{self.usage_power_limit}."
             )
 
     def _create_usage_port(self) -> None:
@@ -254,7 +271,7 @@ class EVBase(TransformNode):
         )
 
     def _create_connection_point_port(self) -> None:
-        """Create a connection point port  and add it to the EV's ports list.
+        """Create a connection point port and add it to the EV's ports list.
 
         Args:
             None
@@ -263,7 +280,14 @@ class EVBase(TransformNode):
             None
         """
 
-        self.ports[self.connection_port_name] = ElectricalPort()
+        self.ports[self.connection_port_name] = ElectricalPort(
+            flows=Flows.Both,
+            import_constraint=FlowConstraint.NoConstraint,
+            flow_type=OptimisationType.Variable,
+            units=Units.KW,
+            export_constraint=FlowConstraint.Fixed,
+            export_constraint_value=self.discharging_power_limit,
+        )
 
     def _create_ev_transformation(self) -> TransformTerm:
         """Creates the appropriate transformation for EV objects: vehicle = connection_point - usage.
@@ -435,7 +459,7 @@ class EVV0G(EVBase):
         )
 
         # Set stateful attributes for usage port
-        self._check_usage_less_than_max_discharge()
+        self._check_usage_less_than_max_usage()
         self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
 
         # Calculate demand
@@ -636,7 +660,7 @@ class EVV1G(EVBase):
         self.interval_duration = interval_duration
 
         # Set stateful attributes for usage port
-        self._check_usage_less_than_max_discharge()
+        self._check_usage_less_than_max_usage()
         self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
 
         # Set stateful data for the connection point port
@@ -721,7 +745,7 @@ class EVV2G(EVBase):
         self.interval_duration = interval_duration
 
         # Set stateful attributes for usage port
-        self._check_usage_less_than_max_discharge()
+        self._check_usage_less_than_max_usage()
         self.ports["usage"].add_demand_profile_from_array(self.usage, expansion_periods=1)
 
         # Set stateful data for the connection point port
@@ -844,7 +868,6 @@ class EVDemandProfile(Node):
         )
 
 
-# TODO: To be deprecated
 class EV(TransformNode):
     charge_mode: Optional[EVChargeMode] = None
     available: Union[ArrayType, list, str]
@@ -875,6 +898,7 @@ class EV(TransformNode):
     port_dict_name_to_port_uid_map: Optional[Dict[str, str]] = None
     port_dict_name_to_port_name_map: Optional[Dict[str, str]] = None
 
+    @deprecated(version="2.1.14", reason="Supeseded by EVV0G, EVV1G, EVV2G, EVWithDemandProfile and EVBase classes")
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
