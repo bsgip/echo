@@ -1,21 +1,19 @@
 """Unit testing for thermal models individual classes"""
 
-import numpy as np
-import pandas as pd
 import pyomo.environ as en
 import pytest
 
 from echo.configuration import Units
-from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (
     FlexPort,
-    MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
-    TellegenNode,
     ThreeWayValveNode,
 )
-from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings, engine_settings_from_environment
-from echo.utils import TimeSeriesData, expand_as_dict
+from echo.models.scenario import (
+    EchoConcreteModel,
+    ScenarioSettings,
+    engine_settings_from_environment,
+)
 
 
 def empty_model():
@@ -33,7 +31,9 @@ def empty_model():
     if scenario_settings.number_of_expansion_intervals == 0:
         model.Expansion = en.RangeSet(0, 0)
     else:
-        model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
+        model.Expansion = en.RangeSet(
+            0, scenario_settings.number_of_expansion_intervals - 1
+        )
     discount_rates = {}
     for ep in range(0, scenario_settings.number_of_expansion_intervals):
         discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
@@ -43,7 +43,9 @@ def empty_model():
 
 def test_partitioned_muticommodity_tellegen_node_default_partition():
     """Test asset creation with default partition"""
-    node = PartitionedMultiCommodityTellegenNode(ports={"port_1": FlexPort(units=Units.KW)})
+    node = PartitionedMultiCommodityTellegenNode(
+        ports={"port_1": FlexPort(units=Units.KW)}
+    )
     assert node.ports["port_1"] in node.partitions[node.default_partition]
 
 
@@ -79,7 +81,7 @@ def test_partitioned_node_add_port():
 def test_partitioned_node_error():
     """Test only ports or partitions validation error"""
     with pytest.raises(Exception):
-        node = PartitionedMultiCommodityTellegenNode(
+        PartitionedMultiCommodityTellegenNode(
             partitions={
                 "partition_1": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
                 "partition_2": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
@@ -101,10 +103,18 @@ def test_threeway_tellegen_node():
     model = empty_model()
     node.add_node_to_model(model, profile=None)
     node.apply_node_constraints(model)
-    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
-    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
-    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
-    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
+    assert (
+        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
+    )
+    assert (
+        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
+    )
+    assert (
+        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
+    )
+    assert (
+        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
+    )
 
 
 def test_threeway_tellegen_node_add_port():
@@ -122,7 +132,15 @@ def test_threeway_tellegen_node_add_port():
     model = empty_model()
     node.add_node_to_model(model, profile=None)
     node.apply_node_constraints(model)
-    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
-    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
-    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
-    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
+    assert (
+        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
+    )
+    assert (
+        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
+    )
+    assert (
+        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
+    )
+    assert (
+        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
+    )

@@ -1,5 +1,3 @@
-"""TODO: This test file is to be renamed to test_ev.py when the EV object and test_evs.py are deprecated."""
-
 from __future__ import division
 
 from typing import List, Tuple
@@ -75,8 +73,12 @@ def test_v0g():
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -139,8 +141,12 @@ def test_v0g_2():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -203,8 +209,12 @@ def test_v0g_3():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -254,8 +264,12 @@ def test_v0g_with_stateful_data_injection():
         connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
         # Create V0G vehicle
-        available = np.array([1] * (time_periods // 2) + [0] * (time_periods // 2))  # bool when at charger
-        usage = np.array([0.0] * (time_periods // 2) + [5] * (time_periods // 2))  # kw average during use
+        available = np.array(
+            [1] * (time_periods // 2) + [0] * (time_periods // 2)
+        )  # bool when at charger
+        usage = np.array(
+            [0.0] * (time_periods // 2) + [5] * (time_periods // 2)
+        )  # kw average during use
         # When we don't want car to be charged. Using list to check it's compatible with np.array
         tod_charging = [1, 1] + [0] + [1] * (45 + 48)
 
@@ -281,8 +295,12 @@ def test_v0g_with_stateful_data_injection():
         system.add_node_obj([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-        system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+        system.connect_ports_and_create_edge(
+            connection_point.ports["ev"], ev_cp.ports["cp"]
+        )
+        system.connect_ports_and_create_edge(
+            grid.ports["cp"], connection_point.ports["grid"]
+        )
 
         # Define new stateful parameters
         new_interval_duration = 30
@@ -299,7 +317,9 @@ def test_v0g_with_stateful_data_injection():
 
         # Update the edge
         system.delete_edge(("cp", "ev"))
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+        system.connect_ports_and_create_edge(
+            connection_point.ports["ev"], ev_cp.ports["cp"]
+        )
 
         assert system.node_obj["ev"].initial_state_of_charge == 50
         assert system.node_obj["ev"].ports["vehicle"].initial_state_of_charge == 50
@@ -340,8 +360,12 @@ def test_v0g_output_matches_expectation():
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    available = [1] * (time_periods // 2) + [0] * (time_periods // 2)  # bool when at charger
-    usage = [0.0] * (time_periods // 2) + [5] * (time_periods // 2)  # kw average during use
+    available = [1] * (time_periods // 2) + [0] * (
+        time_periods // 2
+    )  # bool when at charger
+    usage = [0.0] * (time_periods // 2) + [5] * (
+        time_periods // 2
+    )  # kw average during use
 
     ev = EVV0G(
         node_name="ev",
@@ -366,15 +390,24 @@ def test_v0g_output_matches_expectation():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise_results = optimise(
@@ -390,10 +423,15 @@ def test_v0g_output_matches_expectation():
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
@@ -477,8 +515,12 @@ def test_v0g_output_matches_expectation_with_tod_charging():
     connection_point.add_ports_from_list(["grid", "ev_v0g"], FlexPort, units=Units.KW)
 
     # Create V0G vehicle
-    available = [1] * (time_periods // 2) + [0] * (time_periods // 2)  # bool when at charger
-    usage = [0.0] * (time_periods // 2) + [5] * (time_periods // 2)  # kw average during use
+    available = [1] * (time_periods // 2) + [0] * (
+        time_periods // 2
+    )  # bool when at charger
+    usage = [0.0] * (time_periods // 2) + [5] * (
+        time_periods // 2
+    )  # kw average during use
     tod_charging = [1, 0] + [1] * (22 + 24)  # When we don't want the EV to charge
 
     ev = EVV0G(
@@ -504,15 +546,24 @@ def test_v0g_output_matches_expectation_with_tod_charging():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise_results = optimise(
@@ -528,10 +579,15 @@ def test_v0g_output_matches_expectation_with_tod_charging():
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
@@ -646,15 +702,24 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Set new values for these parameters
     available = [1] * 24 + [0] * 24  # bool when at charger
@@ -672,14 +737,21 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Check that ev has 3 ports
     assert len(ev.ports.keys()) == 3
@@ -810,15 +882,24 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Set new values for these parameters
     available = [1] * 7 + [0] * 3  # bool when at charger
@@ -835,14 +916,21 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].initial_value
+        == system.get_node("ev").ports["cp"].initial_value
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Check that ev has 3 ports
     assert len(ev.ports.keys()) == 3
@@ -862,7 +950,18 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     soc = optimise_results.values(ev.ports["vehicle"].soc_value, 0)
 
     expected_soc = np.array(
-        [21.66666667, 23.33333333, 25.0, 26.66666667, 28.33333333, 30.0, 31.66666667, 30.83333333, 30.0, 29.16666667]
+        [
+            21.66666667,
+            23.33333333,
+            25.0,
+            26.66666667,
+            28.33333333,
+            30.0,
+            31.66666667,
+            30.83333333,
+            30.0,
+            29.16666667,
+        ]
     )
 
     assert np.allclose(soc, expected_soc, rtol=10**-5)
@@ -915,8 +1014,12 @@ def test_v1g_no_objective():
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -979,8 +1082,12 @@ def test_v1g_no_objective_2():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -1043,8 +1150,12 @@ def test_v1g_no_objective_3():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -1106,8 +1217,12 @@ def test_v2g_no_objective():
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -1170,8 +1285,12 @@ def test_v2g_no_objective_2():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -1234,8 +1353,12 @@ def test_v2g_no_objective_3():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid"], connection_point.ports["grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev_v0g"], ev.ports["cp"]
+    )
 
     # Invoke the optimiser and optimise
     optimise(
@@ -1252,7 +1375,10 @@ def test_v2g_no_objective_3():
 
 def test_simple_v1g_with_stateful_data_injection():
     """Ensure stateful data injection behaves appropriately for EVV1G."""
-    good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
+    good_available_usage = (
+        np.array([1, 1, 0, 0, 1, 1]),
+        np.array([0, 0, 10, 10, 0, 0]),
+    )
     good_soc = np.array([50, 50, 40, 30, 30, 30])
 
     # Define parameters
@@ -1298,8 +1424,12 @@ def test_simple_v1g_with_stateful_data_injection():
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
 
     # Set new stateful parameters for ev
     new_interval_duration = 60
@@ -1316,14 +1446,21 @@ def test_simple_v1g_with_stateful_data_injection():
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
     # cp and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].active_periods
+        == system.get_node("ev").ports["cp"].active_periods
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Optimise
     optimise_results = optimise(
@@ -1347,7 +1484,10 @@ def test_simple_v1g_with_stateful_data_injection():
 
 def test_simple_v2g_with_stateful_data_injection():
     """Ensure stateful data injection behaves appropriately for EVV2G."""
-    good_available_usage = (np.array([1, 1, 0, 0, 1, 1]), np.array([0, 0, 10, 10, 0, 0]))
+    good_available_usage = (
+        np.array([1, 1, 0, 0, 1, 1]),
+        np.array([0, 0, 10, 10, 0, 0]),
+    )
 
     # Define parameters
     interval_duration = 1  # each time period is 15 mins long
@@ -1394,8 +1534,12 @@ def test_simple_v2g_with_stateful_data_injection():
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
 
     # Set new stateful parameters for ev
     new_interval_duration = 60
@@ -1412,14 +1556,21 @@ def test_simple_v2g_with_stateful_data_injection():
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
     # cp and ev
-    assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1].active_periods
+        == system.get_node("ev").ports["cp"].active_periods
+    )
 
     # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-    assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    assert (
+        system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+    )
 
     # Optimise
     optimise_results = optimise(
@@ -1511,8 +1662,12 @@ def test_simple_v1g_with_stateful_data_injection_2():
         system.add_node_obj([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-        system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+        system.connect_ports_and_create_edge(
+            connection_point.ports["ev"], ev_cp.ports["cp"]
+        )
+        system.connect_ports_and_create_edge(
+            grid.ports["cp"], connection_point.ports["grid"]
+        )
 
         # Set new stateful parameters for ev
         new_interval_duration = 60
@@ -1529,16 +1684,22 @@ def test_simple_v1g_with_stateful_data_injection_2():
 
         # Update the edge
         system.delete_edge(("cp", "ev"))
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+        system.connect_ports_and_create_edge(
+            connection_point.ports["ev"], ev_cp.ports["cp"]
+        )
 
         # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
         # cp and ev
         assert (
-            system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
+            system.get_edge(("cp", "ev")).vertices[1].active_periods
+            == system.get_node("ev").ports["cp"].active_periods
         )
 
         # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-        assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+        assert (
+            system.get_edge(("cp", "ev")).vertices[1]
+            == system.get_node("ev").ports["cp"]
+        )
 
         # Optimise
         optimise_results = optimise(
@@ -1563,7 +1724,9 @@ def test_simple_v1g_with_stateful_data_injection_2():
 
     # Check the last iteration has flow through the grid and is not just relying on the trip_slack
     grid_to_cp_flow = optimise_results.values(grid.ports["cp"].port_name, 0)
-    cp_to_grid_flow = optimise_results.values(connection_point.ports["grid"].port_name, 0)
+    cp_to_grid_flow = optimise_results.values(
+        connection_point.ports["grid"].port_name, 0
+    )
     cp_to_ev_flow = optimise_results.values(connection_point.ports["ev"].port_name, 0)
     ev_to_cp_flow = optimise_results.values(ev_cp.ports["cp"].port_name, 0)
 
@@ -1630,8 +1793,12 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
         system.add_node_obj([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-        system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+        system.connect_ports_and_create_edge(
+            connection_point.ports["ev"], ev_cp.ports["cp"]
+        )
+        system.connect_ports_and_create_edge(
+            grid.ports["cp"], connection_point.ports["grid"]
+        )
 
         # Set new stateful parameters for ev
         new_interval_duration = 60
@@ -1649,7 +1816,9 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
 
             # Update the edge
             system.delete_edge(("cp", "ev"))
-            system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+            system.connect_ports_and_create_edge(
+                connection_point.ports["ev"], ev_cp.ports["cp"]
+            )
 
             # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp"
             # connection cp and ev
@@ -1659,7 +1828,10 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             )
 
             # Check that "cp" port on ev node and "cp" on Edge connection cp and ev nodes are equal
-            assert system.get_edge(("cp", "ev")).vertices[1] == system.get_node("ev").ports["cp"]
+            assert (
+                system.get_edge(("cp", "ev")).vertices[1]
+                == system.get_node("ev").ports["cp"]
+            )
 
             # Optimise
             optimise(
@@ -1696,14 +1868,18 @@ def test_v1g_with_objective():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(["cp_to_grid", "cp_to_ev", "cp_to_inverter"], FlexPort, units=Units.KW)
+    connection_point.add_ports_from_list(
+        ["cp_to_grid", "cp_to_ev", "cp_to_inverter"], FlexPort, units=Units.KW
+    )
 
     # create a node for the solar
     solar = Node(node_name="solar")
     pv = ElectricalGeneration()  # create an electrical generation object
     pv.curtailable = False  # set whether this can be curtailed or not
     pv.add_generation_profile_from_array(solar_data, expansion_periods)
-    solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
+    solar.ports["solar_to_inverter"] = (
+        pv  # add the electrical generation to a port on the solar node
+    )
 
     # Create an inverter to attach the solar to
     inverter = Inverter(
@@ -1743,14 +1919,24 @@ def test_v1g_with_objective():
     system.add_node_obj([grid, ev, connection_point, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -1800,7 +1986,9 @@ def test_v1g_with_load_with_objective():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -1814,7 +2002,9 @@ def test_v1g_with_load_with_objective():
     pv = ElectricalGeneration()
     pv.curtailable = False
     pv.add_generation_profile_from_array(solar_data, expansion_periods)
-    solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
+    solar.ports["solar_to_inverter"] = (
+        pv  # add the electrical generation to a port on the solar node
+    )
 
     # Create an inverter to attach the solar to
     inverter = Inverter(
@@ -1854,15 +2044,27 @@ def test_v1g_with_load_with_objective():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -1912,7 +2114,9 @@ def test_v2g_with_load_with_objective():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -1926,7 +2130,9 @@ def test_v2g_with_load_with_objective():
     pv = ElectricalGeneration()
     pv.curtailable = False
     pv.add_generation_profile_from_array(solar_data, expansion_periods)
-    solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
+    solar.ports["solar_to_inverter"] = (
+        pv  # add the electrical generation to a port on the solar node
+    )
 
     # Create an inverter to attach the solar to
     inverter = Inverter(
@@ -1966,15 +2172,27 @@ def test_v2g_with_load_with_objective():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the battery
@@ -2028,7 +2246,9 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2042,7 +2262,9 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     pv = ElectricalGeneration()
     pv.curtailable = False
     pv.add_generation_profile_from_array(solar_data, expansion_periods)
-    solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
+    solar.ports["solar_to_inverter"] = (
+        pv  # add the electrical generation to a port on the solar node
+    )
 
     # Create an inverter to attach the solar to
     inverter = Inverter(
@@ -2082,15 +2304,27 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the ev's battery
@@ -2146,7 +2380,9 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2196,17 +2432,31 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
@@ -2222,11 +2472,15 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
 
     # Update the edge
     system.delete_edge(("connection_point", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -2278,7 +2532,9 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2328,17 +2584,31 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [15] * 2  # kw average during use
@@ -2354,11 +2624,15 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
 
     # Update the edge
     system.delete_edge(("connection_point", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the ev's battery
@@ -2406,8 +2680,12 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     connection_point.add_ports_from_list(["ev", "grid"], FlexPort, units=Units.KW)
 
     # Create timeseries data
-    available = np.array([1] * (time_periods // 2) + [0] * (time_periods // 2))  # bool when at charger
-    usage = np.array([0.0] * (time_periods // 2) + [5] * (time_periods // 2))  # kw average during use
+    available = np.array(
+        [1] * (time_periods // 2) + [0] * (time_periods // 2)
+    )  # bool when at charger
+    usage = np.array(
+        [0.0] * (time_periods // 2) + [5] * (time_periods // 2)
+    )  # kw average during use
 
     # Create V0G vehicle
     ev_cp = EVV0G(
@@ -2432,8 +2710,12 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     system.add_node_obj([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-    system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
+    system.connect_ports_and_create_edge(
+        grid.ports["cp"], connection_point.ports["grid"]
+    )
 
     # Define new stateful parameters
     new_interval_duration = 30
@@ -2456,7 +2738,9 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
 
     # Update the edge
     system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
+    system.connect_ports_and_create_edge(
+        connection_point.ports["ev"], ev_cp.ports["cp"]
+    )
 
     # Get node uid
     new_node_uid = system.get_node("ev").uid
@@ -2502,7 +2786,9 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2552,17 +2838,31 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
     usage = [0.0] * 8 + [20] * 2  # kw average during use
@@ -2581,7 +2881,9 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
 
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
     objective_set = ObjectiveSet(objective_list=[import_cost])
 
@@ -2628,7 +2930,9 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2678,17 +2982,31 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -2741,7 +3059,9 @@ def test_set_state_attrs_does_not_add_new_attrs_v1g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2791,17 +3111,31 @@ def test_set_state_attrs_does_not_add_new_attrs_v1g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -2855,7 +3189,9 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -2905,17 +3241,31 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -2996,7 +3346,13 @@ def test_ev_demand_profile_set_stateful_attrs():
     ev.set_stateful_attrs(demand=[1, 2, 3, 4, 5])
     assert isinstance(ev.ports["demand"].initial_value, dict)
     assert len(ev.ports["demand"].initial_value.keys()) == 5
-    assert ev.ports["demand"].initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3, (0, 3): 4, (0, 4): 5}
+    assert ev.ports["demand"].initial_value == {
+        (0, 0): 1,
+        (0, 1): 2,
+        (0, 2): 3,
+        (0, 3): 4,
+        (0, 4): 5,
+    }
 
 
 def test_ev_demand_profile_in_simple_network():
@@ -3018,7 +3374,9 @@ def test_ev_demand_profile_in_simple_network():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -3055,17 +3413,31 @@ def test_ev_demand_profile_in_simple_network():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Get port names and uids sets
     old_port_names = {port_name for port_name in system.get_node("ev").ports.keys()}
@@ -3081,7 +3453,9 @@ def test_ev_demand_profile_in_simple_network():
     assert old_port_names == new_port_names
     assert old_port_uids == new_port_uids
 
-    cp_ev_edge_uids = [vertex.uid for vertex in system.get_edge(("connection_point", "ev")).vertices]
+    cp_ev_edge_uids = [
+        vertex.uid for vertex in system.get_edge(("connection_point", "ev")).vertices
+    ]
 
     # Check the edge port and the node port are the same port
     assert len(old_port_uids) == 1
@@ -3128,7 +3502,9 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -3178,17 +3554,31 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3217,7 +3607,9 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     assert old_port_names == new_port_names
     assert old_port_uids == new_port_uids
 
-    cp_ev_edge_uids = [vertex.uid for vertex in system.get_edge(("connection_point", "ev")).vertices]
+    cp_ev_edge_uids = [
+        vertex.uid for vertex in system.get_edge(("connection_point", "ev")).vertices
+    ]
 
     # Check the edge port and the ev's ev_to_cp port are the same port
     assert len(old_port_uids) == 3
@@ -3226,7 +3618,11 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     assert old_ev_cp_port_uid == new_ev_cp_port_uid
 
     # Check the values in the available port have been updated
-    assert ev.available == list(ev.ports["ev_to_cp"].active_periods.values()) == [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+    assert (
+        ev.available
+        == list(ev.ports["ev_to_cp"].active_periods.values())
+        == [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+    )
     assert list(ev.ports["ev_to_cp"].active_periods.keys()) == [
         (0, 0),
         (0, 1),
@@ -3241,7 +3637,11 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     ]
 
     # Check the values in the available port have been updated
-    assert ev.usage == list(ev.ports["usage"].initial_value.values()) == [0, 0, 0, 0, 0, 0, 0, 0, 20, 20]
+    assert (
+        ev.usage
+        == list(ev.ports["usage"].initial_value.values())
+        == [0, 0, 0, 0, 0, 0, 0, 0, 20, 20]
+    )
     assert list(ev.ports["usage"].initial_value.keys()) == [
         (0, 0),
         (0, 1),
@@ -3256,7 +3656,9 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     ]
 
     # Check the values in the storage port "vehicle" have been updated
-    assert ev.initial_state_of_charge == ev.ports["vehicle"].initial_state_of_charge == 0
+    assert (
+        ev.initial_state_of_charge == ev.ports["vehicle"].initial_state_of_charge == 0
+    )
 
     # Asset interval_duration on the EVV2G object has been updated
     assert ev.interval_duration == 60
@@ -3288,7 +3690,9 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -3338,17 +3742,31 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3423,7 +3841,9 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -3474,17 +3894,31 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3556,7 +3990,9 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
     connection_point.add_ports_from_list(
-        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"], port_type=FlexPort, units=Units.KW
+        names=["cp_to_grid", "cp_to_load", "cp_to_ev", "cp_to_inverter"],
+        port_type=FlexPort,
+        units=Units.KW,
     )
 
     # Create a load object
@@ -3607,17 +4043,31 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
     system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_load"], load.ports["load_to_cp"])
-    system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_load"], load.ports["load_to_cp"]
+    )
+    system.connect_ports_and_create_edge(
+        inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
+    )
 
     # Inject data into load
-    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(load_data, expansion_periods)
+    system.get_node("load").ports["load_to_cp"].add_demand_profile_from_array(
+        load_data, expansion_periods
+    )
 
     # Inject data into solar
-    system.get_node("solar").ports["solar_to_inverter"].add_generation_profile_from_array(solar_data, expansion_periods)
+    system.get_node("solar").ports[
+        "solar_to_inverter"
+    ].add_generation_profile_from_array(solar_data, expansion_periods)
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3703,7 +4153,12 @@ def _get_ev_node_and_edge_ports(
     connection_point_node_name: str = "connection_point",
 ) -> tuple[ElectricalDemand, ElectricalDemand]:
     ev_cp_port = system.get_node(ev_node_name).ports[ev_node_port_name]
-    cp_ev_edge = [vertex for vertex in system.get_edge((connection_point_node_name, ev_node_name)).vertices]
+    cp_ev_edge = [
+        vertex
+        for vertex in system.get_edge(
+            (connection_point_node_name, ev_node_name)
+        ).vertices
+    ]
 
     for port in cp_ev_edge:
         if isinstance(port, ElectricalDemand):
@@ -3735,7 +4190,9 @@ def test_update_node_EVV0G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
 
     # Create V0G vehicle
     ev = EVV0G(
@@ -3764,8 +4221,12 @@ def test_update_node_EVV0G():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3820,7 +4281,9 @@ def test_update_node_EVV0G():
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the ev's battery
@@ -3862,7 +4325,9 @@ def test_update_node_EVV1G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
 
     # Create V1G vehicle
     ev = EVV1G(
@@ -3891,8 +4356,12 @@ def test_update_node_EVV1G():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -3947,7 +4416,9 @@ def test_update_node_EVV1G():
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the ev's battery
@@ -3989,7 +4460,9 @@ def test_update_node_EVV2G():
 
     # Create a connection point
     connection_point = TellegenNode(node_name="connection_point")
-    connection_point.add_ports_from_list(names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW)
+    connection_point.add_ports_from_list(
+        names=["cp_to_grid", "cp_to_ev"], port_type=FlexPort, units=Units.KW
+    )
 
     # Create V2G vehicle
     ev = EVV2G(
@@ -4018,8 +4491,12 @@ def test_update_node_EVV2G():
     system.add_node_obj([grid, ev, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
+    system.connect_ports_and_create_edge(
+        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
+    )
+    system.connect_ports_and_create_edge(
+        connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
+    )
 
     # Update ev with stateful parameters
     available = [1] * 8 + [0] * 2  # bool when at charger
@@ -4074,7 +4551,9 @@ def test_update_node_EVV2G():
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
     import_cost = ImportTariff(
-        component=connection_point.ports["cp_to_grid"], tariff_array=import_tariff, expansion_periods=expansion_periods
+        component=connection_point.ports["cp_to_grid"],
+        tariff_array=import_tariff,
+        expansion_periods=expansion_periods,
     )
 
     # assign a throughput cost to the ev's battery

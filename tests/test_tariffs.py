@@ -25,7 +25,8 @@ from echo.optimiser import optimise
 
 
 @pytest.mark.parametrize(
-    "minimum_demand,demand", [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)]
+    "minimum_demand,demand",
+    [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)],
 )
 @pytest.mark.parametrize("battery_capacity", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
 def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_capacity):
@@ -77,7 +78,10 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
         component=cp1,
         demand_charges=[
             ImportDemandCharge(
-                rate=1.0, window_array=dc_window, min_demand=minimum_demand, reset_periods=[time_periods]
+                rate=1.0,
+                window_array=dc_window,
+                min_demand=minimum_demand,
+                reset_periods=[time_periods],
             )
         ],
     )
@@ -157,7 +161,9 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
 
     import_tariff = ImportTariff(
-        component=cp1, tariff_array=[1.0] * 24 + [1.05] * 24, expansion_periods=expansion_periods
+        component=cp1,
+        tariff_array=[1.0] * 24 + [1.05] * 24,
+        expansion_periods=expansion_periods,
     )
 
     demand_tariff = DemandTariffObjective(
@@ -174,7 +180,9 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
 
     throughput_cost = ThroughputCost(component=b1, rate=0.1)
 
-    objective_set = ObjectiveSet(objective_list=[import_tariff, demand_tariff, throughput_cost])
+    objective_set = ObjectiveSet(
+        objective_list=[import_tariff, demand_tariff, throughput_cost]
+    )
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -191,11 +199,17 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     max_gross_demand = max(demand_period_demand)
     max_net_demand = max(0.0, max_gross_demand - battery_power)
 
-    expected_import = np.maximum(np.subtract(demand_period_demand, battery_power), max_net_demand)
+    expected_import = np.maximum(
+        np.subtract(demand_period_demand, battery_power), max_net_demand
+    )
     expected_import = np.minimum(expected_import, demand_period_demand)
     expected_discharge = expected_import - demand_period_demand
-    np.testing.assert_array_almost_equal(optimise_results.values(cp1.pos, 0)[24:36], expected_import, 3)
-    np.testing.assert_array_almost_equal(optimise_results.values(b1.neg, 0)[24:36], expected_discharge, 3)
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(cp1.pos, 0)[24:36], expected_import, 3
+    )
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(b1.neg, 0)[24:36], expected_discharge, 3
+    )
 
 
 def test_system_path_flows_adjust_to_path_tariffs():
@@ -239,12 +253,16 @@ def test_system_path_flows_adjust_to_path_tariffs():
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
 
-    system.create_path_objects(sources=[grid, battery1, load1], sinks=[grid, battery1, load1])
+    system.create_path_objects(
+        sources=[grid, battery1, load1], sinks=[grid, battery1, load1]
+    )
 
     grid_to_load = system.get_path([grid, site1, load1])
 
     path_tariff = PathTariff(
-        component=grid_to_load, tariff_array=[0] * 24 + [1] * 24, expansion_periods=expansion_periods
+        component=grid_to_load,
+        tariff_array=[0] * 24 + [1] * 24,
+        expansion_periods=expansion_periods,
     )
 
     objective_set = ObjectiveSet(objective_list=[path_tariff])
@@ -263,7 +281,9 @@ def test_system_path_flows_adjust_to_path_tariffs():
     # Check that grid to load flow is minimised in period of path tariff > 0
     net_load = demand - battery_power
     grid_to_load_vals = optimise_results.values(grid_to_load.flow_value, 0)
-    np.testing.assert_array_almost_equal(grid_to_load_vals[24:36], np.ones(12) * net_load)
+    np.testing.assert_array_almost_equal(
+        grid_to_load_vals[24:36], np.ones(12) * net_load
+    )
 
 
 def test_path_flows_respect_port_constraints():
@@ -312,7 +332,9 @@ def test_path_flows_respect_port_constraints():
     system.connect_ports_and_create_edge(pv1, site.ports["pv"])
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
 
-    system.create_path_objects(sources=[grid, battery, solar, load], sinks=[grid, battery, solar, load])
+    system.create_path_objects(
+        sources=[grid, battery, solar, load], sinks=[grid, battery, solar, load]
+    )
 
     tp_cost = ThroughputCost(component=b1, rate=0.2)
 
@@ -338,18 +360,33 @@ def test_path_flows_respect_port_constraints():
     load_to_solar = system.paths[(load.node_name, site.node_name, solar.node_name)]
     grid_to_solar = system.paths[(battery.node_name, site.node_name, solar.node_name)]
 
-    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_load.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimise_results.values(solar_to_grid.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(solar_to_bess.flow_value, 0), [0] * time_periods, 3
+    )
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(solar_to_load.flow_value, 0), [0] * time_periods, 3
+    )
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(solar_to_grid.flow_value, 0), [0] * time_periods, 3
+    )
 
-    np.testing.assert_array_almost_equal(optimise_results.values(bess_to_solar.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimise_results.values(load_to_solar.flow_value, 0), [0] * time_periods, 3)
-    np.testing.assert_array_almost_equal(optimise_results.values(grid_to_solar.flow_value, 0), [0] * time_periods, 3)
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(bess_to_solar.flow_value, 0), [0] * time_periods, 3
+    )
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(load_to_solar.flow_value, 0), [0] * time_periods, 3
+    )
+    np.testing.assert_array_almost_equal(
+        optimise_results.values(grid_to_solar.flow_value, 0), [0] * time_periods, 3
+    )
 
 
 # This test sometimes fails due to the non-deterministic nature of optimizations.
 # We don't want this test to block a merging a pull request due to a failing run of the Github Action
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="don't perform non-deterministic test in Github action")
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="don't perform non-deterministic test in Github action",
+)
 def test_demand_tariff_reset_periods():
     expansion_periods = 1
     expansion_periods = 1
@@ -375,7 +412,9 @@ def test_demand_tariff_reset_periods():
     tariff_array_day = [0] * 12 + [1] * 12 + [0] * 12 + [1] * 12
 
     reset_periods = [day_periods] * num_days
-    import_charge = ImportDemandCharge(rate=1.0, reset_periods=reset_periods, window_array=tariff_array_day * num_days)
+    import_charge = ImportDemandCharge(
+        rate=1.0, reset_periods=reset_periods, window_array=tariff_array_day * num_days
+    )
 
     dt = DemandTariffObjective(component=l1, demand_charges=[import_charge])
 
@@ -410,18 +449,28 @@ def test_block_tariff():
     system = OptimisationGraph()
 
     grid = FlexNode(node_name="grid", port_name="grid", port_unit=Units.KW)
-    load = Load(node_name="load", port_name="load", profile=[10] * time_periods, port_unit=Units.KW)
+    load = Load(
+        node_name="load",
+        port_name="load",
+        profile=[10] * time_periods,
+        port_unit=Units.KW,
+    )
 
     system.add_nodes_from([grid, load])
-    system.connect_ports_and_create_edge(load.ports["load"], grid.ports["grid"], nodes=("grid", "load"))
+    system.connect_ports_and_create_edge(
+        load.ports["load"], grid.ports["grid"], nodes=("grid", "load")
+    )
 
     block_tariff = BlockImportTariff(
-        component=load.ports["load"], blocks=[50, 100], rates=[1, 2, 3], reset_periods=[5, 19]
+        component=load.ports["load"],
+        blocks=[50, 100],
+        rates=[1, 2, 3],
+        reset_periods=[5, 19],
     )
 
     objective_set = ObjectiveSet(objective_list=[block_tariff])
 
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -431,5 +480,3 @@ def test_block_tariff():
         graph=system,
         objective_set=objective_set,
     )
-
-    print()

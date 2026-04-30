@@ -3,9 +3,14 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalImportFlow
 from echo.optimiser import optimise
 
 N_INTERVALS = 48
@@ -73,15 +78,17 @@ def test_hybrid_inverter_dc_ac_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
+        objective_set=ObjectiveSet(
+            objective_list=[TotalImportFlow(component=cp.ports["grid"])]
+        ),
     )
 
-    root_p = optimise_results.values(grid.ports["grid"].port_name, 0)
+    optimise_results.values(grid.ports["grid"].port_name, 0)
     inv_p = optimise_results.values(inverter.ports["cp"].port_name, 0)
     cp_p = optimise_results.values(cp.ports["grid"].port_name, 0)
     sol_p = optimise_results.values(pv1.port_name, 0)
     sto_p = optimise_results.values(b1.port_name, 0)
-    sto_soc = optimise_results.values(b1.soc_value, 0)
+    optimise_results.values(b1.soc_value, 0)
     # With the chosen objective, it doesn't matter if the energy is sourced from solar or battery,
     # but each interval should be importing at 1.0
     # TODO Test for preferencing solar gen vs storage
@@ -116,7 +123,8 @@ def test_hybrid_inverter_dc_dc_efficiency():
     solar = Node()
     pv1 = ElectricalGeneration()
     pv1.add_generation_profile_from_array(
-        [-2.0 / 0.9] * (N_INTERVALS // 2) + [0.0] * (N_INTERVALS // 2), expansion_periods
+        [-2.0 / 0.9] * (N_INTERVALS // 2) + [0.0] * (N_INTERVALS // 2),
+        expansion_periods,
     )
     pv1.curtailable = True
     solar.ports["solar"] = pv1
@@ -135,7 +143,9 @@ def test_hybrid_inverter_dc_dc_efficiency():
 
     load = Node()
     l1 = ElectricalDemand()
-    l1.add_demand_profile_from_array([0.0] * (N_INTERVALS // 2) + [2.0] * (N_INTERVALS // 2), expansion_periods)
+    l1.add_demand_profile_from_array(
+        [0.0] * (N_INTERVALS // 2) + [2.0] * (N_INTERVALS // 2), expansion_periods
+    )
     load.ports["load"] = l1
 
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
@@ -155,14 +165,16 @@ def test_hybrid_inverter_dc_dc_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
+        objective_set=ObjectiveSet(
+            objective_list=[TotalImportFlow(component=cp.ports["grid"])]
+        ),
     )
 
-    root_p = optimise_results.values(grid.ports["grid"].port_name, 0)
+    optimise_results.values(grid.ports["grid"].port_name, 0)
     cp_p = optimise_results.values(cp.ports["grid"].pos, 0)
     sol_p = optimise_results.values(pv1.port_name, 0)
     sto_p = optimise_results.values(b1.port_name, 0)
-    load_p = optimise_results.values(load.ports["load"].port_name, 0)
+    optimise_results.values(load.ports["load"].port_name, 0)
 
     for i in range(N_INTERVALS // 2):
         np.testing.assert_almost_equal(cp_p[i], 0.0, 5)  # Had to add 5dp

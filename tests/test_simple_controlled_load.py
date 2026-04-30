@@ -4,7 +4,7 @@ from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Edge, Node, OptimisationGraph
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 
@@ -19,7 +19,9 @@ def test_simple_controlled_load_does_minimum_energy_action():
     grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0 / 60.0)
+    cl = ControlledLoad(
+        max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0 / 60.0
+    )
     controlled_load.ports["cload"] = cl
 
     system.add_node_obj([grid, controlled_load])
@@ -33,13 +35,17 @@ def test_simple_controlled_load_does_minimum_energy_action():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"])]),
+        objective_set=ObjectiveSet(
+            objective_list=[TotalExportFlow(component=grid.ports["grid"])]
+        ),
     )
 
     grid_export = optimise_results.values(grid.ports["grid"].neg, 0)
     load_import = optimise_results.values(cl.port_name, 0)
 
-    np.testing.assert_almost_equal(sum(grid_export) * -1, cl.max_power * time_periods * cl.min_utilisation)
+    np.testing.assert_almost_equal(
+        sum(grid_export) * -1, cl.max_power * time_periods * cl.min_utilisation
+    )
     # assert sum(optimiser.values(grid.ports['grid'].neg, 0))*-1 * 30.0 / 60.0 == 10.0
 
     for i in range(time_periods):
@@ -58,7 +64,9 @@ def test_simple_controlled_load_does_minimum_power_action():
     grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=2.0, min_utilisation=5.0 / 60.0, max_utilisation=None)
+    cl = ControlledLoad(
+        max_power=5.0, min_power=2.0, min_utilisation=5.0 / 60.0, max_utilisation=None
+    )
     controlled_load.ports["cload"] = cl
 
     system.add_node_obj([grid, controlled_load])
@@ -73,7 +81,9 @@ def test_simple_controlled_load_does_minimum_power_action():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"])]),
+        objective_set=ObjectiveSet(
+            objective_list=[TotalExportFlow(component=grid.ports["grid"])]
+        ),
     )
 
     grid_export = optimise_results.values(grid.ports["grid"].neg, 0) * -1
@@ -95,7 +105,12 @@ def test_simple_controlled_load_limited_to_max_energy():
     grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0 / 60.0, max_utilisation=5.0 / 30.0)
+    cl = ControlledLoad(
+        max_power=5.0,
+        min_power=0.0,
+        min_utilisation=5.0 / 60.0,
+        max_utilisation=5.0 / 30.0,
+    )
     controlled_load.ports["cload"] = cl
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
@@ -111,14 +126,20 @@ def test_simple_controlled_load_limited_to_max_energy():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalExportFlow(component=grid.ports["grid"], minimise=False)]),
+        objective_set=ObjectiveSet(
+            objective_list=[
+                TotalExportFlow(component=grid.ports["grid"], minimise=False)
+            ]
+        ),
     )
 
     grid_export = optimise_results.values(grid.ports["grid"].neg, 0) * -1
     load_import = optimise_results.values(cl.port_name, 0)
 
     # assert sum(load_import) * 30.0 / 60.0 == 20.0
-    np.testing.assert_almost_equal(sum(load_import), cl.max_power * time_periods * cl.max_utilisation)
+    np.testing.assert_almost_equal(
+        sum(load_import), cl.max_power * time_periods * cl.max_utilisation
+    )
 
     for i in range(time_periods):
         np.testing.assert_almost_equal(grid_export[i], load_import[i])
@@ -136,7 +157,9 @@ def test_simple_controlled_load_limited_to_max_power():
     grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0 / 60.0, max_utilisation=None)
+    cl = ControlledLoad(
+        max_power=5.0, min_power=0.0, min_utilisation=5.0 / 60.0, max_utilisation=None
+    )
     controlled_load.ports["cload"] = cl
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
@@ -152,7 +175,11 @@ def test_simple_controlled_load_limited_to_max_power():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=grid.ports["grid"], minimise=False)]),
+        objective_set=ObjectiveSet(
+            objective_list=[
+                TotalImportFlow(component=grid.ports["grid"], minimise=False)
+            ]
+        ),
     )
 
     grid_export = optimise_results.values(grid.ports["grid"].neg, 0) * -1
