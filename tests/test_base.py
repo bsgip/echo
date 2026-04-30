@@ -38,17 +38,11 @@ def test_port_reference_is_made_in_edge():
     system.add_node_obj([grid, connection_point])
 
     # Create edge objects and add to graph
-    system.connect_ports_and_create_edge(
-        grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
-    )
+    system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
 
     with pytest.raises(Exception):
-        assert id(grid.ports["grid_to_cp"]) == id(
-            system.get_edge(("grid", "cp")).vertices[0]
-        )
-        assert id(connection_point.ports["cp_to_grid"]) == id(
-            system.get_edge(("grid", "cp")).vertices[1]
-        )
+        assert id(grid.ports["grid_to_cp"]) == id(system.get_edge(("grid", "cp")).vertices[0])
+        assert id(connection_point.ports["cp_to_grid"]) == id(system.get_edge(("grid", "cp")).vertices[1])
 
 
 def test_rebuild_all_edges():
@@ -102,17 +96,13 @@ def test_rebuild_all_edges():
 
         # Create a connection point
         connection_point = TellegenNode(node_name="connection_point")
-        connection_point.add_ports_from_list(
-            ["cp_to_grid", "cp_to_inverter", "cp_to_ev"], FlexPort, units=Units.KW
-        )
+        connection_point.add_ports_from_list(["cp_to_grid", "cp_to_inverter", "cp_to_ev"], FlexPort, units=Units.KW)
 
         # create a node for the solar
         solar = Node(node_name="solar")
         pv = ElectricalGeneration()  # create an electrical generation object
         pv.curtailable = False  # set whether this can be curtailed or not
-        solar.ports["solar_to_inverter"] = (
-            pv  # add the electrical generation to a port on the solar node
-        )
+        solar.ports["solar_to_inverter"] = pv  # add the electrical generation to a port on the solar node
 
         # Create an inverter to attach the solar to
         inverter = Inverter(
@@ -138,18 +128,10 @@ def test_rebuild_all_edges():
         system.add_node_obj([grid, connection_point, inverter, solar, ev])
 
         # Create edge objects and add to graph
-        system.connect_ports_and_create_edge(
-            grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"]
-        )
-        system.connect_ports_and_create_edge(
-            connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"]
-        )
-        system.connect_ports_and_create_edge(
-            inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"]
-        )
-        system.connect_ports_and_create_edge(
-            connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"]
-        )
+        system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
+        system.connect_ports_and_create_edge(connection_point.ports["cp_to_inverter"], inverter.ports["inverter_to_cp"])
+        system.connect_ports_and_create_edge(inverter.ports["inverter_to_solar"], solar.ports["solar_to_inverter"])
+        system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
 
         # Create objectives/tariffs
         import_cost = ImportTariff(

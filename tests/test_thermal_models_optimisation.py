@@ -58,15 +58,11 @@ mass = 500
 min_temp = 10
 max_temp = 80
 area = default_surface_area_of_cylinder(mass * 1e-3)
-q_max_joules = (
-    4184 * mass * (max_temp - min_temp)
-)  # Max energy storage capacity in joules
+q_max_joules = 4184 * mass * (max_temp - min_temp)  # Max energy storage capacity in joules
 q_max_kwh = q_max_joules / 3600000
 th_load = [0.1] * 14 + [0.4] * 4 + [0.05] * 16 + [0.4] * 6 + [0.2] * 8
 th_load = list((np.array(th_load) * q_max_kwh).round())
-profile_df = pd.DataFrame(
-    {"thermal_load": th_load, "ambient_temp": [25] * NUMBER_INTERVALS}
-)
+profile_df = pd.DataFrame({"thermal_load": th_load, "ambient_temp": [25] * NUMBER_INTERVALS})
 
 # Pre-defined arrays of heating and cooling coefficients of performance for simple chiller and HP models
 NUMBER_INTERVALS_SHORT = 6
@@ -146,19 +142,13 @@ def test_thermal_storage_no_objective():
     )
     # assert that ports units default to KWT
     assert all([v.units == Units.KWT for v in storage.ports.values()])
-    assert storage.initial_temp == storage.min_temp + 0.5 * (
-        storage.max_temp - storage.min_temp
-    )
+    assert storage.initial_temp == storage.min_temp + 0.5 * (storage.max_temp - storage.min_temp)
 
-    thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)}
-    )
+    thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
 
     thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     cp = TellegenNode(
         node_name="conn_point",
@@ -170,20 +160,10 @@ def test_thermal_storage_no_objective():
     )
     system = OptimisationGraph()
     system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-    system.connect_ports_and_create_edge(
-        cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_storage_kwt"], storage.ports["input_output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
-    objective_set = ObjectiveSet(
-        objective_list=[
-            ThroughputCost(component=storage.ports["input_output"], rate=0.1)
-        ]
-    )
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.1)])
 
     optimise_results_no = optimise(
         scenario_settings=ScenarioSettings(
@@ -196,21 +176,15 @@ def test_thermal_storage_no_objective():
         objective_set=objective_set,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(
-        storage.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage.initial_temp, 1)
 
     cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Check that SOC values (in energy units) make sense
@@ -219,20 +193,13 @@ def test_thermal_storage_no_objective():
     # Check that heat loss/gain to environment is calculated correctly
     assert all(
         [
-            round(loss_gain[k])
-            >= round(
-                (storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance
-            )
+            round(loss_gain[k]) >= round((storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance)
             for k in loss_gain.keys()
         ]
     )
 
     # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
-    assert (
-        round(cp_flow_df_no["to_storage_kwt"].min())
-        == round(cp_flow_df_no["to_storage_kwt"].max())
-        == 0
-    )
+    assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
     objective_set = ObjectiveSet(
         objective_list=[
@@ -252,9 +219,7 @@ def test_thermal_storage_no_objective():
     )
 
     cp_flow_df_pp = (
-        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Expecting peak power to be less with peak power objective
@@ -281,15 +246,11 @@ def test_thermal_storage_end_temperature():
         enforce_end_temperature_value=False,
     )
 
-    thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)}
-    )
+    thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
 
     thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     cp = TellegenNode(
         node_name="conn_point",
@@ -301,20 +262,10 @@ def test_thermal_storage_end_temperature():
     )
     system = OptimisationGraph()
     system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-    system.connect_ports_and_create_edge(
-        cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_storage_kwt"], storage.ports["input_output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
-    objective_set = ObjectiveSet(
-        objective_list=[
-            ThroughputCost(component=storage.ports["input_output"], rate=0.1)
-        ]
-    )
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.1)])
 
     optimise_results_no = optimise(
         scenario_settings=ScenarioSettings(
@@ -327,21 +278,15 @@ def test_thermal_storage_end_temperature():
         objective_set=objective_set,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) != 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) != round(
-        storage.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) != round(storage.initial_temp, 1)
 
     cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Check that SOC values (in energy units) make sense
@@ -350,20 +295,13 @@ def test_thermal_storage_end_temperature():
     # Check that heat loss/gain to environment is calculated correctly
     assert all(
         [
-            round(loss_gain[k])
-            >= round(
-                (storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance
-            )
+            round(loss_gain[k]) >= round((storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance)
             for k in loss_gain.keys()
         ]
     )
 
     # Not expecting storage to do anything when no objective set, throughput cost shall prevent from random actions
-    assert (
-        round(cp_flow_df_no["to_storage_kwt"].min())
-        == round(cp_flow_df_no["to_storage_kwt"].max())
-        == 0
-    )
+    assert round(cp_flow_df_no["to_storage_kwt"].min()) == round(cp_flow_df_no["to_storage_kwt"].max()) == 0
 
 
 def test_thermal_storage():
@@ -386,19 +324,13 @@ def test_thermal_storage():
     )
     # assert that ports units default to KWT
     assert all([v.units == Units.KWT for v in storage.ports.values()])
-    assert storage.initial_temp == storage.min_temp + 0.5 * (
-        storage.max_temp - storage.min_temp
-    )
+    assert storage.initial_temp == storage.min_temp + 0.5 * (storage.max_temp - storage.min_temp)
 
-    thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)}
-    )
+    thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
 
     thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     cp = TellegenNode(
         node_name="conn_point",
@@ -410,20 +342,10 @@ def test_thermal_storage():
     )
     system = OptimisationGraph()
     system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-    system.connect_ports_and_create_edge(
-        cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_storage_kwt"], storage.ports["input_output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
-    objective_set = ObjectiveSet(
-        objective_list=[
-            ThroughputCost(component=storage.ports["input_output"], rate=0.01)
-        ]
-    )
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
 
     optimise_results_no = optimise(
         scenario_settings=ScenarioSettings(
@@ -436,16 +358,12 @@ def test_thermal_storage():
         objective_set=objective_set,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Check that SOC values (in energy units) make sense
@@ -454,10 +372,7 @@ def test_thermal_storage():
     # Check that heat loss/gain to environment is calculated correctly
     assert all(
         [
-            round(loss_gain[k])
-            >= round(
-                (storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance
-            )
+            round(loss_gain[k]) >= round((storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance)
             for k in loss_gain.keys()
         ]
     )
@@ -479,20 +394,14 @@ def test_thermal_storage():
         objective_set=objective_set,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(
-        storage.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage.initial_temp, 1)
 
     cp_flow_df_pp = (
-        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Expecting peak power to be less with peak power objective
@@ -516,9 +425,7 @@ def test_thermal_storage_with_profile():
         ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")},
     )
 
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     cp = TellegenNode(
         node_name="conn_point",
@@ -530,20 +437,10 @@ def test_thermal_storage_with_profile():
     )
     system = OptimisationGraph()
     system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-    system.connect_ports_and_create_edge(
-        cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_storage_kwt"], storage.ports["input_output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
-    objective_set = ObjectiveSet(
-        objective_list=[
-            ThroughputCost(component=storage.ports["input_output"], rate=0.01)
-        ]
-    )
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
 
     optimise_results_no = optimise(
         scenario_settings=ScenarioSettings(
@@ -557,21 +454,15 @@ def test_thermal_storage_with_profile():
         profile=profile_df,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(
-        storage.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage.initial_temp, 1)
 
     cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Check that SOC values (in energy units) make sense
@@ -580,10 +471,7 @@ def test_thermal_storage_with_profile():
     # Check that heat loss/gain to environment is calculated correctly
     assert all(
         [
-            round(loss_gain[k])
-            >= round(
-                (storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance
-            )
+            round(loss_gain[k]) >= round((storage.ambient_temp[k] - storage_temp[k]) * storage.lump_conductance)
             for k in loss_gain.keys()
         ]
     )
@@ -607,9 +495,7 @@ def test_thermal_storage_with_profile():
     )
 
     cp_flow_df_pp = (
-        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
 
     # Expecting peak power to be less with peak power objective
@@ -631,9 +517,7 @@ def test_thermal_storage_no_ambient_temp():
         node_name="thermal_load",
         ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")},
     )
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     cp = TellegenNode(
         node_name="conn_point",
@@ -645,20 +529,10 @@ def test_thermal_storage_no_ambient_temp():
     )
     system = OptimisationGraph()
     system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
-    system.connect_ports_and_create_edge(
-        cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_storage_kwt"], storage.ports["input_output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
-    objective_set = ObjectiveSet(
-        objective_list=[
-            ThroughputCost(component=storage.ports["input_output"], rate=0.01)
-        ]
-    )
+    system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
+    system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
+    objective_set = ObjectiveSet(objective_list=[ThroughputCost(component=storage.ports["input_output"], rate=0.01)])
 
     optimise_results_no = optimise(
         scenario_settings=ScenarioSettings(
@@ -672,20 +546,14 @@ def test_thermal_storage_no_ambient_temp():
         profile=profile_df,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage.internal_temp
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage.internal_temp).get_values()
     loss_gain = getattr(optimise_results_no.model, storage.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(
-        storage.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage.initial_temp, 1)
 
-    optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(
-        level=[0]
-    ).drop(columns="level_0")
+    optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
 
     # Check that SOC values (in energy units) make sense
     assert all([0 <= v <= 1 for v in soc_100.values])
@@ -694,9 +562,7 @@ def test_thermal_storage_no_ambient_temp():
     assert all([round(loss_gain[k]) == 0 for k in loss_gain.keys()])
 
     # Expecting no change in storage temperature with zero flows and zero gain/loss
-    assert all(
-        [round(storage_temp[k]) == storage.initial_temp for k in storage_temp.keys()]
-    )
+    assert all([round(storage_temp[k]) == storage.initial_temp for k in storage_temp.keys()])
 
 
 def test_thermal_storage_2_ports():
@@ -706,15 +572,11 @@ def test_thermal_storage_2_ports():
         num_expansion_intervals=NUM_EXPANSION_PERIODS,
     )
     th_demand_dict = expand_as_dict(th_demand_data)
-    thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)}
-    )
+    thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
 
     thermal_demand.ports["demand_kwt"].add_sink_profile(th_demand_dict)
 
-    thermal_mains = Node(
-        node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
+    thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
     storage_2p = ThermalStorage(
         max_temp=80,
@@ -750,26 +612,15 @@ def test_thermal_storage_2_ports():
 
     system = OptimisationGraph()
     system.add_node_obj([storage_2p, thermal_demand, thermal_mains, cp_1, cp_2])
-    system.connect_ports_and_create_edge(
-        cp_1.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp_1.ports["to_storage_input_kwt"], storage_2p.ports["input"]
-    )
-    system.connect_ports_and_create_edge(
-        cp_1.ports["to_demand_cp_kwt"], cp_2.ports["to_supply_cp_kwt"]
-    )
-    system.connect_ports_and_create_edge(
-        cp_2.ports["to_storage_output_kwt"], storage_2p.ports["output"]
-    )
-    system.connect_ports_and_create_edge(
-        cp_2.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"]
-    )
+    system.connect_ports_and_create_edge(cp_1.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
+    system.connect_ports_and_create_edge(cp_1.ports["to_storage_input_kwt"], storage_2p.ports["input"])
+    system.connect_ports_and_create_edge(cp_1.ports["to_demand_cp_kwt"], cp_2.ports["to_supply_cp_kwt"])
+    system.connect_ports_and_create_edge(cp_2.ports["to_storage_output_kwt"], storage_2p.ports["output"])
+    system.connect_ports_and_create_edge(cp_2.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
 
     objective_set = ObjectiveSet(
         objective_list=[
-            ThroughputCost(component=storage_2p.ports[_port_name], rate=0.01)
-            for _port_name in storage_2p.ports
+            ThroughputCost(component=storage_2p.ports[_port_name], rate=0.01) for _port_name in storage_2p.ports
         ]
     )
     optimise_results_no = optimise(
@@ -783,28 +634,18 @@ def test_thermal_storage_2_ports():
         objective_set=objective_set,
     )
 
-    storage_temp = getattr(
-        optimise_results_no.model, storage_2p.internal_temp
-    ).get_values()
-    loss_gain = getattr(
-        optimise_results_no.model, storage_2p.net_loss_gain
-    ).get_values()
+    storage_temp = getattr(optimise_results_no.model, storage_2p.internal_temp).get_values()
+    loss_gain = getattr(optimise_results_no.model, storage_2p.net_loss_gain).get_values()
     soc_100 = optimise_results_no.df()[storage_2p.soc_value][0] * 1 / q_max_kwh
 
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
-    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(
-        storage_2p.initial_temp, 1
-    )
+    assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage_2p.initial_temp, 1)
 
     cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp_1.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp_1.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_2 = (
-        optimise_results_no.df_by_port()[[k for k in cp_2.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_no.df_by_port()[[k for k in cp_2.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_no = cp_flow_df_no.join(cp_flow_df_2)
 
@@ -814,11 +655,7 @@ def test_thermal_storage_2_ports():
     # Check that heat loss/gain to environment is calculated correctly
     assert all(
         [
-            round(loss_gain[k])
-            >= round(
-                (storage_2p.ambient_temp[k] - storage_temp[k])
-                * storage_2p.lump_conductance
-            )
+            round(loss_gain[k]) >= round((storage_2p.ambient_temp[k] - storage_temp[k]) * storage_2p.lump_conductance)
             for k in loss_gain.keys()
         ]
     )
@@ -831,10 +668,7 @@ def test_thermal_storage_2_ports():
             == 0
         )
 
-    obj_list = [
-        ThroughputCost(component=storage_2p.ports[_port_name], rate=0.01)
-        for _port_name in storage_2p.ports
-    ]
+    obj_list = [ThroughputCost(component=storage_2p.ports[_port_name], rate=0.01) for _port_name in storage_2p.ports]
     obj_list.append(PeakPositivePower(component=cp_1.ports["to_supply_kwt"]))
     objective_set = ObjectiveSet(objective_list=obj_list)
 
@@ -850,14 +684,10 @@ def test_thermal_storage_2_ports():
     )
 
     cp_flow_df_pp = (
-        optimise_results_pp.df_by_port()[[k for k in cp_1.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp_1.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_2 = (
-        optimise_results_pp.df_by_port()[[k for k in cp_2.ports.keys()]]
-        .reset_index(level=[0])
-        .drop(columns="level_0")
+        optimise_results_pp.df_by_port()[[k for k in cp_2.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
     )
     cp_flow_df_pp = cp_flow_df_pp.join(cp_flow_df_2)
 
@@ -871,14 +701,10 @@ def test_chiller_operation():
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = ParameterisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],
@@ -896,12 +722,8 @@ def test_chiller_operation():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(
-            chiller.ports[chiller.thermal_output_port_ref].port_name, 0
-        ),
-        optimise_results.values(
-            chiller.ports[chiller.electrical_input_port_ref].port_name, 0
-        ),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -913,10 +735,7 @@ def test_chiller_operation():
     assert min(chiller_actual_cop) != max(chiller_actual_cop)
 
     # Check that observed COP values are within expected range
-    min_cop = (
-        min([v for v in chiller.partial_load_cop.values() if v != 0])
-        * chiller.nominal_cop
-    )
+    min_cop = min([v for v in chiller.partial_load_cop.values() if v != 0]) * chiller.nominal_cop
     for cop_v in chiller_actual_cop:
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
@@ -934,17 +753,13 @@ def test_chiller_with_heat_rejection():
         heat_rejection_coefficient=0.8,
     )
     assert chiller.heat_rejection_port_ref in chiller.ports
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     waste_heat_agg = AggregationNode(port_units=Units.KWT)
     waste_heat_agg.add_port("chiller_waste_heat")
 
     system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],
@@ -966,12 +781,8 @@ def test_chiller_with_heat_rejection():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(
-            chiller.ports[chiller.thermal_output_port_ref].port_name, 0
-        ),
-        optimise_results.values(
-            chiller.ports[chiller.electrical_input_port_ref].port_name, 0
-        ),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -983,16 +794,11 @@ def test_chiller_with_heat_rejection():
     assert min(chiller_actual_cop) != max(chiller_actual_cop)
 
     total_waste_heat = round(optimise_results.values(waste_heat_agg.total, 0).sum(), 2)
-    total_cooling_load = round(
-        optimise_results.df_by_port()["cooling_demand_kwt"].sum(), 2
-    )
+    total_cooling_load = round(optimise_results.df_by_port()["cooling_demand_kwt"].sum(), 2)
     assert total_waste_heat == -chiller.heat_rejection_coefficient * total_cooling_load
 
     # Check that observed COP values are within expected range
-    min_cop = (
-        min([v for v in chiller.partial_load_cop.values() if v != 0])
-        * chiller.nominal_cop
-    )
+    min_cop = min([v for v in chiller.partial_load_cop.values() if v != 0]) * chiller.nominal_cop
     for cop_v in chiller_actual_cop:
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
@@ -1021,18 +827,12 @@ def test_chiller_with_temperature_cop():
         partial_load_cop={0: 1, 0.25: 1, 0.5: 1, 0.75: 1, 1: 1},
         ambient_temperature_dict=ambient_temperature_dict,
     )
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     # Need non zero
-    cooling_load.ports["cooling_demand_kwt"].add_source_profile(
-        cooling_demand_dict_non_zero
-    )
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],
@@ -1050,12 +850,8 @@ def test_chiller_with_temperature_cop():
 
     chiller_actual_cop = list()
     for _output, _input in zip(
-        optimise_results.values(
-            chiller.ports[chiller.thermal_output_port_ref].port_name, 0
-        ),
-        optimise_results.values(
-            chiller.ports[chiller.electrical_input_port_ref].port_name, 0
-        ),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -1063,9 +859,7 @@ def test_chiller_with_temperature_cop():
             assert _output != 0
             chiller_actual_cop.append(round(_output / _input, 3))
 
-    temperature_cop_factor = optimise_results.values(
-        chiller.temperature_cop_param
-    ).tolist()
+    temperature_cop_factor = optimise_results.values(chiller.temperature_cop_param).tolist()
     for _cop_factor in temperature_cop_factor:
         i = temperature_cop_factor.index(_cop_factor)
         ref_temperature = list(chiller.ambient_temperature_dict.values())[i]
@@ -1093,9 +887,7 @@ def test_chiller_with_temperature_cop():
         i = chiller_actual_cop.index(cop_v)
         assert cop_v >= min_cop
         assert cop_v <= chiller.nominal_cop
-        assert round(cop_v, 3) == round(
-            temperature_cop_factor[i] * chiller.nominal_cop, 3
-        )
+        assert round(cop_v, 3) == round(temperature_cop_factor[i] * chiller.nominal_cop, 3)
 
 
 def test_chiller_with_pl_cop():
@@ -1115,18 +907,12 @@ def test_chiller_with_pl_cop():
             45: 1,
         },
     )
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     # Need non zero
-    cooling_load.ports["cooling_demand_kwt"].add_source_profile(
-        cooling_demand_dict_non_zero
-    )
+    cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],
@@ -1145,12 +931,8 @@ def test_chiller_with_pl_cop():
     chiller_actual_cop = list()
     chiller_part_load_value = list()
     for _output, _input in zip(
-        optimise_results.values(
-            chiller.ports[chiller.thermal_output_port_ref].port_name, 0
-        ),
-        optimise_results.values(
-            chiller.ports[chiller.electrical_input_port_ref].port_name, 0
-        ),
+        optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
+        optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
     ):
         if _input == 0:
             assert _output == 0
@@ -1187,22 +969,14 @@ def test_simple_chiller():
     """Test simple chiller operation with predefined coefficient of performance array"""
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
-    chiller = SimpleChiller(
-        max_cooling_capacity=10, cooling_cop_time_series_ref="cooling_cop"
-    )
+    chiller = SimpleChiller(max_cooling_capacity=10, cooling_cop_time_series_ref="cooling_cop")
     # Cooling demand is a heat source
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports["input"]
-    )
-    system.connect_ports_and_create_edge(
-        chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
+    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -1218,10 +992,7 @@ def test_simple_chiller():
     # Coefficient of performance provided at initialisation
     cooling_cop_array = optimise_results.values(chiller.cooling_cop)
     # Actual observed Coefficient of performance (output/input)
-    assert (
-        max(optimise_results.values(chiller.ports["output"].port_name))
-        <= chiller.max_cooling_capacity
-    )
+    assert max(optimise_results.values(chiller.ports["output"].port_name)) <= chiller.max_cooling_capacity
     chiller_actual_cop = list()
     for _output, _input in zip(
         optimise_results.values(chiller.ports["output"].port_name),
@@ -1262,14 +1033,10 @@ def test_simple_heatpump_single_output():
             )
         },
     )
-    thermal_load.ports["thermal_demand_kwt"].set_initial_value(
-        combined_thermal_load_dict
-    )
+    thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
         thermal_load.ports["thermal_demand_kwt"],
@@ -1294,9 +1061,7 @@ def test_simple_heatpump_single_output():
     heating_cop_actual = list()
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
-        optimise_results.values(
-            heatpump.ports[heatpump.electrical_input_port_ref].port_name
-        ),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -1312,9 +1077,7 @@ def test_simple_heatpump_single_output():
     cooling_cop_actual = list()
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
-        optimise_results.values(
-            heatpump.ports[heatpump.electrical_input_port_ref].port_name
-        ),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -1327,12 +1090,10 @@ def test_simple_heatpump_single_output():
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
-    power_to_heat_and_cool = optimise_results.values(
-        heatpump.power_to_cool
-    ) + optimise_results.values(heatpump.power_to_heat)
-    total_power_consumed = optimise_results.values(
-        heatpump.ports[heatpump.electrical_input_port_ref].port_name
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
     )
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)
 
@@ -1348,20 +1109,14 @@ def test_simple_heatpump_dual_output():
         heating_cop_time_series_ref="heating_cop",
     )
     # Cooling demand is a heat source
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
     # Heating demand is a heat sink
-    heating_load = Node(
-        node_name="heating_load", ports={"heating_demand_kwt": Sink(units=Units.KWT)}
-    )
+    heating_load = Node(node_name="heating_load", ports={"heating_demand_kwt": Sink(units=Units.KWT)})
     heating_load.ports["heating_demand_kwt"].add_sink_profile(heating_load_dict)
 
     system.add_node_obj([grid, heatpump, cooling_load, heating_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.cooling_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],
@@ -1405,9 +1160,7 @@ def test_simple_heatpump_dual_output():
 
     cooling_cop_actual = list()
     for _output, _input in zip(
-        optimise_results.values(
-            heatpump.ports[heatpump.cooling_output_port_ref].port_name
-        ),
+        optimise_results.values(heatpump.ports[heatpump.cooling_output_port_ref].port_name),
         optimise_results.values(heatpump.power_to_cool),
     ):
         if _input == 0:
@@ -1421,27 +1174,17 @@ def test_simple_heatpump_dual_output():
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
-    power_to_heat_and_cool = optimise_results.values(
-        heatpump.power_to_cool
-    ) + optimise_results.values(heatpump.power_to_heat)
-    total_power_consumed = optimise_results.values(
-        heatpump.ports[heatpump.electrical_input_port_ref].port_name
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
     )
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(np.round(power_to_heat_and_cool, 2) == np.round(total_power_consumed, 2))
 
-    total_heat_delivered = optimise_results.values(
-        heatpump.ports[heatpump.heating_output_port_ref].port_name
-    ).sum()
-    total_adjusted_heat_from_source = optimise_results.values(
-        heatpump.heating_out_adjusted
-    ).sum()
-    total_waste_heat_recovered = optimise_results.values(
-        heatpump.recovered_waste_heat
-    ).sum()
-    assert round(
-        total_heat_delivered - total_adjusted_heat_from_source, 2
-    ) == -1 * round(total_waste_heat_recovered, 2)
+    total_heat_delivered = optimise_results.values(heatpump.ports[heatpump.heating_output_port_ref].port_name).sum()
+    total_adjusted_heat_from_source = optimise_results.values(heatpump.heating_out_adjusted).sum()
+    total_waste_heat_recovered = optimise_results.values(heatpump.recovered_waste_heat).sum()
+    assert round(total_heat_delivered - total_adjusted_heat_from_source, 2) == -1 * round(total_waste_heat_recovered, 2)
 
 
 def test_parameterised_heatpump_single_output():
@@ -1467,14 +1210,10 @@ def test_parameterised_heatpump_single_output():
             )
         },
     )
-    thermal_load.ports["thermal_demand_kwt"].set_initial_value(
-        combined_thermal_load_dict
-    )
+    thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
         thermal_load.ports["thermal_demand_kwt"],
@@ -1495,9 +1234,7 @@ def test_parameterised_heatpump_single_output():
     heating_cop_actual = list()
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
-        optimise_results.values(
-            heatpump.ports[heatpump.electrical_input_port_ref].port_name
-        ),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -1518,9 +1255,7 @@ def test_parameterised_heatpump_single_output():
     cooling_cop_actual = list()
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
-        optimise_results.values(
-            heatpump.ports[heatpump.electrical_input_port_ref].port_name
-        ),
+        optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
     ):
         if _input == 0:
             assert _output == 0
@@ -1539,12 +1274,10 @@ def test_parameterised_heatpump_single_output():
             assert cop_v <= heatpump.nominal_cooling_cop
 
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
-    power_to_heat_and_cool = optimise_results.values(
-        heatpump.power_to_cool
-    ) + optimise_results.values(heatpump.power_to_heat)
-    total_power_consumed = optimise_results.values(
-        heatpump.ports[heatpump.electrical_input_port_ref].port_name
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
     )
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(np.round(power_to_heat_and_cool, 2) == np.round(total_power_consumed, 2))
 
@@ -1555,18 +1288,12 @@ def test_simple_chiller_constant_cop():
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = SimpleChiller(max_cooling_capacity=10)
     # Cooling demand is a heat source
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
     system.add_node_obj([grid, chiller, cooling_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
-    system.connect_ports_and_create_edge(
-        chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
+    system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(
@@ -1583,10 +1310,7 @@ def test_simple_chiller_constant_cop():
     cooling_cop_array = optimise_results.values(chiller.cooling_cop)
     assert all([cop == chiller.cooling_cop_constant for cop in cooling_cop_array])
     # Actual observed Coefficient of performance (output/input)
-    assert (
-        max(optimise_results.values(chiller.ports["output"].port_name))
-        <= chiller.max_cooling_capacity
-    )
+    assert max(optimise_results.values(chiller.ports["output"].port_name)) <= chiller.max_cooling_capacity
 
 
 def test_simple_heatpump_constant_cop():
@@ -1610,14 +1334,10 @@ def test_simple_heatpump_constant_cop():
             )
         },
     )
-    thermal_load.ports["thermal_demand_kwt"].set_initial_value(
-        combined_thermal_load_dict
-    )
+    thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
     system.add_node_obj([grid, heatpump, thermal_load])
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
         thermal_load.ports["thermal_demand_kwt"],
@@ -1640,12 +1360,10 @@ def test_simple_heatpump_constant_cop():
     assert all([cop == heatpump.heating_cop_constant for cop in heating_cop_array])
 
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
-    power_to_heat_and_cool = optimise_results.values(
-        heatpump.power_to_cool
-    ) + optimise_results.values(heatpump.power_to_heat)
-    total_power_consumed = optimise_results.values(
-        heatpump.ports[heatpump.electrical_input_port_ref].port_name
+    power_to_heat_and_cool = optimise_results.values(heatpump.power_to_cool) + optimise_results.values(
+        heatpump.power_to_heat
     )
+    total_power_consumed = optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name)
 
     assert all(power_to_heat_and_cool == total_power_consumed)
 
@@ -1668,17 +1386,11 @@ def test_chiller_with_parametrised_tellegen_heat_rejection():
         output_port_name_1="to_waste_heat_aggregation_1",
         output_port_name_2="to_waste_heat_aggregation_2",
     )
-    cooling_load = Node(
-        node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)}
-    )
+    cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
-    waste_heat_agg = AggregationNode(
-        node_name="waste_heat_aggregation_1", port_units=Units.KWT
-    )
+    waste_heat_agg = AggregationNode(node_name="waste_heat_aggregation_1", port_units=Units.KWT)
     waste_heat_agg.add_port("chiller_waste_heat_1")
-    waste_heat_agg_2 = AggregationNode(
-        node_name="waste_heat_aggregation_2", port_units=Units.KWT
-    )
+    waste_heat_agg_2 = AggregationNode(node_name="waste_heat_aggregation_2", port_units=Units.KWT)
     waste_heat_agg_2_max_flow = 7
     waste_heat_agg_2.add_port(
         name="chiller_waste_heat_2",
@@ -1698,9 +1410,7 @@ def test_chiller_with_parametrised_tellegen_heat_rejection():
             waste_heat_tellegen,
         ]
     )
-    system.connect_ports_and_create_edge(
-        grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref]
-    )
+    system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
         cooling_load.ports["cooling_demand_kwt"],

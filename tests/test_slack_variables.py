@@ -26,17 +26,13 @@ def test_export_slack_var_is_minimised():
 
     solar = Node()
     pv1 = ElectricalGeneration()
-    pv1.add_generation_profile_from_array(
-        [-float(i) for i in range(N_INTERVALS)], expansion_periods
-    )
+    pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
-    inverter.ports["cp"].set_flow_constraints(
-        max_export=-5.0, max_import=[5.0] * time_periods, slack=True
-    )
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=[5.0] * time_periods, slack=True)
 
     system.add_node_obj([grid, solar, inverter])
 
@@ -51,9 +47,7 @@ def test_export_slack_var_is_minimised():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(
-            objective_list=[TotalFlow(component=grid.ports["grid"], minimise=False)]
-        ),
+        objective_set=ObjectiveSet(objective_list=[TotalFlow(component=grid.ports["grid"], minimise=False)]),
     )
 
     inv_export_slack = optimise_results.values(inverter.ports["cp"].export_slack, 0)
@@ -75,9 +69,7 @@ def test_import_slack_var_is_minimised():
 
     solar = Node()
     pv1 = ElectricalGeneration()
-    pv1.add_generation_profile_from_array(
-        [-float(i) for i in range(N_INTERVALS)], expansion_periods
-    )
+    pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
@@ -97,9 +89,7 @@ def test_import_slack_var_is_minimised():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(
-            objective_list=[TotalFlow(component=pv1, minimise=False)]
-        ),
+        objective_set=ObjectiveSet(objective_list=[TotalFlow(component=pv1, minimise=False)]),
     )
 
     g_import_slack = optimise_results.values(grid.ports["grid"].import_slack, 0)
@@ -121,17 +111,13 @@ def test_slack_vars_take_up_slack_when_forced_to():
 
     solar = Node()
     pv1 = ElectricalGeneration()
-    pv1.add_generation_profile_from_array(
-        [-float(i) for i in range(N_INTERVALS)], expansion_periods
-    )
+    pv1.add_generation_profile_from_array([-float(i) for i in range(N_INTERVALS)], expansion_periods)
     pv1.curtailable = True
     solar.ports["solar"] = pv1
 
     inverter = TellegenNode()
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
-    inverter.ports["cp"].set_flow_constraints(
-        max_export=-5.0, max_import=5.0, slack=True
-    )
+    inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
     system.add_node_obj([grid, solar, inverter])
 

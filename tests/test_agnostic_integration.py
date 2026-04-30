@@ -32,18 +32,10 @@ profile_df = pd.DataFrame(
 
 def test_partitioned_bus_flows():
     """Test that tellegen rule holds per partition per commodity when using PartitionedMultiCommodityTellegenNode"""
-    thermal_mains_1 = Node(
-        node_name="thermal_supply_1", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
-    thermal_mains_2 = Node(
-        node_name="thermal_supply_2", ports={"supply_kwt": FlexPort(units=Units.KWT)}
-    )
-    electrical_mains_1 = Node(
-        node_name="electrical_supply_1", ports={"supply_kw": FlexPort(units=Units.KW)}
-    )
-    electrical_mains_2 = Node(
-        node_name="electrical_supply_2", ports={"supply_kw": FlexPort(units=Units.KW)}
-    )
+    thermal_mains_1 = Node(node_name="thermal_supply_1", ports={"supply_kwt": FlexPort(units=Units.KWT)})
+    thermal_mains_2 = Node(node_name="thermal_supply_2", ports={"supply_kwt": FlexPort(units=Units.KWT)})
+    electrical_mains_1 = Node(node_name="electrical_supply_1", ports={"supply_kw": FlexPort(units=Units.KW)})
+    electrical_mains_2 = Node(node_name="electrical_supply_2", ports={"supply_kw": FlexPort(units=Units.KW)})
 
     thermal_load_1 = Node(
         node_name="thermal_load_1",
@@ -59,15 +51,11 @@ def test_partitioned_bus_flows():
     )
     electrical_load_1 = Node(
         node_name="electrical_load_1",
-        ports={
-            "demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_1")
-        },
+        ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_1")},
     )
     electrical_load_2 = Node(
         node_name="electrical_load_2",
-        ports={
-            "demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_2")
-        },
+        ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_2")},
     )
 
     partitioned_bus = PartitionedMultiCommodityTellegenNode(
@@ -158,7 +146,5 @@ def test_partitioned_bus_flows():
                 partition_commodity_ports[(_partition, _commodity)].append(_p.port_name)
 
     for port_list in partition_commodity_ports.values():
-        net_flow_per_period = (
-            optimise_results_no.df_by_port()[port_list].sum(axis=1).values
-        )
+        net_flow_per_period = optimise_results_no.df_by_port()[port_list].sum(axis=1).values
         assert all([v == 0 for v in net_flow_per_period])

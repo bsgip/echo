@@ -40,9 +40,7 @@ def test_simple_chiller_cop_error():
     with pytest.raises(Exception):
         cooling_cop_dict_neg = cooling_cop_dict.copy()
         cooling_cop_dict_neg[(0, 0)] *= -1
-        SimpleChiller(
-            max_cooling_capacity=20, cooling_cop_time_series=cooling_cop_dict_neg
-        )
+        SimpleChiller(max_cooling_capacity=20, cooling_cop_time_series=cooling_cop_dict_neg)
 
 
 def test_simple_heatpump():

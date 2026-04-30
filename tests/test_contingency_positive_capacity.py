@@ -52,9 +52,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
-    system.create_path_objects(
-        sources=[grid, battery, solar], sinks=[grid, battery, solar]
-    )
+    system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery, solar])
 
     bess_to_g = system.get_path([battery, inverter, grid])
 
@@ -116,9 +114,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
 
-    system.create_path_objects(
-        sources=[grid, battery, solar], sinks=[grid, battery, solar]
-    )
+    system.create_path_objects(sources=[grid, battery, solar], sinks=[grid, battery, solar])
 
     bess_to_g = system.get_path([battery, inverter, grid])
     contingency_obj = ContingencyPositive(component=bess_to_g, duration=10.0)
@@ -190,9 +186,7 @@ def test_positive_contingency_calculation_with_storage_full():
     system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inv"])
     system.connect_ports_and_create_edge(cp.ports["grid"], grid.ports["grid"])
 
-    system.create_path_objects(
-        sources=[grid, battery, load, solar], sinks=[grid, battery, load, solar]
-    )
+    system.create_path_objects(sources=[grid, battery, load, solar], sinks=[grid, battery, load, solar])
 
     bess_to_g = system.get_path([battery, inverter, cp, grid])
     contingency_obj = ContingencyPositive(component=bess_to_g, duration=10.0)

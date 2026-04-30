@@ -78,9 +78,7 @@ def test_hybrid_inverter_dc_ac_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(
-            objective_list=[TotalImportFlow(component=cp.ports["grid"])]
-        ),
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )
 
     optimise_results.values(grid.ports["grid"].port_name, 0)
@@ -143,9 +141,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
 
     load = Node()
     l1 = ElectricalDemand()
-    l1.add_demand_profile_from_array(
-        [0.0] * (N_INTERVALS // 2) + [2.0] * (N_INTERVALS // 2), expansion_periods
-    )
+    l1.add_demand_profile_from_array([0.0] * (N_INTERVALS // 2) + [2.0] * (N_INTERVALS // 2), expansion_periods)
     load.ports["load"] = l1
 
     system.add_node_obj([grid, cp, load, battery, solar, inverter])
@@ -165,9 +161,7 @@ def test_hybrid_inverter_dc_dc_efficiency():
         ),
         engine_settings=engine_settings_from_environment(),
         graph=system,
-        objective_set=ObjectiveSet(
-            objective_list=[TotalImportFlow(component=cp.ports["grid"])]
-        ),
+        objective_set=ObjectiveSet(objective_list=[TotalImportFlow(component=cp.ports["grid"])]),
     )
 
     optimise_results.values(grid.ports["grid"].port_name, 0)

@@ -31,9 +31,7 @@ def empty_model():
     if scenario_settings.number_of_expansion_intervals == 0:
         model.Expansion = en.RangeSet(0, 0)
     else:
-        model.Expansion = en.RangeSet(
-            0, scenario_settings.number_of_expansion_intervals - 1
-        )
+        model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
     discount_rates = {}
     for ep in range(0, scenario_settings.number_of_expansion_intervals):
         discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
@@ -43,9 +41,7 @@ def empty_model():
 
 def test_partitioned_muticommodity_tellegen_node_default_partition():
     """Test asset creation with default partition"""
-    node = PartitionedMultiCommodityTellegenNode(
-        ports={"port_1": FlexPort(units=Units.KW)}
-    )
+    node = PartitionedMultiCommodityTellegenNode(ports={"port_1": FlexPort(units=Units.KW)})
     assert node.ports["port_1"] in node.partitions[node.default_partition]
 
 
@@ -103,18 +99,10 @@ def test_threeway_tellegen_node():
     model = empty_model()
     node.add_node_to_model(model, profile=None)
     node.apply_node_constraints(model)
-    assert (
-        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
-    )
-    assert (
-        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
-    )
-    assert (
-        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
-    )
-    assert (
-        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
-    )
+    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
+    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
+    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
+    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
 
 
 def test_threeway_tellegen_node_add_port():
@@ -132,15 +120,7 @@ def test_threeway_tellegen_node_add_port():
     model = empty_model()
     node.add_node_to_model(model, profile=None)
     node.apply_node_constraints(model)
-    assert (
-        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
-    )
-    assert (
-        getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
-    )
-    assert (
-        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
-    )
-    assert (
-        getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
-    )
+    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_1) is not None
+    assert getattr(model, node.constraint_neg_flow_mutually_exclusive_port_2) is not None
+    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_1) is not None
+    assert getattr(model, node.constraint_pos_flow_mutually_exclusive_port_2) is not None
