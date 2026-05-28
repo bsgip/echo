@@ -101,8 +101,8 @@ class EVBase(TransformNode):
             a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
         charging_power_limit (float): The maximum charging rate of the EV's battery. Positive float in power units.
         connection_point_name (str | None): Name of connection point port. Defaults to "cp".
-        depth_of_discharge_limit (float, optional): The minimum value of the state of ElectricalStorage of the EV. Same as
-            min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
+        depth_of_discharge_limit (float, optional): The minimum value of the state of ElectricalStorage of the EV. Same
+            as min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
             and 100.0. Unitless. Defaults to 0.0.
         discharging_efficiency (float | None): The efficiency of the battery discharging process for the EV. Float as
             a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
@@ -140,8 +140,8 @@ class EVBase(TransformNode):
         soc_conserv_cost (float | None): The cost placed on going below the conservative state of charge limit. That
             is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining)
             more money than this cost. Units are $/kWh. Defaults to None.
-        tod_charging (ArrayType | list | str | None): Time of day charging allows the EV to charge only during certain time
-            windows (1=allowed, 0=not allowed). Most commonly used with V0G charging. Defaults to None.
+        tod_charging (ArrayType | list | str | None): Time of day charging allows the EV to charge only during certain
+            time windows (1=allowed, 0=not allowed). Most commonly used with V0G charging. Defaults to None.
         usage (ArrayType | list | None): An array representing the average power consumption from driving of the EV
             during a time interval. Units of power. Defaults to None.
         usage_power_limit (float | None): The maximum power that can be used during an EV trip. It is to allow
