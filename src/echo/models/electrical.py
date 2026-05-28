@@ -442,7 +442,7 @@ class EVV0G(EVBase):
         ElectricalPort.
 
         Args:
-            **data:
+            None
 
         Returns:
             None
