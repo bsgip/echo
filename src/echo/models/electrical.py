@@ -85,40 +85,96 @@ class MobileElectricalStorage(MobileStorage):
 
 
 class EVBase(TransformNode):
-    """Base class for EVs"""
+    """Base class for EVV0G, EVV1G and EVV2G.
+
+    Args:
+        available (ArrayType | list | str | None): A List or ArrayType of bools representing the ability for the
+            EV to charge. The bools can have values of [False, True] or [0, 1]. 0 and False indicate the EV is not
+            available for charging, 1 and True indicate the EV is available for charging. If
+            set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it may
+            be provided upon EV instantiation or later using set_stateful_attrs(). ArrayType | list represent data,
+            while a str represents the column name in a pandas dataframe. If set_stateful_attrs_at_init is False, this
+            can be set after EV object instantiation using self.set_state_attrs().
+        charge_mode (EVChargeMode | None): Charge mode of the EV. To be set upon instantiation of particular EV child
+            class. Defaults to None.
+        charging_efficiency (float | None): The efficiency of the battery charging process for the EV. Float as
+            a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
+        charging_power_limit (float): The maximum charging rate of the EV's battery. Positive float in power units.
+        connection_point_name (str | None): Name of connection point port. Defaults to "cp".
+        depth_of_discharge_limit (float, optional): The minimum value of the state of ElectricalStorage of the EV. Same as
+            min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
+            and 100.0. Unitless. Defaults to 0.0.
+        discharging_efficiency (float | None): The efficiency of the battery discharging process for the EV. Float as
+            a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
+        discharging_power_limit (float): The maximum discharging rate of the EV's battery. This includes
+            discharging for travelling and V2G actions. Negative float in power units. If usage_power_limit is set then
+            discharging_power_limit represents maximum V2G generation power only.
+        enable_trip_slack (bool | None): Enabling trip slack allows the EV to meet usage requirements even if
+            other constraints/requirements are breached. That is, it allows the state of charge of the EV's battery
+            to go below min to avoid the optimisation failing due to infeasible EV trips. For example, an EV can
+            complete a journey requiring 20 kWh of energy if though there is only 15 kWh of energy in the EV
+            battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
+            there is a cost to do so. This can cause issues when conducting analysis on systems with
+            enable_trip_slack=True, so use with caution. Defaults to False.
+        initial_state_of_charge (float | None: The initial charge present in the EV's battery. Positive
+            float of energy units, not percentage. If set_state_attrs_at_init is True, this must be supplied. If
+            set_stateful_attrs_at_init is False, it may be provided upon EV instantiation or later using
+            set_stateful_attrs(). Positive float with units of energy.
+        interval_duration(int): Length of time interval between time series data points. Used mostly for conversion
+            between power and energy. If set_stateful_attrs_at_init is False, this can be set after EV object
+            instantiation using self.set_state_attrs(). Units of minutes.
+        max_capacity (float): The storage capacity of the EV's battery. Positive float in energy units.
+        port_dict_name_to_port_name_map (dict[str, str] | None): Defines port name to port object map. It is recommended
+            not to use this unless you know what you are doing. If None, it will defined once ports are built. Defaults
+            to None.
+        port_dict_name_to_port_uid_map (dict[str, str] | None): Defines port uid to port object map. It is recommended
+            not to use this unless you know what you are doing. If None, it will defined once ports are built. Defaults
+            to None.
+        set_stateful_attrs_at_init (bool | None): Set attributes with state at object instantiation (True) or
+            defer to later (False). If deferring to later, self.set_stateful_attrs must be used to set these
+            attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
+        soc_conserv (TimeExpandableType | None): Conservative state of charge limit below which the EV should not
+            discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is
+            available impromptu trips. This lower bound only applies while the EV is available to charge. Defaults to
+            None.
+        soc_conserv_cost (float | None): The cost placed on going below the conservative state of charge limit. That
+            is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining)
+            more money than this cost. Units are $/kWh. Defaults to None.
+        tod_charging (ArrayType | list | str | None): Time of day charging allows the EV to charge only during certain time
+            windows (1=allowed, 0=not allowed). Most commonly used with V0G charging. Defaults to None.
+        usage (ArrayType | list | None): An array representing the average power consumption from driving of the EV
+            during a time interval. Units of power. Defaults to None.
+        usage_power_limit (float | None): The maximum power that can be used during an EV trip. It is to allow
+            discharging_power_limit to represent the maximum power flow from an EVV2G back into an electrical network.
+            Negative float in power units. Defaults to None, however if None, it will be set to discharging_power_limit.
+    """
 
     charge_mode: Optional[EVChargeMode] = None
     connection_port_name: str = "cp"
 
     # Battery attributes
-    max_capacity: float
-    depth_of_discharge_limit: float = 0
-    charging_power_limit: float
-    # If usage_power_limit is not set, dischanging_power_limit describes the max discharge limit of the ev's battery.
-    # If usage_power_limit is set, dischanging_power_limit describes the max.
-    discharging_power_limit: float
-    # usage_power_limit is the maximum power that can be used for powering a trip. This can be different from
-    # discharging_power_limit.
-    usage_power_limit: float | None = None
     charging_efficiency: float = 1
+    charging_power_limit: float
+    depth_of_discharge_limit: float = 0
     discharging_efficiency: float = 1
+    discharging_power_limit: float
     enable_trip_slack: bool = False
-
-    # soc_conserv and soc_conserv_cost for having a 'conservative' ev user lower bound on the soc while it is plugged in
+    max_capacity: float
     soc_conserv: TimeExpandableType | None = None
-    soc_conserv_cost: Union[float, None] = None
+    soc_conserv_cost: float | None = None
+    usage_power_limit: float | None = None
 
     # Stateful attributes
-    set_stateful_attrs_at_init: bool = True
     available: ArrayType | list | str | None
-    usage: ArrayType | list | None
-    tod_charging: ArrayType | list | str | None
     initial_state_of_charge: float | None
     interval_duration: int | None
+    set_stateful_attrs_at_init: bool = True
+    tod_charging: ArrayType | list | str | None
+    usage: ArrayType | list | None
 
     # Helpful mappings for port names and uids
-    port_dict_name_to_port_uid_map: Dict[str, str] | None = None
     port_dict_name_to_port_name_map: Dict[str, str] | None = None
+    port_dict_name_to_port_uid_map: Dict[str, str] | None = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -223,36 +279,7 @@ class EVBase(TransformNode):
         """Create a vehicle port and add it to the EV's ports list.
 
         Args:
-            available (Union[ArrayType, list, None] | ): A List or ArrayType of bools representing the ability for the
-                EV to charge. The bools can have values of [False, True] or [0, 1]. 0 and False indicate the EV is not
-                available for charging, 1 and True indicate the EV is available for charging. If
-                set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it may
-                be provided upon EV instantiation or later using set_stateful_attrs().
-            charging_power_limit (float): The maximum charging rate of the EV's battery. Positive float in power units.
-            discharging_power_limit (float): The maximum discharging rate of the EV's battery. This includes
-                discharging for travelling and V2G actions. Negative float in power units.
-            initial_state_of_charge (Optional[float] | float): The initial charge present in the EV's battery. Positive
-                float of energy units, not percentage. If set_state_attrs_at_init is True, this must be supplied. If
-                set_stateful_attrs_at_init is False, it may be provided upon EV instantiation or later using
-                set_stateful_attrs(). Positive float with units of energy.
-            max_capacity (float): The storage capacity of the EV's battery. Positive float in energy units.
-            charging_efficiency (float, optional): The efficiency of the battery charging process for the EV. Float as
-                a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
-            depth_of_discharge_limit (float, optional): The minimum value of the state of charge of the EV. Same as
-                min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
-                and 100.0. Unitless. Defaults to 0.0.
-            enable_trip_slack (bool, optional): Enabling trip slack allows the EV to meet usage requirements even if
-                other constraints/requirements are breached. That is, it allows the state of charge of the EV's battery
-                to go below min to avoid the optimisation failing due to infeasible EV trips. For example, an EV can
-                complete a journey requiring 20 kWh of energy if though there is only 15 kWh of energy in the EV
-                battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
-                there is a cost to do so. This can cause issues when conducting analysis on systems with
-                enable_trip_slack=True, so use with caution. Defaults to False.
-            set_stateful_attrs_at_init (bool, optional): Set attributes with state at object instantiation (True) or
-                defer to later (False). If deferring to later, self.set_stateful_attrs must be used to set these
-                attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
-            soc_conserv (Optional[TimeExpandableType], optional): _description_. Defaults to None.
-            soc_conserv_cost (Union[float, None], optional): _description_. Defaults to None.
+            None
 
         Returns:
             None
@@ -372,10 +399,11 @@ class EVBase(TransformNode):
 class EVV0G(EVBase):
     """This EV object takes an available and usage dataset to precalculate a demand profile.
 
-    Once plugged in for charging, it assumes charging at the maximum rate until the battery is full
+    Once plugged in for charging, it assumes charging at the maximum rate until the battery is full.
 
     """
 
+    # Initialise attributes
     V0G_delta: ArrayType | list | None
     V0G_SOC: ArrayType | list | None
     V0G_trip_infeasibility: ArrayType | list | None
