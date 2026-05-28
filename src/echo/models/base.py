@@ -37,9 +37,7 @@ class BaseModel(PydanticBaseModel):
     """Create a modified base model with the config we want."""
 
     class Config:
-        validate_assignment = (
-            True  # Set to true so that we re-validate when we update a model field
-        )
+        validate_assignment = True  # Set to true so that we re-validate when we update a model field
         extra = "ignore"  # extra attributes are ignored
         arbitrary_types_allowed = True
 
@@ -66,17 +64,11 @@ class Port(BaseModel):
     export_constraint_value: Optional[ConstraintValueType] = None
     active_periods: Optional[dict[tuple[int, int], Any]] = None
     slack: bool = False
-    objective: Union[float, en.numeric_expr.NumericExpression] = (
-        0  # this will eventually be a pyomo expression
-    )
+    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
-    import_con_sign = validator("import_constraint_value", allow_reuse=True)(
-        import_cons_check
-    )
-    export_con_sign = validator("export_constraint_value", allow_reuse=True)(
-        export_cons_check
-    )
+    import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
+    export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
 
     @property
     def pos(self):
@@ -116,9 +108,7 @@ class Port(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if (
-            not self.port_name
-        ):  # if no name is provided, give it a default name using the uid
+        if not self.port_name:  # if no name is provided, give it a default name using the uid
             self.port_name = "port_" + str(self.uid)
 
     def set_flow_constraints(
@@ -156,9 +146,7 @@ class Port(BaseModel):
         elif isinstance(initial_val, str):
             self.initial_value_ref = initial_val
         elif hasattr(initial_val, "__iter__"):
-            self.set_initial_value_from_array(
-                initial_val, expansion_periods, time_periods
-            )
+            self.set_initial_value_from_array(initial_val, expansion_periods, time_periods)
 
     def verify_port(self):
         """Used to verify that a port has been set up appropriately"""
@@ -167,65 +155,41 @@ class Port(BaseModel):
 
         if (self.flows is Flows.Import) or (self.flows is Flows.Both):
             if self.import_constraint is FlowConstraint.NA:
-                raise ConfigurationError(
-                    "The Import FlowConstraint cannot be set to a value of NA."
-                )
-            if (
-                self.import_constraint is FlowConstraint.Fixed
-                and self.import_constraint_value is None
-            ):
+                raise ConfigurationError("The Import FlowConstraint cannot be set to a value of NA.")
+            if self.import_constraint is FlowConstraint.Fixed and self.import_constraint_value is None:
                 raise ConfigurationError(
                     "The Import flow constraint value cannot be set to None when an Import constraint exists."
                 )
 
         if (self.flows is Flows.Export) or (self.flows is Flows.Both):
             if self.export_constraint is FlowConstraint.NA:
-                raise ConfigurationError(
-                    "The Export FlowConstraint cannot be set to a value of NA."
-                )
-            if (
-                self.export_constraint is FlowConstraint.Fixed
-                and self.export_constraint_value is None
-            ):
+                raise ConfigurationError("The Export FlowConstraint cannot be set to a value of NA.")
+            if self.export_constraint is FlowConstraint.Fixed and self.export_constraint_value is None:
                 raise ConfigurationError(
                     "The Export flow constraint value cannot be set to None when an Export constraint exists."
                 )
 
         if self.flow_type is OptimisationType.NA:
-            raise ConfigurationError(
-                "The Optimisation Type has to be configured before instantiation."
-            )
+            raise ConfigurationError("The Optimisation Type has to be configured before instantiation.")
 
         if self.units is Units.NA:
-            raise ConfigurationError(
-                "The Units parameter has to be configured before instantiation."
-            )
+            raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def _add_flow_variable_to_model(
-        self, model: EchoConcreteModel, initial_value, domain
-    ):
+    def _add_flow_variable_to_model(self, model: EchoConcreteModel, initial_value, domain):
         setattr(
             model,
             self.port_name,
-            en.Var(
-                model.Expansion, model.Time, initialize=initial_value, domain=domain
-            ),
+            en.Var(model.Expansion, model.Time, initialize=initial_value, domain=domain),
         )
 
     def _add_active_period_constraints_to_model(self, model: EchoConcreteModel):
         port_active_periods = self.active_periods
 
         def on_off_rule1(model: EchoConcreteModel, p, t):
-            return (
-                getattr(model, self.port_name)[p, t]
-                <= port_active_periods[p, t] * model.bigM
-            )
+            return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.bigM
 
         def on_off_rule2(model: EchoConcreteModel, p, t):
-            return (
-                getattr(model, self.port_name)[p, t]
-                >= -port_active_periods[p, t] * model.bigM
-            )
+            return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
 
         setattr(
             model,
@@ -243,9 +207,7 @@ class Port(BaseModel):
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
         # Generate an array of constraints (ie indexed by time and expansion period)
-        import_constraint_dict = generate_array_constraint(
-            self.import_constraint_value, time_periods, exp_periods
-        )
+        import_constraint_dict = generate_array_constraint(self.import_constraint_value, time_periods, exp_periods)
         setattr(
             model,
             self.import_con_val,
@@ -260,9 +222,7 @@ class Port(BaseModel):
         if self.slack:
             self._add_slack_import_constraints_to_model(model=model)
         else:
-            set_var_bounds_from_dict(
-                model=model, var_name=self.port_name, ub=import_constraint_dict, lb=None
-            )
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=import_constraint_dict, lb=None)
 
     def _add_slack_import_constraints_to_model(self, model: EchoConcreteModel):
         """Adds import capacity constraint with slack rules"""
@@ -270,8 +230,7 @@ class Port(BaseModel):
         # Add export capacity slack constraint
         def import_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
-                getattr(model, self.port_name)[p, t]
-                + getattr(model, self.import_slack)[p, t]
+                getattr(model, self.port_name)[p, t] + getattr(model, self.import_slack)[p, t]
                 <= getattr(model, self.import_con_val)[p, t]
             )
 
@@ -294,9 +253,7 @@ class Port(BaseModel):
 
         # Add import capacity slack max constraint
         def import_cap_slack_max_rule(model: EchoConcreteModel, p, t):
-            return getattr(model, self.import_slack)[p, t] >= getattr(
-                model, self.import_slack_max
-            )
+            return getattr(model, self.import_slack)[p, t] >= getattr(model, self.import_slack_max)
 
         con_name = "import_con_max_" + self.port_name
         setattr(
@@ -315,9 +272,7 @@ class Port(BaseModel):
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
         # Generate an array of constraints (ie indexed by time and expansion period)
-        export_constraint_dict = generate_array_constraint(
-            self.export_constraint_value, time_periods, exp_periods
-        )
+        export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
         setattr(
             model,
             self.export_con_val,
@@ -332,9 +287,7 @@ class Port(BaseModel):
         if self.slack:
             self._add_slack_export_constraints_to_model(model=model)
         else:
-            set_var_bounds_from_dict(
-                model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict
-            )
+            set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
 
     def _add_slack_export_constraints_to_model(self, model: EchoConcreteModel):
         """Adds import capacity constraint with slack rules"""
@@ -342,8 +295,7 @@ class Port(BaseModel):
         # Add export capacity slack constraint
         def export_cap_rule_slack(model: EchoConcreteModel, p, t):
             return (
-                getattr(model, self.port_name)[p, t]
-                + getattr(model, self.export_slack)[p, t]
+                getattr(model, self.port_name)[p, t] + getattr(model, self.export_slack)[p, t]
                 >= getattr(model, self.export_con_val)[p, t]
             )
 
@@ -366,9 +318,7 @@ class Port(BaseModel):
 
         # Add export capacity slack max constraint
         def export_cap_slack_max_rule(model: EchoConcreteModel, p, t):
-            return getattr(model, self.export_slack)[p, t] <= getattr(
-                model, self.export_slack_max
-            )
+            return getattr(model, self.export_slack)[p, t] <= getattr(model, self.export_slack_max)
 
         con_name = "export_con_max_" + self.port_name
         setattr(
@@ -382,9 +332,7 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
         )
 
-    def _determine_initial_value(
-        self, time_periods: int, expansion_periods: int, profile: pd.DataFrame
-    ):
+    def _determine_initial_value(self, time_periods: int, expansion_periods: int, profile: pd.DataFrame):
         initial_value_scaling = self.initial_value_scaling or 1
         if self.initial_value_ref is not None:
             initial_val = to_initial_values(
@@ -411,24 +359,16 @@ class Port(BaseModel):
 
         # Flow is always represented with a pyomo variable.
         # This gives us flexibility for converting between a variable and parameter with fix/unfix
-        self._add_flow_variable_to_model(
-            model=model, initial_value=initial_value, domain=domain
-        )
+        self._add_flow_variable_to_model(model=model, initial_value=initial_value, domain=domain)
 
         # Convert flow variable to parameter if requested.
         if self.flow_type is OptimisationType.Parameter:
-            getattr(
-                model, self.port_name
-            ).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
+            getattr(model, self.port_name).fix()  # Fix the variable - equivalent to setting it as an 'en.Param'
 
-        if (
-            self.import_constraint is FlowConstraint.Fixed
-        ):  # only apply import/export constraints to variables
+        if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
             self._add_import_constraints_to_model(model=model)
 
-        if (
-            self.export_constraint is FlowConstraint.Fixed
-        ):  # only apply these constraints to variables
+        if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             self._add_export_constraints_to_model(model=model)
 
         if self.active_periods is not None:
@@ -464,11 +404,7 @@ class Port(BaseModel):
             )
 
             con_rule = self.factory_pos_neg_flows(self.port_name, self.pos, self.neg)
-            con_name = (
-                positive_variable_component
-                + negative_variable_component
-                + self.port_name
-            )
+            con_name = positive_variable_component + negative_variable_component + self.port_name
             setattr(
                 model,
                 con_name,
@@ -476,10 +412,7 @@ class Port(BaseModel):
             )
 
             def only_pos_or_neg_one(model: EchoConcreteModel, p, t):
-                return (
-                    getattr(model, self.pos)[p, t]
-                    <= getattr(model, self.is_pos)[p, t] * model.bigM
-                )
+                return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
 
             setattr(
                 model,
@@ -488,10 +421,7 @@ class Port(BaseModel):
             )
 
             def only_pos_or_neg_two(model: EchoConcreteModel, p, t):
-                return (
-                    getattr(model, self.neg)[p, t]
-                    >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
-                )
+                return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
 
             setattr(
                 model,
@@ -543,9 +473,7 @@ class Port(BaseModel):
         )
         self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
-    def set_active_periods_from_array(
-        self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None
-    ):
+    def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
         """Sets port active periods
         Args:
             array: array, list of active periods as bool values
@@ -572,22 +500,14 @@ class Port(BaseModel):
                 total += -1 * getattr(model, self.import_slack_max) * model.bigM
                 total += (
                     -1
-                    * sum(
-                        getattr(model, self.import_slack)[p, t]
-                        for p in model.Expansion
-                        for t in model.Time
-                    )
+                    * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in model.Time)
                     * model.bigM
                     * 0.1
                 )
             if hasattr(model, self.export_slack) is True:
                 total += getattr(model, self.export_slack_max) * model.bigM
                 total += (
-                    sum(
-                        getattr(model, self.export_slack)[p, t]
-                        for p in model.Expansion
-                        for t in model.Time
-                    )
+                    sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in model.Time)
                     * model.bigM
                     * 0.1
                 )
@@ -635,9 +555,7 @@ class Node(BaseModel):
     node_name: str = ""
     uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
-    objective: Union[float, en.numeric_expr.NumericExpression] = (
-        0  # For adding any node objectives
-    )
+    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
 
     @property
     def inflow(self):
@@ -652,13 +570,9 @@ class Node(BaseModel):
         if self.ports.get(name) is None:
             self.ports[name] = port
         else:
-            raise ConfigurationError(
-                f"Port with name {name} is already defined on node {self.node_name}"
-            )
+            raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
-    def add_ports_from_list(
-        self, names: Iterable[str], port_type: Type[Port], **kwargs
-    ):
+    def add_ports_from_list(self, names: Iterable[str], port_type: Type[Port], **kwargs):
         """Creates a set of ports (using port_type) and adds them to this Node. The ports will be constructed
         using port_type and the supplied kwargs"""
         for name in names:
@@ -690,10 +604,7 @@ class Node(BaseModel):
         pass
 
     def get_port_name_to_port_dict_name_map(self):
-        return {
-            port.port_name: port_dict_name
-            for port_dict_name, port in self.ports.items()
-        }
+        return {port.port_name: port_dict_name for port_dict_name, port in self.ports.items()}
 
 
 class TransformNode(Node):
@@ -708,21 +619,15 @@ class TransformNode(Node):
         """
         self.transformations[transformation_obj.uid] = transformation_obj
 
-    def add_input_output_transformation(
-        self, input_port: Port, output_port: Port, input_weight: float
-    ):
+    def add_input_output_transformation(self, input_port: Port, output_port: Port, input_weight: float):
         lhs_terms = [
             TransformTerm(var=output_port, rule=TransformRule.Both, weight=1),
-            TransformTerm(
-                var=input_port, rule=TransformRule.Both, weight=-input_weight
-            ),
+            TransformTerm(var=input_port, rule=TransformRule.Both, weight=-input_weight),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
 
-    def add_emission_transformation(
-        self, emitting_port: Port, carbon_port: Port, emission_factor: float
-    ):
+    def add_emission_transformation(self, emitting_port: Port, carbon_port: Port, emission_factor: float):
         """Creates an emission transformation and adds to the node.
         Args:
             emitting_port: port object that generates emissions when exporting (when negative)
@@ -731,9 +636,7 @@ class TransformNode(Node):
         """
         lhs_terms = [
             TransformTerm(var=carbon_port, rule=TransformRule.Neg, weight=1),
-            TransformTerm(
-                var=emitting_port, rule=TransformRule.Neg, weight=-emission_factor
-            ),
+            TransformTerm(var=emitting_port, rule=TransformRule.Neg, weight=-emission_factor),
         ]
         t = Transform(lhs_terms=lhs_terms)
         self.add_transformation(t)
@@ -742,9 +645,7 @@ class TransformNode(Node):
         super(TransformNode, self).verify_node()
 
         if not self.transformations:
-            raise ConfigurationError(
-                "Node has Transform rule but Transformation object(s) has not been added to node."
-            )
+            raise ConfigurationError("Node has Transform rule but Transformation object(s) has not been added to node.")
 
     def apply_node_constraints(self, model: EchoConcreteModel):
         def transform(model: EchoConcreteModel, p, t):  # Generic transformation node
@@ -765,16 +666,12 @@ class TransformNode(Node):
                 elif rule is TransformRule.Neg:
                     var_name = term.var.neg
                 else:
-                    raise Exception(
-                        f"Unsupported transform rule {rule} for term {term}"
-                    )
+                    raise Exception(f"Unsupported transform rule {rule} for term {term}")
                 lhs += getattr(model, var_name)[p, t] * weight[p, t]
             return lhs == current_transform.rhs
 
         for current_transform in self.transformations.values():
-            current_transform._add_transform_to_model(
-                model
-            )  # make sure that all variables have been initialised
+            current_transform._add_transform_to_model(model)  # make sure that all variables have been initialised
             con_name = "transformation_con_" + self.node_name
             setattr(
                 model,
@@ -813,13 +710,9 @@ class Edge(BaseModel):
         port2 = self.vertices[1]
 
         if (port1.flows is Flows.Export) and (port2.flows is Flows.Export):
-            raise ConfigurationError(
-                "Port flow constraints do not allow any flow along the edge."
-            )
+            raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
         if (port1.flows is Flows.Import) and (port2.flows is Flows.Import):
-            raise ConfigurationError(
-                "Port flow constraints do not allow any flow along the edge."
-            )
+            raise ConfigurationError("Port flow constraints do not allow any flow along the edge.")
 
     def add_edge_to_model(self, model: EchoConcreteModel):
         """Applies edge constraint: ``port1 = -1 *port2``
@@ -832,11 +725,7 @@ class Edge(BaseModel):
         port2 = self.vertices[1]
 
         def edge_constraint_rule(model: EchoConcreteModel, p, t):
-            return (
-                getattr(model, port1.port_name)[p, t]
-                + getattr(model, port2.port_name)[p, t]
-                == 0
-            )
+            return getattr(model, port1.port_name)[p, t] + getattr(model, port2.port_name)[p, t] == 0
 
         con_name = "edge_con_" + port1.port_name + "_" + port2.port_name
         setattr(
@@ -895,9 +784,7 @@ class Path(BaseModel):
         setattr(
             model,
             self.flow_value,
-            en.Var(
-                model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals
-            ),
+            en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals),
         )
 
     def add_objective(self, model: EchoConcreteModel):
@@ -906,8 +793,7 @@ class Path(BaseModel):
         if self.regularise is True:
             total += (
                 sum(
-                    getattr(model, self.flow_value)[p, t]
-                    * getattr(model, self.flow_value)[p, t]
+                    getattr(model, self.flow_value)[p, t] * getattr(model, self.flow_value)[p, t]
                     for p in model.Expansion
                     for t in model.Time
                 )
@@ -1037,9 +923,7 @@ class OptimisationGraph(BaseModel):
     ):
         """Creates an edge between port1 and port2 and adds it to the graph"""
         if nodes is None and warn is True:
-            print(
-                "No edge nodes defined. Defining edge nodes here speeds up constructing of echo graph."
-            )
+            print("No edge nodes defined. Defining edge nodes here speeds up constructing of echo graph.")
         e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
         self.add_edge(e)
 
@@ -1057,31 +941,20 @@ class OptimisationGraph(BaseModel):
 
         for edge_node_names in self.edge_list():
             # Get the port names from the edge
-            port_names = copy.copy(
-                [
-                    port.port_name
-                    for port in self.get_edge(nodes=edge_node_names).vertices
-                ]
-            )
+            port_names = copy.copy([port.port_name for port in self.get_edge(nodes=edge_node_names).vertices])
 
             # Remove the old edge
             self.delete_edge(edge_node_names)
 
-            port_name_in_dict_1 = self.get_node(
-                edge_node_names[0]
-            ).get_port_name_to_port_dict_name_map()[port_names[0]]
-            port_name_in_dict_2 = self.get_node(
-                edge_node_names[1]
-            ).get_port_name_to_port_dict_name_map()[port_names[1]]
+            port_name_in_dict_1 = self.get_node(edge_node_names[0]).get_port_name_to_port_dict_name_map()[port_names[0]]
+            port_name_in_dict_2 = self.get_node(edge_node_names[1]).get_port_name_to_port_dict_name_map()[port_names[1]]
 
             # Find the ports to build the new edges
             new_port_1 = self.get_node(edge_node_names[0]).ports[port_name_in_dict_1]
             new_port_2 = self.get_node(edge_node_names[1]).ports[port_name_in_dict_2]
 
             # Build the new edges
-            self.connect_ports_and_create_edge(
-                port1=new_port_1, port2=new_port_2, nodes=edge_node_names
-            )
+            self.connect_ports_and_create_edge(port1=new_port_1, port2=new_port_2, nodes=edge_node_names)
 
     def lookup_node_names_from_port(self, port: Port) -> str:
         """Returns node name of the node that a specified port belongs to, if the port belongs to a node."""
@@ -1089,13 +962,9 @@ class OptimisationGraph(BaseModel):
             for p in node.ports.values():
                 if port == p:
                     return node_name
-        raise ConfigurationError(
-            f"Port {port.port_name} is not part of any node, or node has not been added to graph."
-        )
+        raise ConfigurationError(f"Port {port.port_name} is not part of any node, or node has not been added to graph.")
 
-    def get_ports_on_edge_from_nodes(
-        self, node1: str, node2: str
-    ) -> Optional[tuple[Port, Port]]:
+    def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> Optional[tuple[Port, Port]]:
         """Returns the ports that are on the edge from node1 to node2."""
         connecting_edge = self.edge_obj.get((node1, node2))
         if connecting_edge:
@@ -1142,9 +1011,7 @@ class OptimisationGraph(BaseModel):
                 if node in path.vertices[1:-1]:
                     # if the source/sink node appears in the middle of another path, the optimiser will fail
                     # A node can't be both a tellegen node and a source/sink node
-                    raise ConfigurationError(
-                        "Source/sink node is being treated as a tellegen node."
-                    )
+                    raise ConfigurationError("Source/sink node is being treated as a tellegen node.")
 
     def create_path_objects(
         self,
@@ -1165,45 +1032,29 @@ class OptimisationGraph(BaseModel):
         if isinstance(sinks[0], Node):
             sinks = [cast(Node, i).node_name for i in sinks]
 
-        tellegen_node_set = (
-            set()
-        )  # create a set to store list of nodes that are treated as tellegen nodes
-        source_sink_set = set(
-            sources + sinks
-        )  # create a set of nodes that are treated as sinks/sources
+        tellegen_node_set = set()  # create a set to store list of nodes that are treated as tellegen nodes
+        source_sink_set = set(sources + sinks)  # create a set of nodes that are treated as sinks/sources
         for source_node in sources:
             for sink_node in sinks:
                 if source_node is not sink_node:
                     # Find all the paths, just using the node names
                     simple_paths = nx.all_simple_paths(graph, source_node, sink_node)
-                    simple_edges = nx.all_simple_edge_paths(
-                        graph, source_node, sink_node
-                    )
+                    simple_edges = nx.all_simple_edge_paths(graph, source_node, sink_node)
                     for vertex_list, edge_list in zip(simple_paths, simple_edges):
-                        tellegen_node_set.update(
-                            vertex_list[1:-1]
-                        )  # update set of tellegen nodes
-                        p = self._create_path_object(
-                            vertex_list, edge_list, regularise, path_unit
-                        )  # create path
+                        tellegen_node_set.update(vertex_list[1:-1])  # update set of tellegen nodes
+                        p = self._create_path_object(vertex_list, edge_list, regularise, path_unit)  # create path
                         all_paths[tuple(vertex_list)] = p
 
-        intersection = source_sink_set.intersection(
-            tellegen_node_set
-        )  # check overlap of tellegen and src/sink nodes
+        intersection = source_sink_set.intersection(tellegen_node_set)  # check overlap of tellegen and src/sink nodes
         validate(
             len(intersection) == 0,
             f"Nodes '{intersection}' are being treated as both tellegen and source/sink.",
         )
         self.paths = all_paths
 
-    def _create_path_object(
-        self, vertex_list: list, edge_list: list, regularise: bool, path_unit: Units
-    ):
+    def _create_path_object(self, vertex_list: list, edge_list: list, regularise: bool, path_unit: Units):
         """Creates a path object"""
-        p = Path(
-            vertices=vertex_list, regularise=regularise, units=path_unit
-        )  # Create path object
+        p = Path(vertices=vertex_list, regularise=regularise, units=path_unit)  # Create path object
         for edge in edge_list:
             edge_ports = self.get_ports_on_edge_from_nodes(edge[0], edge[1])
             validate(
@@ -1219,26 +1070,16 @@ class OptimisationGraph(BaseModel):
         def path_flow_rule(model: EchoConcreteModel, p, t):
             a = 0
             for path in self.paths.values():  # Iterate through all paths in the model
-                if (
-                    path.vertices[0] is current_node_name
-                ):  # If the path starts at the current node
+                if path.vertices[0] is current_node_name:  # If the path starts at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
-                if (
-                    path.vertices[-1] is current_node_name
-                ):  # If the path ends at the current node
-                    a -= getattr(model, path.flow_value)[
-                        p, t
-                    ]  # Subtract the flow value
-            return (
-                a == getattr(model, current_port.port_name)[p, t] * -1
-            )  # Flows out - flows in = -1 * port
+                if path.vertices[-1] is current_node_name:  # If the path ends at the current node
+                    a -= getattr(model, path.flow_value)[p, t]  # Subtract the flow value
+            return a == getattr(model, current_port.port_name)[p, t] * -1  # Flows out - flows in = -1 * port
 
         def only_inflow_or_outflow1(model: EchoConcreteModel, p, t):
             a = 0
             for path in self.paths.values():
-                if (
-                    path.vertices[-1] is current_node_name
-                ):  # If the path ends at the current node
+                if path.vertices[-1] is current_node_name:  # If the path ends at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
                 a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM
@@ -1247,37 +1088,23 @@ class OptimisationGraph(BaseModel):
         def only_inflow_or_outflow2(model: EchoConcreteModel, p, t):
             a = 0
             for path in self.paths.values():
-                if (
-                    path.vertices[0] is current_node_name
-                ):  # If the path starts at the node
+                if path.vertices[0] is current_node_name:  # If the path starts at the node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
                 a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.bigM
             )  # Outgoing paths can only be non-zero if inflow=0
 
-        sources_and_sinks = (
-            self.get_sources_and_sinks()
-        )  # returns concatenated list of all source/sink nodes
-        for (
-            current_node_name
-        ) in sources_and_sinks:  # Iterate through the source/sink nodes
+        sources_and_sinks = self.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
+        for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
             current_node_obj = self.node_obj[current_node_name]  # get the node obj
             for (
                 path_vertices,
                 path_obj,
             ) in self.paths.items():  # Iterate through all paths
-                if (
-                    current_node_name is path_vertices[0]
-                ):  # If the path starts at the current node
-                    current_port = path_obj.edge_ports[0][
-                        0
-                    ]  # Pick up the first port on the path
-                elif (
-                    current_node_name is path_vertices[-1]
-                ):  # If the path ends at the current node
-                    current_port = path_obj.edge_ports[-1][
-                        -1
-                    ]  # Pick up the last port on the path
+                if current_node_name is path_vertices[0]:  # If the path starts at the current node
+                    current_port = path_obj.edge_ports[0][0]  # Pick up the first port on the path
+                elif current_node_name is path_vertices[-1]:  # If the path ends at the current node
+                    current_port = path_obj.edge_ports[-1][-1]  # Pick up the last port on the path
 
             setattr(
                 model,
@@ -1295,17 +1122,13 @@ class OptimisationGraph(BaseModel):
             setattr(
                 model,
                 f"path_flow_con2_{current_node_name}",
-                en.Constraint(
-                    model.Expansion, model.Time, rule=only_inflow_or_outflow1
-                ),
+                en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow1),
             )
 
             setattr(
                 model,
                 f"path_flow_con3_{current_node_name}",
-                en.Constraint(
-                    model.Expansion, model.Time, rule=only_inflow_or_outflow2
-                ),
+                en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow2),
             )
 
     def draw_on_axes(self, axes, with_labels=False, labels=None, **kwargs):
@@ -1374,9 +1197,7 @@ class OptimisationGraph(BaseModel):
     def verify_graph(self):
         """Checks that the graph is connected (all nodes have at least one edge), and warns if there
         are unconnected ports"""
-        validate(
-            nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected."
-        )
+        validate(nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected.")
         # Check graph for ports that are not connected
         ports_on_edges = self.get_port_names_from_nodes()
         ports_on_nodes = self.get_port_names_from_edges()
@@ -1395,9 +1216,7 @@ class OptimisationGraph(BaseModel):
         if system.has_edge(node1, node2):
             system.remove_edge(node1, node2)
         else:
-            raise ValueError(
-                'No edge exists between nodes "{}" and "{}"'.format(node1, node2)
-            )
+            raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
 
         # Get a list of the two sets of nodes
         y = nx.connected_components(system)
@@ -1431,12 +1250,8 @@ class OptimisationGraph(BaseModel):
         for edge in self.edge_list():
             if node_name in edge:
                 found_edge = edge
-                edge_node_1_name = self.lookup_node_names_from_port(
-                    self.get_edge(edge).vertices[0]
-                )
-                edge_node_2_name = self.lookup_node_names_from_port(
-                    self.get_edge(edge).vertices[1]
-                )
+                edge_node_1_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[0])
+                edge_node_2_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[1])
                 edge_node_1_port_name = self.get_edge(edge).vertices[0].port_name
                 edge_node_2_port_name = self.get_edge(edge).vertices[1].port_name
 
@@ -1457,12 +1272,8 @@ class OptimisationGraph(BaseModel):
             # Get the correct port objects to build a new edge
             node1 = self.node_obj[edge_node_1_name]
             node2 = self.node_obj[edge_node_2_name]
-            edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[
-                edge_node_1_port_name
-            ]
-            edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[
-                edge_node_2_port_name
-            ]
+            edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
+            edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
             port1 = node1.ports[edge_node_1_port_dict_name]
             port2 = node2.ports[edge_node_2_port_dict_name]
 
