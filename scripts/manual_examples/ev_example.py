@@ -15,7 +15,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import OptimisationGraph
-from echo.models.electrical import EV
+from echo.models.electrical import EVV0G, EVV1G, EVV2G, EVWithProfile
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise
@@ -34,17 +34,17 @@ grid = FlexElectricalNode(port_name="grid")
 
 # Create a connection point (zero sum) node with ports for our three EVs
 connection_point = TellegenNode()
-connection_point.add_ports_from_list(["grid", "ev_v0g", "ev_v1g", "ev_v2g"], FlexPort, units=Units.KW)
+connection_point.add_ports_from_list(
+    ["grid", "ev_v0g", "ev_v1g", "ev_v2g", "ev_with_profile"], FlexPort, units=Units.KW
+)
 
 # Create V0G vehicle
+ev_v0g_available = [1] * 24 + [0] * 24  # bool when at charger
+ev_v0g_usage = [0.0] * 24 + [5] * 24  # kw average during use
 
-available = [1] * 24 + [0] * 24  # bool when at charger
-usage = [0.0] * 24 + [5] * 24  # kw average during use
-
-ev_v0g = EV(
-    charge_mode="V0G",
-    available=available,
-    usage=usage,
+ev_v0g = EVV0G(
+    available=ev_v0g_available,
+    usage=ev_v0g_usage,
     connection_port_name="cp",
     max_capacity=40,
     depth_of_discharge_limit=0,
@@ -61,14 +61,12 @@ ev_v0g = EV(
 )
 
 # Create V1G vehicle
+ev_v1g_available = np.array([1] * 24 + [0] * 24)  # bool when at charger
+ev_v1g_usage = np.array([0.0] * 24 + [5] * 24)  # kw average during use
 
-available = np.array([1] * 24 + [0] * 24)  # bool when at charger
-usage = np.array([0.0] * 24 + [5] * 24)  # kw average during use
-
-ev_v1g = EV(
-    charge_mode="V1G",
-    available=available,
-    usage=usage,
+ev_v1g = EVV1G(
+    available=ev_v1g_available,
+    usage=ev_v1g_usage,
     connection_port_name="cp",
     max_capacity=40,
     depth_of_discharge_limit=0,
@@ -85,14 +83,12 @@ ev_v1g = EV(
 )
 
 # Create a V2G vehicle
+ev_v2g_available = np.array([1] * 24 + [0] * 24)  # bool when at charger
+ev_v2g_usage = np.array([0.0] * 24 + [2] * 24)  # kw average during use
 
-available = np.array([1] * 24 + [0] * 24)  # bool when at charger
-usage = np.array([0.0] * 24 + [2] * 24)  # kw average during use
-
-ev_v2g = EV(
-    charge_mode="V2G",
-    available=available,
-    usage=usage,
+ev_v2g = EVV2G(
+    available=ev_v2g_available,
+    usage=ev_v2g_usage,
     connection_port_name="cp",
     max_capacity=40,
     depth_of_discharge_limit=0,
@@ -105,16 +101,34 @@ ev_v2g = EV(
     soc_conserv_cost=1.0,
     interval_duration=interval_duration,
     tod_charging=False,
-    trip_slack=True,
+    trip_slack=False,
+    set_stateful_attrs_at_init=True,
 )
 
-system.add_node_obj([grid, ev_v0g, ev_v1g, ev_v2g, connection_point])
+# Create a EVWithProfile
+ev_with_profile = EVWithProfile(
+    port_name="cp",
+    charging_power_limit=10,
+    set_stateful_attrs_at_init=True,
+    demand=[5] * 24 + [0] * 12 + [9] * 12,
+)
+
+system.add_node_obj([grid, ev_v0g, ev_v1g, ev_v2g, ev_with_profile, connection_point])
 
 # Create edge objects and add to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev_v0g.ports["cp"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_v1g"], ev_v1g.ports["cp"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_v2g"], ev_v2g.ports["cp"])
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v0g"], ev_v0g.ports["cp"]
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v1g"], ev_v1g.ports["cp"]
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v2g"], ev_v2g.ports["cp"]
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_with_profile"], ev_with_profile.ports["cp"]
+)
 
 ############################ ----------------------- ########################################
 
