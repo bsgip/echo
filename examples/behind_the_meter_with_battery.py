@@ -1,5 +1,3 @@
-from __future__ import division
-
 import time
 
 import matplotlib
@@ -69,7 +67,8 @@ test_pv = -1 * 2 * data_df["solar"].to_numpy()
 
 # Tariffs are in $ / kwh
 import_tariff_array = np.array(
-    ([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12) * duration_multiplication
+    ([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12)
+    * duration_multiplication
 )
 export_tariff_array = np.array(([0.0] * 96 * duration_multiplication))
 
@@ -103,7 +102,9 @@ connection_point.add_ports_from_list(
 # set flow constraints for the port that connects to the grid,
 # such that         max_export <= 0 <= max_import
 # set slack=True to allow the constraints to be violated if the optimisation problem would be infeasible otherwise
-connection_point.ports["grid"].set_flow_constraints(max_import=15, max_export=-15, slack=True)
+connection_point.ports["grid"].set_flow_constraints(
+    max_import=15, max_export=-15, slack=True
+)
 # todo: value of slack
 
 # Create a load
@@ -157,9 +158,15 @@ network = OptimisationGraph()
 network.add_node_obj([grid, battery, load, solar, connection_point, inverter])
 
 # Add edges to graph (i.e. connect up the graph structure how we want it)
-network.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-network.connect_ports_and_create_edge(connection_point.ports["load"], load.ports["load"])
-network.connect_ports_and_create_edge(connection_point.ports["inv"], inverter.ports["inv"])
+network.connect_ports_and_create_edge(
+    grid.ports["grid"], connection_point.ports["grid"]
+)
+network.connect_ports_and_create_edge(
+    connection_point.ports["load"], load.ports["load"]
+)
+network.connect_ports_and_create_edge(
+    connection_point.ports["inv"], inverter.ports["inv"]
+)
 network.connect_ports_and_create_edge(inverter.ports["bess"], battery.ports["bess"])
 network.connect_ports_and_create_edge(inverter.ports["pv"], solar.ports["pv"])
 
@@ -187,7 +194,9 @@ export_cost = ExportTariff(
     expansion_periods=expansion_periods,
 )
 
-objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost])
+objective_set = ObjectiveSet(
+    objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost]
+)
 
 # ----------------------------------------------------------------------------------------------------------------------
 #   6. Perform the optimisation
@@ -215,7 +224,9 @@ log_infeasible_constraints(optimise_results.model)
 
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)
-optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
+optimised_connection_point_load = optimise_results.values(
+    connection_point.ports["grid"].port_name, 0
+)
 
 # Set up seaborn (plotting) style
 sns.set_style(

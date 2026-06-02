@@ -1,7 +1,6 @@
-from __future__ import division
-
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
@@ -33,213 +32,18 @@ sns.set_style(
 # Define an Example Optimisation Problem
 
 # The load and pv arrays below are in average kw consumed per 15 minutes
-test_load = np.array(
-    [
-        2.13,
-        2.09,
-        2.3,
-        2.11,
-        2.2,
-        2.23,
-        2.2,
-        2.15,
-        2.02,
-        2.19,
-        2.19,
-        2.19,
-        2.12,
-        2.15,
-        2.25,
-        2.12,
-        2.21,
-        2.16,
-        2.26,
-        2.13,
-        2.08,
-        2.15,
-        2.42,
-        2.02,
-        2.3,
-        2.26,
-        2.35,
-        2.55,
-        3.23,
-        2.98,
-        3.49,
-        3.5,
-        3.12,
-        3.52,
-        3.94,
-        3.55,
-        3.99,
-        3.71,
-        3.38,
-        3.76,
-        3.71,
-        3.78,
-        3.29,
-        3.65,
-        3.61,
-        3.75,
-        3.38,
-        3.66,
-        3.56,
-        3.69,
-        3.3,
-        3.61,
-        3.71,
-        3.82,
-        3.17,
-        3.69,
-        3.74,
-        3.86,
-        3.57,
-        3.55,
-        3.75,
-        3.6,
-        3.67,
-        3.48,
-        3.51,
-        3.46,
-        3.19,
-        3.38,
-        3.19,
-        3.38,
-        3.04,
-        3.12,
-        2.91,
-        3.11,
-        3.13,
-        2.77,
-        2.24,
-        2.54,
-        2.24,
-        2.24,
-        2.09,
-        2.33,
-        2.17,
-        2.16,
-        1.97,
-        2.16,
-        2.21,
-        2.18,
-        2.01,
-        2.16,
-        2.19,
-        2.11,
-        2.17,
-        2.13,
-        2.05,
-        2.19,
-    ]
-)
+data_df = pd.read_csv("examples/data.csv")
+test_load = data_df["load"].to_numpy()
 
-test_pv = 2 * np.array(
-    [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.05,
-        0.23,
-        0.52,
-        0.74,
-        0.71,
-        0.63,
-        0.68,
-        0.97,
-        0.01,
-        0.52,
-        0.83,
-        0.83,
-        0.79,
-        1.22,
-        1.36,
-        1.27,
-        1.42,
-        1.97,
-        2.56,
-        2.91,
-        3.24,
-        3.8,
-        4.3,
-        4.62,
-        4.84,
-        4.6,
-        4.17,
-        3.77,
-        3.76,
-        3.38,
-        2.64,
-        1.96,
-        1.76,
-        1.85,
-        2.4,
-        3.82,
-        5.13,
-        4.97,
-        5.02,
-        5.43,
-        5.32,
-        3.56,
-        1.75,
-        1.43,
-        1.65,
-        1.69,
-        2.3,
-        2.71,
-        2.41,
-        2.63,
-        2.6,
-        1.9,
-        0.78,
-        0.13,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    ]
-)
-test_pv *= -1  # convert solar generation to negative to match convention.
+# convert solar generation to negative to match convention.
+test_pv = -1 * 2 * data_df["solar"].to_numpy()
 
 aggregate_load = test_load + test_pv
 
 # Tariffs are in $ / kwh
-remote_energy_tariff = np.array(([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12))
+remote_energy_tariff = np.array(
+    ([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12)
+)
 remote_transport_import = np.array([0.15] * 96)
 local_energy_tariff = remote_energy_tariff
 # local_energy_tariff = np.array(([0.1] * 28 + [0.2] * 8 + [0.0] * 32 + [0.2] * 16 + [0.1] * 12))
@@ -248,7 +52,9 @@ local_transport_import = np.array([0.05] * 96)
 remote_transport_export = np.array([0.0] * 96)
 local_transport_export = np.array([0.0] * 96)
 
-import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
+import_tariff_array = np.array(
+    ([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12)
+)
 export_tariff_array = np.array(([0.0] * 96))
 
 # Optimise this Example
@@ -269,7 +75,9 @@ grid = Node()
 grid.add_port("grid", FlexPort(units=Units.KW))
 
 connection_point = TellegenNode()
-connection_point.add_ports_from_list(["load", "bess", "pv", "grid"], FlexPort, units=Units.KW)
+connection_point.add_ports_from_list(
+    ["load", "bess", "pv", "grid"], FlexPort, units=Units.KW
+)
 
 load = Node()
 l1 = FixedElectricalPort()
@@ -294,7 +102,9 @@ system.add_node_obj([grid, battery, load, connection_point])
 # Add edges to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
 system.connect_ports_and_create_edge(connection_point.ports["load"], load.ports["load"])
-system.connect_ports_and_create_edge(connection_point.ports["bess"], battery.ports["bess"])
+system.connect_ports_and_create_edge(
+    connection_point.ports["bess"], battery.ports["bess"]
+)
 
 # Generate path objects from graph representation
 system.create_path_objects(sources=[grid, battery, load], sinks=[grid, battery, load])
@@ -364,7 +174,9 @@ rnetwork = [
 
 throughput_cost = ThroughputCost(component=b, rate=0.000001)
 
-objective_set = ObjectiveSet(objective_list=cws + cstorage + rnetwork + [throughput_cost])
+objective_set = ObjectiveSet(
+    objective_list=cws + cstorage + rnetwork + [throughput_cost]
+)
 
 # Invoke the optimiser and optimise
 optimise_results = optimise(
@@ -386,7 +198,9 @@ log_infeasible_constraints(optimise_results.model)
 
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)
-optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
+optimised_connection_point_load = optimise_results.values(
+    connection_point.ports["grid"].port_name, 0
+)
 
 optimise_results.get_single_objective_total_value(rnetwork[0])
 optimise_results.get_single_objective_total_value(throughput_cost)

@@ -1,5 +1,3 @@
-from __future__ import division
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -44,7 +42,9 @@ test_pv = -1 * 2 * data_df["solar"].to_numpy()
 aggregate_load = test_load + test_pv
 
 # Tariffs are in $ / kwh
-remote_energy_tariff = np.array(([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12))
+remote_energy_tariff = np.array(
+    ([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12)
+)
 remote_transport_import = np.array([0.15] * 96)
 local_energy_tariff = remote_energy_tariff
 # local_energy_tariff = np.array(([0.1] * 28 + [0.2] * 8 + [0.0] * 32 + [0.2] * 16 + [0.1] * 12))
@@ -53,7 +53,9 @@ local_transport_import = np.array([0.05] * 96)
 remote_transport_export = np.array([0.0] * 96)
 local_transport_export = np.array([0.0] * 96)
 
-import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
+import_tariff_array = np.array(
+    ([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12)
+)
 export_tariff_array = np.array(([0.0] * 96))
 
 # Optimise this Example
@@ -74,7 +76,9 @@ grid = Node(node_name="grid")
 grid.add_port("grid", FlexPort(units=Units.KW))
 
 connection_point = TellegenNode(node_name="cp")
-connection_point.add_ports_from_list(["load", "bess", "pv", "grid"], FlexPort, units=Units.KW)
+connection_point.add_ports_from_list(
+    ["load", "bess", "pv", "grid"], FlexPort, units=Units.KW
+)
 
 load = Node(node_name="load")
 l1 = FixedElectricalPort()
@@ -138,7 +142,9 @@ log_infeasible_constraints(optimise_results.model)
 
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)
-optimised_connection_point_load = optimise_results.values(connection_point.ports["grid"].port_name, 0)
+optimised_connection_point_load = optimise_results.values(
+    connection_point.ports["grid"].port_name, 0
+)
 
 optimise_results.get_single_objective_total_value(throughput_cost)
 
