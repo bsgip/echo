@@ -72,9 +72,7 @@ system = OptimisationGraph()
 
 # Create assets
 connection_point = TellegenNode(node_name="cp")  # create the connection point
-connection_point.add_ports_from_list(
-    ["load", "inv", "diesel_gen"], FlexPort, units=Units.KW
-)
+connection_point.add_ports_from_list(["load", "inv", "diesel_gen"], FlexPort, units=Units.KW)
 
 load = Node(node_name="load")  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
@@ -91,9 +89,7 @@ inverter = Inverter(
     dc_ac_efficiency=1,
     ac_dc_efficiency=1,
 )
-inverter.add_ac_port(
-    "inv"
-)  # add a port that is used to connect back to the connection_point
+inverter.add_ac_port("inv")  # add a port that is used to connect back to the connection_point
 inverter.add_dc_port("bess")  # add a port to connect to the battery
 inverter.add_dc_port("pv")  # add a port to connect to the pv
 
@@ -131,14 +127,10 @@ system.add_node_obj([battery, load, solar, connection_point, inverter, diesel_ge
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 # system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
 system.connect_ports_and_create_edge(connection_point.ports["load"], load.ports["load"])
-system.connect_ports_and_create_edge(
-    connection_point.ports["inv"], inverter.ports["inv"]
-)
+system.connect_ports_and_create_edge(connection_point.ports["inv"], inverter.ports["inv"])
 system.connect_ports_and_create_edge(inverter.ports["bess"], battery.ports["bess"])
 system.connect_ports_and_create_edge(inverter.ports["pv"], solar.ports["pv"])
-system.connect_ports_and_create_edge(
-    diesel_gen.ports["output"], connection_point.ports["diesel_gen"]
-)
+system.connect_ports_and_create_edge(diesel_gen.ports["output"], connection_point.ports["diesel_gen"])
 
 # Create objectives/tariffs
 diesel_cost = ImportTariff(
@@ -169,9 +161,7 @@ log_infeasible_constraints(optimise_results.model)
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)
 # grid_supply = optimiser.values(connection_point.ports['grid'].port_name, 0)
-diesel_power = optimise_results.values(
-    connection_point.ports["diesel_gen"].port_name, 0
-)
+diesel_power = optimise_results.values(connection_point.ports["diesel_gen"].port_name, 0)
 curtailed_solar = optimise_results.values(solar.ports["pv"].port_name, 0)
 diesel_use_lps = optimise_results.values(diesel_gen.ports["input"].port_name, 0)
 # optimised_connection_point_load = optimise_results.values(connection_point.ports['grid'].port_name, 0)

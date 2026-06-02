@@ -25,9 +25,7 @@ from echo.validators import ArrayType
 
 
 class Tariff(Objective):
-    tariff_array: Union[
-        ArrayType, list
-    ]  # tariff array prices should always be positive
+    tariff_array: Union[ArrayType, list]  # tariff array prices should always be positive
     expansion_periods: Optional[PositiveInt] = 1
 
     @staticmethod
@@ -50,9 +48,7 @@ class ImportTariff(Tariff):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.import_tariff_dict = self.return_tariff_dict(
-            self.tariff_array, self.expansion_periods
-        )
+        self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
         setattr(
@@ -90,9 +86,7 @@ class ExportTariff(Tariff):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.export_tariff_dict = self.return_tariff_dict(
-            self.tariff_array, self.expansion_periods
-        )
+        self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
         setattr(
@@ -153,9 +147,7 @@ class BlockTariff(Objective):
 
     def _get_active_periods(
         self, time_periods: int
-    ) -> dict[
-        tuple[int, int, int], np.ndarray
-    ]:  # todo only works for single expansion period
+    ) -> dict[tuple[int, int, int], np.ndarray]:  # todo only works for single expansion period
         """
         Creates a dict for initialising the window_active pyomo var
         Args:
@@ -174,22 +166,14 @@ class BlockTariff(Objective):
             )
         window_bool = np.ones(time_periods)
         num_resets = len(self.reset_periods)
-        blank = np.zeros(
-            [num_resets, time_periods]
-        )  # Create template blank array that we will populate with 1s
+        blank = np.zeros([num_resets, time_periods])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
         for i in range(num_resets):
-            blank[i, index : index + self.reset_periods[i]] = (
-                1.0  # put the right number of 1s in # noqa E203
-            )
+            blank[i, index : index + self.reset_periods[i]] = 1.0  # put the right number of 1s in # noqa E203
             index += self.reset_periods[i]
-            new_window = (
-                np.array(window_bool) * blank[i]
-            )  # use the blank array as a filter on the window bool array
+            new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(time_periods):
-                initial_window_val[(0, i, t)] = new_window[
-                    t
-                ]  # get the array into a dict with the right keys
+                initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
         return initial_window_val
 
 
@@ -203,9 +187,7 @@ class BlockImportTariff(BlockTariff):
         for i in range(self.num_price_bands):
             # Create a variable for each price band, and bound it
             var_name = self.get_block_var_name(i)
-            setattr(
-                model, var_name, en.Var(self.reset_index, domain=en.NonNegativeReals)
-            )
+            setattr(model, var_name, en.Var(self.reset_index, domain=en.NonNegativeReals))
             if i == 0:
                 getattr(model, var_name).setub(self.blocks[i])
             elif i != self.num_price_bands - 1:
@@ -215,9 +197,7 @@ class BlockImportTariff(BlockTariff):
         setattr(
             model,
             self.window_active,
-            en.Param(
-                model.Expansion, self.reset_index, model.Time, initialize=initial_val
-            ),
+            en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val),
         )
 
     def apply_constraints(self, model: EchoConcreteModel):
@@ -227,8 +207,7 @@ class BlockImportTariff(BlockTariff):
                 var = self.get_block_var_name(i)
                 all_blocks += getattr(model, var)[r]
             total_energy = sum(
-                getattr(model, self.component.pos)[p, t]
-                * getattr(model, self.window_active)[p, r, t]
+                getattr(model, self.component.pos)[p, t] * getattr(model, self.window_active)[p, r, t]
                 for p in model.Expansion
                 for t in model.Time
             )
@@ -241,9 +220,7 @@ class BlockImportTariff(BlockTariff):
     def objective_expr(self, model: EchoConcreteModel):
         total = 0
         for i in range(self.num_price_bands):
-            total += self.rates[i] * sum(
-                getattr(model, self.get_block_var_name(i))[r] for r in self.reset_index
-            )
+            total += self.rates[i] * sum(getattr(model, self.get_block_var_name(i))[r] for r in self.reset_index)
         return total
 
 
@@ -259,9 +236,7 @@ class PathTariff(Tariff):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.path_tariff_dict = self.return_tariff_dict(
-            self.tariff_array, self.expansion_periods
-        )
+        self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
         setattr(
@@ -296,10 +271,7 @@ class ThroughputCost(Objective):
     def objective_expr(self, model: EchoConcreteModel):
         obj = (
             sum(
-                (
-                    getattr(model, self.component.pos)[p, t]
-                    - getattr(model, self.component.neg)[p, t]
-                )
+                (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t])
                 * model.discount_rates[p]
                 for p in model.Expansion
                 for t in model.Time
@@ -349,17 +321,9 @@ class TimePeriod(EchoBaseModel):
             # Weekends are 5, 6
             allowed_days_of_week_end = 6
         if Day.holiday in self.day_type:
-            raise NotImplementedError(
-                "Public holidays not currently supported in optimisation"
-            )
+            raise NotImplementedError("Public holidays not currently supported in optimisation")
         return (
-            (
-                df.index.isin(
-                    df.between_time(
-                        self.start_time, self.end_time, inclusive="left"
-                    ).index
-                )
-            )
+            (df.index.isin(df.between_time(self.start_time, self.end_time, inclusive="left").index))
             & (df.index.weekday <= allowed_days_of_week_end)
             & (df.index.weekday >= allowed_days_of_week_start)
         ).astype(int)
@@ -415,9 +379,7 @@ class Window(EchoBaseModel):
         for i in range(len(v)):
             for j in range(i + 1, len(v)):
                 if v[i].overlaps(v[j]):
-                    raise ValueError(
-                        f"TimePeriod {v[i]} overlaps with TimePeriod {v[j]}"
-                    )
+                    raise ValueError(f"TimePeriod {v[i]} overlaps with TimePeriod {v[j]}")
         return v
 
     def to_bool_periods(self, df: pd.DataFrame) -> np.ndarray:
@@ -425,17 +387,13 @@ class Window(EchoBaseModel):
         if isinstance(df, dict):
             df = pd.DataFrame(df)
             df.index = pd.to_datetime(df.index)
-        time_period_stack = np.column_stack(
-            [period.to_bool(df) for period in self.time_periods]
-        )
+        time_period_stack = np.column_stack([period.to_bool(df) for period in self.time_periods])
         return time_period_stack.any(axis=1).astype(int)
 
     def get_reset_period_array(self, df: pd.DataFrame) -> list:
         """Returns an array where each value is the number of time intervals within which the demand charge is
         calculated."""
-        interval_duration = (
-            df.index[1] - df.index[0]
-        ).seconds // 60  # get the interval duration in minutes
+        interval_duration = (df.index[1] - df.index[0]).seconds // 60  # get the interval duration in minutes
         total_intervals = len(df)
 
         def _find_rollover(df, interval_duration):
@@ -449,9 +407,7 @@ class Window(EchoBaseModel):
                 total = 1
 
                 for i in diff_array:
-                    if (
-                        i != 0
-                    ):  # this indicates we have rolled over - add our total # intervals
+                    if i != 0:  # this indicates we have rolled over - add our total # intervals
                         _reset_periods.append(total)
                         # reset the total
                         total = 1
@@ -558,9 +514,7 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @staticmethod
-    def _get_active_periods(
-        window_bool, reset_periods
-    ):  # todo only works for single expansion period
+    def _get_active_periods(window_bool, reset_periods):  # todo only works for single expansion period
         """
         Creates a dict for initialising the window_active pyomo var
         Args:
@@ -572,22 +526,14 @@ class DemandCharge(EchoBaseModel):
         initial_window_val = {}
         n_intervals = len(window_bool)
         num_resets = len(reset_periods)
-        blank = np.zeros(
-            [num_resets, n_intervals]
-        )  # Create template blank array that we will populate with 1s
+        blank = np.zeros([num_resets, n_intervals])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
         for i in range(num_resets):
-            blank[i, index : index + reset_periods[i] - 1] = (
-                1.0  # put the right number of 1s in # noqa E203
-            )
+            blank[i, index : index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in # noqa E203
             index += reset_periods[i] - 1
-            new_window = (
-                np.array(window_bool) * blank[i]
-            )  # use the blank array as a filter on the window bool array
+            new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(n_intervals):
-                initial_window_val[(0, i, t)] = new_window[
-                    t
-                ]  # get the array into a dict with the right keys
+                initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
         return initial_window_val
 
     def create_params(self, model: EchoConcreteModel, df):
@@ -622,15 +568,9 @@ class DemandCharge(EchoBaseModel):
     def objective_expr(self, model: EchoConcreteModel):
         objective = 0
         if self.import_demand:
-            objective += sum(
-                getattr(model, self.max_demand_val)[r] * self.rate
-                for r in self.reset_index
-            )
+            objective += sum(getattr(model, self.max_demand_val)[r] * self.rate for r in self.reset_index)
         elif self.export_demand:
-            objective += sum(
-                getattr(model, self.max_demand_val)[r] * self.rate * -1
-                for r in self.reset_index
-            )
+            objective += sum(getattr(model, self.max_demand_val)[r] * self.rate * -1 for r in self.reset_index)
         return objective
 
     def get_objective_total(self, model: EchoConcreteModel):
@@ -654,9 +594,7 @@ class DemandTariffObjective(Objective):
                 if prev_window.size > 0:
                     comparison = np.array(prev_window) * np.array(dc.window_array)
                     if sum(comparison) > 0:
-                        raise ValueError(
-                            f"Overlapping time periods between {prev_dc} and {dc}"
-                        )
+                        raise ValueError(f"Overlapping time periods between {prev_dc} and {dc}")
                     prev_window = np.array(prev_window) + np.array(dc.window_array)
                 else:
                     prev_dc = dc

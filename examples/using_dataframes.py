@@ -41,9 +41,7 @@ solar.add_port("pv", pv)
 # Populate graph with assets (nodes)
 system.add_nodes_from([grid, load, connection_point, solar])
 
-system.connect_ports_and_create_edge(
-    grid.get_port("grid"), connection_point.get_port("grid")
-)
+system.connect_ports_and_create_edge(grid.get_port("grid"), connection_point.get_port("grid"))
 system.connect_ports_and_create_edge(pv, connection_point.get_port("pv"))
 system.connect_ports_and_create_edge(l1, connection_point.get_port("load"))
 
