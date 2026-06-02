@@ -58,7 +58,7 @@ ev_v0g = EVV0G(
     soc_conserv_cost=0.0,
     interval_duration=interval_duration,
     tod_charging=None,
-    trip_slack=True,
+    trip_slack=False,
 )
 
 ev_v0g_with_trip_slack = EVV0G(
@@ -99,7 +99,7 @@ ev_v1g = EVV1G(
     soc_conserv_cost=0.0,
     interval_duration=interval_duration,
     tod_charging=False,
-    trip_slack=True,
+    trip_slack=False,
 )
 
 # Create a V2G vehicle
