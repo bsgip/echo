@@ -22,7 +22,7 @@ from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
 
-## Set up hyper params
+# Set up simulation parameters
 time_periods = 48  # number of time periods to run the optimisation for
 interval_duration = 30  # each time period is 30 mins long
 expansion_periods = 1  # not yet implemented leave as 1
@@ -153,15 +153,22 @@ system.add_node_obj(
 
 # Create edge objects and add to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev_v0g.ports["cp"])
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v0g"], ev_v0g.ports["cp"]
+)
 system.connect_ports_and_create_edge(
     connection_point.ports["ev_v0g_with_trip_slack"], ev_v0g_with_trip_slack.ports["cp"]
 )
-system.connect_ports_and_create_edge(connection_point.ports["ev_v1g"], ev_v1g.ports["cp"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_v2g"], ev_v2g.ports["cp"])
-system.connect_ports_and_create_edge(connection_point.ports["ev_with_profile"], ev_with_profile.ports["cp"])
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v1g"], ev_v1g.ports["cp"]
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_v2g"], ev_v2g.ports["cp"]
+)
+system.connect_ports_and_create_edge(
+    connection_point.ports["ev_with_profile"], ev_with_profile.ports["cp"]
+)
 
-############################ ----------------------- ########################################
 # Define a minimise import cost objective
 import_tariff = [10, 5] * 24
 minimise_import_cost = ImportTariff(
@@ -177,7 +184,9 @@ minimise_throughput_cost = ThroughputCost(
 )
 
 # Define the objective set
-objective_set = ObjectiveSet(objective_list=[minimise_import_cost, minimise_throughput_cost])
+objective_set = ObjectiveSet(
+    objective_list=[minimise_import_cost, minimise_throughput_cost]
+)
 
 # Invoke the optimiser and optimise
 optimise_results = optimise(
@@ -194,7 +203,7 @@ optimise_results = optimise(
 
 log_infeasible_constraints(optimise_results.model)
 
-############################ Analyse the Optimisation ########################################
+# Analyse the Optimisation Output
 
 print("EV V0G NODE ATTRIBUTES:")
 pprint.pprint(vars(ev_v0g))

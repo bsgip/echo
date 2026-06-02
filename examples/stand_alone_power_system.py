@@ -8,14 +8,19 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.prebuilt import DieselGenerator
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
 
-""" 
+"""
             Example of optimising a behind operation of a stand alone power system
 
              our graph is going to look like
@@ -26,7 +31,6 @@ from echo.optimiser import optimise
                                                         |----pv
 
 """
-
 
 # set up seaborn the way you like
 sns.set_style(
@@ -44,7 +48,7 @@ sns.set_style(
     }
 )
 
-############################ Define an Example Optimisation Problem ########################################
+# Define an Example Optimisation Problem
 
 # fmt: off
 # The load and pv arrays below are in average kw consumed per 15 minutes
@@ -67,11 +71,11 @@ test_pv = 1.5 * np.array(
 test_pv *= -1  # convert solar generation to negative to match convention.
 # fmt: on
 
-############################ Optimise this Example ########################################
+# Optimise this Example
 
 np.set_printoptions(suppress=True)
 
-## Set up hyper params
+# Set up optimisation parameters
 time_periods = len(test_load)  # number of time periods to run the optimisation for
 interval_duration = 15  # each time period is 15 mins long
 expansion_periods = 1  # not yet implemented leave as 1
@@ -81,16 +85,10 @@ discount_rate = 0  # not yet implemented leave as 0
 system = OptimisationGraph()
 
 # Create assets
-# grid = Node(node_name='grid')                                   # create node representing upstream grid
-# grid.add_ports('grid', FlexPort(units=Units.KW))  # create a port which will be used to connect with the conn point
-
-
 connection_point = TellegenNode(node_name="cp")  # create the connection point
 connection_point.add_ports_from_list(
     ["load", "inv", "diesel_gen"], FlexPort, units=Units.KW
-)  # create ports to connect to the grid, the load, and the inverter
-# connection_point.ports['grid'].set_flow_constraints(max_import=0,max_export=-0, slack=True)
-
+)
 
 load = Node(node_name="load")  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
@@ -100,8 +98,16 @@ load.ports["load"] = l1  # add the electrical demand to a port of the load node
 # create an inverter node with some properties,
 # if the constraints are not none then they should be max_export <= 0 <= max_import
 # can also set efficiency on the dc and the ac side in the range 0-1
-inverter = Inverter(node_name="inv", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
-inverter.add_ac_port("inv")  # add a port that is used to connect back to the connection_point
+inverter = Inverter(
+    node_name="inv",
+    max_import=None,
+    max_export=None,
+    dc_ac_efficiency=1,
+    ac_dc_efficiency=1,
+)
+inverter.add_ac_port(
+    "inv"
+)  # add a port that is used to connect back to the connection_point
 inverter.add_dc_port("bess")  # add a port to connect to the battery
 inverter.add_dc_port("pv")  # add a port to connect to the pv
 
@@ -139,20 +145,23 @@ system.add_node_obj([battery, load, solar, connection_point, inverter, diesel_ge
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 # system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
 system.connect_ports_and_create_edge(connection_point.ports["load"], load.ports["load"])
-system.connect_ports_and_create_edge(connection_point.ports["inv"], inverter.ports["inv"])
+system.connect_ports_and_create_edge(
+    connection_point.ports["inv"], inverter.ports["inv"]
+)
 system.connect_ports_and_create_edge(inverter.ports["bess"], battery.ports["bess"])
 system.connect_ports_and_create_edge(inverter.ports["pv"], solar.ports["pv"])
-system.connect_ports_and_create_edge(diesel_gen.ports["output"], connection_point.ports["diesel_gen"])
+system.connect_ports_and_create_edge(
+    diesel_gen.ports["output"], connection_point.ports["diesel_gen"]
+)
 
 # Create objectives/tariffs
 diesel_cost = ImportTariff(
-    component=diesel_gen.ports["input"], tariff_array=[1] * time_periods, expansion_periods=expansion_periods
+    component=diesel_gen.ports["input"],
+    tariff_array=[1] * time_periods,
+    expansion_periods=expansion_periods,
 )
 
-
 objective_set = ObjectiveSet(objective_list=[diesel_cost])
-
-############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
 optimise_results = optimise(
@@ -169,12 +178,14 @@ optimise_results = optimise(
 
 log_infeasible_constraints(optimise_results.model)
 
-############################ Analyse the Optimisation ########################################
+# Analyse the Optimisation
 
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)
 # grid_supply = optimiser.values(connection_point.ports['grid'].port_name, 0)
-diesel_power = optimise_results.values(connection_point.ports["diesel_gen"].port_name, 0)
+diesel_power = optimise_results.values(
+    connection_point.ports["diesel_gen"].port_name, 0
+)
 curtailed_solar = optimise_results.values(solar.ports["pv"].port_name, 0)
 diesel_use_lps = optimise_results.values(diesel_gen.ports["input"].port_name, 0)
 # optimised_connection_point_load = optimise_results.values(connection_point.ports['grid'].port_name, 0)
