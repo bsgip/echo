@@ -153,21 +153,13 @@ system.add_node_obj(
 
 # Create edge objects and add to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
-system.connect_ports_and_create_edge(
-    connection_point.ports["ev_v0g"], ev_v0g.ports["cp"]
-)
+system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev_v0g.ports["cp"])
 system.connect_ports_and_create_edge(
     connection_point.ports["ev_v0g_with_trip_slack"], ev_v0g_with_trip_slack.ports["cp"]
 )
-system.connect_ports_and_create_edge(
-    connection_point.ports["ev_v1g"], ev_v1g.ports["cp"]
-)
-system.connect_ports_and_create_edge(
-    connection_point.ports["ev_v2g"], ev_v2g.ports["cp"]
-)
-system.connect_ports_and_create_edge(
-    connection_point.ports["ev_with_profile"], ev_with_profile.ports["cp"]
-)
+system.connect_ports_and_create_edge(connection_point.ports["ev_v1g"], ev_v1g.ports["cp"])
+system.connect_ports_and_create_edge(connection_point.ports["ev_v2g"], ev_v2g.ports["cp"])
+system.connect_ports_and_create_edge(connection_point.ports["ev_with_profile"], ev_with_profile.ports["cp"])
 
 # Define a minimise import cost objective
 import_tariff = [10, 5] * 24
@@ -184,9 +176,7 @@ minimise_throughput_cost = ThroughputCost(
 )
 
 # Define the objective set
-objective_set = ObjectiveSet(
-    objective_list=[minimise_import_cost, minimise_throughput_cost]
-)
+objective_set = ObjectiveSet(objective_list=[minimise_import_cost, minimise_throughput_cost])
 
 # Invoke the optimiser and optimise
 optimise_results = optimise(

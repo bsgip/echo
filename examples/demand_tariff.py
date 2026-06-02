@@ -44,9 +44,7 @@ battery = Battery(
     initial_state_of_charge=0.0,
 )
 
-load = Load(
-    node_name="load", port_name="load", port_unit=Units.KW, profile=[2] * time_periods
-)
+load = Load(node_name="load", port_name="load", port_unit=Units.KW, profile=[2] * time_periods)
 
 site = TellegenNode()
 site.add_ports_from_list(["cp", "load", "battery"], FlexPort, units=Units.KW)
@@ -63,25 +61,19 @@ system.connect_ports_and_create_edge(load.ports["load"], site.ports["load"])
 peak_rate = 2.0
 peak_window = [0] * 14 + [1] * 4 + [0] * 16 + [1] * 6 + [0] * 8
 
-peak_charge = ImportDemandCharge(
-    rate=peak_rate, window_array=peak_window, min_demand=0.0
-)
+peak_charge = ImportDemandCharge(rate=peak_rate, window_array=peak_window, min_demand=0.0)
 
 # shoulder usage
 shoulder_rate = 1.0
 shoulder_window = [0] * 18 + [1] * 16 + [0] * 6 + [1] * 4 + [0] * 4
 
-shoulder_charge = ImportDemandCharge(
-    rate=shoulder_rate, window_array=shoulder_window, min_demand=0.0
-)
+shoulder_charge = ImportDemandCharge(rate=shoulder_rate, window_array=shoulder_window, min_demand=0.0)
 
 # off peak usage
 off_peak_rate = 0.5
 off_peak_window = np.subtract(1, np.add(shoulder_window, peak_window))
 
-off_peak_charge = ImportDemandCharge(
-    rate=off_peak_rate, window_array=off_peak_window, min_demand=0.0
-)
+off_peak_charge = ImportDemandCharge(rate=off_peak_rate, window_array=off_peak_window, min_demand=0.0)
 
 demand_tariff = DemandTariffObjective(
     component=site.ports["cp"],
