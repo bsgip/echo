@@ -83,12 +83,11 @@ class EVBase(TransformNode):
         available (ArrayType | list | str | None): A List or ArrayType of bools representing the ability for the
             EV to charge. The bools can have values of [False, True] or [0, 1]. 0 and False indicate the EV is not
             available for charging, 1 and True indicate the EV is available for charging. If
-            set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it may
-            be provided upon EV instantiation or later using set_stateful_attrs(). ArrayType | list represent data,
-            while a str represents the column name in a pandas dataframe. If set_stateful_attrs_at_init is False, this
-            can be set after EV object instantiation using self.set_state_attrs().
-        charge_mode (EVChargeMode | None): Charge mode of the EV. To be set upon instantiation of particular EV child
-            class. Defaults to None.
+            set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, this must
+            be provided later using set_stateful_attrs(). ArrayType | list represents data, while a str represents the
+            column name in a pandas dataframe.
+        charge_mode (EVChargeMode | None): Charge mode of the EV. This is set upon instantiation of EV child classes.
+            Defaults to None.
         charging_efficiency (float | None): The efficiency of the battery charging process for the EV. Float as
             a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.
         charging_power_limit (float): The maximum charging rate of the EV's battery. Positive float in power units.
@@ -108,10 +107,9 @@ class EVBase(TransformNode):
             battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
             there is a cost to do so. This can cause issues when conducting analysis on systems with
             enable_trip_slack=True, so use with caution. Defaults to False.
-        initial_state_of_charge (float | None: The initial charge present in the EV's battery. Positive
-            float of energy units, not percentage. If set_state_attrs_at_init is True, this must be supplied. If
-            set_stateful_attrs_at_init is False, it may be provided upon EV instantiation or later using
-            set_stateful_attrs(). Positive float with units of energy.
+        initial_state_of_charge (float | None): The initial charge present in the EV's battery. If
+            set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it must be
+            provided later using set_stateful_attrs(). Positive float with units of energy (not percentage).
         interval_duration(int): Length of time interval between time series data points. Used mostly for conversion
             between power and energy. If set_stateful_attrs_at_init is False, this can be set after EV object
             instantiation using self.set_state_attrs(). Units of minutes.
@@ -131,14 +129,15 @@ class EVBase(TransformNode):
             None.
         soc_conserv_cost (float | None): The cost placed on going below the conservative state of charge limit. That
             is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining)
-            more money than this cost. Units are $/kWh. Defaults to None.
+            more money than this cost. Units of $/kWh. Defaults to None.
         tod_charging (ArrayType | list | str | None): Time of day charging allows the EV to charge only during certain
             time windows (1=allowed, 0=not allowed). Most commonly used with V0G charging. Defaults to None.
         usage (ArrayType | list | None): An array representing the average power consumption from driving of the EV
-            during a time interval. Units of power. Defaults to None.
-        usage_power_limit (float | None): The maximum power that can be used during an EV trip. It is to allow
-            discharging_power_limit to represent the maximum power flow from an EVV2G back into an electrical network.
-            Negative float in power units. Defaults to None, however if None, it will be set to discharging_power_limit.
+            during a time interval. Units of power.
+        usage_power_limit (float | None): The maximum power that can be used during an EV trip. If not None, it allows
+            discharging_power_limit to represent only the maximum power flow from an EVV2G back into an electrical
+            network, and not the maximum power output during a trip. Negative float in power units. Defaults to None,
+            however if None, it will be set to discharging_power_limit.
     """
 
     charge_mode: Optional[EVChargeMode] = None
@@ -162,7 +161,7 @@ class EVBase(TransformNode):
     interval_duration: int | None
     set_stateful_attrs_at_init: bool = True
     tod_charging: ArrayType | list | str | None
-    usage: ArrayType | list | None
+    usage: ArrayType | list | None = None
 
     # Helpful mappings for port names and uids
     port_dict_name_to_port_name_map: Dict[str, str] | None = None
