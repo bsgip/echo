@@ -121,7 +121,7 @@ class EVBase(TransformNode):
             not to use this unless you know what you are doing. If None, it will defined once ports are built. Defaults
             to None.
         set_stateful_attrs_at_init (bool | None): Set attributes with state at object instantiation (True) or
-            defer to later (False). If deferring to later, self.set_stateful_attrs must be used to set these
+            defer to later (False). If deferring to later, self.set_stateful_attrs() must be used to set these
             attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
         soc_conserv (TimeExpandableType | None): Conservative state of charge limit below which the EV should not
             discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is
@@ -787,10 +787,18 @@ class EVV2G(EVBase):
 
 
 class EVWithProfile(Node):
-    """A convenience charging EV defined primarily through a timeseries profile of demand and/or generation.
+    """An EV defined through a timeseries profile of demand.
 
-    This object is for convenience for when a charging demand profile (or generation in the case when two-way charging
-    is available). The EV essentially acts as a pure load.
+    This EV object is to be used when real world (or modelled) charging data is available; essentially acting as a
+    pure load.
+
+    charging_power_limit (float | None): The maximum charging power of the vehicle. Used for data sanity checks only.
+        Positive float in units of power.
+    demand (dict[str, float] | ArrayType | list[float] | None): The demand data for the EV. Values must be positive
+        floats. Values in units of power.
+    set_stateful_attrs_at_init (bool | None): Set attributes with state at object instantiation (True) or
+        defer to later (False). If deferring to later, self.set_stateful_attrs() must be used to set these
+        attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.
     """
 
     charge_mode: EVChargeMode = EVChargeMode.DemandProfile
