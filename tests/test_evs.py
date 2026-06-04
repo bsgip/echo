@@ -4171,3 +4171,310 @@ def test_update_node_EVDemandProfile():
 
 def test_trip_slack_false():
     pass
+
+
+def test_v0g_with_discharging_power_limit_and_usage_power_limit():
+    # Number of time periods to run the optimisation for
+    time_periods = 48
+
+    # The duration in minutes between each data point in time series data
+    interval_duration = 30
+
+    # Create an infinite grid node with one downstream port
+    grid = FlexElectricalNode(node_name="grid", port_name="connection_point")
+
+    # Create a connection point (zero sum) node with ports for our three EVs
+    connection_point = TellegenNode(node_name="connection_point")
+    connection_point.add_ports_from_list(
+        ["grid", "ev_v0g"],
+        FlexPort,
+        units=Units.KW,
+    )
+
+    # Create availability and usage data for a V0G vehicle
+    ev_v0g_available = [1] * 36 + [0] * 12
+    ev_v0g_usage = [0] * 36 + [1.5] * 12
+
+    # Create V0G vehicle
+    ev_v0g = EVV0G(
+        node_name="ev_v0g",
+        available=ev_v0g_available,
+        usage=ev_v0g_usage,
+        connection_port_name="cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=0,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=False,
+        usage_power_limit=-10,
+    )
+
+    # Create the optmisation graph
+    system = OptimisationGraph()
+
+    # Add nodes to the optimisation graph
+    system.add_node_obj(
+        [
+            grid,
+            connection_point,
+            ev_v0g,
+        ]
+    )
+
+    system.connect_ports_and_create_edge(grid.ports["connection_point"], connection_point.ports["grid"])
+    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev_v0g.ports["cp"])
+
+    optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=1,
+            discount_rate=0,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+    )
+
+
+def test_v1g_with_discharging_power_limit_and_usage_power_limit_greater_than_usage():
+    """Check when usage_power_limit and discharging_power_limit is greater than usage."""
+
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    EVV1G(
+        node_name="ev_v1g",
+        available=available,
+        usage=usage,
+        connection_port_name="cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-10,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=False,
+        usage_power_limit=-15,
+    )
+
+
+def test_v1g_with_usage_power_limit_less_than_usage():
+    """Assert that the optimisation raises an error when usage_power_limit is less than trip average power."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    with pytest.raises(Exception):
+        EVV1G(
+            node_name="ev_v1g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-10,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=-1,
+        )
+
+
+def test_v1g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
+    """Check if usage_power_limit is larger than usage then value of discharging power limit doesn't matter."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    EVV1G(
+        node_name="ev_v1g",
+        available=available,
+        usage=usage,
+        connection_port_name="cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-1,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=False,
+        usage_power_limit=-10,
+    )
+
+
+def test_v1g_with_discharging_power_limit_and_usage_power_limit_less_than_usage():
+    """Check exception raised if usage_power_limit and discharging_power_limit are less than usage."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    with pytest.raises(Exception):
+        EVV1G(
+            node_name="ev_v1g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-1,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=-1,
+        )
+
+
+# -----------------------------------------------------------------
+
+
+def test_v2g_with_discharging_power_limit_and_usage_power_limit_greater_than_usage():
+    """Check when usage_power_limit and discharging_power_limit is greater than usage."""
+
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    EVV2G(
+        node_name="ev_v2g",
+        available=available,
+        usage=usage,
+        connection_port_name="cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-10,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=False,
+        usage_power_limit=-15,
+    )
+
+
+def test_v2g_with_usage_power_limit_less_than_usage():
+    """Assert that the optimisation raises an error when usage_power_limit is less than trip average power."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    with pytest.raises(Exception):
+        EVV2G(
+            node_name="ev_v2g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-10,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=-1,
+        )
+
+
+def test_v2g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
+    """Check if usage_power_limit is larger than usage then value of discharging power limit doesn't matter."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    EVV1G(
+        node_name="ev_v2g",
+        available=available,
+        usage=usage,
+        connection_port_name="cp",
+        max_capacity=40,
+        depth_of_discharge_limit=0,
+        charging_power_limit=10,
+        discharging_power_limit=-1,
+        charging_efficiency=1,
+        discharging_efficiency=1,
+        initial_state_of_charge=20,
+        soc_conserv=None,
+        soc_conserv_cost=0.0,
+        interval_duration=interval_duration,
+        tod_charging=None,
+        trip_slack=False,
+        usage_power_limit=-10,
+    )
+
+
+def test_v2g_with_discharging_power_limit_and_usage_power_limit_less_than_usage():
+    """Check exception raised if usage_power_limit and discharging_power_limit are less than usage."""
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 36 + [0] * 12
+    usage = [0] * 36 + [1.5] * 12
+    interval_duration = 30
+
+    with pytest.raises(Exception):
+        EVV2G(
+            node_name="ev_v2g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=10,
+            discharging_power_limit=-1,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=-1,
+        )
