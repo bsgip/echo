@@ -4,7 +4,14 @@ import numpy as np
 import pandas as pd
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.agnostic import AggregationNode, FlexPort, Sink, Source, TellegenNode, ThreeWayValveNode
+from echo.models.agnostic import (
+    AggregationNode,
+    FlexPort,
+    Sink,
+    Source,
+    TellegenNode,
+    ThreeWayValveNode,
+)
 from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import (
@@ -40,7 +47,9 @@ def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True)
 
 
 amb_temp_data = TimeSeriesData(
-    value=25, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+    value=25,
+    num_time_intervals=NUMBER_INTERVALS,
+    num_expansion_intervals=NUM_EXPANSION_PERIODS,
 )
 ambient_temp_dict = expand_as_dict(amb_temp_data)
 
@@ -59,23 +68,31 @@ profile_df = pd.DataFrame({"thermal_load": th_load, "ambient_temp": [25] * NUMBE
 NUMBER_INTERVALS_SHORT = 6
 # Cooling demand is a heat source
 cooling_load_data = TimeSeriesData(
-    value=[0, 0, -2.5, -5, -7.5, -10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+    value=[0, 0, -2.5, -5, -7.5, -10],
+    num_time_intervals=NUMBER_INTERVALS_SHORT,
+    num_expansion_intervals=1,
 )
 cooling_demand_dict = expand_as_dict(cooling_load_data)
 
 cooling_demand_dict_non_zero = expand_as_dict(
     TimeSeriesData(
-        value=[-1, -1, -2.5, -5, -7.5, -10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+        value=[-1, -1, -2.5, -5, -7.5, -10],
+        num_time_intervals=NUMBER_INTERVALS_SHORT,
+        num_expansion_intervals=1,
     )
 )
 
 heating_load_data = TimeSeriesData(
-    value=[5, 5, 3, 3, 0, 0], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+    value=[5, 5, 3, 3, 0, 0],
+    num_time_intervals=NUMBER_INTERVALS_SHORT,
+    num_expansion_intervals=1,
 )
 heating_load_dict = expand_as_dict(heating_load_data)
 
 combined_thermal_load_data = TimeSeriesData(
-    value=[5, 3, -5, -3, 0, 10], num_time_intervals=NUMBER_INTERVALS_SHORT, num_expansion_intervals=1
+    value=[5, 3, -5, -3, 0, 10],
+    num_time_intervals=NUMBER_INTERVALS_SHORT,
+    num_expansion_intervals=1,
 )
 combined_thermal_load_dict = expand_as_dict(combined_thermal_load_data)
 
@@ -107,7 +124,9 @@ profile_short = pd.DataFrame(
 
 def test_thermal_storage_no_objective():
     th_demand_data = TimeSeriesData(
-        value=th_load, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+        value=th_load,
+        num_time_intervals=NUMBER_INTERVALS,
+        num_expansion_intervals=NUM_EXPANSION_PERIODS,
     )
     th_demand_dict = expand_as_dict(th_demand_data)
 
@@ -209,7 +228,9 @@ def test_thermal_storage_no_objective():
 
 def test_thermal_storage_end_temperature():
     th_demand_data = TimeSeriesData(
-        value=th_load, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+        value=th_load,
+        num_time_intervals=NUMBER_INTERVALS,
+        num_expansion_intervals=NUM_EXPANSION_PERIODS,
     )
     th_demand_dict = expand_as_dict(th_demand_data)
 
@@ -285,7 +306,9 @@ def test_thermal_storage_end_temperature():
 
 def test_thermal_storage():
     th_demand_data = TimeSeriesData(
-        value=th_load, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+        value=th_load,
+        num_time_intervals=NUMBER_INTERVALS,
+        num_expansion_intervals=NUM_EXPANSION_PERIODS,
     )
     th_demand_dict = expand_as_dict(th_demand_data)
 
@@ -398,7 +421,8 @@ def test_thermal_storage_with_profile():
     )
 
     thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")}
+        node_name="thermal_load",
+        ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")},
     )
 
     thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
@@ -490,7 +514,8 @@ def test_thermal_storage_no_ambient_temp():
     )
 
     thermal_demand = Node(
-        node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")}
+        node_name="thermal_load",
+        ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load")},
     )
     thermal_mains = Node(node_name="thermal_supply", ports={"supply_kwt": FlexPort(units=Units.KWT)})
 
@@ -528,9 +553,7 @@ def test_thermal_storage_no_ambient_temp():
     assert round(soc_100.loc[NUMBER_INTERVALS - 1], 1) == 0.5
     assert round(storage_temp[(0, NUMBER_INTERVALS - 1)], 1) == round(storage.initial_temp, 1)
 
-    cp_flow_df_no = (
-        optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
-    )
+    optimise_results_no.df_by_port()[[k for k in cp.ports.keys()]].reset_index(level=[0]).drop(columns="level_0")
 
     # Check that SOC values (in energy units) make sense
     assert all([0 <= v <= 1 for v in soc_100.values])
@@ -544,7 +567,9 @@ def test_thermal_storage_no_ambient_temp():
 
 def test_thermal_storage_2_ports():
     th_demand_data = TimeSeriesData(
-        value=th_load, num_time_intervals=NUMBER_INTERVALS, num_expansion_intervals=NUM_EXPANSION_PERIODS
+        value=th_load,
+        num_time_intervals=NUMBER_INTERVALS,
+        num_expansion_intervals=NUM_EXPANSION_PERIODS,
     )
     th_demand_dict = expand_as_dict(th_demand_data)
     thermal_demand = Node(node_name="thermal_load", ports={"demand_kwt": Sink(units=Units.KWT)})
@@ -573,7 +598,7 @@ def test_thermal_storage_2_ports():
         ports={
             "to_supply_kwt": FlexPort(units=Units.KWT),
             "to_demand_cp_kwt": FlexPort(units=Units.KWT),
-            f"to_storage_input_kwt": FlexPort(units=Units.KWT),
+            "to_storage_input_kwt": FlexPort(units=Units.KWT),
         },
     )
     cp_2 = TellegenNode(
@@ -681,7 +706,8 @@ def test_chiller_operation():
     system.add_node_obj([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        chiller.ports[chiller.thermal_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -721,7 +747,10 @@ def test_chiller_with_heat_rejection():
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     chiller = ParameterisedChiller(
-        max_cooling_capacity=10, nominal_cop=2.5, heat_rejection_port=True, heat_rejection_coefficient=0.8
+        max_cooling_capacity=10,
+        nominal_cop=2.5,
+        heat_rejection_port=True,
+        heat_rejection_coefficient=0.8,
     )
     assert chiller.heat_rejection_port_ref in chiller.ports
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
@@ -732,10 +761,12 @@ def test_chiller_with_heat_rejection():
     system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        chiller.ports[chiller.thermal_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.heat_rejection_port_ref], waste_heat_agg.ports["chiller_waste_heat"]
+        chiller.ports[chiller.heat_rejection_port_ref],
+        waste_heat_agg.ports["chiller_waste_heat"],
     )
 
     optimise_results = optimise(
@@ -803,7 +834,8 @@ def test_chiller_with_temperature_cop():
     system.add_node_obj([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        chiller.ports[chiller.thermal_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -882,7 +914,8 @@ def test_chiller_with_pl_cop():
     system.add_node_obj([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        chiller.ports[chiller.thermal_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -1005,7 +1038,8 @@ def test_simple_heatpump_single_output():
     system.add_node_obj([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+        heatpump.ports[heatpump.thermal_output_port_ref],
+        thermal_load.ports["thermal_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -1084,10 +1118,12 @@ def test_simple_heatpump_dual_output():
     system.add_node_obj([grid, heatpump, cooling_load, heating_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        heatpump.ports[heatpump.cooling_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        heatpump.ports[heatpump.cooling_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
     system.connect_ports_and_create_edge(
-        heatpump.ports[heatpump.heating_output_port_ref], heating_load.ports["heating_demand_kwt"]
+        heatpump.ports[heatpump.heating_output_port_ref],
+        heating_load.ports["heating_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -1156,7 +1192,10 @@ def test_parameterised_heatpump_single_output():
     system = OptimisationGraph()
     grid = Node(node_name="grid", ports={"supply_kw": FlexPort(units=Units.KW)})
     heatpump = ParameterisedHeatPump(
-        max_cooling_capacity=10, max_heating_capacity=10, nominal_heating_cop=5, nominal_cooling_cop=3
+        max_cooling_capacity=10,
+        max_heating_capacity=10,
+        nominal_heating_cop=5,
+        nominal_cooling_cop=3,
     )
     # Cooling demand is a heat source
     thermal_load = Node(
@@ -1176,7 +1215,8 @@ def test_parameterised_heatpump_single_output():
     system.add_node_obj([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+        heatpump.ports[heatpump.thermal_output_port_ref],
+        thermal_load.ports["thermal_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -1299,7 +1339,8 @@ def test_simple_heatpump_constant_cop():
     system.add_node_obj([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        heatpump.ports[heatpump.thermal_output_port_ref], thermal_load.ports["thermal_demand_kwt"]
+        heatpump.ports[heatpump.thermal_output_port_ref],
+        thermal_load.ports["thermal_demand_kwt"],
     )
 
     optimise_results = optimise(
@@ -1354,22 +1395,37 @@ def test_chiller_with_parametrised_tellegen_heat_rejection():
     waste_heat_agg_2.add_port(
         name="chiller_waste_heat_2",
         port=FlexPort(
-            units=Units.KWT, import_constraint=FlowConstraint.Fixed, import_constraint_value=waste_heat_agg_2_max_flow
+            units=Units.KWT,
+            import_constraint=FlowConstraint.Fixed,
+            import_constraint_value=waste_heat_agg_2_max_flow,
         ),
     )
-    system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg, waste_heat_agg_2, waste_heat_tellegen])
+    system.add_node_obj(
+        [
+            grid,
+            chiller,
+            cooling_load,
+            waste_heat_agg,
+            waste_heat_agg_2,
+            waste_heat_tellegen,
+        ]
+    )
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.thermal_output_port_ref], cooling_load.ports["cooling_demand_kwt"]
+        chiller.ports[chiller.thermal_output_port_ref],
+        cooling_load.ports["cooling_demand_kwt"],
     )
     system.connect_ports_and_create_edge(
-        chiller.ports[chiller.heat_rejection_port_ref], waste_heat_tellegen.ports["to_chiller_heat_rejection"]
+        chiller.ports[chiller.heat_rejection_port_ref],
+        waste_heat_tellegen.ports["to_chiller_heat_rejection"],
     )
     system.connect_ports_and_create_edge(
-        waste_heat_tellegen.ports["to_waste_heat_aggregation_1"], waste_heat_agg.ports["chiller_waste_heat_1"]
+        waste_heat_tellegen.ports["to_waste_heat_aggregation_1"],
+        waste_heat_agg.ports["chiller_waste_heat_1"],
     )
     system.connect_ports_and_create_edge(
-        waste_heat_tellegen.ports["to_waste_heat_aggregation_2"], waste_heat_agg_2.ports["chiller_waste_heat_2"]
+        waste_heat_tellegen.ports["to_waste_heat_aggregation_2"],
+        waste_heat_agg_2.ports["chiller_waste_heat_2"],
     )
     optimise_results = optimise(
         scenario_settings=ScenarioSettings(

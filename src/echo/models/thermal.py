@@ -712,7 +712,7 @@ class ThermalStorage(Node):
         )
 
     def _apply_final_temperature_constraint(self, model: EchoConcreteModel):
-        # Storage internal temperature at the last optimisation interval must equal initial temperatur
+        # Storage internal temperature at the last optimisation interval must equal initial temperature
         max_t = len(model.Time) - 1
         internal_temperature = getattr(model, self.internal_temp)
 

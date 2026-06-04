@@ -505,10 +505,10 @@ class Storage(Port):
     discharging_power_limit: float
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-    initial_state_of_charge: float
     fixed_storage_capacity: bool = True
     storage_capacity_cost: Optional[PositiveFloat]
     regularise: bool = False
+    initial_state_of_charge: Optional[float]
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
@@ -662,7 +662,10 @@ class MobileStorage(Storage):
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
         super(Storage, self).add_port_to_model(model, profile)
         self.create_storage_variables(model)
-        self.apply_modified_soc_constraints(model)
+        if self.enable_trip_slack:
+            self.apply_modified_soc_constraints(model)
+        else:
+            self.apply_soc_constraints(model)
         self.apply_conserv_soc_constraints(model)
 
     def apply_conserv_soc_constraints(self, model: EchoConcreteModel):

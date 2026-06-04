@@ -92,6 +92,8 @@ def dod_checks(cls, values):
     dod_lim = values.get("depth_of_discharge_limit")
     max_cap = values.get("max_capacity")
     init_soc = values.get("initial_state_of_charge")
+    set_stateful_attrs_at_init = values.get("set_stateful_attrs_at_init")
+
     # Check dod representation
     if 0 <= dod_lim <= 1:
         # Assume decimal representation
@@ -101,15 +103,28 @@ def dod_checks(cls, values):
         min_soc = max_cap * dod_lim / 100.0
     else:
         raise ValueError("DoD must be entered as decimal fraction or percentage of max capacity")
+
+    values["min_soc"] = min_soc
+
     # Check initial soc is within bounds
-    if (init_soc < min_soc) or (init_soc > max_cap):
+    if set_stateful_attrs_at_init:
+        check_initial_state_of_charge_within_bounds(
+            initial_state_of_charge=init_soc, min_soc=min_soc, max_capacity=max_cap
+        )
+
+    return values
+
+
+def check_initial_state_of_charge_within_bounds(
+    initial_state_of_charge: float, min_soc: float, max_capacity: float
+) -> None:
+    # Check initial soc is within bounds
+    if (initial_state_of_charge < min_soc) or (initial_state_of_charge > max_capacity):
         raise ValueError(
             "Initial state of charge, {}, must be between min soc, {}, and max capacity, {}".format(
-                init_soc, min_soc, max_cap
+                initial_state_of_charge, min_soc, max_capacity
             )
         )
-    values["min_soc"] = min_soc
-    return values
 
 
 def check_bound_order(cls, values):

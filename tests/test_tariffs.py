@@ -25,7 +25,8 @@ from echo.optimiser import optimise
 
 
 @pytest.mark.parametrize(
-    "minimum_demand,demand", [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)]
+    "minimum_demand,demand",
+    [(0.0, 1.0), (1.0, 1.0), (2.0, 1.0), (0.0, 2.0), (1.0, 2.0), (2.0, 2.0)],
 )
 @pytest.mark.parametrize("battery_capacity", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
 def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_capacity):
@@ -77,7 +78,10 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
         component=cp1,
         demand_charges=[
             ImportDemandCharge(
-                rate=1.0, window_array=dc_window, min_demand=minimum_demand, reset_periods=[time_periods]
+                rate=1.0,
+                window_array=dc_window,
+                min_demand=minimum_demand,
+                reset_periods=[time_periods],
             )
         ],
     )
@@ -157,7 +161,9 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
 
     import_tariff = ImportTariff(
-        component=cp1, tariff_array=[1.0] * 24 + [1.05] * 24, expansion_periods=expansion_periods
+        component=cp1,
+        tariff_array=[1.0] * 24 + [1.05] * 24,
+        expansion_periods=expansion_periods,
     )
 
     demand_tariff = DemandTariffObjective(
@@ -244,7 +250,9 @@ def test_system_path_flows_adjust_to_path_tariffs():
     grid_to_load = system.get_path([grid, site1, load1])
 
     path_tariff = PathTariff(
-        component=grid_to_load, tariff_array=[0] * 24 + [1] * 24, expansion_periods=expansion_periods
+        component=grid_to_load,
+        tariff_array=[0] * 24 + [1] * 24,
+        expansion_periods=expansion_periods,
     )
 
     objective_set = ObjectiveSet(objective_list=[path_tariff])
@@ -349,7 +357,10 @@ def test_path_flows_respect_port_constraints():
 
 # This test sometimes fails due to the non-deterministic nature of optimizations.
 # We don't want this test to block a merging a pull request due to a failing run of the Github Action
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="don't perform non-deterministic test in Github action")
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="don't perform non-deterministic test in Github action",
+)
 def test_demand_tariff_reset_periods():
     expansion_periods = 1
     expansion_periods = 1
@@ -410,18 +421,26 @@ def test_block_tariff():
     system = OptimisationGraph()
 
     grid = FlexNode(node_name="grid", port_name="grid", port_unit=Units.KW)
-    load = Load(node_name="load", port_name="load", profile=[10] * time_periods, port_unit=Units.KW)
+    load = Load(
+        node_name="load",
+        port_name="load",
+        profile=[10] * time_periods,
+        port_unit=Units.KW,
+    )
 
     system.add_nodes_from([grid, load])
     system.connect_ports_and_create_edge(load.ports["load"], grid.ports["grid"], nodes=("grid", "load"))
 
     block_tariff = BlockImportTariff(
-        component=load.ports["load"], blocks=[50, 100], rates=[1, 2, 3], reset_periods=[5, 19]
+        component=load.ports["load"],
+        blocks=[50, 100],
+        rates=[1, 2, 3],
+        reset_periods=[5, 19],
     )
 
     objective_set = ObjectiveSet(objective_list=[block_tariff])
 
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -431,5 +450,3 @@ def test_block_tariff():
         graph=system,
         objective_set=objective_set,
     )
-
-    print()

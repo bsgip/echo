@@ -4,7 +4,7 @@ from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Edge, Node, OptimisationGraph
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalFlow, TotalImportFlow
+from echo.objectives.base import ObjectiveSet, TotalExportFlow, TotalImportFlow
 from echo.optimiser import optimise
 
 
@@ -95,7 +95,12 @@ def test_simple_controlled_load_limited_to_max_energy():
     grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
 
     controlled_load = Node()
-    cl = ControlledLoad(max_power=5.0, min_power=0.0, min_utilisation=5.0 / 60.0, max_utilisation=5.0 / 30.0)
+    cl = ControlledLoad(
+        max_power=5.0,
+        min_power=0.0,
+        min_utilisation=5.0 / 60.0,
+        max_utilisation=5.0 / 30.0,
+    )
     controlled_load.ports["cload"] = cl
 
     edge = Edge(vertices=[grid.ports["grid"], cl])

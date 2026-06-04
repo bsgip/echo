@@ -3,7 +3,12 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.contingency import ContingencyPositive
@@ -75,7 +80,6 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     expansion_periods = 1
     time_periods = 48
     interval_duration = 30  # min
-    N_INTERVALS = time_periods
 
     system = OptimisationGraph()
 
@@ -117,7 +121,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
 
     objective_set = ObjectiveSet(objective_list=[contingency_obj])
 
-    optimise_results = optimise(
+    optimise(
         scenario_settings=ScenarioSettings(
             interval_duration=interval_duration,
             number_of_intervals=time_periods,
@@ -127,69 +131,6 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
         graph=system,
         objective_set=objective_set,
     )
-
-    cont_pos_p = optimise_results.values(contingency_obj.contingency_pos, 0)
-    sol_p = optimise_results.values(pv1.port_name, 0)
-
-    # for i in range(0, 1):
-    #     assert cont_pos_p[i] == pytest.approx(2.0, rel=utils.RELATIVE_TOLERANCE,
-    #                                           abs=utils.ABSOLUTE_TOLERANCE), "value is not greater than or equal to within {tolerance}"
-    #
-    # for i in range(1, N_INTERVALS // 2):
-    #     assert cont_pos_p[i] == 4.0
-    #     assert sol_p[i] >= -3.0  # Solar at least partially curtailed
-    # for i in range(N_INTERVALS // 2, N_INTERVALS):
-    #     assert cont_pos_p[i] == 4.0
-    #     assert sol_p[i] == 0.0
-
-    #
-    #
-    # battery = Storage(name='sto', min_power=-2.0, max_power=2.0, max_capacity=48.0)
-    # system = Junction(
-    #     name='root',
-    #     connections=[
-    #         Inverter(name='inv', connections=[
-    #             Solar(name='sol', curtailable=True),
-    #             battery
-    #         ], max_power=5.0, min_power=-5.0)
-    #     ]
-    # )
-    #
-    # model = ConcreteModel()
-    #
-    # model.time = en.RangeSet(0, N_INTERVALS - 1)
-    # model.interval_duration = [30.0] * N_INTERVALS
-    # model.big_m = 1000000
-    #
-    # df = pd.DataFrame({'sol_p_max': [-5.0] * (N_INTERVALS // 2) + [0.0] * (N_INTERVALS // 2)})
-    #
-    # system_initial_state = {"sto_soc": 48.0}
-    # options = Options()
-    #
-    # system.initialise_model(model, df.to_dict(), system_initial_state, options)
-    # system.apply_constraints(model, system)
-    #
-    # objective = ObjectiveSet(objectives=[
-    #     ContingencyPositive(component=battery.name)
-    # ])
-    # objective.initialise_objective(model, system)
-    # objective.set_objective(model)
-    #
-    # solver = SolverFactory(SOLVER, executable=SOLVER_EXECUTABLE)
-    # result = solver.solve(model, tee=True)
-    #
-    # cont_pos_p = model.sto_p_contingency_pos.extract_values()
-    # sol_p = model.sol_p.extract_values()
-    #
-    # for i in range(0, 1):
-    #     assert cont_pos_p[i] == pytest.approx(2.0, rel=utils.RELATIVE_TOLERANCE,
-    #                                           abs=utils.ABSOLUTE_TOLERANCE), "value is not greater than or equal to within {tolerance}"
-    # for i in range(1, N_INTERVALS // 2):
-    #     assert cont_pos_p[i] == 4.0
-    #     assert sol_p[i] >= -3.0  # Solar at least partially curtailed
-    # for i in range(N_INTERVALS // 2, N_INTERVALS):
-    #     assert cont_pos_p[i] == 4.0
-    #     assert sol_p[i] == 0.0
 
 
 def test_positive_contingency_calculation_with_storage_full():

@@ -3,10 +3,21 @@ from __future__ import division
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import DemandTariffObjective, ExportTariff, ImportDemandCharge, ImportTariff, ThroughputCost
+from echo.objectives.tariff import (
+    DemandTariffObjective,
+    ExportTariff,
+    ImportDemandCharge,
+    ImportTariff,
+    ThroughputCost,
+)
 from echo.optimiser import optimise
 
 
@@ -101,7 +112,7 @@ def test_objectives_sum_correctly():
     )
 
     # get back each tariff component
-    sc = optimise_results.get_single_objective_total_value(shoulder_charge)
+    optimise_results.get_single_objective_total_value(shoulder_charge)
     tp = optimise_results.get_single_objective_total_value(tp_cost)
     it = optimise_results.get_single_objective_total_value(import_t)
     et = optimise_results.get_single_objective_total_value(export_t)

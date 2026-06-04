@@ -10,19 +10,23 @@ from echo.models.base import OptimisationGraph
 from echo.models.prebuilt import Battery, FlexNode, Load
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import DemandTariffObjective, ImportDemandCharge, ThroughputCost
+from echo.objectives.tariff import (
+    DemandTariffObjective,
+    ImportDemandCharge,
+    ThroughputCost,
+)
 from echo.optimiser import optimise
 
 SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")
 SOLVER_EXECUTABLE = None
 
-########## DEFINE MODEL OPTIONS ##################
+# DEFINE MODEL OPTIONS
 
 expansion_periods = 1
 time_periods = 48
 interval_duration = 30
 
-########## DEFINE MODEL ##################
+# DEFINE MODEL
 
 system = OptimisationGraph()
 
@@ -51,7 +55,7 @@ system.connect_ports_and_create_edge(grid.ports["grid"], site.ports["cp"])
 system.connect_ports_and_create_edge(battery.ports["battery"], site.ports["battery"])
 system.connect_ports_and_create_edge(load.ports["load"], site.ports["load"])
 
-########## DEFINE TARIFFS ##################
+# DEFINE TARIFFS
 
 # peak usage
 peak_rate = 2.0
@@ -72,7 +76,8 @@ off_peak_window = np.subtract(1, np.add(shoulder_window, peak_window))
 off_peak_charge = ImportDemandCharge(rate=off_peak_rate, window_array=off_peak_window, min_demand=0.0)
 
 demand_tariff = DemandTariffObjective(
-    component=site.ports["cp"], demand_charges=[peak_charge, shoulder_charge, off_peak_charge]
+    component=site.ports["cp"],
+    demand_charges=[peak_charge, shoulder_charge, off_peak_charge],
 )
 
 throughput_cost = ThroughputCost(component=battery.ports["battery"], rate=0.0001)

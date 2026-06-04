@@ -1,21 +1,25 @@
-from __future__ import division
-
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.prebuilt import DieselGenerator
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
 
-""" 
+"""
             Example of optimising a behind operation of a stand alone power system
 
              our graph is going to look like
@@ -26,7 +30,6 @@ from echo.optimiser import optimise
                                                         |----pv
 
 """
-
 
 # set up seaborn the way you like
 sns.set_style(
@@ -44,34 +47,21 @@ sns.set_style(
     }
 )
 
-############################ Define an Example Optimisation Problem ########################################
+# Define an Example Optimisation Problem
 
-# fmt: off
 # The load and pv arrays below are in average kw consumed per 15 minutes
 # define load (loads must be positive values)
-test_load = np.array(
-    [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 15, 15, 15, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
-     2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
-     3.99, 3.71, 3.38, 3.76, 3.71, 3.78, 3.29, 3.65, 3.61, 3.75, 3.38, 3.66, 3.56, 3.69, 3.3, 3.61, 3.71, 3.82,
-     3.17, 3.69, 3.74, 3.86, 3.57, 3.55, 3.75, 3.6, 3.67, 3.48, 3.51, 3.46, 3.19, 3.38, 3.19, 3.38, 3.04, 3.12,
-     2.91, 3.11, 3.13, 2.77, 2.24, 2.54, 2.24, 2.24, 2.09, 2.33, 2.17, 2.16, 1.97, 2.16, 2.21, 2.18, 2.01, 2.16,
-     2.19, 2.11, 2.17, 2.13, 12, 12]*5)
+data_df = pd.read_csv("examples/data.csv")
+test_load = 5 * data_df["load"].to_numpy()
 
-# define PV, generation is negative values
-test_pv = 1.5 * np.array(
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.23, 0.52,
-     0.74, 0.71, 0.63, 0.68, 0.97, 0.01, 0.52, 0.83, 0.83, 0.79, 1.22, 1.36, 1.27, 1.42, 1.97, 2.56, 2.91, 3.24,
-     3.8, 4.3, 4.62, 4.84, 4.6, 4.17, 3.77, 3.76, 3.38, 2.64, 1.96, 1.76, 1.85, 2.4, 3.82, 5.13, 4.97, 5.02, 5.43,
-     5.32, 3.56, 1.75, 1.43, 1.65, 1.69, 2.3, 2.71, 2.41, 2.63, 2.6, 1.9, 0.78, 0.13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]*5)
-test_pv *= -1  # convert solar generation to negative to match convention.
-# fmt: on
+# convert solar generation to negative to match convention.
+test_pv = -1 * 5 * data_df["solar"].to_numpy()
 
-############################ Optimise this Example ########################################
+# Optimise this Example
 
 np.set_printoptions(suppress=True)
 
-## Set up hyper params
+# Set up optimisation parameters
 time_periods = len(test_load)  # number of time periods to run the optimisation for
 interval_duration = 15  # each time period is 15 mins long
 expansion_periods = 1  # not yet implemented leave as 1
@@ -81,16 +71,8 @@ discount_rate = 0  # not yet implemented leave as 0
 system = OptimisationGraph()
 
 # Create assets
-# grid = Node(node_name='grid')                                   # create node representing upstream grid
-# grid.add_ports('grid', FlexPort(units=Units.KW))  # create a port which will be used to connect with the conn point
-
-
 connection_point = TellegenNode(node_name="cp")  # create the connection point
-connection_point.add_ports_from_list(
-    ["load", "inv", "diesel_gen"], FlexPort, units=Units.KW
-)  # create ports to connect to the grid, the load, and the inverter
-# connection_point.ports['grid'].set_flow_constraints(max_import=0,max_export=-0, slack=True)
-
+connection_point.add_ports_from_list(["load", "inv", "diesel_gen"], FlexPort, units=Units.KW)
 
 load = Node(node_name="load")  # create a node to represent the load
 l1 = ElectricalDemand()  # create an electrical demand to attach to this node
@@ -100,7 +82,13 @@ load.ports["load"] = l1  # add the electrical demand to a port of the load node
 # create an inverter node with some properties,
 # if the constraints are not none then they should be max_export <= 0 <= max_import
 # can also set efficiency on the dc and the ac side in the range 0-1
-inverter = Inverter(node_name="inv", max_import=None, max_export=None, dc_ac_efficiency=1, ac_dc_efficiency=1)
+inverter = Inverter(
+    node_name="inv",
+    max_import=None,
+    max_export=None,
+    dc_ac_efficiency=1,
+    ac_dc_efficiency=1,
+)
 inverter.add_ac_port("inv")  # add a port that is used to connect back to the connection_point
 inverter.add_dc_port("bess")  # add a port to connect to the battery
 inverter.add_dc_port("pv")  # add a port to connect to the pv
@@ -146,13 +134,12 @@ system.connect_ports_and_create_edge(diesel_gen.ports["output"], connection_poin
 
 # Create objectives/tariffs
 diesel_cost = ImportTariff(
-    component=diesel_gen.ports["input"], tariff_array=[1] * time_periods, expansion_periods=expansion_periods
+    component=diesel_gen.ports["input"],
+    tariff_array=[1] * time_periods,
+    expansion_periods=expansion_periods,
 )
 
-
 objective_set = ObjectiveSet(objective_list=[diesel_cost])
-
-############################ ----------------------- ########################################
 
 # Invoke the optimiser and optimise
 optimise_results = optimise(
@@ -169,7 +156,7 @@ optimise_results = optimise(
 
 log_infeasible_constraints(optimise_results.model)
 
-############################ Analyse the Optimisation ########################################
+# Analyse the Optimisation
 
 storage_energy_delta = optimise_results.values(b.port_name, 0)
 storage_energy_soc = optimise_results.values(b.soc_value, 0)

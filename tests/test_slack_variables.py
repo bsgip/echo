@@ -93,7 +93,7 @@ def test_import_slack_var_is_minimised():
     )
 
     g_import_slack = optimise_results.values(grid.ports["grid"].import_slack, 0)
-    g = optimise_results.values(grid.ports["grid"].port_name, 0)
+    optimise_results.values(grid.ports["grid"].port_name, 0)
 
     np.testing.assert_almost_equal(g_import_slack, 0)
 

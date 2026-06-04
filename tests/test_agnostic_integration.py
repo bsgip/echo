@@ -1,21 +1,16 @@
 """Integration testing for thermal models individual classes"""
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import (
     FlexPort,
-    MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
     Sink,
-    TellegenNode,
 )
-from echo.models.base import Node, OptimisationGraph, Port
+from echo.models.base import Node, OptimisationGraph
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise
-from echo.utils import TimeSeriesData, expand_as_dict
 
 NUMBER_INTERVALS = 10
 INTERVAL_DURATION = 30
@@ -43,19 +38,24 @@ def test_partitioned_bus_flows():
     electrical_mains_2 = Node(node_name="electrical_supply_2", ports={"supply_kw": FlexPort(units=Units.KW)})
 
     thermal_load_1 = Node(
-        node_name="thermal_load_1", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_1")}
+        node_name="thermal_load_1",
+        ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_1")},
     )
     thermal_load_2 = Node(
-        node_name="thermal_load_2", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_2")}
+        node_name="thermal_load_2",
+        ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_2")},
     )
     thermal_load_3 = Node(
-        node_name="thermal_load_3", ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_3")}
+        node_name="thermal_load_3",
+        ports={"demand_kwt": Sink(units=Units.KWT, initial_value_ref="thermal_load_3")},
     )
     electrical_load_1 = Node(
-        node_name="electrical_load_1", ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_1")}
+        node_name="electrical_load_1",
+        ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_1")},
     )
     electrical_load_2 = Node(
-        node_name="electrical_load_2", ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_2")}
+        node_name="electrical_load_2",
+        ports={"demand_kw": Sink(units=Units.KW, initial_value_ref="electrical_load_2")},
     )
 
     partitioned_bus = PartitionedMultiCommodityTellegenNode(
@@ -92,7 +92,8 @@ def test_partitioned_bus_flows():
         ]
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_thermal_supply_1"], thermal_mains_1.ports["supply_kwt"]
+        partitioned_bus.ports["to_thermal_supply_1"],
+        thermal_mains_1.ports["supply_kwt"],
     )
     system.connect_ports_and_create_edge(
         partitioned_bus.ports["to_thermal_demand_1"], thermal_load_1.ports["demand_kwt"]
@@ -101,22 +102,27 @@ def test_partitioned_bus_flows():
         partitioned_bus.ports["to_thermal_demand_2"], thermal_load_2.ports["demand_kwt"]
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_electrical_supply_1"], electrical_mains_1.ports["supply_kw"]
+        partitioned_bus.ports["to_electrical_supply_1"],
+        electrical_mains_1.ports["supply_kw"],
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_electrical_demand_1"], electrical_load_1.ports["demand_kw"]
+        partitioned_bus.ports["to_electrical_demand_1"],
+        electrical_load_1.ports["demand_kw"],
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_thermal_supply_2"], thermal_mains_2.ports["supply_kwt"]
+        partitioned_bus.ports["to_thermal_supply_2"],
+        thermal_mains_2.ports["supply_kwt"],
     )
     system.connect_ports_and_create_edge(
         partitioned_bus.ports["to_thermal_demand_3"], thermal_load_3.ports["demand_kwt"]
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_electrical_supply_2"], electrical_mains_2.ports["supply_kw"]
+        partitioned_bus.ports["to_electrical_supply_2"],
+        electrical_mains_2.ports["supply_kw"],
     )
     system.connect_ports_and_create_edge(
-        partitioned_bus.ports["to_electrical_demand_2"], electrical_load_2.ports["demand_kw"]
+        partitioned_bus.ports["to_electrical_demand_2"],
+        electrical_load_2.ports["demand_kw"],
     )
 
     optimise_results_no = optimise(

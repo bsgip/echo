@@ -1,17 +1,21 @@
-from __future__ import division
-
 import time
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
+from echo.models.electrical import (
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalStorage,
+    Inverter,
+)
 from echo.models.scenario import EngineSettings, ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower
@@ -53,26 +57,13 @@ engine_settings = EngineSettings(
 
 duration_multiplication = 1
 
-# fmt: off
 # The load and pv arrays below are in average kw consumed per 15 minutes
 # define load (loads must be positive values)
-test_load = np.array(
-    [2.13, 2.09, 2.3, 2.11, 2.2, 2.23, 15, 15, 15, 2.19, 2.19, 2.19, 2.12, 2.15, 2.25, 2.12, 2.21, 2.16,
-     2.26, 2.13, 2.08, 2.15, 2.42, 2.02, 2.3, 2.26, 2.35, 2.55, 3.23, 2.98, 3.49, 3.5, 3.12, 3.52, 3.94, 3.55,
-     3.99, 3.71, 3.38, 3.76, 3.71, 3.78, 3.29, 3.65, 3.61, 3.75, 3.38, 3.66, 3.56, 3.69, 3.3, 3.61, 3.71, 3.82,
-     3.17, 3.69, 3.74, 3.86, 3.57, 3.55, 3.75, 3.6, 3.67, 3.48, 3.51, 3.46, 3.19, 3.38, 3.19, 3.38, 3.04, 3.12,
-     2.91, 3.11, 3.13, 2.77, 2.24, 2.54, 2.24, 2.24, 2.09, 2.33, 2.17, 2.16, 1.97, 2.16, 2.21, 2.18, 2.01, 2.16,
-     2.19, 2.11, 2.17, 2.13, 12, 12] * duration_multiplication)
+data_df = pd.read_csv("examples/data.csv")
+test_load = data_df["load"].to_numpy()
 
-# define PV, generation is negative values
-test_pv = 2 * np.array(
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.23, 0.52,
-     0.74, 0.71, 0.63, 0.68, 0.97, 0.01, 0.52, 0.83, 0.83, 0.79, 1.22, 1.36, 1.27, 1.42, 1.97, 2.56, 2.91, 3.24,
-     3.8, 4.3, 4.62, 4.84, 4.6, 4.17, 3.77, 3.76, 3.38, 2.64, 1.96, 1.76, 1.85, 2.4, 3.82, 5.13, 4.97, 5.02, 5.43,
-     5.32, 3.56, 1.75, 1.43, 1.65, 1.69, 2.3, 2.71, 2.41, 2.63, 2.6, 1.9, 0.78, 0.13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] * duration_multiplication)
-test_pv *= -1  # convert solar generation to negative to match convention.
-# fmt: on
+# convert solar generation to negative to match convention.
+test_pv = -1 * 2 * data_df["solar"].to_numpy()
 
 # Tariffs are in $ / kwh
 import_tariff_array = np.array(
@@ -182,12 +173,16 @@ peak_power_obj = PeakNegativePower(component=grid.ports["grid"])
 
 # create the import objective cost
 import_cost = ImportTariff(
-    component=connection_point.ports["grid"], tariff_array=import_tariff_array, expansion_periods=expansion_periods
+    component=connection_point.ports["grid"],
+    tariff_array=import_tariff_array,
+    expansion_periods=expansion_periods,
 )
 
 # create the export objective cost
 export_cost = ExportTariff(
-    component=connection_point.ports["grid"], tariff_array=export_tariff_array, expansion_periods=expansion_periods
+    component=connection_point.ports["grid"],
+    tariff_array=export_tariff_array,
+    expansion_periods=expansion_periods,
 )
 
 objective_set = ObjectiveSet(objective_list=[import_cost, export_cost, peak_power_obj, throughput_cost])
@@ -270,7 +265,8 @@ if matplotlib.get_backend() != "agg":
     plt.show()
 else:
     print(
-        "Warning: Unable to show plot with AGG backend. See https://matplotlib.org/stable/users/explain/figure/backends.html for more information."
+        "Warning: Unable to show plot with AGG backend. See "
+        "https://matplotlib.org/stable/users/explain/figure/backends.html for more information."
     )
     figure_filename = "btm_battery_example_result.png"
     print(f"-> Saving figure to file '{figure_filename}' instead.")

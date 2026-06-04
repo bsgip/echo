@@ -1,21 +1,19 @@
 """Unit testing for thermal models individual classes"""
 
-import numpy as np
-import pandas as pd
 import pyomo.environ as en
 import pytest
 
 from echo.configuration import Units
-from echo.exceptions import ConfigurationError
 from echo.models.agnostic import (
     FlexPort,
-    MultiCommodityTellegenNode,
     PartitionedMultiCommodityTellegenNode,
-    TellegenNode,
     ThreeWayValveNode,
 )
-from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings, engine_settings_from_environment
-from echo.utils import TimeSeriesData, expand_as_dict
+from echo.models.scenario import (
+    EchoConcreteModel,
+    ScenarioSettings,
+    engine_settings_from_environment,
+)
 
 
 def empty_model():
@@ -79,7 +77,7 @@ def test_partitioned_node_add_port():
 def test_partitioned_node_error():
     """Test only ports or partitions validation error"""
     with pytest.raises(Exception):
-        node = PartitionedMultiCommodityTellegenNode(
+        PartitionedMultiCommodityTellegenNode(
             partitions={
                 "partition_1": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
                 "partition_2": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],

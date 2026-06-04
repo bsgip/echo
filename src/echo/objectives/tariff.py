@@ -6,7 +6,15 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from pydantic import (
+    Field,
+    NonNegativeFloat,
+    NonPositiveFloat,
+    PositiveFloat,
+    PositiveInt,
+    root_validator,
+    validator,
+)
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
@@ -43,7 +51,11 @@ class ImportTariff(Tariff):
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
-        setattr(model, self.import_tariff, en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict))
+        setattr(
+            model,
+            self.import_tariff,
+            en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict),
+        )
 
     def apply_constraints(self, model: EchoConcreteModel):
         if hasattr(model, self.component.pos) is False:
@@ -77,7 +89,11 @@ class ExportTariff(Tariff):
         self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
-        setattr(model, self.export_tariff, en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict))
+        setattr(
+            model,
+            self.export_tariff,
+            en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict),
+        )
 
     def apply_constraints(self, model: EchoConcreteModel):
         if hasattr(model, self.component.pos) is False:
@@ -111,7 +127,10 @@ class BlockTariff(Objective):
 
     @root_validator
     def check_block_rates(cls, values):
-        validate(len(values.get("blocks")) + 1 == len(values.get("rates")), "Enter one more rate than num blocks")
+        validate(
+            len(values.get("blocks")) + 1 == len(values.get("rates")),
+            "Enter one more rate than num blocks",
+        )
         return values
 
     @root_validator(pre=True)
@@ -141,7 +160,10 @@ class BlockTariff(Objective):
         if self.reset_periods is None:
             self.reset_periods = [time_periods]
         else:
-            validate(sum(self.reset_periods) == time_periods, "Total reset intervals doesn't match time periods.")
+            validate(
+                sum(self.reset_periods) == time_periods,
+                "Total reset intervals doesn't match time periods.",
+            )
         window_bool = np.ones(time_periods)
         num_resets = len(self.reset_periods)
         blank = np.zeros([num_resets, time_periods])  # Create template blank array that we will populate with 1s
@@ -173,7 +195,9 @@ class BlockImportTariff(BlockTariff):
 
         initial_val = self._get_active_periods(time_periods=len(model.Time))
         setattr(
-            model, self.window_active, en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val)
+            model,
+            self.window_active,
+            en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val),
         )
 
     def apply_constraints(self, model: EchoConcreteModel):
@@ -215,7 +239,11 @@ class PathTariff(Tariff):
         self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df):
-        setattr(model, self.path_tariff, en.Param(model.Expansion, model.Time, initialize=self.path_tariff_dict))
+        setattr(
+            model,
+            self.path_tariff,
+            en.Param(model.Expansion, model.Time, initialize=self.path_tariff_dict),
+        )
 
     def apply_constraints(self, model: EchoConcreteModel):
         pass
@@ -317,14 +345,20 @@ class TimePeriod(EchoBaseModel):
             if end_time == time(0, 0):
                 end_time = time(23, 59, 59)
             if self.start_time > self.end_time:
-                self_ranges = [(time(0, 0), end_time), (self.start_time, time(23, 59, 59))]
+                self_ranges = [
+                    (time(0, 0), end_time),
+                    (self.start_time, time(23, 59, 59)),
+                ]
             else:
                 self_ranges = [(self.start_time, end_time)]
             end_time = other.end_time
             if end_time == time(0, 0):
                 end_time = time(23, 59, 59)
             if other.start_time > other.end_time:
-                other_ranges = [(time(0, 0), end_time), (other.start_time, time(23, 59, 59))]
+                other_ranges = [
+                    (time(0, 0), end_time),
+                    (other.start_time, time(23, 59, 59)),
+                ]
             else:
                 other_ranges = [(other.start_time, end_time)]
         for self_range in self_ranges:
@@ -508,14 +542,28 @@ class DemandCharge(EchoBaseModel):
         setattr(
             model,
             self.window_active,
-            en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val, domain=en.Binary),
+            en.Param(
+                model.Expansion,
+                self.reset_index,
+                model.Time,
+                initialize=initial_val,
+                domain=en.Binary,
+            ),
         )
 
     def create_vars(self, model: EchoConcreteModel):
         if self.import_demand is True:
-            setattr(model, self.max_demand_val, en.Var(self.reset_index, initialize=0, domain=en.NonNegativeReals))
+            setattr(
+                model,
+                self.max_demand_val,
+                en.Var(self.reset_index, initialize=0, domain=en.NonNegativeReals),
+            )
         elif self.export_demand is True:
-            setattr(model, self.max_demand_val, en.Var(self.reset_index, initialize=0, domain=en.NonPositiveReals))
+            setattr(
+                model,
+                self.max_demand_val,
+                en.Var(self.reset_index, initialize=0, domain=en.NonPositiveReals),
+            )
 
     def objective_expr(self, model: EchoConcreteModel):
         objective = 0
@@ -559,7 +607,10 @@ class DemandTariffObjective(Objective):
             prev_length = None
             for dc in self.demand_charges:
                 if prev_length is not None:
-                    validate(len(dc.window_array) == prev_length, "Demand charge windows are not all the same length")
+                    validate(
+                        len(dc.window_array) == prev_length,
+                        "Demand charge windows are not all the same length",
+                    )
                     prev_length = len(dc.window_array)
                 else:
                     prev_length = len(dc.window_array)
@@ -596,7 +647,12 @@ class DemandTariffObjective(Objective):
                 setattr(
                     model,
                     f"cons_{dc.max_demand_val}_max_demand",
-                    en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_import_demand_rule),
+                    en.Constraint(
+                        model.Expansion,
+                        model.Time,
+                        dc.reset_index,
+                        rule=max_import_demand_rule,
+                    ),
                 )
             elif dc.export_demand is True:
 
@@ -610,7 +666,12 @@ class DemandTariffObjective(Objective):
                 setattr(
                     model,
                     f"cons_{dc.max_demand_val}_max_export_demand",
-                    en.Constraint(model.Expansion, model.Time, dc.reset_index, rule=max_export_demand_rule),
+                    en.Constraint(
+                        model.Expansion,
+                        model.Time,
+                        dc.reset_index,
+                        rule=max_export_demand_rule,
+                    ),
                 )
 
     def objective_expr(self, model: EchoConcreteModel):
