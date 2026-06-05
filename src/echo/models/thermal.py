@@ -118,7 +118,7 @@ class SimpleChiller(Node):
         if self.cooling_cop_time_series_ref:
             if self.cooling_cop_time_series_ref not in profile_df.columns:
                 raise ValueError(
-                    "Could not find reference column name " f"{self.cooling_cop_time_series_ref} in the profile."
+                    f"Could not find reference column name {self.cooling_cop_time_series_ref} in the profile."
                 )
             self.cooling_cop_time_series = to_initial_values(
                 profile_df,
@@ -610,8 +610,7 @@ class ThermalStorage(Node):
         if self.ambient_temp_ref:
             if self.ambient_temp_ref not in profile_df.columns:
                 raise ValueError(
-                    f"Could find reference column name {self.ambient_temp_ref} "
-                    "for ambient temperature in the profile."
+                    f"Could find reference column name {self.ambient_temp_ref} for ambient temperature in the profile."
                 )
             else:
                 self.ambient_temp = to_initial_values(
@@ -901,7 +900,7 @@ class SimpleHeatPump(Node):
         if self.cooling_cop_time_series_ref:
             if self.cooling_cop_time_series_ref not in profile_df.columns:
                 raise ValueError(
-                    "Could not find reference column name " f"{self.cooling_cop_time_series_ref} in the profile."
+                    f"Could not find reference column name {self.cooling_cop_time_series_ref} in the profile."
                 )
             else:
                 self.cooling_cop_time_series = to_initial_values(
@@ -914,7 +913,7 @@ class SimpleHeatPump(Node):
         if self.heating_cop_time_series_ref:
             if self.heating_cop_time_series_ref not in profile_df.columns:
                 raise ValueError(
-                    "Could not find reference column name " f"{self.heating_cop_time_series_ref} in the profile."
+                    f"Could not find reference column name {self.heating_cop_time_series_ref} in the profile."
                 )
             else:
                 self.heating_cop_time_series = to_initial_values(

@@ -204,12 +204,12 @@ class EVBase(TransformNode):
 
         if self.available is None:
             raise ConfigurationError(
-                f"The available attribute for {self.node_name} has not been set. " f"Please use set_stateful_attrs()."
+                f"The available attribute for {self.node_name} has not been set. Please use set_stateful_attrs()."
             )
 
         if self.usage is None:
             raise ConfigurationError(
-                f"The usage attribute for {self.node_name} has not been set. " f"Please use set_stateful_attrs()."
+                f"The usage attribute for {self.node_name} has not been set. Please use set_stateful_attrs()."
             )
 
         if self.initial_state_of_charge is None:
@@ -245,7 +245,7 @@ class EVBase(TransformNode):
         # If the maximum power usage is larger than the usage power limit, raise an error.
         if max_usage > self.usage_power_limit * -1:
             raise ValueError(
-                f"Usage requirement of {max_usage} exceeds battery discharge limit of " f"{self.usage_power_limit}."
+                f"Usage requirement of {max_usage} exceeds battery discharge limit of {self.usage_power_limit}."
             )
 
     def _create_usage_port(self) -> None:
@@ -892,8 +892,7 @@ class EVWithProfile(Node):
             max_demand = np.max(np.array(self.demand))
             if max_demand > self.charging_power_limit:
                 raise ValueError(
-                    f"Demand requirement of {max_demand} exceeds maximum charging rate of "
-                    f"{self.charging_power_limit}."
+                    f"Demand requirement of {max_demand} exceeds maximum charging rate of {self.charging_power_limit}."
                 )
 
     def _verify_ports(self) -> None:
