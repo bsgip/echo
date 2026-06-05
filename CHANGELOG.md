@@ -2,6 +2,12 @@
 
 ## Releases
 
+### v2.2.1 (2026-06-05)
+
+#### Adds
+
+- MIT licence
+
 ### v2.2.0 (2026-04-30)
 
 #### Adds
@@ -19,9 +25,9 @@
   - `EVV1G` - demand managed charging based on EV availability
   - `EVV2G` - demand and generation managed charging based on EV availability
   - `EVWithProfile` - EV charging based on a demand and/or generation profile. The profile can have positive (demand) and negative (generation) values). For use with collected EV data.
-- Replaces `**data` input variable with explicit input variables for functions in `EVBase`, `EVV0G`, `EVV1G`, `EVV2G` and `EVWithDemandProfilee` objects.
+  - Replaces `**data` input variable with explicit input variables for functions in `EVBase`, `EVV0G`, `EVV1G`, `EVV2G` and `EVWithDemandProfilee` objects.
 
-#### Removes
+#### Deprecates
 
 - Deprecates the `EV` object.
 
