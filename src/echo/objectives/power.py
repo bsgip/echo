@@ -1,4 +1,3 @@
-from typing import Optional
 
 import pyomo.environ as en
 from pydantic import PositiveFloat
@@ -90,7 +89,7 @@ class NotFullyChargedPenalty(Objective):
     """A penalty objective for penalising a storage asset for not being fulling charged."""
 
     component: Storage
-    rate: Optional[PositiveFloat]
+    rate: PositiveFloat | None
     rate_array: list
 
     def apply_constraints(self, model: EchoConcreteModel):

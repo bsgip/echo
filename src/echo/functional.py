@@ -4,8 +4,8 @@ from collections.abc import Iterable, Mapping
 
 def is_list(
     obj: typing.Any,
-    scalars: typing.Tuple = (Mapping, str),
-    iters: typing.Tuple[typing.Type[typing.Iterable]] = (Iterable,),
+    scalars: tuple = (Mapping, str),
+    iters: tuple[type[typing.Iterable]] = (Iterable,),
 ) -> bool:
     """Return true if the object is iterable.
 
@@ -46,7 +46,7 @@ def is_list(
     return isinstance(obj, iters) and not isinstance(obj, scalars or ())
 
 
-def maybe_list(obj: typing.Any, scalars: typing.Tuple = (Mapping, str)) -> typing.List:
+def maybe_list(obj: typing.Any, scalars: tuple = (Mapping, str)) -> list:
     """Return list of one element if ``l`` is a scalar.
 
     Taken from

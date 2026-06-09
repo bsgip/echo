@@ -1,7 +1,8 @@
 import copy
 import warnings
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Type, Union, cast
+from typing import Any, Union, cast
 
 import networkx as nx
 import pandas as pd
@@ -10,16 +11,20 @@ import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import (FlowConstraint, Flows, OptimisationType,
-                                TransformRule, Units)
-from echo.constants import (negative_variable_component,
-                            positive_variable_component)
+from echo.configuration import FlowConstraint, Flows, OptimisationType, TransformRule, Units
+from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (TimeExpandableType, TimeSeriesData, domain_from_flow,
-                        expand_as_array, expand_as_dict,
-                        generate_array_constraint, set_var_bounds_from_dict,
-                        to_initial_values)
+from echo.utils import (
+    TimeExpandableType,
+    TimeSeriesData,
+    domain_from_flow,
+    expand_as_array,
+    expand_as_dict,
+    generate_array_constraint,
+    set_var_bounds_from_dict,
+    to_initial_values,
+)
 from echo.validators import ArrayType, export_cons_check, import_cons_check
 
 
@@ -41,20 +46,20 @@ class Port(BaseModel):
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict = 0
-    initial_value_ref: Optional[str]  # string ref to df column
-    initial_value_scaling: Optional[int]  # scaling factor for initial values
+    initial_value_ref: str | None  # string ref to df column
+    initial_value_scaling: int | None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
-    uid: Optional[str] = Field(default_factory=shortuuid.uuid)
+    uid: str | None = Field(default_factory=shortuuid.uuid)
     port_name: str = ""
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
     import_constraint: FlowConstraint = FlowConstraint.NA
-    import_constraint_value: Optional[ConstraintValueType] = None
+    import_constraint_value: ConstraintValueType | None = None
     export_constraint: FlowConstraint = FlowConstraint.NA
-    export_constraint_value: Optional[ConstraintValueType] = None
-    active_periods: Optional[dict[tuple[int, int], Any]] = None
+    export_constraint_value: ConstraintValueType | None = None
+    active_periods: dict[tuple[int, int], Any] | None = None
     slack: bool = False
-    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # this will eventually be a pyomo expression
+    objective: float | en.numeric_expr.NumericExpression = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -103,9 +108,9 @@ class Port(BaseModel):
 
     def set_flow_constraints(
         self,
-        max_import: Optional[ConstraintValueType],
-        max_export: Optional[ConstraintValueType],
-        slack: Optional[bool] = False,
+        max_import: ConstraintValueType | None,
+        max_export: ConstraintValueType | None,
+        slack: bool | None = False,
     ):
         """Sets the values of port flow constraints.
 
@@ -129,7 +134,7 @@ class Port(BaseModel):
         self,
         initial_val,
         expansion_periods: int = 1,
-        time_periods: Optional[int] = None,
+        time_periods: int | None = None,
     ):
         if isinstance(initial_val, dict):
             self.set_initial_value(initial_val)
@@ -443,7 +448,7 @@ class Port(BaseModel):
         self,
         array: TimeExpandableType,
         expansion_periods: int = 1,
-        time_periods: Optional[int] = None,
+        time_periods: int | None = None,
     ):
         """Sets initial port value which is used to initialise the pyomo var/param
 
@@ -463,7 +468,7 @@ class Port(BaseModel):
         )
         self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
-    def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: Optional[int] = None):
+    def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: int | None = None):
         """Sets port active periods
         Args:
             array: array, list of active periods as bool values
@@ -545,7 +550,7 @@ class Node(BaseModel):
     node_name: str = ""
     uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
-    objective: Union[float, en.numeric_expr.NumericExpression] = 0  # For adding any node objectives
+    objective: float | en.numeric_expr.NumericExpression = 0  # For adding any node objectives
 
     @property
     def inflow(self):
@@ -562,7 +567,7 @@ class Node(BaseModel):
         else:
             raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
-    def add_ports_from_list(self, names: Iterable[str], port_type: Type[Port], **kwargs):
+    def add_ports_from_list(self, names: Iterable[str], port_type: type[Port], **kwargs):
         """Creates a set of ports (using port_type) and adds them to this Node. The ports will be constructed
         using port_type and the supplied kwargs"""
         for name in names:
@@ -632,7 +637,7 @@ class TransformNode(Node):
         self.add_transformation(t)
 
     def verify_node(self):
-        super(TransformNode, self).verify_node()
+        super().verify_node()
 
         if not self.transformations:
             raise ConfigurationError("Node has Transform rule but Transformation object(s) has not been added to node.")
@@ -677,10 +682,10 @@ class Edge(BaseModel):
     """
 
     uid: str = Field(default_factory=shortuuid.uuid)
-    edge_name: Optional[str] = None
+    edge_name: str | None = None
     vertices: tuple[Port, Port]
-    nodes: Optional[tuple[str, str]]  # tuple of node names - todo make this required
-    tariff: Optional[Union[list, None]]
+    nodes: tuple[str, str] | None  # tuple of node names - todo make this required
+    tariff: list | None | None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -748,16 +753,16 @@ class Path(BaseModel):
     edge_ports: list[tuple[Port, Port]] = []  # list of edge name tuples
     vertices: list  # list of node names
     uid: str = Field(default_factory=shortuuid.uuid)
-    path_name: Optional[str] = None
+    path_name: str | None = None
     units = Units.KW
     regularise: bool = False
-    objective: Union[float, en.numeric_expr.NumericExpression] = 0
+    objective: float | en.numeric_expr.NumericExpression = 0
 
     flow_value: str = ""
-    contingency_neg: Optional[str]
-    contingency_pos: Optional[str]
-    path_tariff: Optional[str]
-    slack: Optional[str]
+    contingency_neg: str | None
+    contingency_pos: str | None
+    path_tariff: str | None
+    slack: str | None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -818,7 +823,7 @@ class OptimisationGraph(BaseModel):
     def _add_single_node(self, node_obj: Node):
         validate(
             node_obj.node_name not in self.node_obj,
-            "Node '{}' already defined".format(node_obj.node_name),
+            f"Node '{node_obj.node_name}' already defined",
         )
         self.node_obj[node_obj.node_name] = node_obj
 
@@ -834,7 +839,7 @@ class OptimisationGraph(BaseModel):
         else:
             print(f"Edge {edge_nodes} not found.")
 
-    def add_node_obj(self, node: Union[list, Node]):
+    def add_node_obj(self, node: list | Node):
         """Adds either a single node or list of nodes to graph"""
         # todo phase out this method
         if isinstance(node, list):
@@ -866,7 +871,7 @@ class OptimisationGraph(BaseModel):
         if edge is not None:
             return edge
         elif warn:
-            print("Edge between {} and {} does not exist".format(nodes[0], nodes[1]))
+            print(f"Edge between {nodes[0]} and {nodes[1]} does not exist")
 
     def _add_single_edge(self, edge_obj: Edge):
         port1 = edge_obj.vertices[0]
@@ -888,7 +893,7 @@ class OptimisationGraph(BaseModel):
 
         self.edge_obj[(node1_name, node2_name)] = edge_obj
 
-    def add_edge_obj(self, edge: Union[list[Edge], Edge]):
+    def add_edge_obj(self, edge: list[Edge] | Edge):
         # todo phase out this method
         if isinstance(edge, list):
             for e in edge:
@@ -907,8 +912,8 @@ class OptimisationGraph(BaseModel):
         self,
         port1: Port,
         port2: Port,
-        edge_name: Optional[str] = None,
-        nodes: Optional[tuple[str]] = None,
+        edge_name: str | None = None,
+        nodes: tuple[str] | None = None,
         warn: bool = False,
     ):
         """Creates an edge between port1 and port2 and adds it to the graph"""
@@ -954,7 +959,7 @@ class OptimisationGraph(BaseModel):
                     return node_name
         raise ConfigurationError(f"Port {port.port_name} is not part of any node, or node has not been added to graph.")
 
-    def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> Optional[tuple[Port, Port]]:
+    def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> tuple[Port, Port] | None:
         """Returns the ports that are on the edge from node1 to node2."""
         connecting_edge = self.edge_obj.get((node1, node2))
         if connecting_edge:
@@ -982,7 +987,7 @@ class OptimisationGraph(BaseModel):
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
 
-    def get_path(self, path_vertices: Union[list[Node], list[str]]):
+    def get_path(self, path_vertices: list[Node] | list[str]):
         """Looks up a path using a list of path vertices (nodes, or node names)."""
         if isinstance(path_vertices[0], Node):
             name_key = [cast(Node, node).node_name for node in path_vertices]
@@ -1005,8 +1010,8 @@ class OptimisationGraph(BaseModel):
 
     def create_path_objects(
         self,
-        sources: Union[list[Node], list[str]],
-        sinks: Union[list[Node], list[str]],
+        sources: list[Node] | list[str],
+        sinks: list[Node] | list[str],
         path_unit: Units = Units.KW,
         regularise: bool = False,
     ):
@@ -1206,7 +1211,7 @@ class OptimisationGraph(BaseModel):
         if system.has_edge(node1, node2):
             system.remove_edge(node1, node2)
         else:
-            raise ValueError('No edge exists between nodes "{}" and "{}"'.format(node1, node2))
+            raise ValueError(f'No edge exists between nodes "{node1}" and "{node2}"')
 
         # Get a list of the two sets of nodes
         y = nx.connected_components(system)
@@ -1274,10 +1279,10 @@ class OptimisationGraph(BaseModel):
     def inject_data_into_ev(
         self,
         node_name: str,
-        available: Optional[Union[ArrayType, list, str]] = None,
-        usage: Optional[Union[ArrayType, list, str]] = None,
-        initial_state_of_charge: Optional[float] = None,
-        interval_duration: Optional[int] = None,
+        available: ArrayType | list | str | None = None,
+        usage: ArrayType | list | str | None = None,
+        initial_state_of_charge: float | None = None,
+        interval_duration: int | None = None,
     ):
         """Injects stateful data into an EV node in an OptimisationGraph.
 

@@ -8,8 +8,7 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalStorage, FixedElectricalPort
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import PathTariff, ThroughputCost
 from echo.optimiser import optimise
@@ -42,7 +41,7 @@ test_pv = -1 * 2 * data_df["solar"].to_numpy()
 aggregate_load = test_load + test_pv
 
 # Tariffs are in $ / kwh
-remote_energy_tariff = np.array(([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12))
+remote_energy_tariff = np.array([0.1] * 28 + [0.25] * 8 + [0.1] * 32 + [0.25] * 16 + [0.1] * 12)
 remote_transport_import = np.array([0.15] * 96)
 local_energy_tariff = remote_energy_tariff
 # local_energy_tariff = np.array(([0.1] * 28 + [0.2] * 8 + [0.0] * 32 + [0.2] * 16 + [0.1] * 12))
@@ -51,8 +50,8 @@ local_transport_import = np.array([0.05] * 96)
 remote_transport_export = np.array([0.0] * 96)
 local_transport_export = np.array([0.0] * 96)
 
-import_tariff_array = np.array(([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12))
-export_tariff_array = np.array(([0.0] * 96))
+import_tariff_array = np.array([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12)
+export_tariff_array = np.array([0.0] * 96)
 
 # Optimise this Example
 

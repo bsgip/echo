@@ -121,9 +121,7 @@ def check_initial_state_of_charge_within_bounds(
     # Check initial soc is within bounds
     if (initial_state_of_charge < min_soc) or (initial_state_of_charge > max_capacity):
         raise ValueError(
-            "Initial state of charge, {}, must be between min soc, {}, and max capacity, {}".format(
-                initial_state_of_charge, min_soc, max_capacity
-            )
+            f"Initial state of charge, {initial_state_of_charge}, must be between min soc, {min_soc}, and max capacity, {max_capacity}"
         )
 
 
@@ -170,7 +168,7 @@ def validate_piecewise_arrays(cls, values):
         for k, _ in input_points.items():
             validate(
                 len(input_points[k]) == len(output_points[k]),
-                "Input and output arrays are not equal lengths for index {}".format(k),
+                f"Input and output arrays are not equal lengths for index {k}",
             )
 
     return values

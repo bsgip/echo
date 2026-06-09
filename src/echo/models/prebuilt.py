@@ -1,11 +1,9 @@
-from typing import Optional, Union
 
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
 from echo.configuration import Units
-from echo.models.agnostic import (Demand, FlexPort, FlexSink, InputOutputNode,
-                                  OffOrConstrainedPort)
+from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, OffOrConstrainedPort
 from echo.models.base import Node, TransformNode
 from echo.models.carbon import CarbonSource
 from echo.models.electrical import ElectricalGeneration, ElectricalStorage
@@ -21,7 +19,7 @@ class Battery(Node):
         initial_state_of_charge: float,
         charging_power_limit: float,
         discharging_power_limit: float,
-        storage_capacity_cost: Optional[PositiveFloat] = None,
+        storage_capacity_cost: PositiveFloat | None = None,
         charging_efficiency: float = 1,
         discharging_efficiency: float = 1,
         depth_of_discharge_limit: float = 0,
@@ -45,7 +43,7 @@ class Battery(Node):
 
 
 class Solar(Node):
-    def __init__(self, port_name: str, profile: Union[ArrayType, dict], curtailable: bool = False, **data):
+    def __init__(self, port_name: str, profile: ArrayType | dict, curtailable: bool = False, **data):
         super().__init__(**data)
         self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
         if type(profile) is dict:
@@ -65,7 +63,7 @@ class NewSolar(Node):
 
 
 class Load(Node):
-    def __init__(self, port_name: str, port_unit: Units, profile: Union[dict, ArrayType, list], **data):
+    def __init__(self, port_name: str, port_unit: Units, profile: dict | ArrayType | list, **data):
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)
         if type(profile) is dict:
@@ -92,7 +90,7 @@ class FlexNodeWithEmissions(TransformNode):
         emitting_port: str,
         emitting_port_units: Units,
         carbon_port: str,
-        emissions_factor: Union[float, ArrayType],
+        emissions_factor: float | ArrayType,
         **data,
     ):
         super().__init__(**data)
@@ -131,7 +129,7 @@ class DieselGenerator(InputOutputNode):
         # todo: add some validators :-)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        super(DieselGenerator, self).apply_node_constraints(model)
+        super().apply_node_constraints(model)
 
         def node_constraint(model: EchoConcreteModel, p, t):
             p_in = getattr(model, self.ports["input"].port_name)

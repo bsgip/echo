@@ -1,15 +1,15 @@
-from typing import Optional
 
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
 
 from echo.configuration import Units
-from echo.models.agnostic import (FixedPort, FlexPort, InputOutputNode,
-                                  OffOrConstrainedPort)
+from echo.models.agnostic import FixedPort, FlexPort, InputOutputNode, OffOrConstrainedPort
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    ArrayType, set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
-    validate_startup_efficiency)
+    ArrayType,
+    set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
+    validate_startup_efficiency,
+)
 
 
 class FlexGasPort(FlexPort):
@@ -54,7 +54,7 @@ class GasBoilerFixedCOP(InputOutputNode):
         self.ports[self.output_port_ref] = thermal_output_port
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        super(GasBoilerFixedCOP, self).apply_node_constraints(model)
+        super().apply_node_constraints(model)
 
         def node_constraint(model: EchoConcreteModel, p, t):
             p_in = getattr(model, self.ports[self.input_port_ref].port_name)
@@ -90,10 +90,10 @@ class TempControlledBoiler(InputOutputNode):
     return_temp_bounds: tuple = (50, 80)
     deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
     cop: float  # coefficient of performance - determines how much of the input energy is delivered as heating energy
-    startup_cop: Optional[float]
+    startup_cop: float | None
 
     # pyomo vars
-    is_on: Optional[str]
+    is_on: str | None
     return_t: str = ""
     exit_t: str = ""
 
@@ -113,7 +113,7 @@ class TempControlledBoiler(InputOutputNode):
         self.exit_t = "outlet_temp_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(TempControlledBoiler, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
             model,

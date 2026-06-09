@@ -1,18 +1,16 @@
 import warnings
+from collections.abc import Collection
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
-from typing import Collection, Optional, Union
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pyomo.opt import (SolverFactory, SolverResults, SolverStatus,
-                       TerminationCondition)
+from pyomo.opt import SolverFactory, SolverResults, SolverStatus, TerminationCondition
 
 from echo.exceptions import ConfigurationError, OptimiserResultError, validate
 from echo.models.base import Node, OptimisationGraph, Port
-from echo.models.scenario import (EchoConcreteModel, EngineSettings,
-                                  ScenarioSettings)
+from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives.base import Objective, ObjectiveSet
 
 # The default set of termination conditions that pyomo can return and echo will report as a success
@@ -29,7 +27,7 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
 
 
 @contextmanager
-def logged_stdout(logfile: Optional[str], mode: str = "w"):
+def logged_stdout(logfile: str | None, mode: str = "w"):
     """Context manager that while held open will redirect all stdout to logfile. If the logfile is None then
     no redirection will occur"""
     if logfile is None:
@@ -49,7 +47,7 @@ class OptimisationResult:
     scenario_settings: ScenarioSettings
     objective: en.numeric_expr.NumericExpression
     model: EchoConcreteModel
-    objective_set: Optional[ObjectiveSet]
+    objective_set: ObjectiveSet | None
     graph: OptimisationGraph
     opt_status: SolverStatus
     termination_condition: TerminationCondition
@@ -168,7 +166,7 @@ def validate_network_graph(graph: OptimisationGraph):
     for node_name, node_obj in graph.node_obj.items():
         validate(
             node_obj.node_name == node_name,
-            "Node {} name has been updated after being added to the network graph.".format(node_name),
+            f"Node {node_name} name has been updated after being added to the network graph.",
         )
 
     graph.verify_graph()
@@ -179,8 +177,8 @@ def build_model_and_objective(
     scenario_settings: ScenarioSettings,
     smallM: float,
     bigM: int,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
+    profile: pd.DataFrame | None,
+    objective_set: ObjectiveSet | None,
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
@@ -195,7 +193,7 @@ def _build_model(
     scenario_settings: ScenarioSettings,
     smallM: float,
     bigM: int,
-    profile: Optional[pd.DataFrame],
+    profile: pd.DataFrame | None,
 ):
     model = EchoConcreteModel()
     model.smallM = en.Param(initialize=smallM)
@@ -244,10 +242,10 @@ def _build_model(
 def _build_objective(
     model: EchoConcreteModel,
     graph: OptimisationGraph,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
+    profile: pd.DataFrame | None,
+    objective_set: ObjectiveSet | None,
 ):
-    objective: Union[float, en.numeric_expr.NumericExpression] = 0
+    objective: float | en.numeric_expr.NumericExpression = 0
 
     # Add objectives defined in the objective set
     if objective_set is not None:
@@ -272,11 +270,11 @@ def optimise(
     scenario_settings: ScenarioSettings,
     engine_settings: EngineSettings,
     graph: OptimisationGraph,
-    objective_set: Optional[ObjectiveSet] = None,
-    profile: Optional[pd.DataFrame] = None,
+    objective_set: ObjectiveSet | None = None,
+    profile: pd.DataFrame | None = None,
     verbose: bool = False,
     show_solver_output: bool = False,
-    logfile: Optional[str] = None,
+    logfile: str | None = None,
     time_limit: int = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:

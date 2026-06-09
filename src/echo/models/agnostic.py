@@ -1,4 +1,3 @@
-from typing import Optional, Union
 
 import pandas as pd
 import pyomo.environ as en
@@ -8,16 +7,27 @@ from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (TimeExpandableType, TimeSeriesData, expand_as_array,
-                        generate_array_constraint,
-                        populate_values_across_time_and_expansion_indices,
-                        set_float_var_bounds, set_var_bounds_from_dict)
-from echo.validators import (ArrayType, check_bound_order, dod_checks,
-                             node_unit_validator, nonnegative_costs,
-                             nonnegative_load, nonpositive_generation,
-                             set_bounds_from_piecewise_points,
-                             validate_partition_ports,
-                             validate_piecewise_arrays)
+from echo.utils import (
+    TimeExpandableType,
+    TimeSeriesData,
+    expand_as_array,
+    generate_array_constraint,
+    populate_values_across_time_and_expansion_indices,
+    set_float_var_bounds,
+    set_var_bounds_from_dict,
+)
+from echo.validators import (
+    ArrayType,
+    check_bound_order,
+    dod_checks,
+    node_unit_validator,
+    nonnegative_costs,
+    nonnegative_load,
+    nonpositive_generation,
+    set_bounds_from_piecewise_points,
+    validate_partition_ports,
+    validate_piecewise_arrays,
+)
 
 """
 
@@ -69,7 +79,7 @@ class Source(Port):
     def add_source_profile(self, source_values: dict):
         self.set_initial_value(source_values)
 
-    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: Optional[int] = None):
+    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: int | None = None):
         self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
 
 
@@ -87,7 +97,7 @@ class Sink(Port):
     def add_sink_profile(self, sink_values: dict):
         self.set_initial_value(sink_values)
 
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: Optional[int] = None):
+    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int | None = None):
         self.set_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )
@@ -98,7 +108,7 @@ class Demand(Sink):
         self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
-        self, demand: TimeExpandableType, expansion_periods=1, time_periods: Optional[int] = None
+        self, demand: TimeExpandableType, expansion_periods=1, time_periods: int | None = None
     ):
         self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
@@ -120,7 +130,7 @@ class TellegenNode(Node):
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule))
 
     def verify_node(self):
-        super(TellegenNode, self).verify_node()
+        super().verify_node()
 
         validate(
             len(self.ports) >= 2,
@@ -200,10 +210,10 @@ class ThreeWayValveNode(TellegenNode):
             self.binary_variable_flow_through_mutually_exclusive_port_1,
             en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
         )
-        super(ThreeWayValveNode, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
 
     def apply_node_constraints(self, model: EchoConcreteModel):
-        super(ThreeWayValveNode, self).apply_node_constraints(model)
+        super().apply_node_constraints(model)
         self._apply_mutually_exclusive_port_flow_constraint(model)
 
     def _apply_mutually_exclusive_port_flow_constraint(self, model: EchoConcreteModel):
@@ -351,14 +361,14 @@ class ControlledLoadOrGen(FlexPort):
     and the maximum energy that could be consumed/generated if the load operated at max power.
     """
 
-    min_utilisation: Optional[float] = None
-    max_utilisation: Optional[float] = None
-    max_power: Optional[float] = None
-    min_power: Optional[float] = None
+    min_utilisation: float | None = None
+    max_utilisation: float | None = None
+    max_power: float | None = None
+    min_power: float | None = None
     units: Units = Units.KW
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(ControlledLoadOrGen, self).add_port_to_model(model, profile)
+        super().add_port_to_model(model, profile)
 
         # Set bounds using min and max power
         set_float_var_bounds(model=model, var_name=self.port_name, ub=self.max_power, lb=self.min_power)
@@ -437,7 +447,7 @@ class OffOrConstrainedPort(FlexPort):
         return "active_" + self.port_name
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(OffOrConstrainedPort, self).add_port_to_model(model, profile)
+        super().add_port_to_model(model, profile)
         setattr(model, self.active, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary))
 
         # Apply constraints such that if active=1, the port is bounded, and if active=0, the port is 0.
@@ -454,13 +464,13 @@ class OffOrConstrainedPort(FlexPort):
 class BoundedPort(FlexPort):
     """A flex port with an upper and lower bound"""
 
-    upper_bound: Union[ArrayType, float]
-    lower_bound: Union[ArrayType, float]
+    upper_bound: ArrayType | float
+    lower_bound: ArrayType | float
 
     bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedPort, self).add_port_to_model(model, profile)
+        super().add_port_to_model(model, profile)
         # Set bounds on our port variable
         ub_dict = generate_array_constraint(self.upper_bound, time_periods=len(model.Time), expansion_periods=1)
         lb_dict = generate_array_constraint(self.lower_bound, time_periods=len(model.Time), expansion_periods=1)
@@ -477,7 +487,7 @@ class BoundedLoad(BoundedPort):
     lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_costs)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(BoundedLoad, self).add_port_to_model(model, profile)
+        super().add_port_to_model(model, profile)
 
 
 class Storage(Port):
@@ -495,9 +505,9 @@ class Storage(Port):
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
     fixed_storage_capacity: bool = True
-    storage_capacity_cost: Optional[PositiveFloat]
+    storage_capacity_cost: PositiveFloat | None
     regularise: bool = False
-    initial_state_of_charge: Optional[float]
+    initial_state_of_charge: float | None
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
@@ -519,7 +529,7 @@ class Storage(Port):
         self.export_constraint_value = self.discharging_power_limit
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
-        super(Storage, self).add_port_to_model(model, profile)
+        super().add_port_to_model(model, profile)
         self.create_storage_variables(model)
         self.apply_soc_constraints(model)
 
@@ -597,7 +607,7 @@ class Storage(Port):
             setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule))
 
     def add_objective(self, model: EchoConcreteModel):
-        super(Storage, self).add_objective(model)
+        super().add_objective(model)
         total = 0
 
         # To get unique solution
@@ -625,10 +635,10 @@ class MobileStorage(Storage):
     enable_trip_slack: bool = False
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: Optional[TimeExpandableType] = None
-    soc_conserv_cost: Union[float, None] = None
+    soc_conserv: TimeExpandableType | None = None
+    soc_conserv_cost: float | None = None
     # soc_conserve: scalarOrArray
-    available: Union[ArrayType, list, None] = None
+    available: ArrayType | list | None = None
 
     @property
     def cons_slack(self):
@@ -750,7 +760,7 @@ class MobileStorage(Storage):
                 setattr(model, self.soc_constraint, en.Constraint(model.Expansion, model.Time, rule=SOC_rule_slack))
 
     def add_objective(self, model: EchoConcreteModel):
-        super(MobileStorage, self).add_objective(model)
+        super().add_objective(model)
         total = 0
 
         if self.enable_trip_slack:
@@ -780,10 +790,10 @@ class InputOutputNode(Node):
     input_port_unit: Units
     output_port_unit: Units
     # Optional parameters for controlling input/output port flows
-    max_output: Optional[float]  # output might be neg or pos, leave it open
-    min_output: Optional[float]
-    max_input: Optional[float]
-    min_input: Optional[float]
+    max_output: float | None  # output might be neg or pos, leave it open
+    min_output: float | None
+    max_input: float | None
+    min_input: float | None
     input_port_ref: str = "input"
     output_port_ref: str = "output"
 
@@ -802,14 +812,10 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     Attributes input_port_unit and output_port_unit define node's commodity.
     """
 
-    input_points: Optional[dict]  # dict where the keys are planning-time period tuple, and value is input pt array
-    output_points: Optional[dict]  # dict where the keys are planning-time period tuple, and value is output pt array
-    input_points_ref: Optional[
-        str
-    ]  # Ref to profile dataframe column with input points array to be used across all times
-    output_points_ref: Optional[
-        str
-    ]  # Ref to profile dataframe column with input points array to be used across all times
+    input_points: dict | None  # dict where the keys are planning-time period tuple, and value is input pt array
+    output_points: dict | None  # dict where the keys are planning-time period tuple, and value is output pt array
+    input_points_ref: str | None  # Ref to profile dataframe column with input points array to be used across all times
+    output_points_ref: str | None  # Ref to profile dataframe column with input points array to be used across all times
 
     piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output points
     populate_bounds = root_validator(allow_reuse=True)(
@@ -851,7 +857,7 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         self.load_input_output_values_from_profile(model, profile)
-        super(TimeVaryingPiecewiseIONode, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         # Bound input and output port variables, otherwise piecewise constraint will fail
         self.verify_points_values()
         set_float_var_bounds(
@@ -884,14 +890,14 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         )
 
     def add_constant_input_points(
-        self, input_points: Union[float, int, list], time_periods: int, expansion_periods: int = 1
+        self, input_points: float | int | list, time_periods: int, expansion_periods: int = 1
     ):
         """Tiles constant input points array across time and expansion periods"""
         self.input_points = populate_values_across_time_and_expansion_indices(
             input_points, time_periods, expansion_periods
         )
 
-    def add_constant_output_points(self, output_points: Union[float, int, list], time_periods, expansion_periods=1):
+    def add_constant_output_points(self, output_points: float | int | list, time_periods, expansion_periods=1):
         """Tiles constant output points array across time and expansion periods."""
         self.output_points = populate_values_across_time_and_expansion_indices(
             output_points, time_periods, expansion_periods
@@ -939,7 +945,7 @@ class AggregationNode(Node):
         return "total_value_" + self.node_name
 
     def verify_node(self):
-        super(AggregationNode, self).verify_node()
+        super().verify_node()
 
     def add_port(self, name: str, port=FlexSink()):
         if self.ports.get(name) is None:
@@ -955,7 +961,7 @@ class AggregationNode(Node):
             raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(AggregationNode, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         # Create a variable for the total value
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 

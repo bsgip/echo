@@ -10,8 +10,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (ElectricalDemand, ElectricalGeneration,
-                                    ElectricalStorage, Inverter)
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage, Inverter
 from echo.models.scenario import EngineSettings, ScenarioSettings
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower
@@ -65,7 +64,7 @@ test_pv = -1 * 2 * data_df["solar"].to_numpy()
 import_tariff_array = np.array(
     ([0.1] * 28 + [0.3] * 8 + [0.2] * 32 + [0.3] * 16 + [0.1] * 12) * duration_multiplication
 )
-export_tariff_array = np.array(([0.0] * 96 * duration_multiplication))
+export_tariff_array = np.array([0.0] * 96 * duration_multiplication)
 
 # Set up hyper parameters
 time_periods = len(test_load)  # number of time periods to run the optimisation for

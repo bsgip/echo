@@ -1,6 +1,4 @@
-from __future__ import division
 
-from typing import List, Tuple
 
 import numpy as np
 import pytest
@@ -9,12 +7,18 @@ from echo.configuration import EVChargeMode, Flows, Units
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (EVV0G, EVV1G, EVV2G, ElectricalDemand,
-                                    ElectricalGeneration, ElectricalPort,
-                                    EVWithProfile, Inverter)
+from echo.models.electrical import (
+    EVV0G,
+    EVV1G,
+    EVV2G,
+    ElectricalDemand,
+    ElectricalGeneration,
+    ElectricalPort,
+    EVWithProfile,
+    Inverter,
+)
 from echo.models.prebuilt import FlexElectricalNode
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff, ThroughputCost
 from echo.optimiser import optimise
@@ -218,7 +222,7 @@ def test_v0g_with_stateful_data_injection():
     """
 
     # Available and usage combinations that work
-    good_available_usages: List[Tuple[np.array, np.array]] = [
+    good_available_usages: list[tuple[np.array, np.array]] = [
         (np.array([1, 1, 1, 1, 1, 1]), np.array([0, 0, 0, 0, 0, 0])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([1, 1, 1, 1, 1, 1])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([0, 0, 0, 0, 0, 0])),
@@ -1457,7 +1461,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
     """Ensure stateful data injection behaves appropriately for EVV1G with different parameters."""
 
     # Available and usage combinations that work
-    good_available_usages: List[Tuple[np.array, np.array]] = [
+    good_available_usages: list[tuple[np.array, np.array]] = [
         (np.array([1, 1, 1, 1, 1, 1]), np.array([0, 0, 0, 0, 0, 0])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([1, 1, 1, 1, 1, 1])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([0, 0, 0, 0, 0, 0])),
@@ -1465,7 +1469,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
         (np.array([1, 1, 0, 0, 1, 0]), np.array([0, 0, 25, 20, 0, 10])),
     ]
 
-    good_socs: List[np.array] = [
+    good_socs: list[np.array] = [
         np.array([50, 50, 50, 50, 50, 50]),
         np.array([49, 48, 47, 46, 45, 44]),
         np.array([50, 50, 50, 50, 50, 50]),
@@ -1585,7 +1589,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
 def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
     """Inject bad stateful data which should be detected and an error raised."""
 
-    bad_available_usages: List[Tuple[list, list]] = [
+    bad_available_usages: list[tuple[list, list]] = [
         ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]),
         ([0, 0, 1, 1, 0, 0], [0, 0, 1, 1, 0, 0]),
         ([1, 1, 0, 0, 1, 1], [0, 0, 40, 40, 0, 0]),

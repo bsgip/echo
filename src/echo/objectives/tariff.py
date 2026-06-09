@@ -1,13 +1,11 @@
 from datetime import time
 from enum import Enum
-from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import (Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat,
-                      PositiveInt, root_validator, validator)
+from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
@@ -18,8 +16,8 @@ from echo.validators import ArrayType
 
 
 class Tariff(Objective):
-    tariff_array: Union[ArrayType, list]  # tariff array prices should always be positive
-    expansion_periods: Optional[PositiveInt] = 1
+    tariff_array: ArrayType | list  # tariff array prices should always be positive
+    expansion_periods: PositiveInt | None = 1
 
     @staticmethod
     def return_tariff_dict(array, expansion_periods):
@@ -33,7 +31,7 @@ class ImportTariff(Tariff):
     """The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
 
     component: Port
-    import_tariff_dict: Optional[dict]
+    import_tariff_dict: dict | None
 
     @property
     def import_tariff(self):
@@ -71,7 +69,7 @@ class ExportTariff(Tariff):
     to the negative (exporting) component of the specified port."""
 
     component: Port
-    export_tariff_dict: Optional[dict]
+    export_tariff_dict: dict | None
 
     @property
     def export_tariff(self):
@@ -221,7 +219,7 @@ class PathTariff(Tariff):
     """The PathTariff objective applies a cost per kW of power flow on a specified path."""
 
     component: Path
-    path_tariff_dict: Optional[dict]
+    path_tariff_dict: dict | None
 
     @property
     def path_tariff(self):
@@ -365,7 +363,7 @@ class Window(EchoBaseModel):
     """Class for specifying window over which a tariff is calculated using datetimes"""
 
     time_periods: list[TimePeriod]
-    reset_periods: Optional[ResetPeriod] = None
+    reset_periods: ResetPeriod | None = None
 
     @validator("time_periods")
     def non_overlapping_periods(cls, v):
@@ -451,8 +449,8 @@ class DemandCharge(EchoBaseModel):
     name: str
     rate: NonNegativeFloat
     min_demand: float = 0.0
-    window_array: Union[ArrayType, List]
-    reset_periods: Union[ArrayType, List]
+    window_array: ArrayType | list
+    reset_periods: ArrayType | list
     import_demand: bool = False
     export_demand: bool = False
 
@@ -474,9 +472,7 @@ class DemandCharge(EchoBaseModel):
         if rp is not None:
             validate(
                 sum(rp) == len(window_array),
-                "Sum of reset period lengths ({}) is not equal to window array length ({}).".format(
-                    sum(rp), len(window_array)
-                ),
+                f"Sum of reset period lengths ({sum(rp)}) is not equal to window array length ({len(window_array)}).",
             )
             values["num_reset_periods"] = len(rp)
         else:
@@ -489,11 +485,9 @@ class DemandCharge(EchoBaseModel):
     def check_import_or_export(cls, values):
         validate(
             values.get("import_demand") is True or values.get("export_demand") is True,
-            str(
-                "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
+            ("Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
                 " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
-                "the demand charge to the demand tariff objective."
-            ),
+                "the demand charge to the demand tariff objective."),
         )
         return values
 
@@ -575,8 +569,8 @@ class DemandTariffObjective(Objective):
     """A demand tariff objective contains a set of one or more demand charges."""
 
     component: Port
-    demand_charges: List[DemandCharge]
-    expansion_periods: Optional[PositiveInt] = 1
+    demand_charges: list[DemandCharge]
+    expansion_periods: PositiveInt | None = 1
 
     def verify_objective(self, model: EchoConcreteModel, df):
         def verify_non_overlapping():

@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional, Union
 
 import pandas as pd
 import pyomo.environ as en
@@ -11,7 +10,7 @@ from echo.models.scenario import EchoConcreteModel
 
 
 class Objective(EchoBaseModel):
-    component: Union[Port, Path, None]
+    component: Port | Path | None
     uid: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: str = ""
     weight: float = 1
@@ -21,10 +20,10 @@ class Objective(EchoBaseModel):
         if not self.name:
             self.name = "obj_" + str(self.uid)
 
-    def verify_objective(self, model: EchoConcreteModel, df: Optional[pd.DataFrame]):
+    def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame | None):
         pass
 
-    def create_params(self, model: EchoConcreteModel, df: Optional[pd.DataFrame]):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame | None):
         pass
 
     def create_vars(self, model: EchoConcreteModel):
@@ -46,7 +45,7 @@ class ObjectiveSet(EchoBaseModel):
 
     objective_list: list[Objective]
 
-    def add_objectives_to_model(self, model: EchoConcreteModel, df: Optional[pd.DataFrame] = None):
+    def add_objectives_to_model(self, model: EchoConcreteModel, df: pd.DataFrame | None = None):
         for obj in self.objective_list:
             obj.verify_objective(model, df)
             obj.create_params(model, df)

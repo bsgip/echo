@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
@@ -88,7 +88,7 @@ class TimeSeriesData:
     num_expansion_intervals: int
 
 
-def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], Union[int, float]]:
+def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], int | float]:
     """Converts a TimeSeriesData object to a dictionary of time-series values keyed by the expansion and time intervals.
 
     Calls `expand_as_array` internally to produce enough values for the time and expansion intervals.
@@ -177,7 +177,7 @@ def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
     )
 
 
-def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[float], lb: Optional[float]) -> None:
+def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: float | None, lb: float | None) -> None:
     """
     Updates the bounds on a pyomo variable. Only floats can be used as bounds.
     Args:
@@ -195,7 +195,7 @@ def set_float_var_bounds(model: EchoConcreteModel, var_name: str, ub: Optional[f
         var.setub(ub)
 
 
-def set_var_bounds_from_dict(model: EchoConcreteModel, var_name: str, ub: Optional[dict], lb: Optional[dict]) -> None:
+def set_var_bounds_from_dict(model: EchoConcreteModel, var_name: str, ub: dict | None, lb: dict | None) -> None:
     """
     Updates the bounds on a pyomo variable using an array of floats.
     Args:
@@ -411,7 +411,7 @@ def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expans
 
 
 def to_initial_values_for_array(
-    values: np.array, time_periods: Optional[int] = None, expansion_periods: int = 1, scaling: int = 1
+    values: np.array, time_periods: int | None = None, expansion_periods: int = 1, scaling: int = 1
 ):
     if values is None or values.size == 0:
         raise ValueError("No values defined.")
@@ -444,12 +444,12 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
     if (len(array) != time_periods) or (len(array) != time_periods * expansion_periods):
         raise ValueError("Array constraint length is not consistent with combination of time/expansion periods.")
     if len(array) == time_periods:
-        print("Repeating array across {} expansion period(s).".format(expansion_periods))
+        print(f"Repeating array across {expansion_periods} expansion period(s).")
         for p in range(expansion_periods):
             for t in range(time_periods):
                 d[(p, t)] = array[t]
     elif len(array) == time_periods * expansion_periods:
-        print("Dividing array between {} expansion period(s).".format(expansion_periods))
+        print(f"Dividing array between {expansion_periods} expansion period(s).")
         i = 0
         for p in range(expansion_periods):
             for t in range(time_periods):

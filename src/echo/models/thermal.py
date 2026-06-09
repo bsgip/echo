@@ -1,21 +1,22 @@
-from typing import Optional
 
 import pandas as pd
 import pyomo.environ as en
-from pydantic import (NegativeFloat, NonNegativeFloat, PositiveFloat,
-                      root_validator, validator)
+from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
 from scipy import interpolate
 
 from echo.configuration import FlowConstraint, Units
-from echo.models.agnostic import (FlexPort, FlexSink, FlexSource,
-                                  TimeVaryingPiecewiseIONode)
+from echo.models.agnostic import FlexPort, FlexSink, FlexSource, TimeVaryingPiecewiseIONode
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (TimeSeriesData, clamp, expand_as_dict,
-                        set_float_var_bounds, set_var_bounds_from_dict,
-                        to_initial_values)
-from echo.validators import (non_negative_cop_check, validate_partial_load_cop,
-                             validate_temperature_dependent_cop)
+from echo.utils import (
+    TimeSeriesData,
+    clamp,
+    expand_as_dict,
+    set_float_var_bounds,
+    set_var_bounds_from_dict,
+    to_initial_values,
+)
+from echo.validators import non_negative_cop_check, validate_partial_load_cop, validate_temperature_dependent_cop
 
 
 class SimpleChiller(Node):
@@ -29,9 +30,9 @@ class SimpleChiller(Node):
 
     max_cooling_capacity: PositiveFloat = None  # Max cooling load that can be serviced in KWT
     # (if None, bounded by bigM value)
-    cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
-    cooling_cop_time_series_ref: Optional[str]
-    cooling_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
+    cooling_cop_time_series: dict | None  # Formatted dict of cooling COPs (coefficients of performance)
+    cooling_cop_time_series_ref: str | None
+    cooling_cop_constant: PositiveFloat | None = 1  # Constant COP value to use across all optimisation intervals
 
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
 
@@ -79,7 +80,7 @@ class SimpleChiller(Node):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Load coefficient of performance values from profile (if provided by reference)
         self._load_cop_values_from_profile(model, profile)
-        super(SimpleChiller, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         setattr(
             model,
             self.cooling_cop,
@@ -209,7 +210,7 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         self._define_temperature_dependent_cop_coefficient(model)
         self._set_input_points(model)
         self._set_output_points(model)
-        super(ParameterisedChiller, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         if self.heat_rejection_port_ref in self.ports:
             self._add_heat_rejection_constraint(model)
 
@@ -217,7 +218,7 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         self,
         electrical_input_port: FlexSink,
         cooling_output_port: FlexPort,
-        heat_rejection_port: Optional[FlexPort] = None,
+        heat_rejection_port: FlexPort | None = None,
     ):
         # Discard existing ports
         self.ports.clear()
@@ -364,7 +365,7 @@ class ThermalNode(Node):
         self.gains = "gains_" + self.node_name
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(ThermalNode, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         self.create_and_bound_temp_vars(model)
         self.loss_and_gain_constraints_and_variables(model)
         self.apply_energy_balance_constraint(model)
@@ -452,7 +453,7 @@ class ThermalStorage(Node):
         None  # Maximum energy flow out of the storage at each interval, in energy_flow_units
     )
     ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
-    ambient_temp_ref: Optional[str]  # Ambient temp by column name reference in profile dataframe
+    ambient_temp_ref: str | None  # Ambient temp by column name reference in profile dataframe
     ins_transmittance: NonNegativeFloat = (
         0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
     )
@@ -593,7 +594,7 @@ class ThermalStorage(Node):
         return self.lump_capacitance * (self.max_temp - self.min_temp) * self.energy_units_conversion
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(ThermalStorage, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         self._load_values_from_profile(model, profile)
         self._create_and_bound_temp_variable(model)
         self._create_soc_variable(model)
@@ -755,15 +756,15 @@ class SimpleHeatPump(Node):
     max_heating_capacity: PositiveFloat = (
         None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
     )
-    heating_cop_time_series: Optional[dict]  # Formatted dict of heating COPs (coefficients of performance)
+    heating_cop_time_series: dict | None  # Formatted dict of heating COPs (coefficients of performance)
     # per time period
-    cooling_cop_time_series: Optional[dict]  # Formatted dict of cooling COPs (coefficients of performance)
+    cooling_cop_time_series: dict | None  # Formatted dict of cooling COPs (coefficients of performance)
     # per time period
-    heating_cop_time_series_ref: Optional[str]
-    cooling_cop_time_series_ref: Optional[str]
+    heating_cop_time_series_ref: str | None
+    cooling_cop_time_series_ref: str | None
 
-    cooling_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
-    heating_cop_constant: Optional[PositiveFloat] = 1  # Constant COP value to use across all optimisation intervals
+    cooling_cop_constant: PositiveFloat | None = 1  # Constant COP value to use across all optimisation intervals
+    heating_cop_constant: PositiveFloat | None = 1  # Constant COP value to use across all optimisation intervals
 
     heating_cop_check = validator("heating_cop_time_series", allow_reuse=True)(non_negative_cop_check)
     cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
@@ -878,7 +879,7 @@ class SimpleHeatPump(Node):
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Load coefficient of performance values from profile (if be set ref)
         self._load_cop_values_from_profile(model, profile)
-        super(SimpleHeatPump, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         self._set_ports_var_bounds(model)
         self._set_helper_variables(model)
 
@@ -1078,7 +1079,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         # Use parent class method
-        super(SimpleHeatPumpDualOutput, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         self._create_heat_recovery_vars(model)
         self._create_delta_heat_flow_vars(model)
 
@@ -1298,7 +1299,7 @@ class ParameterisedHeatPump(Node):
         self,
         electrical_input_port: FlexSink,
         thermal_output_port: FlexPort,
-        heat_intake_rejection_port: Optional[FlexPort] = None,
+        heat_intake_rejection_port: FlexPort | None = None,
     ):
         # Discard existing ports
         self.ports.clear()
@@ -1320,7 +1321,7 @@ class ParameterisedHeatPump(Node):
 
     def add_node_to_model(self, model: EchoConcreteModel, profile):
         """Set up variables and parameters associated with the node"""
-        super(ParameterisedHeatPump, self).add_node_to_model(model, profile)
+        super().add_node_to_model(model, profile)
         self._set_helper_variables(model)
         self._load_temperature_values_from_profile(model, profile)
         self._define_temperature_dependent_cop_coefficient(model)

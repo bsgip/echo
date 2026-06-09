@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from pyomo.environ import ConcreteModel, Param, RangeSet
 
@@ -47,7 +46,7 @@ class EchoConcreteModel(ConcreteModel):
     scenario_settings: ScenarioSettings
 
 
-def engine_settings_from_environment(optimiser_engine: Optional[str] = None) -> EngineSettings:
+def engine_settings_from_environment(optimiser_engine: str | None = None) -> EngineSettings:
     """Configure the optimiser through setting appropriate environmental variables."""
 
     if not optimiser_engine:

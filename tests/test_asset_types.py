@@ -4,11 +4,9 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, Sink, TellegenNode
 from echo.models.base import Node, OptimisationGraph, TransformNode
 from echo.models.carbon import CarbonAggregation, CarbonSink, CarbonSource
-from echo.models.electrical import (ElectricalDemand, ElectricalPort,
-                                    ElectricalStorage)
+from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
 from echo.models.gas import FlexGasPort, GasBoilerFixedCOP
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
@@ -144,7 +142,7 @@ def test_carbon_aggregation():
 
     import_tariff = ImportTariff(
         component=site1.ports["cp"],
-        tariff_array=np.array(([0.1] * 24 + [0.3] * 24)),
+        tariff_array=np.array([0.1] * 24 + [0.3] * 24),
         expansion_periods=expansion_periods,
     )
 
