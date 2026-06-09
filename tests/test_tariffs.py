@@ -9,18 +9,15 @@ from hypothesis.strategies import floats
 from echo.configuration import FlowConstraint, Flows, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
+from echo.models.electrical import (ElectricalDemand, ElectricalPort,
+                                    ElectricalStorage)
 from echo.models.prebuilt import FlexNode, Load
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import (ScenarioSettings,
+                                  engine_settings_from_environment)
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import (
-    BlockImportTariff,
-    DemandTariffObjective,
-    ImportDemandCharge,
-    ImportTariff,
-    PathTariff,
-    ThroughputCost,
-)
+from echo.objectives.tariff import (BlockImportTariff, DemandTariffObjective,
+                                    ImportDemandCharge, ImportTariff,
+                                    PathTariff, ThroughputCost)
 from echo.optimiser import optimise
 
 

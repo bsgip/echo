@@ -2,13 +2,12 @@ import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
 
 from echo.configuration import Units
-from echo.models.agnostic import FixedPort, FlexPort, InputOutputNode, OffOrConstrainedPort
+from echo.models.agnostic import (FixedPort, FlexPort, InputOutputNode,
+                                  OffOrConstrainedPort)
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    ArrayType,
-    set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
-    validate_startup_efficiency,
-)
+    ArrayType, set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
+    validate_startup_efficiency)
 
 
 class FlexGasPort(FlexPort):

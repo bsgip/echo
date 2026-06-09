@@ -8,21 +8,17 @@ import shortuuid
 from deprecated import deprecated
 from pydantic import Field, NonNegativeFloat
 
-from echo.configuration import (
-    EVChargeMode,
-    EVChargeStatus,
-    FlowConstraint,
-    Flows,
-    OptimisationType,
-    TransformRule,
-    Units,
-)
+from echo.configuration import (EVChargeMode, EVChargeStatus, FlowConstraint,
+                                Flows, OptimisationType, TransformRule, Units)
 from echo.exceptions import ConfigurationError, validate
-from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
+from echo.models.agnostic import (BoundedLoad, Demand, FixedPort, FlexPort,
+                                  MobileStorage, Source, Storage)
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
-from echo.validators import ArrayType, check_initial_state_of_charge_within_bounds
+from echo.utils import (TimeExpandableType, fix_port_variable,
+                        set_var_bounds_from_dict)
+from echo.validators import (ArrayType,
+                             check_initial_state_of_charge_within_bounds)
 
 
 class ElectricalDemand(Demand):
@@ -37,7 +33,7 @@ class ElectricalGeneration(Source):
     units = Units.KW
     curtailable: bool = False
 
-    def add_generation_profile(self, generation: dict):
+    def add_generation_profile(self, generation: dict) -> None:
         self.set_initial_value(generation)
 
     def add_generation_profile_from_array(
@@ -45,10 +41,13 @@ class ElectricalGeneration(Source):
         generation: ArrayType,
         expansion_periods: int = 1,
         time_periods: int | None = None,
-    ):
-        self.set_initial_value_from_array(generation, expansion_periods=expansion_periods, time_periods=time_periods)
+    ) -> None:
 
-    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame):
+        self.set_initial_value_from_array(
+            array=generation, expansion_periods=expansion_periods, time_periods=time_periods
+        )
+
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         # Whether curtailable is set or not affect whether the flow is represented as a parameter or variable
         # Handle that here before calling `add_port_to_model`
         self.flow_type = OptimisationType.Variable if self.curtailable else OptimisationType.Parameter
@@ -162,14 +161,6 @@ class EVBase(TransformNode):
     def __init__(self, **data) -> None:
         super().__init__(**data)
 
-        # Initialise port_name_to_port_uid_map
-        if self.port_dict_name_to_port_uid_map is None:
-            self.port_dict_name_to_port_uid_map = {}
-
-        # Initialise port_name_to_port_name_map
-        if self.port_dict_name_to_port_name_map is None:
-            self.port_dict_name_to_port_name_map = {}
-
         # If usage_power_limit isn't specified, set it to discharging_power_limit. This is for backwards compatability
         if self.usage_power_limit is None:
             self.usage_power_limit = self.discharging_power_limit
@@ -280,7 +271,6 @@ class EVBase(TransformNode):
             depth_of_discharge_limit=self.depth_of_discharge_limit,
             discharging_efficiency=self.discharging_efficiency,
             enable_trip_slack=self.enable_trip_slack,
-            set_stateful_attrs_at_init=self.set_stateful_attrs_at_init,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
         )
@@ -304,7 +294,7 @@ class EVBase(TransformNode):
             export_constraint_value=self.discharging_power_limit,
         )
 
-    def _create_ev_transformation(self) -> TransformTerm:
+    def _create_ev_transformation(self) -> Transform:
         """Creates the appropriate transformation for EV objects: vehicle = connection_point - usage.
 
         Args:
@@ -364,7 +354,7 @@ class EVBase(TransformNode):
             f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
         )
 
-    def set_port_uid_maps(self):
+    def set_port_uid_maps(self) -> None:
         """Sets the two maps for port names and port uids, if they aren't already set.
 
         Args:
@@ -375,11 +365,11 @@ class EVBase(TransformNode):
         """
 
         # Set port_dict_name_to_port_uid_map
-        if len(self.port_dict_name_to_port_uid_map.keys()) == 0:
+        if self.port_dict_name_to_port_uid_map is None:
             self.port_dict_name_to_port_uid_map = {port_name: port.uid for port_name, port in self.ports.items()}
 
         # Set port_dict_name_to_port_name_map
-        if len(self.port_dict_name_to_port_name_map.keys()) == 0:
+        if self.port_dict_name_to_port_name_map is None:
             self.port_dict_name_to_port_name_map = {port_name: port.port_name for port_name, port in self.ports.items()}
 
 
@@ -423,7 +413,7 @@ class EVV0G(EVBase):
         # Set port_dict_name_to_port_uid_map and port_dict_name_to_port_name_map
         self.set_port_uid_maps()
 
-    def _create_connection_point_port(self):
+    def _create_connection_point_port(self) -> None:
         """Creates a connection point port for the EV.min_soc
 
         Overwrites EVBase._create_connection_point_port as V0G uses an ElectricalDemand port instead of a
@@ -570,7 +560,7 @@ class EVV0G(EVBase):
 
         return success, soc[1:], delta, trip_infeasibility
 
-    def _verify_ports(self):
+    def _verify_ports(self) -> None:
         """Checks data with state has been set for each port.
 
         Overwrites parent function.
@@ -1187,31 +1177,31 @@ class Inverter(Node):
     def __init__(
         self,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(**kwargs)
         if self.ac_port_name:
             self._add_ac_port(port_name=self.ac_port_name)
         for port_name in self.dc_port_names:
             self._add_port(port_name=port_name)
 
-    def _add_port(self, port_name: str, uid: str | None = None):
+    def _add_port(self, port_name: str, uid: str | None = None) -> None:
         p = ElectricalPort(port_name=port_name, uid=uid)
         self.ports[port_name] = p
 
-    def _add_ac_port(self, port_name: str, uid: str | None = None):
+    def _add_ac_port(self, port_name: str, uid: str | None = None) -> None:
         p = ElectricalPort(port_name=port_name, uid=uid)
         p.set_flow_constraints(max_export=self.max_export, max_import=self.max_import)
         self.ports[port_name] = p
 
-    def add_dc_port(self, port_name: str, uid: str | None = None):
+    def add_dc_port(self, port_name: str, uid: str | None = None) -> None:
         self.dc_port_names.append(port_name)
         self._add_port(port_name=port_name, uid=uid)
 
-    def add_ac_port(self, port_name: str, uid: str | None = None):
+    def add_ac_port(self, port_name: str, uid: str | None = None) -> None:
         self.ac_port_name = port_name
         self._add_ac_port(port_name=self.ac_port_name, uid=uid)
 
-    def verify_node(self):
+    def verify_node(self) -> None:
         # Check that we have at least one ac and one dc port
         validate(self.ac_port_name is not None, "Define at least one ac port on inverter.")
         validate(self.dc_port_names is not None, "Define at least one dc port on inverter.")
@@ -1223,14 +1213,16 @@ class Inverter(Node):
             "All ports on inverter must be ac or dc.",
         )
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
+    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
         super().add_node_to_model(model, profile)
 
         ac_port = self.ports[self.ac_port_name]
         # Split ac port into pos/neg, so we can apply the correct efficiencies
         ac_port.constrain_pos_neg(model)
 
-        def inverter_ac_output_must_track_efficiency(model: EchoConcreteModel, p, t):  # Apply efficiency constraints
+        def inverter_ac_output_must_track_efficiency(
+            model: EchoConcreteModel, p, t
+        ) -> None:  # Apply efficiency constraints
             dc_total = 0
             for dc_port_name in self.dc_port_names:
                 dc_port = self.ports[dc_port_name]

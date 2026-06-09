@@ -4,17 +4,14 @@ import numpy as np
 import pandas as pd
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.agnostic import AggregationNode, FlexPort, Sink, Source, TellegenNode, ThreeWayValveNode
+from echo.models.agnostic import (AggregationNode, FlexPort, Sink, Source,
+                                  TellegenNode, ThreeWayValveNode)
 from echo.models.base import Node, OptimisationGraph, Port
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
-from echo.models.thermal import (
-    ParameterisedChiller,
-    ParameterisedHeatPump,
-    SimpleChiller,
-    SimpleHeatPump,
-    SimpleHeatPumpDualOutput,
-    ThermalStorage,
-)
+from echo.models.scenario import (ScenarioSettings,
+                                  engine_settings_from_environment)
+from echo.models.thermal import (ParameterisedChiller, ParameterisedHeatPump,
+                                 SimpleChiller, SimpleHeatPump,
+                                 SimpleHeatPumpDualOutput, ThermalStorage)
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakPositivePower
 from echo.objectives.tariff import ThroughputCost

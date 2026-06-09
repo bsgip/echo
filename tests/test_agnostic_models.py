@@ -4,8 +4,11 @@ import pyomo.environ as en
 import pytest
 
 from echo.configuration import Units
-from echo.models.agnostic import FlexPort, PartitionedMultiCommodityTellegenNode, ThreeWayValveNode
-from echo.models.scenario import EchoConcreteModel, ScenarioSettings, engine_settings_from_environment
+from echo.models.agnostic import (FlexPort,
+                                  PartitionedMultiCommodityTellegenNode,
+                                  ThreeWayValveNode)
+from echo.models.scenario import (EchoConcreteModel, ScenarioSettings,
+                                  engine_settings_from_environment)
 
 
 def empty_model():

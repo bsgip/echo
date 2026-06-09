@@ -1,14 +1,7 @@
 from pandas.io.pytables import Fixed
-from echo.configuration import (
-    FlowConstraint,
-    Flows,
-    OptimisationType,
-    Units,
-)
-from echo.models.gas import (
-    FlexGasPort,
-    FixedGasPort,
-)
+
+from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
+from echo.models.gas import FixedGasPort, FlexGasPort
 
 
 def test_build_flex_gas_port():
