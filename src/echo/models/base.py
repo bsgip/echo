@@ -1,9 +1,8 @@
 import copy
-import time
 import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import networkx as nx
 import pandas as pd
@@ -28,6 +27,8 @@ from echo.utils import (
 )
 from echo.validators import ArrayType, export_cons_check, import_cons_check
 
+
+ConstraintValueType = ArrayType | float
 InitialValue = dict[tuple[int, int], float] | list[int | float]
 
 
@@ -38,9 +39,6 @@ class BaseModel(PydanticBaseModel):
         validate_assignment = True  # Set to true so that we re-validate when we update a model field
         extra = "ignore"  # extra attributes are ignored
         arbitrary_types_allowed = True
-
-
-ConstraintValueType = Union[ArrayType, float]
 
 
 class Port(BaseModel):
@@ -152,8 +150,8 @@ class Port(BaseModel):
                 time_periods=time_periods,
             )
 
-        else:
-            raise TypeError(f"The initial_value for port: {self.port_name} is not of type dict, str or Iterable.")
+        elif not isinstance(initial_val, InitialValue):
+            raise TypeError(f"The initial_value for port: {self.port_name} is not of type InitialValue.")
 
     def verify_port(self):
         """Used to verify that a port has been set up appropriately"""
