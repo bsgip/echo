@@ -43,7 +43,7 @@ class GasBoilerFixedCOP(InputOutputNode):
         )
         self.ports[self.output_port_ref] = FlexPort(units=self.output_port_unit)
 
-    def set_ports(self, gas_input_port: OffOrConstrainedPort, thermal_output_port: FlexPort):
+    def set_ports(self, gas_input_port: OffOrConstrainedPort, thermal_output_port: FlexPort) -> None:
         # Discard existing ports
         self.ports.clear()
         # Add the new ports
@@ -52,7 +52,7 @@ class GasBoilerFixedCOP(InputOutputNode):
         self.ports[self.input_port_ref] = gas_input_port
         self.ports[self.output_port_ref] = thermal_output_port
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         super().apply_node_constraints(model)
 
         def node_constraint(model: EchoConcreteModel, p, t):
@@ -99,7 +99,7 @@ class TempControlledBoiler(InputOutputNode):
     check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
     set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self.ports[self.input_port_ref] = OffOrConstrainedPort(
             units=self.input_port_unit, lower_bound=self.min_input, upper_bound=self.max_input
@@ -111,7 +111,7 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = "inlet_temp_" + self.node_name
         self.exit_t = "outlet_temp_" + self.node_name
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
+    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
         super().add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
@@ -125,7 +125,7 @@ class TempControlledBoiler(InputOutputNode):
             en.Var(model.Expansion, model.Time, initialize=0, bounds=self.exit_temp_bounds, domain=en.Reals),
         )
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         # Retrieve some variables
         input_kw = getattr(model, self.ports[self.input_port_ref].port_name)
         output_kw = getattr(model, self.ports[self.output_port_ref].port_name)
@@ -136,6 +136,10 @@ class TempControlledBoiler(InputOutputNode):
                 getattr(model, self.return_t)[p, t] - getattr(model, self.exit_t)[p, t]
             ) * self.deg_to_kw * self.cop == output_kw[p, t]
 
+        print(constraint2)
+        print()
+        print(type(constraint2))
+        assert 1 == 2
         setattr(
             model, "boiler_temp_con2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=constraint2)
         )
