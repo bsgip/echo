@@ -1,4 +1,5 @@
 import copy
+import time
 import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -27,6 +28,8 @@ from echo.utils import (
 )
 from echo.validators import ArrayType, export_cons_check, import_cons_check
 
+InitialValue = dict[tuple[int, int], float] | list[int | float]
+
 
 class BaseModel(PydanticBaseModel):
     """Create a modified base model with the config we want."""
@@ -45,7 +48,7 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict = 0
+    initial_value: InitialValue | None = None
     initial_value_ref: str | None  # string ref to df column
     initial_value_scaling: int | None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
@@ -132,16 +135,25 @@ class Port(BaseModel):
 
     def process_initial_value(
         self,
-        initial_val,
+        initial_val: InitialValue,
         expansion_periods: int = 1,
         time_periods: int | None = None,
-    ):
+    ) -> None:
         if isinstance(initial_val, dict):
             self.set_initial_value(initial_val)
+
         elif isinstance(initial_val, str):
             self.initial_value_ref = initial_val
-        elif hasattr(initial_val, "__iter__"):
-            self.set_initial_value_from_array(initial_val, expansion_periods, time_periods)
+
+        elif isinstance(initial_val, list):
+            self.set_initial_value_from_array(
+                array=initial_val,
+                expansion_periods=expansion_periods,
+                time_periods=time_periods,
+            )
+
+        else:
+            raise TypeError(f"The initial_value for port: {self.port_name} is not of type dict, str or Iterable.")
 
     def verify_port(self):
         """Used to verify that a port has been set up appropriately"""
@@ -446,10 +458,10 @@ class Port(BaseModel):
 
     def set_initial_value_from_array(
         self,
-        array: TimeExpandableType,
+        array: list[int | float],
         expansion_periods: int = 1,
         time_periods: int | None = None,
-    ):
+    ) -> None:
         """Sets initial port value which is used to initialise the pyomo var/param
 
         Args:

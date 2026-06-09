@@ -47,10 +47,10 @@ def test_rebuild_all_edges():
     """Tests the rebuild_all_edges function usage after stateful data has been injected."""
 
     def assert_node_edge_port_values(
-        v0g_node_port_value: float,
-        v0g_edge_port_value: float,
-        v12g_node_value: float | None,
-        v12g_edge_value: float | None,
+        v0g_node_port_value: dict[tuple[int, int], float] | None,
+        v0g_edge_port_value: dict[tuple[int, int], float] | None,
+        v12g_node_value: dict[tuple[int, int], float] | None,
+        v12g_edge_value: dict[tuple[int, int], float] | None,
     ):
         # Assert that stateful attrs are blank
         if isinstance(ev, EVV0G):
@@ -59,7 +59,6 @@ def test_rebuild_all_edges():
 
             # Assert ev port on the edge is blank
             for edge_name in system.edge_list():
-                print(edge_name)
                 if "ev" in edge_name:
                     assert ev.ports["ev_to_cp"].initial_value == v0g_edge_port_value
         else:
@@ -68,7 +67,6 @@ def test_rebuild_all_edges():
 
             # Assert ev port on the edge is blank
             for edge_name in system.edge_list():
-                print(edge_name)
                 if "ev" in edge_name:
                     assert ev.ports["ev_to_cp"].active_periods == v12g_edge_value
 
@@ -143,8 +141,8 @@ def test_rebuild_all_edges():
         pv.add_generation_profile_from_array(solar_data, expansion_periods)
 
         assert_node_edge_port_values(
-            v0g_node_port_value=0,
-            v0g_edge_port_value=0,
+            v0g_node_port_value=None,
+            v0g_edge_port_value=None,
             v12g_node_value=None,
             v12g_edge_value=None,
         )
