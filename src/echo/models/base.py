@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
@@ -28,7 +29,8 @@ from echo.utils import (
 from echo.validators import ArrayType, export_cons_check, import_cons_check
 
 ConstraintValueType = ArrayType | float
-InitialValue = dict[tuple[int, int], float] | list[int | float]
+InitialValue = dict[tuple[int, int], int | float]
+InitialValueInput = InitialValue | list[int | float] | np.ndarray
 
 
 class BaseModel(PydanticBaseModel):
@@ -111,7 +113,7 @@ class Port(BaseModel):
         max_import: ConstraintValueType | None,
         max_export: ConstraintValueType | None,
         slack: bool | None = False,
-    ):
+    ) -> None:
         """Sets the values of port flow constraints.
 
         Args:
@@ -132,7 +134,7 @@ class Port(BaseModel):
 
     def process_initial_value(
         self,
-        initial_val: InitialValue,
+        initial_val: InitialValueInput,
         expansion_periods: int = 1,
         time_periods: int | None = None,
     ) -> None:
@@ -142,17 +144,17 @@ class Port(BaseModel):
         elif isinstance(initial_val, str):
             self.initial_value_ref = initial_val
 
-        elif isinstance(initial_val, list):
+        elif isinstance(initial_val, list | np.ndarray):
             self.set_initial_value_from_array(
                 array=initial_val,
                 expansion_periods=expansion_periods,
                 time_periods=time_periods,
             )
 
-        elif not isinstance(initial_val, InitialValue):
+        else:
             raise TypeError(f"The initial_value for port: {self.port_name} is not of type InitialValue.")
 
-    def verify_port(self):
+    def verify_port(self) -> None:
         """Used to verify that a port has been set up appropriately"""
         if self.flows is Flows.NA:
             raise ConfigurationError("The flows value cannot be set to a value of NA.")
@@ -179,14 +181,14 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def _add_flow_variable_to_model(self, model: EchoConcreteModel, initial_value, domain):
+    def _add_flow_variable_to_model(self, model: EchoConcreteModel, initial_value, domain) -> None:
         setattr(
             model,
             self.port_name,
             en.Var(model.Expansion, model.Time, initialize=initial_value, domain=domain),
         )
 
-    def _add_active_period_constraints_to_model(self, model: EchoConcreteModel):
+    def _add_active_period_constraints_to_model(self, model: EchoConcreteModel) -> None:
         port_active_periods = self.active_periods
 
         def on_off_rule1(model: EchoConcreteModel, p, t):
@@ -206,7 +208,7 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=on_off_rule2),
         )
 
-    def _add_import_constraints_to_model(self, model: EchoConcreteModel):
+    def _add_import_constraints_to_model(self, model: EchoConcreteModel) -> None:
         # Add import constraint parameter
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
@@ -455,7 +457,7 @@ class Port(BaseModel):
 
     def set_initial_value_from_array(
         self,
-        array: list[int | float],
+        array: list[int | float] | np.ndarray,
         expansion_periods: int = 1,
         time_periods: int | None = None,
     ) -> None:
