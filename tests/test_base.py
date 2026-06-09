@@ -1,14 +1,42 @@
 import pytest
+import numpy as np
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
-from echo.models.base import Node, OptimisationGraph
+from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
+
+
+def test_port_proccess_initial_value_types():
+    port = Port(port_name="port_name")
+
+    # Assert the initial value is None before it's set
+    assert port.initial_value is None
+
+    # Assert list of ints is processed
+    port.process_initial_value(initial_val=[1, 2, 3])
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert list of floats is processed
+    port.process_initial_value(initial_val=[1.0, 2.0, 3.0])
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
+
+    # Assert a dict of ints is processed
+    port.process_initial_value(initial_val={(0, 0): 1, (0, 1): 2, (0, 2): 3})
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert a dict of ints is processed
+    port.process_initial_value(initial_val={(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0})
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
+
+    # Assert a numpy array of ints is processed
+    port.process_initial_value(initial_val=np.array([1, 2, 3]))
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
 
 
 def test_port_reference_is_made_in_edge():
