@@ -3035,7 +3035,7 @@ def test_ev_demand_profile_set_stateful_attrs():
     assert isinstance(ev.port_uid, str)
 
     # Inject some demand data into it
-    assert ev.ports["demand"].initial_value == 0
+    assert ev.ports["demand"].initial_value is None
     ev.set_stateful_attrs(demand=[1, 2, 3, 4, 5])
     assert isinstance(ev.ports["demand"].initial_value, dict)
     assert len(ev.ports["demand"].initial_value.keys()) == 5
