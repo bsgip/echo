@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv sync --extra dev
+          uv sync 
 
       - name: Coverage (source branch)
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv sync --extra dev
+          uv sync
 
       - name: Coverage (target branch)
         run: |
