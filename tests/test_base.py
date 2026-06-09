@@ -10,6 +10,7 @@ from echo.models.scenario import ScenarioSettings, engine_settings_from_environm
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
+from echo.validators import ArrayType
 
 
 def test_port_proccess_initial_value_types():
@@ -37,6 +38,10 @@ def test_port_proccess_initial_value_types():
     # Assert a numpy array of ints is processed
     port.process_initial_value(initial_val=np.array([1, 2, 3]))
     assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert a numpy array of floats is processed
+    port.process_initial_value(initial_val=np.array([1.0, 2.0, 3.0]))
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
 
 
 def test_port_reference_is_made_in_edge():
