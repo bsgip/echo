@@ -70,8 +70,6 @@ docs = ["sphinx", "sphinx-rtd-theme"]
 dev = [{ include-group = "linters" }, { include-group = "test" }]
 all = [{ include-group = "dev" }, { include-group = "docs" }]
 
-[project.optional-dependencies]
-dev = [{ include-group = "linters" }, { include-group = "test" }]
 
 [tool.setuptools.package-data]
 "echo" = ["py.typed"]
