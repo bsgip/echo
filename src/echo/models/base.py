@@ -47,8 +47,8 @@ class Port(BaseModel):
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: InitialValue | None = None
-    initial_value_ref: str | None  # string ref to df column
-    initial_value_scaling: int | None  # scaling factor for initial values
+    initial_value_ref: str | None = None  # string ref to df column
+    initial_value_scaling: int | None = None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
     uid: str | None = Field(default_factory=shortuuid.uuid)
     port_name: str = ""
