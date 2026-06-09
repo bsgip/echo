@@ -6,13 +6,11 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
-from pyomo.opt import (SolverFactory, SolverResults, SolverStatus,
-                       TerminationCondition)
+from pyomo.opt import SolverFactory, SolverResults, SolverStatus, TerminationCondition
 
 from echo.exceptions import ConfigurationError, OptimiserResultError, validate
 from echo.models.base import Node, OptimisationGraph, Port
-from echo.models.scenario import (EchoConcreteModel, EngineSettings,
-                                  ScenarioSettings)
+from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives.base import Objective, ObjectiveSet
 
 # The default set of termination conditions that pyomo can return and echo will report as a success

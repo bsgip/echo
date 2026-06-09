@@ -2,12 +2,13 @@ import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
 
 from echo.configuration import Units
-from echo.models.agnostic import (FixedPort, FlexPort, InputOutputNode,
-                                  OffOrConstrainedPort)
+from echo.models.agnostic import FixedPort, FlexPort, InputOutputNode, OffOrConstrainedPort
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    ArrayType, set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
-    validate_startup_efficiency)
+    ArrayType,
+    set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
+    validate_startup_efficiency,
+)
 
 
 class FlexGasPort(FlexPort):
@@ -135,10 +136,6 @@ class TempControlledBoiler(InputOutputNode):
                 getattr(model, self.return_t)[p, t] - getattr(model, self.exit_t)[p, t]
             ) * self.deg_to_kw * self.cop == output_kw[p, t]
 
-        print(constraint2)
-        print()
-        print(type(constraint2))
-        assert 1 == 2
         setattr(
             model, "boiler_temp_con2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=constraint2)
         )

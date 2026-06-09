@@ -1,10 +1,8 @@
 from echo.configuration import OptimisationType, Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (ElectricalDemand, ElectricalPort,
-                                    ElectricalStorage)
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.electrical import ElectricalDemand, ElectricalPort, ElectricalStorage
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakNegativePower, PeakPositivePower
 from echo.optimiser import optimise

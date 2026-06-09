@@ -8,17 +8,21 @@ import shortuuid
 from deprecated import deprecated
 from pydantic import Field, NonNegativeFloat
 
-from echo.configuration import (EVChargeMode, EVChargeStatus, FlowConstraint,
-                                Flows, OptimisationType, TransformRule, Units)
+from echo.configuration import (
+    EVChargeMode,
+    EVChargeStatus,
+    FlowConstraint,
+    Flows,
+    OptimisationType,
+    TransformRule,
+    Units,
+)
 from echo.exceptions import ConfigurationError, validate
-from echo.models.agnostic import (BoundedLoad, Demand, FixedPort, FlexPort,
-                                  MobileStorage, Source, Storage)
+from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, MobileStorage, Source, Storage
 from echo.models.base import Node, Transform, TransformNode, TransformTerm
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (TimeExpandableType, fix_port_variable,
-                        set_var_bounds_from_dict)
-from echo.validators import (ArrayType,
-                             check_initial_state_of_charge_within_bounds)
+from echo.utils import TimeExpandableType, fix_port_variable, set_var_bounds_from_dict
+from echo.validators import ArrayType, check_initial_state_of_charge_within_bounds
 
 
 class ElectricalDemand(Demand):

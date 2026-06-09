@@ -7,10 +7,8 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.electrical import (ElectricalDemand, ElectricalGeneration,
-                                    ElectricalStorage)
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.electrical import ElectricalDemand, ElectricalGeneration, ElectricalStorage
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import PathTariff, ThroughputCost
 from echo.optimiser import optimise

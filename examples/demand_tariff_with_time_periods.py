@@ -6,12 +6,17 @@ from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalStorage
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import (Day, DemandTariffObjective,
-                                    ImportDemandCharge, ResetPeriod,
-                                    ThroughputCost, TimePeriod, Window)
+from echo.objectives.tariff import (
+                                  Day,
+                                  DemandTariffObjective,
+                                  ImportDemandCharge,
+                                  ResetPeriod,
+                                  ThroughputCost,
+                                  TimePeriod,
+                                  Window,
+)
 from echo.optimiser import optimise
 
 expansion_periods = 1
