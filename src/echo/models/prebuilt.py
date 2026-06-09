@@ -1,4 +1,3 @@
-
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 

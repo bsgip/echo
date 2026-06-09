@@ -485,9 +485,11 @@ class DemandCharge(EchoBaseModel):
     def check_import_or_export(cls, values):
         validate(
             values.get("import_demand") is True or values.get("export_demand") is True,
-            ("Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
+            (
+                "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
                 " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
-                "the demand charge to the demand tariff objective."),
+                "the demand charge to the demand tariff objective."
+            ),
         )
         return values
 

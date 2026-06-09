@@ -1,4 +1,3 @@
-
 import pytest
 
 from echo.configuration import Units

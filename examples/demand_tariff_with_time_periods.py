@@ -9,13 +9,13 @@ from echo.models.electrical import ElectricalDemand, ElectricalStorage
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import (
-                                  Day,
-                                  DemandTariffObjective,
-                                  ImportDemandCharge,
-                                  ResetPeriod,
-                                  ThroughputCost,
-                                  TimePeriod,
-                                  Window,
+    Day,
+    DemandTariffObjective,
+    ImportDemandCharge,
+    ResetPeriod,
+    ThroughputCost,
+    TimePeriod,
+    Window,
 )
 from echo.optimiser import optimise
 
