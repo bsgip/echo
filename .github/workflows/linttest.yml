@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: ${{ matrix.pyver }}
       - name: Install Dependencies
-        run: uv sync --extra dev --extra test
+        run: uv sync --extra dev
       - name: Lint (ruff)
         run: uv run ruff check .
       - name: Format check
@@ -60,7 +60,7 @@ jobs:
 
       - name: Install Dependencies
         run: | 
-          uv sync --extra test
+          uv sync --extra dev
           sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
       - name: Run Pytest
