@@ -1,5 +1,4 @@
 from typing import cast
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -60,7 +59,12 @@ class ElectricalGeneration(Source):
 
         if self.curtailable:
             # Constrain solar gen to be within initial value (max value)
-            set_var_bounds_from_dict(model=model, var_name=self.port_name, lb=self.initial_value, ub=None)
+            set_var_bounds_from_dict(
+                model=model,
+                var_name=self.port_name,
+                lb=self.initial_value,
+                ub=None,
+            )
 
 
 class ElectricalStorage(Storage):
@@ -223,8 +227,12 @@ class EVBase(TransformNode):
             None
 
         Raises:
+            TypeError: if self.usage is None
             ValueError: if the maximum power usage is greater than max_discharge_rate.
         """
+
+        if self.usage is None:
+            raise TypeError("self.usage has not been set, it is still None.")
 
         # Get the maximum power usage
         max_usage = np.max(np.array(self.usage))
@@ -934,9 +942,6 @@ class EV(TransformNode):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-
-        # Display deprecation warning
-        warn("Class EV will be deprecated in future versions. Please use EVV0G, EVV1G, EVV2G or EVDemandProfile.")
 
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         for i in self.usage:
