@@ -504,22 +504,22 @@ class Storage(Port):
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
     fixed_storage_capacity: bool = True
-    storage_capacity_cost: PositiveFloat | None
+    storage_capacity_cost: PositiveFloat | None = None
     regularise: bool = False
     initial_state_of_charge: float | None
 
     dod_check = root_validator(allow_reuse=True)(dod_checks)
 
     @property
-    def soc_value(self):
+    def soc_value(self) -> str:
         return "storage_soc_" + self.port_name
 
     @property
-    def optimised_capacity(self):
+    def optimised_capacity(self) -> str:
         return "optimised_storage_capacity_" + self.port_name
 
     @property
-    def soc_constraint(self):
+    def soc_constraint(self) -> str:
         return "soc_cons_" + self.port_name
 
     def __init__(self, **data):
