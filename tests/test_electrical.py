@@ -5,7 +5,8 @@ from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import (ScenarioSettings,
+                                  engine_settings_from_environment)
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise

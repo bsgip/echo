@@ -3,7 +3,8 @@ import numpy as np
 from echo.configuration import Units
 from echo.models.agnostic import ControlledLoad, FlexPort
 from echo.models.base import Node, OptimisationGraph
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import (ScenarioSettings,
+                                  engine_settings_from_environment)
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import QuadraticPower
 from echo.optimiser import optimise

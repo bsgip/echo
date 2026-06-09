@@ -3,11 +3,8 @@
 import pytest
 
 from echo.configuration import Units
-from echo.models.thermal import (
-    SimpleChiller,
-    SimpleHeatPump,
-    SimpleHeatPumpDualOutput,
-)
+from echo.models.thermal import (SimpleChiller, SimpleHeatPump,
+                                 SimpleHeatPumpDualOutput)
 from echo.utils import TimeSeriesData, expand_as_dict
 
 NUMBER_INTERVALS = 5

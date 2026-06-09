@@ -8,27 +8,16 @@ from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (
-    TimeExpandableType,
-    TimeSeriesData,
-    expand_as_array,
-    generate_array_constraint,
-    populate_values_across_time_and_expansion_indices,
-    set_float_var_bounds,
-    set_var_bounds_from_dict,
-)
-from echo.validators import (
-    ArrayType,
-    check_bound_order,
-    dod_checks,
-    node_unit_validator,
-    nonnegative_costs,
-    nonnegative_load,
-    nonpositive_generation,
-    set_bounds_from_piecewise_points,
-    validate_partition_ports,
-    validate_piecewise_arrays,
-)
+from echo.utils import (TimeExpandableType, TimeSeriesData, expand_as_array,
+                        generate_array_constraint,
+                        populate_values_across_time_and_expansion_indices,
+                        set_float_var_bounds, set_var_bounds_from_dict)
+from echo.validators import (ArrayType, check_bound_order, dod_checks,
+                             node_unit_validator, nonnegative_costs,
+                             nonnegative_load, nonpositive_generation,
+                             set_bounds_from_piecewise_points,
+                             validate_partition_ports,
+                             validate_piecewise_arrays)
 
 """
 

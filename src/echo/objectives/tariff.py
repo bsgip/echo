@@ -6,15 +6,8 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import (
-    Field,
-    NonNegativeFloat,
-    NonPositiveFloat,
-    PositiveFloat,
-    PositiveInt,
-    root_validator,
-    validator,
-)
+from pydantic import (Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat,
+                      PositiveInt, root_validator, validator)
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel

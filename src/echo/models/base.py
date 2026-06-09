@@ -10,26 +10,16 @@ import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
 
-from echo.configuration import (
-    FlowConstraint,
-    Flows,
-    OptimisationType,
-    TransformRule,
-    Units,
-)
-from echo.constants import negative_variable_component, positive_variable_component
+from echo.configuration import (FlowConstraint, Flows, OptimisationType,
+                                TransformRule, Units)
+from echo.constants import (negative_variable_component,
+                            positive_variable_component)
 from echo.exceptions import ConfigurationError, validate
 from echo.models.scenario import EchoConcreteModel
-from echo.utils import (
-    TimeExpandableType,
-    TimeSeriesData,
-    domain_from_flow,
-    expand_as_array,
-    expand_as_dict,
-    generate_array_constraint,
-    set_var_bounds_from_dict,
-    to_initial_values,
-)
+from echo.utils import (TimeExpandableType, TimeSeriesData, domain_from_flow,
+                        expand_as_array, expand_as_dict,
+                        generate_array_constraint, set_var_bounds_from_dict,
+                        to_initial_values)
 from echo.validators import ArrayType, export_cons_check, import_cons_check
 
 

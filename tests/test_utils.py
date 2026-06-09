@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from echo.utils import TimeSeriesData, UnexpandableTimeSeriesDataError, expand_as_array, expand_as_dict
+from echo.utils import (TimeSeriesData, UnexpandableTimeSeriesDataError,
+                        expand_as_array, expand_as_dict)
 
 
 @pytest.mark.parametrize(
