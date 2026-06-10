@@ -60,7 +60,7 @@ maintainers = [
 #Documentation = "https://PROJECTNAME.readthedocs.io"
 Repository = "https://github.com/bsip/echo"
 Issues = "https://github.com/bsgip/echo/issues"
-Changelog = "https://github.com/bsgip/echo/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/bsgip/echo/blob/main/CHANGELOG.md"
 
 
 [dependency-groups]
