@@ -2,7 +2,7 @@ import copy
 import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import networkx as nx
 import numpy as np
@@ -47,7 +47,7 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: InitialValue | None = None
+    initial_value: dict[tuple[int, int], int | float] | None = None
     initial_value_ref: str | None = None  # string ref to df column
     initial_value_scaling: int | None = None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
@@ -68,42 +68,42 @@ class Port(BaseModel):
     export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
 
     @property
-    def pos(self):
+    def pos(self) -> str:
         return positive_variable_component + self.port_name
 
     @property
-    def neg(self):
+    def neg(self) -> str:
         return negative_variable_component + self.port_name
 
     @property
-    def is_pos(self):
+    def is_pos(self) -> str:
         return f"is_pos_{self.port_name}"
 
     @property
-    def import_con_val(self):
+    def import_con_val(self) -> str:
         return f"import_con_val_{self.port_name}"
 
     @property
-    def export_con_val(self):
+    def export_con_val(self) -> str:
         return f"export_con_val_{self.port_name}"
 
     @property
-    def import_slack(self):
+    def import_slack(self) -> str:
         return f"import_slack_{self.port_name}"
 
     @property
-    def import_slack_max(self):
+    def import_slack_max(self) -> str:
         return f"import_slack_max_{self.port_name}"
 
     @property
-    def export_slack(self):
+    def export_slack(self) -> str:
         return f"export_slack_{self.port_name}"
 
     @property
-    def export_slack_max(self):
+    def export_slack_max(self) -> str:
         return f"export_slack_max_{self.port_name}"
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         if not self.port_name:  # if no name is provided, give it a default name using the uid
             self.port_name = "port_" + str(self.uid)
@@ -150,9 +150,6 @@ class Port(BaseModel):
                 expansion_periods=expansion_periods,
                 time_periods=time_periods,
             )
-
-        else:
-            raise TypeError(f"The initial_value for port: {self.port_name} is not of type InitialValue.")
 
     def verify_port(self) -> None:
         """Used to verify that a port has been set up appropriately"""
@@ -230,7 +227,7 @@ class Port(BaseModel):
         else:
             set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=import_constraint_dict, lb=None)
 
-    def _add_slack_import_constraints_to_model(self, model: EchoConcreteModel):
+    def _add_slack_import_constraints_to_model(self, model: EchoConcreteModel) -> None:
         """Adds import capacity constraint with slack rules"""
 
         # Add export capacity slack constraint
@@ -273,10 +270,13 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=import_cap_slack_max_rule),
         )
 
-    def _add_export_constraints_to_model(self, model: EchoConcreteModel):
+    def _add_export_constraints_to_model(self, model: EchoConcreteModel) -> None:
+        """Add export constraints to the model."""
+
         # Add export constraint parameter
         time_periods = len(model.Time)
         exp_periods = len(model.Expansion)
+
         # Generate an array of constraints (ie indexed by time and expansion period)
         export_constraint_dict = generate_array_constraint(self.export_constraint_value, time_periods, exp_periods)
         setattr(
@@ -295,7 +295,7 @@ class Port(BaseModel):
         else:
             set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=None, lb=export_constraint_dict)
 
-    def _add_slack_export_constraints_to_model(self, model: EchoConcreteModel):
+    def _add_slack_export_constraints_to_model(self, model: EchoConcreteModel) -> None:
         """Adds import capacity constraint with slack rules"""
 
         # Add export capacity slack constraint
@@ -436,7 +436,7 @@ class Port(BaseModel):
             )
 
     @staticmethod
-    def factory_pos_neg_flows(var_name, pos_name, neg_name):
+    def factory_pos_neg_flows(var_name: str, pos_name: str, neg_name: str) -> Callable:
         def constraint(model: EchoConcreteModel, expansion_interval, time_interval):
             return getattr(model, var_name)[expansion_interval, time_interval] == (
                 getattr(model, pos_name)[expansion_interval, time_interval]
@@ -445,14 +445,14 @@ class Port(BaseModel):
 
         return constraint
 
-    def set_initial_value(self, initial_value: dict):
+    def set_initial_value(self, initial_value: dict) -> None:
         """Sets initial port value which will be used to initialise the pyomo var/param
         Args:
             initial_value: dict of initial values
         """
         self.initial_value = initial_value
 
-    def set_initial_value_from_timeseriesdata(self, time_series_data: TimeSeriesData):
+    def set_initial_value_from_timeseriesdata(self, time_series_data: TimeSeriesData) -> None:
         self.set_initial_value(expand_as_dict(time_series_data))
 
     def set_initial_value_from_array(
@@ -479,7 +479,9 @@ class Port(BaseModel):
         )
         self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
-    def set_active_periods_from_array(self, array: Any, expansion_periods: int = 1, time_periods: int | None = None):
+    def set_active_periods_from_array(
+        self, array: Any, expansion_periods: int = 1, time_periods: int | None = None
+    ) -> None:
         """Sets port active periods
         Args:
             array: array, list of active periods as bool values
@@ -495,7 +497,7 @@ class Port(BaseModel):
         )
         self.active_periods = expand_as_dict(time_series_data)
 
-    def add_objective(self, model: EchoConcreteModel):
+    def add_objective(self, model: EchoConcreteModel) -> None:
         """Populates the port attribute 'objectives' with any pyomo expressions that are needed
         Args:
             model: pyomo concrete model
@@ -535,16 +537,16 @@ class Transform(BaseModel):
     lhs: list[TransformTerm] = []
     rhs = 0
 
-    def __init__(self, lhs_terms: list[TransformTerm] = [], **data):
+    def __init__(self, lhs_terms: list[TransformTerm], **data):
         super().__init__(**data)
         if lhs_terms:
             self.lhs = lhs_terms
 
     @property
-    def transform_name(self):
+    def transform_name(self) -> str:
         return "transform_" + str(self.uid)
 
-    def _add_transform_to_model(self, model: EchoConcreteModel):
+    def _add_transform_to_model(self, model: EchoConcreteModel) -> None:
         # Check if we need to create pos/neg components
         for term in self.lhs:
             if term.rule is not TransformRule.Both:
