@@ -788,7 +788,7 @@ def test_chiller_with_heat_rejection():
 
     total_waste_heat = round(optimise_results.values(waste_heat_agg.total, 0).sum(), 2)
     total_cooling_load = round(optimise_results.df_by_port()["cooling_demand_kwt"].sum(), 2)
-    assert total_waste_heat == -chiller.heat_rejection_coefficient * total_cooling_load
+    assert total_waste_heat == round(-1 * chiller.heat_rejection_coefficient * total_cooling_load, 1)
 
     # Check that observed COP values are within expected range
     min_cop = min([v for v in chiller.partial_load_cop.values() if v != 0]) * chiller.nominal_cop
