@@ -1,20 +1,17 @@
-import abc
 import copy
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import networkx as nx
-from networkx.classes.reportviews import InEdgeDataView
 import numpy as np
 import pandas as pd
-from pyomo.core import Constraint
-from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 import pyomo.environ as en
 import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
+from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, TransformRule, Units
 from echo.constants import negative_variable_component, positive_variable_component

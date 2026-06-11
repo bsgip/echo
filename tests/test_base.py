@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
@@ -10,7 +10,6 @@ from echo.models.scenario import ScenarioSettings, engine_settings_from_environm
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
-from echo.validators import ArrayType
 
 
 def test_port_proccess_initial_value_types():

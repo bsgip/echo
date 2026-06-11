@@ -1,12 +1,12 @@
 from typing import cast
 
-from deprecated import deprecated
 import numpy as np
 import pandas as pd
-from pydantic import Field, NonNegativeFloat
 import pyomo.environ as en
-from pyomo.core.expr.relational_expr import EqualityExpression
 import shortuuid
+from deprecated import deprecated
+from pydantic import Field, NonNegativeFloat
+from pyomo.core.expr.relational_expr import EqualityExpression
 
 from echo.configuration import (
     EVChargeMode,
