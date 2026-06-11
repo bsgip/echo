@@ -1,11 +1,12 @@
 from typing import cast
 
+from deprecated import deprecated
 import numpy as np
 import pandas as pd
-import pyomo.environ as en
-import shortuuid
-from deprecated import deprecated
 from pydantic import Field, NonNegativeFloat
+import pyomo.environ as en
+from pyomo.core.expr.relational_expr import EqualityExpression
+import shortuuid
 
 from echo.configuration import (
     EVChargeMode,
@@ -1030,7 +1031,7 @@ class EV(TransformNode):
         usage: ArrayType | list | str | None = None,
         initial_state_of_charge: float | None = None,
         interval_duration: int | None = None,
-    ):
+    ) -> None:
         self.__init__(
             node_name=self.node_name,
             uid=self.uid,
@@ -1056,7 +1057,7 @@ class EV(TransformNode):
             port_dict_name_to_port_name_map=self.port_dict_name_to_port_name_map,
         )
 
-    def create_ev_transformation(self):
+    def create_ev_transformation(self) -> Transform:
         # Create appropriate transformation: vehicle = cp - usage
         lhs_terms = [
             TransformTerm(var=self.ports["vehicle"], rule=TransformRule.Both, weight=1),
@@ -1089,7 +1090,7 @@ class EV(TransformNode):
             self.charge_status = EVChargeStatus.Feasible if success else EVChargeStatus.Infeasible
         self.V0G_trip_infeasibility = trip_infeasibility
 
-    def V0G_charging(self, interval_duration: float, force_conv=False):
+    def V0G_charging(self, interval_duration: float, force_conv=False) -> None:
         """Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
         if (self.tod_charging is not None) and (not force_conv):
             self.available = self.available * self.tod_charging
@@ -1119,7 +1120,7 @@ class EV(TransformNode):
 
         return success, soc[1:], delta, trip_infeasibility
 
-    def verify_node(self):
+    def verify_node(self) -> None:
         super().verify_node()
         if self.charge_mode == EVChargeMode.V0G:
             validate(
@@ -1136,7 +1137,7 @@ class EV(TransformNode):
             "EV usage port needs usage profile added.",
         )
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
+    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
         super().add_node_to_model(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
@@ -1229,9 +1230,8 @@ class Inverter(Node):
         # Split ac port into pos/neg, so we can apply the correct efficiencies
         ac_port.constrain_pos_neg(model)
 
-        def inverter_ac_output_must_track_efficiency(
-            model: EchoConcreteModel, p, t
-        ) -> None:  # Apply efficiency constraints
+        def inverter_ac_output_must_track_efficiency(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
+            """Apply efficiency constraints"""
             dc_total = 0
             for dc_port_name in self.dc_port_names:
                 dc_port = self.ports[dc_port_name]
