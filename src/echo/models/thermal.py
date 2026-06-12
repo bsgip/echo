@@ -1,4 +1,5 @@
 import pandas as pd
+from pyomo.core.expr import EqualityExpression, InequalityExpression
 import pyomo.environ as en
 from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
 from scipy import interpolate
@@ -1446,7 +1447,7 @@ class ParameterisedHeatPump(Node):
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
         power_in = getattr(model, self.ports[self.electrical_input_port_ref].port_name)  # input electrical power
 
-        def only_heat_or_cool1(model: EchoConcreteModel, p, t):
+        def only_heat_or_cool1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_heat variable.
             power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< bigM value when is_cooling=0"""
             return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
@@ -1457,7 +1458,7 @@ class ParameterisedHeatPump(Node):
             en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool1),
         )
 
-        def only_heat_or_cool2(model: EchoConcreteModel, p, t):
+        def only_heat_or_cool2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_cool variable.
             power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< bigM value when is_cooling=1"""
             return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.bigM
@@ -1468,13 +1469,13 @@ class ParameterisedHeatPump(Node):
             en.Constraint(model.Expansion, model.Time, rule=only_heat_or_cool2),
         )
 
-        def sum_rule(model: EchoConcreteModel, p, t):
+        def sum_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             """Electrical power input used for heating and for cooling must sum to total electrical power input"""
             return power_in[p, t] == getattr(model, self.power_to_heat)[p, t] + getattr(model, self.power_to_cool)[p, t]
 
         setattr(model, "sum_heat_cool_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=sum_rule))
 
-    def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel):
+    def _define_temperature_dependent_cop_coefficient(self, model: EchoConcreteModel) -> None:
         """Get heating and cooling COP (coefficient of performance) scaling factor for each interval.
 
         Calculate value of the temperature_cop_factor parameter using numpy linear interpolation function.
@@ -1531,13 +1532,17 @@ class ParameterisedHeatPump(Node):
         )
 
     def _set_piecewise_linear_cooling_cop_constraint(
-        self, model: EchoConcreteModel, power_to_cool_var: str, cooling_out_var: str
-    ):
+        self,
+        model: EchoConcreteModel,
+        power_to_cool_var: str,
+        cooling_out_var: str,
+    ) -> None:
         xvar = getattr(model, power_to_cool_var)
         yvar = getattr(model, cooling_out_var)
         xdata = self.input_points_cooling
         ydata = self.output_points_cooling
         con_name = "piecewise_con_cooling_" + self.node_name
+
         setattr(
             model,
             con_name,
@@ -1555,8 +1560,11 @@ class ParameterisedHeatPump(Node):
         )
 
     def _set_piecewise_linear_heating_cop_constraint(
-        self, model: EchoConcreteModel, power_to_heat_var: str, heating_out_var: str
-    ):
+        self,
+        model: EchoConcreteModel,
+        power_to_heat_var: str,
+        heating_out_var: str,
+    ) -> None:
         xvar = getattr(model, power_to_heat_var)
         yvar = getattr(model, heating_out_var)
         xdata = self.input_points_heating
@@ -1585,7 +1593,7 @@ class ParameterisedHeatPump(Node):
         # get parameter holding temperature dependent COP (coefficient of performance) factor
         temperature_cop_param = getattr(model, self.temperature_cop_cooling_param)
 
-        def input_point(k, v):
+        def input_point(k: float, v: float) -> float:
             if v == 0:
                 return 0
             else:
@@ -1597,7 +1605,7 @@ class ParameterisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def _set_output_points_cooling(self, model: EchoConcreteModel):
+    def _set_output_points_cooling(self, model: EchoConcreteModel) -> None:
         """Output breakpoints are partial cooling load values (% of max capacity)"""
         self.output_points_cooling = {
             (p, t): [k * self.max_cooling_capacity for k in self.partial_load_cop_cooling.keys()]
@@ -1605,14 +1613,14 @@ class ParameterisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def _set_input_points_heating(self, model: EchoConcreteModel):
+    def _set_input_points_heating(self, model: EchoConcreteModel) -> None:
         """Input breakpoints are input electrical power values calculated as
         heating_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 
         # get parameter holding temperature dependent COP (coefficient of performance) factor
         temperature_cop_param = getattr(model, self.temperature_cop_heating_param)
 
-        def input_point(k, v):
+        def input_point(k: float, v: float) -> float:
             if v == 0:
                 return 0
             else:
@@ -1624,7 +1632,7 @@ class ParameterisedHeatPump(Node):
             for t in range(len(model.Time))
         }
 
-    def _set_output_points_heating(self, model: EchoConcreteModel):
+    def _set_output_points_heating(self, model: EchoConcreteModel) -> None:
         """Output breakpoints are partial heating load values (% of max capacity).
 
         Need to multiply by -1, heating is negative flow of the thermal port.
