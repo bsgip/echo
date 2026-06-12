@@ -1,3 +1,4 @@
+from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 import copy
 import warnings
 from collections.abc import Callable, Iterable
@@ -781,7 +782,7 @@ class TransformNode(Node):
         if not self.transformations:
             raise ConfigurationError("Node has Transform rule but Transformation object(s) has not been added to node.")
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         """Add the constraints assoicated with this node to a concrete model.
 
         Args:
@@ -814,7 +815,9 @@ class TransformNode(Node):
                         num_time_intervals=len(model.Time),
                     )
                 )
+
                 rule = term.rule
+
                 if rule is TransformRule.Both:
                     var_name = term.var.port_name
                 elif rule is TransformRule.Pos:
@@ -823,7 +826,9 @@ class TransformNode(Node):
                     var_name = term.var.neg
                 else:
                     raise Exception(f"Unsupported transform rule {rule} for term {term}")
+
                 lhs += getattr(model, var_name)[p, t] * weight[p, t]
+
             return lhs == current_transform.rhs
 
         for current_transform in self.transformations.values():
@@ -1192,7 +1197,7 @@ class OptimisationGraph(BaseModel):
             sources_or_sinks.add(path.vertices[-1])
         return sources_or_sinks
 
-    def get_path(self, path_vertices: list[Node] | list[str]):
+    def get_path(self, path_vertices: list[Node] | list[str]) -> Path:
         """Looks up a path using a list of path vertices (nodes, or node names)."""
         if isinstance(path_vertices[0], Node):
             name_key = [cast(Node, node).node_name for node in path_vertices]
@@ -1203,7 +1208,7 @@ class OptimisationGraph(BaseModel):
             else:
                 raise ValueError(f"No path with vertices {path_vertices} is defined.")
 
-    def verify_paths(self):
+    def verify_paths(self) -> None:
         """Verifies that our paths meet the assumptions required to correctly do flow tracing."""
         all_nodes = self.get_sources_and_sinks()
         for node in all_nodes:
@@ -1272,10 +1277,10 @@ class OptimisationGraph(BaseModel):
             p.edge_ports.append(edge_ports)
         return p
 
-    def apply_path_constraints(self, model: EchoConcreteModel):
+    def apply_path_constraints(self, model: EchoConcreteModel) -> None:
         """Applies path tracing constraints to model"""
 
-        def path_flow_rule(model: EchoConcreteModel, p, t):
+        def path_flow_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             a = 0
             for path in self.paths.values():  # Iterate through all paths in the model
                 if path.vertices[0] is current_node_name:  # If the path starts at the current node
@@ -1284,7 +1289,7 @@ class OptimisationGraph(BaseModel):
                     a -= getattr(model, path.flow_value)[p, t]  # Subtract the flow value
             return a == getattr(model, current_port.port_name)[p, t] * -1  # Flows out - flows in = -1 * port
 
-        def only_inflow_or_outflow1(model: EchoConcreteModel, p, t):
+        def only_inflow_or_outflow1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             a = 0
             for path in self.paths.values():
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
@@ -1293,7 +1298,7 @@ class OptimisationGraph(BaseModel):
                 a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM
             )  # Incoming paths can only be non-zero if inflow=1
 
-        def only_inflow_or_outflow2(model: EchoConcreteModel, p, t):
+        def only_inflow_or_outflow2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             a = 0
             for path in self.paths.values():
                 if path.vertices[0] is current_node_name:  # If the path starts at the node
@@ -1339,7 +1344,7 @@ class OptimisationGraph(BaseModel):
                 en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow2),
             )
 
-    def draw_on_axes(self, axes, with_labels=False, labels=None, **kwargs):
+    def draw_on_axes(self, axes, with_labels=False, labels=None, **kwargs) -> None:
         """Draws the network on a matplotlib plot
 
         Args:
@@ -1373,36 +1378,36 @@ class OptimisationGraph(BaseModel):
         """Converts the optimisation graph to json that can be read by cytoscape (https://js.cytoscape.org/)"""
         import json
 
-        G = self.convert_to_nx()
+        graph = self.convert_to_nx()
         nodes = []
-        for node in G.nodes():
+        for node in graph.nodes():
             nodes.append({"data": {"id": node}})
-        for n1, n2 in G.edges():
+        for n1, n2 in graph.edges():
             nodes.append({"data": {"id": f"{n1}_{n2}", "source": n1, "target": n2}})
 
         return json.dumps(nodes)
 
-    def print_port_names(self):
+    def print_port_names(self) -> None:
         """Prints port name-uid pairs, useful for debugging infeasible optimisation"""
         for n in self.node_obj.values():
             for pn, p in n.ports.items():
                 print(pn, ", ", p.port_name)
 
-    def get_port_names_from_nodes(self):
+    def get_port_names_from_nodes(self) -> set[str]:
         output = set()
         for n in self.node_obj.values():
-            for pn, p in n.ports.items():
+            for p in n.ports.values():
                 output.add(p.port_name)
         return output
 
-    def get_port_names_from_edges(self):
+    def get_port_names_from_edges(self) -> set[str]:
         output = set()
         for e in self.edge_obj.values():
             output.add(e.vertices[0].port_name)
             output.add(e.vertices[1].port_name)
         return output
 
-    def verify_graph(self):
+    def verify_graph(self) -> None:
         """Checks that the graph is connected (all nodes have at least one edge), and warns if there
         are unconnected ports"""
         validate(nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected.")
@@ -1413,10 +1418,11 @@ class OptimisationGraph(BaseModel):
         if len(diff) != 0:
             warnings.warn(
                 f"Ports {diff} are defined on nodes but are not part of an edge. "
-                "This may cause erroneous optimisation results."
+                "This may cause erroneous optimisation results.",
+                stacklevel=1,
             )
 
-    def split_graph_on_edge(self, node1: str, node2: str):
+    def split_graph_on_edge(self, node1: str, node2: str) -> tuple[OptimisationGraph, OptimisationGraph]:
         """Splits a graph between node1 and node 2, and returns two echo optimisation graphs.
         The ports on the split edge are kept in the two new graphs."""
         system = self.convert_to_nx()
@@ -1434,7 +1440,7 @@ class OptimisationGraph(BaseModel):
         g1_subgraph = system.subgraph(g1_nodes)
         g2_subgraph = system.subgraph(g2_nodes)
 
-        def create_new_graph(nodes: list, edges: list):
+        def create_new_graph(nodes: list, edges: list) -> OptimisationGraph:
             """Creates a new graph from a list of node names and edge names"""
             new_graph = OptimisationGraph()
             for n in nodes:
@@ -1447,12 +1453,12 @@ class OptimisationGraph(BaseModel):
 
             return new_graph
 
-        G1 = create_new_graph(g1_subgraph.nodes, g1_subgraph.edges)
-        G2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
+        graph1 = create_new_graph(g1_subgraph.nodes, g1_subgraph.edges)
+        graph2 = create_new_graph(g2_subgraph.nodes, g2_subgraph.edges)
 
-        return G1, G2
+        return graph1, graph2
 
-    def update_node(self, node_name: str, **kwargs):
+    def update_node(self, node_name: str, **kwargs) -> None:
         # Update the edge associated with the EV
         found_edge = None
         for edge in self.edge_list():
@@ -1496,7 +1502,7 @@ class OptimisationGraph(BaseModel):
         usage: ArrayType | list | str | None = None,
         initial_state_of_charge: float | None = None,
         interval_duration: int | None = None,
-    ):
+    ) -> None:
         """Injects stateful data into an EV node in an OptimisationGraph.
 
         This is a convenience method to be used for networks constructed by MESNetwork.to_echo(). It will update
