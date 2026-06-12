@@ -1,3 +1,5 @@
+import pandas as pd
+from pyomo.core.expr import EqualityExpression
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
 
@@ -55,7 +57,7 @@ class GasBoilerFixedCOP(InputOutputNode):
     def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         super().apply_node_constraints(model)
 
-        def node_constraint(model: EchoConcreteModel, p, t):
+        def node_constraint(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             p_in = getattr(model, self.ports[self.input_port_ref].port_name)
             p_out = getattr(model, self.ports[self.output_port_ref].port_name)
             if p == 0 and t == 0:
@@ -111,7 +113,7 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = "inlet_temp_" + self.node_name
         self.exit_t = "outlet_temp_" + self.node_name
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
@@ -130,7 +132,7 @@ class TempControlledBoiler(InputOutputNode):
         input_kw = getattr(model, self.ports[self.input_port_ref].port_name)
         output_kw = getattr(model, self.ports[self.output_port_ref].port_name)
 
-        def constraint2(model: EchoConcreteModel, p, t):
+        def constraint2(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             """return temp at time t - exiting temp at time t == energy removed at t"""
             return (
                 getattr(model, self.return_t)[p, t] - getattr(model, self.exit_t)[p, t]
@@ -140,7 +142,7 @@ class TempControlledBoiler(InputOutputNode):
             model, "boiler_temp_con2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=constraint2)
         )
 
-        def constraint3(model: EchoConcreteModel, p, t):
+        def constraint3(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             """exiting temp at time t = return temp at time t + energy added at time t"""
             return (
                 input_kw[p, t]
