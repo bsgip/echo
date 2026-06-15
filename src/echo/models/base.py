@@ -449,9 +449,14 @@ class Port(BaseModel):
 
     def set_initial_value(self, initial_value: dict) -> None:
         """Sets initial port value which will be used to initialise the pyomo var/param
+
         Args:
             initial_value: dict of initial values
+
+        Returns:
+            None
         """
+
         self.initial_value = initial_value
 
     def set_initial_value_from_timeseriesdata(self, time_series_data: TimeSeriesData) -> None:
