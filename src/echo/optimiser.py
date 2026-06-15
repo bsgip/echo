@@ -1,3 +1,4 @@
+from typing import Generator
 import warnings
 from collections.abc import Collection
 from contextlib import contextmanager, redirect_stdout
@@ -27,7 +28,7 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
 
 
 @contextmanager
-def logged_stdout(logfile: str | None, mode: str = "w"):
+def logged_stdout(logfile: str | None, mode: str = "w") -> Generator[None, str, None]:
     """Context manager that while held open will redirect all stdout to logfile. If the logfile is None then
     no redirection will occur"""
     if logfile is None:
@@ -52,7 +53,7 @@ class OptimisationResult:
     opt_status: SolverStatus
     termination_condition: TerminationCondition
 
-    def df(self):
+    def df(self) -> pd.DataFrame:
         """
         Extract all vars from the solution as a dataframe
         """
@@ -70,7 +71,7 @@ class OptimisationResult:
 
         return df
 
-    def df_by_node(self):
+    def df_by_node(self) -> pd.DataFrame:
         """Returns a df of results by node, using the port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
@@ -80,7 +81,7 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
-    def df_by_port(self):
+    def df_by_port(self) -> pd.DataFrame:
         """Returns a df of results by port, using port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
@@ -94,7 +95,7 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
-    def df_objective_by_port(self, index={1}):
+    def df_objective_by_port(self, index: set = {1}) -> pd.DataFrame:
         """Return the value of each objective assigned to each port."""
         dct = {}
         for obj in self.objective_set.objective_list:
@@ -102,7 +103,7 @@ class OptimisationResult:
 
         return pd.DataFrame(dct, index=index)
 
-    def values(self, variable_name, expansion=0):
+    def values(self, variable_name: str, expansion: int = 0) -> np.ndarray:
         """Returns the value of a single specified variable during a single specified expansion period."""
 
         var_obj = getattr(self.model, variable_name)
@@ -132,14 +133,14 @@ class OptimisationResult:
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj: Node, expansion_period=0):
+    def node_values(self, node_obj: Node, expansion_period: int = 0) -> dict[str, np.ndarray]:
         """Returns all values of all ports in a specified node for a single specified expansion period."""
         outputs = {}
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_single_objective_total_value(self, objective_obj: Objective):
+    def get_single_objective_total_value(self, objective_obj: Objective) -> float:
         """Returns the value of a single objective."""
         return objective_obj.get_objective_total(model=self.model)
 
@@ -157,7 +158,7 @@ class OptimisationResult:
         return total
 
 
-def validate_network_graph(graph: OptimisationGraph):
+def validate_network_graph(graph: OptimisationGraph) -> None:
     """
     Validates that a pyomo model can be built from the provided network graph. Checks for:
     - name consistency between objects (e.g. node.node_name) and graph nodes
