@@ -1,3 +1,6 @@
+"""Commodity agnostic ports and nodes"""
+
+import numpy as np
 import pandas as pd
 import pyomo.environ as en
 from pydantic import Field, PositiveFloat, root_validator, validator
@@ -27,12 +30,6 @@ from echo.validators import (
     validate_partition_ports,
     validate_piecewise_arrays,
 )
-
-"""
-
-    Commodity agnostic ports and nodes
-
-"""
 
 
 class FlexPort(Port):
@@ -75,11 +72,18 @@ class Source(Port):
     # Source should have non positive initial values
     non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
-    def add_source_profile(self, source_values: dict):
+    def add_source_profile(self, source_values: dict) -> None:
         self.set_initial_value(source_values)
 
-    def add_source_profile_from_array(self, source_values, expansion_periods=1, time_periods: int | None = None):
-        self.set_initial_value_from_array(source_values, expansion_periods, time_periods)
+    def add_source_profile_from_array(
+        self,
+        source_values: list[int | float] | np.ndarray,
+        expansion_periods: int = 1,
+        time_periods: int | None = None,
+    ) -> None:
+        self.set_initial_value_from_array(
+            array=source_values, expansion_periods=expansion_periods, time_periods=time_periods
+        )
 
 
 class Sink(Port):
@@ -93,10 +97,10 @@ class Sink(Port):
         nonnegative_load
     )  # Sink should have non negative initial values
 
-    def add_sink_profile(self, sink_values: dict):
+    def add_sink_profile(self, sink_values) -> None:
         self.set_initial_value(sink_values)
 
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int | None = None):
+    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int | None = None) -> None:
         self.set_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )

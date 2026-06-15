@@ -1,7 +1,7 @@
 import pandas as pd
-from pyomo.core.expr import EqualityExpression, InequalityExpression
 import pyomo.environ as en
 from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
+from pyomo.core.expr import EqualityExpression, InequalityExpression
 from scipy import interpolate
 
 from echo.configuration import FlowConstraint, Units

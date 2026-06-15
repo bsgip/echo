@@ -1,6 +1,6 @@
 import pandas as pd
-from pyomo.core.expr import EqualityExpression
 import pyomo.environ as en
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Flows, Units
 from echo.models.agnostic import FlexPort

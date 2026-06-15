@@ -1,4 +1,5 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
+
 import copy
 import warnings
 from collections.abc import Callable, Iterable

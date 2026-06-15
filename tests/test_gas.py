@@ -1,4 +1,3 @@
-
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.models.gas import FixedGasPort, FlexGasPort
 
