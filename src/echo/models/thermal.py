@@ -503,7 +503,7 @@ class ThermalStorage(Node):
             self.ports[self.input_output_port_ref].export_constraint = FlowConstraint.Fixed
             self.ports[self.input_output_port_ref].export_constraint_value = self.discharging_power_limit
 
-    def update(self, ambient_temp) -> None:
+    def update(self, ambient_temp: dict[tuple[int, int], float]) -> None:
         self.ambient_temp = ambient_temp
 
     def set_ports(self, input_port: FlexSink, output_port: FlexSource) -> None:

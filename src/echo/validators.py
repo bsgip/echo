@@ -1,11 +1,10 @@
-from collections.abc import Iterable
+from collections.abc import Generator
 from typing import Any
 
 import numpy as np
 from pydantic import Field
 
 from echo.exceptions import validate
-
 
 FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
 
@@ -14,12 +13,12 @@ class ArrayType(np.ndarray):
     numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
 
     @classmethod
-    def __get_validators__(cls):
+    def __get_validators__(cls) -> Generator:
         yield cls.validate
 
     # todo actually validate this type
     @classmethod
-    def validate(cls, v):
+    def validate(cls, v: np.ndarray) -> np.ndarray:
         if type(v) is str:
             raise ValueError("Array Type cannot be a string.")
         return v
@@ -28,7 +27,7 @@ class ArrayType(np.ndarray):
         arbitrary_types_allowed = True
 
 
-def var_in_range(var1: float, range_min: float, range_max: float):
+def var_in_range(var1: float, range_min: float, range_max: float) -> ValueError | None:
     if var1 < range_min or var1 > range_max:
         return ValueError()
 
@@ -128,7 +127,8 @@ def check_initial_state_of_charge_within_bounds(
     # Check initial soc is within bounds
     if (initial_state_of_charge < min_soc) or (initial_state_of_charge > max_capacity):
         raise ValueError(
-            f"Initial state of charge, {initial_state_of_charge}, must be between min soc, {min_soc}, and max capacity, {max_capacity}"
+            f"Initial state of charge, {initial_state_of_charge}, must be between min soc, {min_soc},"
+            f"and max capacity, {max_capacity}"
         )
 
 

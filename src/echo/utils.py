@@ -1,11 +1,12 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Union
 
 import numpy as np
 import numpy.typing as npt
 import orjson as orjson
 import pandas as pd
 import pyomo.environ as en
+from pyomo.core import Expression, RangeSet
 from sklearn import linear_model
 
 from echo.configuration import Flows
@@ -14,18 +15,9 @@ from echo.functional import maybe_list
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
+DataArray = list[float] | set[float] | np.ndarray
 
-def clamp(n, smallest, largest):
-    return max(smallest, min(n, largest))
-
-
-def _to_values(profile, key):
-    if isinstance(profile, dict):
-        return profile[key]
-    return dict(enumerate(profile[key].values))
-
-
-TimeExpandableType = Union[int, float, list[int | float], list[list[int | float]]]
+TimeExpandableType = float | list[float] | list[list[float]]
 """TimeExpandableType
 
 Variables with type `TimeExpandableType` should only contain numbers (int or float).
@@ -37,6 +29,10 @@ or a 2-dimensional list of number e.g. [[1,2,3,4, ...], [5, 6, 7, 8, ...]].
 
 class UnexpandableTimeSeriesDataError(Exception):
     pass
+
+
+def clamp(n: float, smallest: float, largest: float) -> float:
+    return max(smallest, min(n, largest))
 
 
 @dataclass
@@ -214,27 +210,35 @@ def set_var_bounds_from_dict(model: EchoConcreteModel, var_name: str, ub: dict |
             var[k].setub(i)
 
 
-def generate_array_constraint(constraint, time_periods: int, expansion_periods: int) -> dict:
+def generate_array_constraint(
+    constraint: float | list[float] | np.ndarray, time_periods: int, expansion_periods: int
+) -> dict:
     """
+
     Args:
         constraint: float or array
     Returns:
         d: a formatted dict to be used in constraining a variable
     """
+
     d = {}
+
     if (type(constraint) is float) or (type(constraint) is int):
         for p in range(expansion_periods):
             for t in range(time_periods):
                 d[(p, t)] = constraint
+
     elif hasattr(constraint, "__iter__"):
         # Check length
         if (len(constraint) != time_periods) or (len(constraint) != time_periods * expansion_periods):
             raise ValueError("Array constraint length is not consistent with time periods/expansion periods.")
+
         if len(constraint) == time_periods:
             # Can tile across expansion periods
             for p in range(expansion_periods):
                 for t in range(time_periods):
                     d[(p, t)] = constraint[t]
+
         if len(constraint) == time_periods * expansion_periods:
             # No tiling
             i = 0
@@ -245,14 +249,9 @@ def generate_array_constraint(constraint, time_periods: int, expansion_periods: 
     return d
 
 
-# class PretendArray:
-#     def __init__(self, var):
-#         self.var = var
-#
-#     # initialisation check
-
-
-def fix_port_variable(model: EchoConcreteModel, var_name: str, new_values: ArrayType, expansion_periods=1):
+def fix_port_variable(
+    model: EchoConcreteModel, var_name: str, new_values: ArrayType, expansion_periods: int = 1
+) -> None:
     """
     Updates existing pyomo variable to have fixed values.
     Args:
@@ -269,31 +268,41 @@ def fix_port_variable(model: EchoConcreteModel, var_name: str, new_values: Array
     var.fix()
 
 
-def generate_input_output_values_from_polynomial_coeff_array(coeff_array, pts):
-    """
-    Generates x and y values for the polynomial function with coefficients defined by the coeff array
+def generate_input_output_values_from_polynomial_coeff_array(
+    coeff_array: list[float], pts: list[float]
+) -> tuple[list[float], list[float]]:
+    """Generates x and y values for the polynomial function with coefficients defined by the coeff array.
+
     Args:
         coeff array: list of polynomial function coefficients
         pts: list of x values for which we want to evaluate the function described by the coeff array
+
+    Returns:
+        x: The pts array returned.
+        y: List of values at values of x for polynomial coefficients coeff_array.
     """
 
     x = pts
     y = np.zeros(len(x))
     n = len(coeff_array)
+
     for i in range(len(y)):
         for j in range(n):
             y[i] += np.power(x[i], n - j) * coeff_array[j]
+
     return x, y
 
 
-def generate_piecewise_input_output_arrays(coeff_array, pts):
-    """
-    Generates x and y values for the polynomial function with coefficients defined by the coeff array
+def generate_piecewise_input_output_arrays(
+    coeff_array: list[float], pts: list[float]
+) -> tuple[list[float], list[float]]:
+    """Generates x and y values for the polynomial function with coefficients defined by the coeff array
+
     Args:
         coeff array: list of polynomial function coefficients, indexed by time
         pts: list of x values for which we want to evaluate the function described by the coeff array
     """
-
+    # TODO: This seems to be a duplicate of generate_input_output_values_from_polynomial_coeff_array().
     x = pts
     y = np.zeros(len(x))
     n = len(coeff_array)
@@ -303,24 +312,30 @@ def generate_piecewise_input_output_arrays(coeff_array, pts):
     return x, y
 
 
-def do_multivariate_regression(X, y):
-    """
-    Performs multivariate regression on provided data.
+def do_multivariate_regression(
+    x: list[list[float]] | np.ndarray, y: list[float] | list[list[float]] | np.ndarray
+) -> tuple[tuple[np.ndarray, float], float]:
+    """Performs multivariate regression on provided data.
+
+    Implementation of sklean.linear_model.LinearRegression.
+
     Args:
-        X:
-        Y:
+        x : Test samples. Array-like of shape (n_samples, n_features).
+        y : array-like of shape (n_samples,) or (n_samples, n_outputs). True values for x.
     Returns:
         coefficient array
         R^2
 
     """
     regr = linear_model.LinearRegression()
-    regr.fit(X, y)
+    regr.fit(x, y)
 
-    return regr.coef_, regr.score(X, y)
+    return regr.coef_, regr.score(x, y)
 
 
-def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature_array, xpts, time_periods):
+def create_input_output_pts_from_coefficients(
+    temp_coef: list[float], input_coef: list[float], temperature_array: list[float], xpts: int, time_periods: int
+) -> tuple[dict, dict]:
     """Generates a set of output (y) points based on two coefficient arrays,
     one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
     Args:
@@ -348,9 +363,7 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
     temp_orders = [i for i in range(num_temp_cols)][::-1]
     input_orders = [i for i in range(num_input_cols)][::-1]
 
-    T = time_periods  # get the optimisation time period
-
-    for t in range(T):
+    for t in range(time_periods):
         # collect our temperature terms into a single term for this time period
         temp_term = 0
         for temp_col in range(num_temp_cols):  # Iterate through all our temperature terms and add them up
@@ -372,7 +385,11 @@ def create_input_output_pts_from_coefficients(temp_coef, input_coef, temperature
     return x, y
 
 
-def populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods):
+def populate_values_across_time_and_expansion_indices(
+    values: float | DataArray,
+    time_periods: int,
+    expansion_periods: int,
+) -> dict[tuple[int, int], float]:
     """Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.
 
     Example:
@@ -391,28 +408,36 @@ def populate_values_across_time_and_expansion_indices(values, time_periods, expa
     return output
 
 
-def create_named_constraint_with_rule(model: EchoConcreteModel, con_name: str, rule):
+def create_named_constraint_with_rule(model: EchoConcreteModel, con_name: str, rule: Expression) -> None:
     """Util function for creating pyomo constraints from a rule."""
     setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=rule))
 
 
-def tile_array_over_expansion_periods(array, expansion_periods):
+def tile_array_over_expansion_periods(array: DataArray, expansion_periods: int) -> np.ndarray:
     """Constructs an array by repeating 'array' input x times where x = num of expansion periods"""
     output = np.tile(np.array(array), expansion_periods)
     return output
 
 
-def to_initial_values(profile: pd.DataFrame, key: str, time_periods: int, expansion_periods: int, scaling: int = 1):
+def to_initial_values(
+    profile: pd.DataFrame | None,
+    key: str,
+    time_periods: int,
+    expansion_periods: int,
+    scaling: int = 1,
+) -> dict[tuple[int, int], float]:
+
     if profile is None:
         raise ValueError("No profile dataframe defined. Check that you added the profile to the optimiser.")
+
     return to_initial_values_for_array(
         values=profile[key].values, time_periods=time_periods, expansion_periods=expansion_periods, scaling=scaling
     )
 
 
 def to_initial_values_for_array(
-    values: np.array, time_periods: int | None = None, expansion_periods: int = 1, scaling: int = 1
-):
+    values: np.ndarray, time_periods: int | None = None, expansion_periods: int = 1, scaling: int = 1
+) -> dict[tuple[int, int], float]:
     if values is None or values.size == 0:
         raise ValueError("No values defined.")
     scaled_values = values * scaling
@@ -435,7 +460,7 @@ def orjson_dumps(v: dict, *, default: Callable | None) -> str:
 
 
 def generate_dict_with_pyomo_keys_from_array(
-    array,
+    array: DataArray,
     time_periods: int,
     expansion_periods: int = 1,
 ) -> dict[tuple[int, int], float]:
@@ -468,7 +493,7 @@ def generate_dict_with_pyomo_keys_from_array(
     return d
 
 
-def domain_from_flow(flow: Flows):
+def domain_from_flow(flow: Flows) -> RangeSet:
     match flow:
         case Flows.Both:
             domain = en.Reals

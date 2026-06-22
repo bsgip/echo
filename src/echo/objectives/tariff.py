@@ -3,10 +3,10 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
-from pyomo.core.expr import InequalityExpression
 import pyomo.environ as en
 import shortuuid
 from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from pyomo.core.expr import InequalityExpression
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
@@ -21,7 +21,7 @@ class Tariff(Objective):
     expansion_periods: PositiveInt | None = 1
 
     @staticmethod
-    def return_tariff_dict(array, expansion_periods):
+    def return_tariff_dict(array: list[float] | np.ndarray, expansion_periods: int) -> dict:
         # todo update this to work for multiple expansion periods
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
         vals = dict(zip(keys, array, strict=True))
@@ -118,7 +118,7 @@ class BlockTariff(Objective):
         return len(self.rates)
 
     @root_validator
-    def check_block_rates(cls, values):
+    def check_block_rates(cls, values: dict) -> dict:
         validate(
             len(values.get("blocks")) + 1 == len(values.get("rates")),
             "Enter one more rate than num blocks",
@@ -126,7 +126,7 @@ class BlockTariff(Objective):
         return values
 
     @root_validator(pre=True)
-    def set_reset_index(cls, values):
+    def set_reset_index(cls, values: dict) -> dict:
         rp = values.get("reset_periods")
         if rp is not None:
             values["reset_index"] = en.RangeSet(0, len(rp) - 1)
@@ -367,7 +367,7 @@ class Window(EchoBaseModel):
     reset_periods: ResetPeriod | None = None
 
     @validator("time_periods")
-    def non_overlapping_periods(cls, v):
+    def non_overlapping_periods(cls, v: list[TimePeriod]) -> list[TimePeriod]:
         for i in range(len(v)):
             for j in range(i + 1, len(v)):
                 if v[i].overlaps(v[j]):
@@ -467,7 +467,7 @@ class DemandCharge(EchoBaseModel):
         return "window_active_" + self.name
 
     @root_validator(pre=True)
-    def check_reset_periods(cls, values):
+    def check_reset_periods(cls, values: dict) -> dict:
         rp = values.get("reset_periods")
         window_array = values.get("window_array")
         if rp is not None:
@@ -483,7 +483,7 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @root_validator
-    def check_import_or_export(cls, values):
+    def check_import_or_export(cls, values: dict) -> dict:
         validate(
             values.get("import_demand") is True or values.get("export_demand") is True,
             (
@@ -495,7 +495,7 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @root_validator(pre=True)
-    def check_name(cls, values):
+    def check_name(cls, values: dict) -> dict:
         if not values.get("uid"):
             values["uid"] = shortuuid.uuid()
 

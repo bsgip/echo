@@ -108,12 +108,12 @@ class Sink(Port):
 
 
 class Demand(Sink):
-    def add_demand_profile(self, demand: dict):
+    def add_demand_profile(self, demand: dict) -> None:
         self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
         self, demand: TimeExpandableType, expansion_periods=1, time_periods: int | None = None
-    ):
+    ) -> None:
         self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
 
@@ -654,7 +654,7 @@ class MobileStorage(Storage):
         return "trip_slack_" + self.port_name
 
     @root_validator
-    def check_soc_conserv_has_cost(cls, values):
+    def check_soc_conserv_has_cost(cls, values: dict) -> dict:
         soc_conserv = values.get("soc_conserv")
         soc_conserv_cost = values.get("soc_conserv_cost")
         available = values.get("available")

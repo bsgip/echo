@@ -306,7 +306,7 @@ def optimise(
         objective_set=objective_set,
     )
 
-    def objective_function(model: EchoConcreteModel):
+    def objective_function(model: EchoConcreteModel) -> en.numeric_expr.NumericExpression:
         return objective
 
     model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)

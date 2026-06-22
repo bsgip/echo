@@ -3441,8 +3441,6 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
         interval_duration=interval_duration,
     )
 
-    # Ensure the ports on the edge connecting the ev and the connection_point
-    system.get_node("ev").ports
     # Optimising after setting stateful parameters will work now
     optimise(
         scenario_settings=ScenarioSettings(

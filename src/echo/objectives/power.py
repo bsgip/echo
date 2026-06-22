@@ -1,6 +1,6 @@
-from pyomo.core.expr import InequalityExpression
 import pyomo.environ as en
 from pydantic import PositiveFloat
+from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic import Storage
 from echo.models.base import Port

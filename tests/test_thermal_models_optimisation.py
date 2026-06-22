@@ -717,6 +717,7 @@ def test_chiller_operation():
     for _output, _input in zip(
         optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
         optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -776,6 +777,7 @@ def test_chiller_with_heat_rejection():
     for _output, _input in zip(
         optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
         optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -845,6 +847,7 @@ def test_chiller_with_temperature_cop():
     for _output, _input in zip(
         optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
         optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -926,6 +929,7 @@ def test_chiller_with_pl_cop():
     for _output, _input in zip(
         optimise_results.values(chiller.ports[chiller.thermal_output_port_ref].port_name, 0),
         optimise_results.values(chiller.ports[chiller.electrical_input_port_ref].port_name, 0),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -990,6 +994,7 @@ def test_simple_chiller():
     for _output, _input in zip(
         optimise_results.values(chiller.ports["output"].port_name),
         optimise_results.values(chiller.ports["input"].port_name),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -998,7 +1003,7 @@ def test_simple_chiller():
             assert _output != 0
             chiller_actual_cop.append(round(_output / _input, 3))
     # Assert that when output is non-zero, the actual COP equals provided COP
-    for _set_cop, _actual_cop in zip(cooling_cop_array, chiller_actual_cop):
+    for _set_cop, _actual_cop in zip(cooling_cop_array, chiller_actual_cop, strict=True):
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
 
@@ -1055,6 +1060,7 @@ def test_simple_heatpump_single_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
         optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -1063,7 +1069,7 @@ def test_simple_heatpump_single_output():
             heating_cop_actual.append(-1 * round(_output / _input, 3))
 
     # Assert that when output is non-zero, the actual COP equals provided COP
-    for _set_cop, _actual_cop in zip(heating_cop_array, heating_cop_actual):
+    for _set_cop, _actual_cop in zip(heating_cop_array, heating_cop_actual, strict=True):
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
 
@@ -1071,6 +1077,7 @@ def test_simple_heatpump_single_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
         optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -1079,7 +1086,7 @@ def test_simple_heatpump_single_output():
             cooling_cop_actual.append(round(_output / _input, 3))
 
     # Assert that when output is non-zero, the actual COP equals provided COP
-    for _set_cop, _actual_cop in zip(cooling_cop_array, cooling_cop_actual):
+    for _set_cop, _actual_cop in zip(cooling_cop_array, cooling_cop_actual, strict=True):
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
@@ -1139,6 +1146,7 @@ def test_simple_heatpump_dual_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.heating_out_adjusted),
         optimise_results.values(heatpump.power_to_heat),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -1147,7 +1155,7 @@ def test_simple_heatpump_dual_output():
             heating_cop_actual.append(-1 * round(_output / _input, 3))
 
     # Assert that when output is non-zero, the actual COP equals provided COP
-    for _set_cop, _actual_cop in zip(heating_cop_array, heating_cop_actual):
+    for _set_cop, _actual_cop in zip(heating_cop_array, heating_cop_actual, strict=True):
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
 
@@ -1155,6 +1163,7 @@ def test_simple_heatpump_dual_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.cooling_output_port_ref].port_name),
         optimise_results.values(heatpump.power_to_cool),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -1163,7 +1172,7 @@ def test_simple_heatpump_dual_output():
             cooling_cop_actual.append(round(_output / _input, 3))
 
     # Assert that when output is non-zero, the actual COP equals provided COP
-    for _set_cop, _actual_cop in zip(cooling_cop_array, cooling_cop_actual):
+    for _set_cop, _actual_cop in zip(cooling_cop_array, cooling_cop_actual, strict=True):
         if not _actual_cop == 0:
             assert _set_cop == _actual_cop
     # Assert that all electrical power consumed is equal to the power used for heating + power used for cooling
@@ -1228,6 +1237,7 @@ def test_parameterised_heatpump_single_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].neg),
         optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0
@@ -1249,6 +1259,7 @@ def test_parameterised_heatpump_single_output():
     for _output, _input in zip(
         optimise_results.values(heatpump.ports[heatpump.thermal_output_port_ref].pos),
         optimise_results.values(heatpump.ports[heatpump.electrical_input_port_ref].port_name),
+        strict=True,
     ):
         if _input == 0:
             assert _output == 0

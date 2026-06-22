@@ -1,6 +1,6 @@
-from pyomo.core.expr import EqualityExpression
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Units
 from echo.models.agnostic import Demand, FlexPort, FlexSink, InputOutputNode, OffOrConstrainedPort
