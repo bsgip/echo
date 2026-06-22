@@ -1,7 +1,13 @@
+from collections.abc import Iterable
+from typing import Any
+
 import numpy as np
 from pydantic import Field
 
 from echo.exceptions import validate
+
+
+FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
 
 
 class ArrayType(np.ndarray):
@@ -22,12 +28,12 @@ class ArrayType(np.ndarray):
         arbitrary_types_allowed = True
 
 
-def var_in_range(var1, range_min, range_max):
+def var_in_range(var1: float, range_min: float, range_max: float):
     if var1 < range_min or var1 > range_max:
         return ValueError()
 
 
-def is_non_negative(v, err_msg):
+def is_non_negative(v: FloatData, err_msg: str) -> FloatData:
     if v is not None:
         if hasattr(v, "__iter__"):
             if isinstance(v, dict):
@@ -41,10 +47,11 @@ def is_non_negative(v, err_msg):
         else:
             if v < 0:
                 raise ValueError(err_msg)
+
     return v
 
 
-def is_non_positive(v, err_msg):
+def is_non_positive(v: FloatData, err_msg: str) -> FloatData:
     if v is not None:
         if hasattr(v, "__iter__"):
             if type(v) is dict:
@@ -61,32 +68,32 @@ def is_non_positive(v, err_msg):
     return v
 
 
-def import_cons_check(v):
+def import_cons_check(v: FloatData) -> FloatData:
     v = is_non_negative(v, "Import constraint should be positive, following positive load convention")
     return v
 
 
-def export_cons_check(v):
+def export_cons_check(v: FloatData) -> FloatData:
     v = is_non_positive(v, "Export constraint should be negative following positive load convention.")
     return v
 
 
-def nonnegative_load(v):
+def nonnegative_load(v: FloatData) -> FloatData:
     v = is_non_negative(v, "Load array entries should all be non negative.")
     return v
 
 
-def nonpositive_generation(v):
+def nonpositive_generation(v: FloatData) -> FloatData:
     v = is_non_positive(v, "Generation array entries should all be non positive.")
     return v
 
 
-def nonnegative_costs(v):
+def nonnegative_costs(v: FloatData) -> FloatData:
     v = is_non_negative(v, "Costs should be positive")
     return v
 
 
-def dod_checks(cls, values):
+def dod_checks(cls, values: dict) -> dict:
     """Validator for depth of discharge."""
     # Check which dod representation we have
     dod_lim = values.get("depth_of_discharge_limit")
@@ -125,7 +132,7 @@ def check_initial_state_of_charge_within_bounds(
         )
 
 
-def check_bound_order(cls, values):
+def check_bound_order(cls, values: dict) -> dict:
     """Checks that lower bound is smaller than upper bound."""
     lb = values.get("lower_bound")
     ub = values.get("upper_bound")
@@ -141,7 +148,7 @@ def check_bound_order(cls, values):
     return values
 
 
-def node_unit_validator(cls, values):
+def node_unit_validator(cls, values: dict) -> dict:
     """Checks that a tellegen and aggregation nodes' ports all have the same units."""
     ports = values.get("ports")
     u = None
@@ -160,7 +167,7 @@ def node_unit_validator(cls, values):
     return values
 
 
-def validate_piecewise_arrays(cls, values):
+def validate_piecewise_arrays(cls, values: dict) -> dict:
     input_points = values.get("input_points")
     output_points = values.get("output_points")
     if input_points is not None and output_points is not None:
@@ -174,7 +181,7 @@ def validate_piecewise_arrays(cls, values):
     return values
 
 
-def set_bounds_from_piecewise_points(cls, values):
+def set_bounds_from_piecewise_points(cls, values: dict) -> dict:
     input_points = values.get("input_points")
     output_points = values.get("output_points")
     if input_points is not None and output_points is not None:
@@ -185,7 +192,7 @@ def set_bounds_from_piecewise_points(cls, values):
     return values
 
 
-def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values):
+def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values: dict) -> dict:
     cop = values.get("cop")
     eta = values.get("startup_cop")
     max_in = values.get("max_input")
@@ -198,7 +205,7 @@ def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values):
     return values
 
 
-def validate_startup_efficiency(cls, values):
+def validate_startup_efficiency(cls, values: dict) -> dict:
     cop = values.get("cop")
     eta = values.get("startup_cop")
     if eta is not None:
@@ -206,7 +213,7 @@ def validate_startup_efficiency(cls, values):
     return values
 
 
-def validate_partial_load_cop(cls, values):
+def validate_partial_load_cop(cls, values: dict) -> dict:
     partial_load_cop = values.get("partial_load_cop")
     for k, v in partial_load_cop.items():
         validate(
@@ -220,7 +227,7 @@ def validate_partial_load_cop(cls, values):
     return values
 
 
-def validate_temperature_dependent_cop(cls, values):
+def validate_temperature_dependent_cop(cls, values: dict) -> dict:
     """Validate temperature dependent cop dictionary"""
     temperature_cop_coeff = values.get("temperature_dependent_cop")
     for k, v in temperature_cop_coeff.items():
@@ -238,12 +245,12 @@ def validate_temperature_dependent_cop(cls, values):
     return values
 
 
-def non_negative_cop_check(v):
+def non_negative_cop_check(v: FloatData) -> FloatData:
     v = is_non_negative(v, "Coefficient of performance for heating and cooling must be given as non_negative value")
     return v
 
 
-def validate_partition_ports(cls, values):
+def validate_partition_ports(cls, values: dict) -> dict:
     """Validate that set of ports defined across different partitions are unique"""
     partitions = values.get("partitions")
     port_name_list = [_port.port_name for v in partitions.values() for _port in v]

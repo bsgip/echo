@@ -50,7 +50,7 @@ class Port(BaseModel):
     # attribute_name: type = default_value
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
-    initial_value: dict[tuple[int, int], int | float] | None = None
+    initial_value: dict[tuple[int, int], float] | None = None
     initial_value_ref: str | None = None  # string ref to df column
     initial_value_scaling: int | None = None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
@@ -465,7 +465,7 @@ class Port(BaseModel):
 
     def set_initial_value_from_array(
         self,
-        array: list[int | float] | np.ndarray,
+        array: list[float] | np.ndarray,
         expansion_periods: int = 1,
         time_periods: int | None = None,
     ) -> None:
@@ -488,13 +488,15 @@ class Port(BaseModel):
         self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
     def set_active_periods_from_array(
-        self, array: Any, expansion_periods: int = 1, time_periods: int | None = None
+        self, array: list[bool], expansion_periods: int = 1, time_periods: int | None = None
     ) -> None:
         """Sets port active periods
+
         Args:
             array: array, list of active periods as bool values
             expansion_periods: number of expansion periods (int)
         """
+
         if time_periods is None:
             time_periods = len(array)
 
@@ -1257,7 +1259,7 @@ class OptimisationGraph(BaseModel):
                     # Find all the paths, just using the node names
                     simple_paths = nx.all_simple_paths(graph, source_node, sink_node)
                     simple_edges = nx.all_simple_edge_paths(graph, source_node, sink_node)
-                    for vertex_list, edge_list in zip(simple_paths, simple_edges):
+                    for vertex_list, edge_list in zip(simple_paths, simple_edges, strict=True):
                         tellegen_node_set.update(vertex_list[1:-1])  # update set of tellegen nodes
                         p = self._create_path_object(vertex_list, edge_list, regularise, path_unit)  # create path
                         all_paths[tuple(vertex_list)] = p

@@ -28,7 +28,7 @@ class SimpleChiller(Node):
     performance (COP) time series data.
     """
 
-    max_cooling_capacity: PositiveFloat = None  # Max cooling load that can be serviced in KWT
+    max_cooling_capacity: PositiveFloat | None = None  # Max cooling load that can be serviced in KWT
     # (if None, bounded by bigM value)
     cooling_cop_time_series: dict | None  # Formatted dict of cooling COPs (coefficients of performance)
     cooling_cop_time_series_ref: str | None
@@ -50,9 +50,9 @@ class SimpleChiller(Node):
             thermal_import_constraint_value = None
 
         # Create input and output ports
-        self.ports[self.electrical_input_port_ref] = FlexSink(
-            units=Units.KW
-        )  # Simple Chiller has electrical input port
+        # Simple Chiller has electrical input port
+        self.ports[self.electrical_input_port_ref] = FlexSink(units=Units.KW)
+
         # Simple Chiller has cooling output port (thermal sink)
         self.ports[self.thermal_output_port_ref] = FlexSink(
             units=Units.KWT,
@@ -70,7 +70,7 @@ class SimpleChiller(Node):
         self.ports[self.electrical_input_port_ref] = electrical_input_port
         self.ports[self.thermal_output_port_ref] = thermal_output_port
 
-    def update(self, cooling_cop_time_series) -> None:
+    def update(self, cooling_cop_time_series: dict[float, float]) -> None:
         self.cooling_cop_time_series = cooling_cop_time_series
 
     @property
@@ -268,7 +268,7 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
         cop_scaling_interpolated = interpolate.interp1d(temperature_points, cop_points, assume_sorted=False)(
             list(clamped_temp_values)
         ).round(2)
-        temperature_cop_dict = {k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated)}
+        temperature_cop_dict = {k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated, strict=True)}
         # Create a parameter holding ambient/condenser temperature dictionary
         # (defaulting to self.constant_ambient_temperature)
         setattr(
@@ -776,7 +776,7 @@ class SimpleHeatPump(Node):
         super().__init__(**data)
         self.create_ports()
 
-    def update(self, heating_cop_time_series, cooling_cop_time_series) -> None:
+    def update(self, heating_cop_time_series: dict[float, float], cooling_cop_time_series: dict[float, float]) -> None:
         self.heating_cop_time_series = heating_cop_time_series
         self.cooling_cop_time_series = cooling_cop_time_series
 
@@ -1067,6 +1067,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
 
     def _set_ports_var_bounds(self, model: EchoConcreteModel) -> None:
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given."""
+
         lower_bound = self.max_heating_capacity or model.bigM
         upper_bound = self.max_cooling_capacity or model.bigM
         set_float_var_bounds(model, self.ports[self.cooling_output_port_ref].port_name, ub=upper_bound, lb=0)
@@ -1074,10 +1075,11 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
 
     def _create_heat_recovery_vars(self, model: EchoConcreteModel) -> None:
         """Create variable for adjusted heat_output supplied by the heating loop"""
+
         setattr(model, self.heating_out_adjusted, en.Var(model.Expansion, model.Time, domain=en.NonPositiveReals))
         setattr(model, self.recovered_waste_heat, en.Var(model.Expansion, model.Time, domain=en.NonNegativeReals))
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         # Use parent class method
         super().add_node_to_model(model, profile)
         self._create_heat_recovery_vars(model)
@@ -1319,7 +1321,7 @@ class ParameterisedHeatPump(Node):
             self.heat_intake_rejection_port_ref = heat_intake_rejection_port.port_name
             self.ports[self.heat_intake_rejection_port_ref] = heat_intake_rejection_port
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         """Set up variables and parameters associated with the node"""
         super().add_node_to_model(model, profile)
         self._set_helper_variables(model)
@@ -1443,7 +1445,7 @@ class ParameterisedHeatPump(Node):
                     expansion_periods=len(model.Expansion),
                 )
 
-    def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str):
+    def _apply_only_heat_or_cool_constraints(self, model: EchoConcreteModel, binary_var_name: str) -> None:
         is_cooling = getattr(model, binary_var_name)  # binary var for whether we are cooling
         power_in = getattr(model, self.ports[self.electrical_input_port_ref].port_name)  # input electrical power
 
@@ -1507,7 +1509,9 @@ class ParameterisedHeatPump(Node):
         cop_scaling_interpolated_heating = interpolate.interp1d(
             temperature_points_heating, cop_points_heating, assume_sorted=False
         )(clamped_temp_values_heating).round(2)
-        temperature_cop_dict_heating = {k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated_heating)}
+        temperature_cop_dict_heating = {
+            k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated_heating, strict=True)
+        }
 
         min_temp_cooling = min(self.temperature_dependent_cop_cooling.keys())
         max_temp_cooling = max(self.temperature_dependent_cop_cooling.keys())
@@ -1516,7 +1520,9 @@ class ParameterisedHeatPump(Node):
         cop_scaling_interpolated_cooling = interpolate.interp1d(
             temperature_points_cooling, cop_points_cooling, assume_sorted=False
         )(clamped_temp_values_cooling).round(2)
-        temperature_cop_dict_cooling = {k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated_cooling)}
+        temperature_cop_dict_cooling = {
+            k: v for k, v in zip(temperature_dict.keys(), cop_scaling_interpolated_cooling, strict=True)
+        }
 
         # Create a parameter holding ambient/condenser temperature dictionary
         # (defaulting to self.constant_ambient_temperature)
@@ -1586,7 +1592,7 @@ class ParameterisedHeatPump(Node):
             ),
         )
 
-    def _set_input_points_cooling(self, model: EchoConcreteModel):
+    def _set_input_points_cooling(self, model: EchoConcreteModel) -> None:
         """Input breakpoints are input electrical power values calculated as
         cooling_output/(COP_nominal*partial_load_correction) and scaled by 1/temperature_cop_param value"""
 

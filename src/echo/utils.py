@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -88,7 +88,7 @@ class TimeSeriesData:
     num_expansion_intervals: int
 
 
-def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], int | float]:
+def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], float]:
     """Converts a TimeSeriesData object to a dictionary of time-series values keyed by the expansion and time intervals.
 
     Calls `expand_as_array` internally to produce enough values for the time and expansion intervals.
@@ -112,7 +112,7 @@ def expand_as_dict(data: TimeSeriesData) -> dict[tuple[int, int], int | float]:
     expanded_data = expand_as_array(data).flatten()
 
     keys = [(x, i) for x in range(data.num_expansion_intervals) for i in range(data.num_time_intervals)]
-    return dict(zip(keys, expanded_data))
+    return dict(zip(keys, expanded_data, strict=True))
 
 
 def expand_as_array(data: TimeSeriesData) -> npt.NDArray:
@@ -264,7 +264,7 @@ def fix_port_variable(model: EchoConcreteModel, var_name: str, new_values: Array
     """
     var = getattr(model, var_name)
     keys = [(x, i) for x in range(expansion_periods) for i in range(len(var))]
-    fixed_vals = dict(zip(keys, new_values))
+    fixed_vals = dict(zip(keys, new_values, strict=True))
     var.set_values(fixed_vals)
     var.fix()
 
@@ -421,11 +421,11 @@ def to_initial_values_for_array(
     else:
         validate(len(values) == time_periods, "Initial values are wrong length.")
     keys = [(x, i) for x in range(expansion_periods) for i in range(time_periods)]
-    d = dict(zip(keys, scaled_values))
+    d = dict(zip(keys, scaled_values, strict=True))
     return d
 
 
-def orjson_dumps(v, *, default):
+def orjson_dumps(v: dict, *, default: Callable | None) -> str:
     for key, value in v.items():
         if isinstance(value, dict):
             v[key] = ":".join(value)
@@ -434,15 +434,24 @@ def orjson_dumps(v, *, default):
     return orjson.dumps(v, default=default).decode()
 
 
-def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion_periods: int = 1):
+def generate_dict_with_pyomo_keys_from_array(
+    array,
+    time_periods: int,
+    expansion_periods: int = 1,
+) -> dict[tuple[int, int], float]:
     """
     Generates a dict suitable for initializing a pyomo var or param.
-    The dict keys are a tuple (expansion period, time period)
+
+    The dict keys are a tuple (expansion period, time period).
     """
+
     d = {}
+
     validate(hasattr(array, "__iter__"), "Please enter an iterable array")
+
     if (len(array) != time_periods) or (len(array) != time_periods * expansion_periods):
         raise ValueError("Array constraint length is not consistent with combination of time/expansion periods.")
+
     if len(array) == time_periods:
         print(f"Repeating array across {expansion_periods} expansion period(s).")
         for p in range(expansion_periods):
@@ -455,6 +464,7 @@ def generate_dict_with_pyomo_keys_from_array(array, time_periods: int, expansion
             for t in range(time_periods):
                 d[(p, t)] = array[i]
                 i += 1
+
     return d
 
 

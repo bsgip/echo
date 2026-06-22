@@ -1,3 +1,4 @@
+from pyomo.core.expr import EqualityExpression
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, PositiveFloat
 
@@ -13,7 +14,7 @@ from echo.validators import ArrayType
 class Battery(Node):
     def __init__(
         self,
-        port_name,
+        port_name: str,
         max_capacity: float,
         initial_state_of_charge: float,
         charging_power_limit: float,
@@ -25,7 +26,7 @@ class Battery(Node):
         fixed_storage_capacity: bool = True,
         regularise: bool = False,
         **data,
-    ):
+    ) -> None:
         super().__init__(**data)
         self.ports[port_name] = ElectricalStorage(
             max_capacity=max_capacity,
@@ -42,7 +43,7 @@ class Battery(Node):
 
 
 class Solar(Node):
-    def __init__(self, port_name: str, profile: ArrayType | dict, curtailable: bool = False, **data):
+    def __init__(self, port_name: str, profile: ArrayType | dict, curtailable: bool = False, **data) -> None:
         super().__init__(**data)
         self.ports[port_name] = ElectricalGeneration(curtailable=curtailable)
         if type(profile) is dict:
@@ -54,7 +55,14 @@ class Solar(Node):
 class NewSolar(Node):
     """New Solar Node using Solar size for scaling of initial value ref"""
 
-    def __init__(self, port_name: str, solar_size: float, initial_value_ref: str, curtailable: bool = False, **data):
+    def __init__(
+        self,
+        port_name: str,
+        solar_size: float,
+        initial_value_ref: str,
+        curtailable: bool = False,
+        **data,
+    ) -> None:
         super().__init__(**data)
         self.ports[port_name] = ElectricalGeneration(
             curtailable=curtailable, initial_value_ref=initial_value_ref, initial_value_scaling=solar_size
@@ -62,7 +70,7 @@ class NewSolar(Node):
 
 
 class Load(Node):
-    def __init__(self, port_name: str, port_unit: Units, profile: dict | ArrayType | list, **data):
+    def __init__(self, port_name: str, port_unit: Units, profile: dict | ArrayType | list, **data) -> None:
         super().__init__(**data)
         self.ports[port_name] = Demand(units=port_unit)
         if type(profile) is dict:
@@ -72,7 +80,7 @@ class Load(Node):
 
 
 class FlexNode(Node):
-    def __init__(self, port_name: str, port_unit: Units, **data):
+    def __init__(self, port_name: str, port_unit: Units, **data) -> None:
         super().__init__(**data)
         self.ports[port_name] = FlexPort(port_name=port_name, units=port_unit)
 
@@ -91,7 +99,7 @@ class FlexNodeWithEmissions(TransformNode):
         carbon_port: str,
         emissions_factor: float | ArrayType,
         **data,
-    ):
+    ) -> None:
         super().__init__(**data)
         self.ports[emitting_port] = FlexPort(port_name=emitting_port, units=emitting_port_units)
         self.ports[carbon_port] = CarbonSource()
@@ -127,10 +135,10 @@ class DieselGenerator(InputOutputNode):
         self.ports["co2"] = CarbonSource()
         # todo: add some validators :-)
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         super().apply_node_constraints(model)
 
-        def node_constraint(model: EchoConcreteModel, p, t):
+        def node_constraint(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             p_in = getattr(model, self.ports["input"].port_name)
             p_out = getattr(model, self.ports["output"].port_name)
 
@@ -140,7 +148,7 @@ class DieselGenerator(InputOutputNode):
                 out = (p_in[p, t] * self.startup_efficiency + p_in[p, t - 1] * (1 - self.startup_efficiency)) * self.cop
             return p_out[p, t] == -out
 
-        def carbon_rule(model: EchoConcreteModel, p, t):
+        def carbon_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             p_in = getattr(model, self.ports["input"].port_name)
             c_out = getattr(model, self.ports["co2"].port_name)
             return c_out[p, t] == -p_in[p, t]

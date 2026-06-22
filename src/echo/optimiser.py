@@ -1,6 +1,5 @@
-from typing import Generator
 import warnings
-from collections.abc import Collection
+from collections.abc import Collection, Generator
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
 
@@ -28,7 +27,7 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
 
 
 @contextmanager
-def logged_stdout(logfile: str | None, mode: str = "w") -> Generator[None, str, None]:
+def logged_stdout(logfile: str | None, mode: str = "w") -> Generator[None]:
     """Context manager that while held open will redirect all stdout to logfile. If the logfile is None then
     no redirection will occur"""
     if logfile is None:
@@ -95,8 +94,13 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
-    def df_objective_by_port(self, index: set = {1}) -> pd.DataFrame:
+    def df_objective_by_port(self, index: set | None = None) -> pd.DataFrame:
         """Return the value of each objective assigned to each port."""
+
+        # If the index is None, set it to {1}
+        if index is None:
+            index = {1}
+
         dct = {}
         for obj in self.objective_set.objective_list:
             dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
@@ -144,11 +148,11 @@ class OptimisationResult:
         """Returns the value of a single objective."""
         return objective_obj.get_objective_total(model=self.model)
 
-    def get_total_objective_value(self):
+    def get_total_objective_value(self) -> float:
         """Returns the value of the objective function."""
         return en.value(self.objective)
 
-    def get_total_objective_at_port(self, port_obj: Port):
+    def get_total_objective_at_port(self, port_obj: Port) -> float:
         """Sums all objectives that take the defined port as their component."""
         total = 0
         if self.objective_set:
@@ -195,7 +199,7 @@ def _build_model(
     smallM: float,
     bigM: int,
     profile: pd.DataFrame | None,
-):
+) -> EchoConcreteModel:
     model = EchoConcreteModel()
     model.smallM = en.Param(initialize=smallM)
     model.bigM = en.Param(initialize=bigM)
@@ -245,7 +249,7 @@ def _build_objective(
     graph: OptimisationGraph,
     profile: pd.DataFrame | None,
     objective_set: ObjectiveSet | None,
-):
+) -> float | en.numeric_expr.NumericExpression:
     objective: float | en.numeric_expr.NumericExpression = 0
 
     # Add objectives defined in the objective set
@@ -264,6 +268,7 @@ def _build_objective(
     for path_obj in graph.paths.values():
         path_obj.add_objective(model)
         objective += path_obj.objective
+
     return objective
 
 
@@ -276,7 +281,7 @@ def optimise(
     verbose: bool = False,
     show_solver_output: bool = False,
     logfile: str | None = None,
-    time_limit: int = None,
+    time_limit: int | None = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
@@ -337,7 +342,7 @@ def optimise(
 
     if solver_status != SolverStatus.ok:
         if solver_status == SolverStatus.aborted:
-            warnings.warn(f"Solver status returned as {solver_status}")
+            warnings.warn(f"Solver status returned as {solver_status}", stacklevel=1)
         else:
             raise OptimiserResultError(f"Solver status returned as {solver_status}")
 

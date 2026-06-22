@@ -529,7 +529,11 @@ class EVV0G(EVBase):
         # Set nodes V0G_trip_infeasibility
         self.V0G_trip_infeasibility = trip_infeasibility
 
-    def _v0g_charging(self, interval_duration: float, force_conv: bool = False) -> tuple[bool, float, float, float]:
+    def _v0g_charging(
+        self,
+        interval_duration: float,
+        force_conv: bool = False,
+    ) -> tuple[bool, list[float], float, float]:
         """Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible.
 
         Args:
@@ -547,17 +551,17 @@ class EVV0G(EVBase):
         if (self.tod_charging is not None) and (not force_conv):
             self.available = list(np.array(self.available) * np.array(self.tod_charging))
 
-        T = len(self.available)
-        soc = np.zeros((T + 1,))
+        available_len = len(self.available)
+        soc = np.zeros((available_len + 1,))
         vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
         soc[0] = vehicle.initial_state_of_charge
-        trip_infeasibility = np.zeros((T,))
-        delta = np.zeros((T,))
+        trip_infeasibility = np.zeros((available_len,))
+        delta = np.zeros((available_len,))
         max_capacity = vehicle.max_capacity
         charge_limit = vehicle.charging_power_limit
         charging_efficiency = vehicle.charging_efficiency
 
-        for t in range(T):
+        for t in range(available_len):
             if self.available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
                 delta[t] = min(
                     charge_limit,
@@ -999,7 +1003,7 @@ class EV(TransformNode):
             else:
                 electrical_demand = ElectricalDemand()
             self.ports[self.connection_port_name] = electrical_demand
-            self.process_V0G_charging(self.interval_duration)
+            self.process_v0g_charging(self.interval_duration)
             electrical_demand.add_demand_profile_from_array(self.V0G_delta, expansion_periods=1)
         else:
             if self.connection_port_name in self.port_dict_name_to_port_uid_map.keys():
@@ -1070,8 +1074,8 @@ class EV(TransformNode):
         ]
         return Transform(lhs_terms=lhs_terms)
 
-    def process_V0G_charging(self, interval_duration: float):
-        success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration)
+    def process_v0g_charging(self, interval_duration: float) -> None:
+        success, ev_soc, ev_delta, trip_infeasibility = self.v0g_charging(interval_duration)
 
         self.V0G_delta = ev_delta
         self.V0G_SOC = ev_soc
@@ -1079,7 +1083,7 @@ class EV(TransformNode):
             if success:
                 self.charge_status = EVChargeStatus.Feasible
             else:  # force convenience charging
-                success, ev_soc, ev_delta, trip_infeasibility = self.V0G_charging(interval_duration, force_conv=True)
+                success, ev_soc, ev_delta, trip_infeasibility = self.v0g_charging(interval_duration, force_conv=True)
                 self.charge_status = (
                     EVChargeStatus.TimeOfDayInfeasibleConvenienceFeasible if success else EVChargeStatus.Infeasible
                 )
@@ -1090,21 +1094,26 @@ class EV(TransformNode):
             self.charge_status = EVChargeStatus.Feasible if success else EVChargeStatus.Infeasible
         self.V0G_trip_infeasibility = trip_infeasibility
 
-    def V0G_charging(self, interval_duration: float, force_conv=False) -> None:
+    def v0g_charging(
+        self,
+        interval_duration: float,
+        force_conv: bool = False,
+    ) -> tuple[bool, list[float], float, float]:
         """Convert V0G vehicle (convenience charging) to a soc profile and a power profile if possible."""
+
         if (self.tod_charging is not None) and (not force_conv):
             self.available = self.available * self.tod_charging
-        T = len(self.available)
-        soc = np.zeros((T + 1,))
+        available_len = len(self.available)
+        soc = np.zeros((available_len + 1,))
         vehicle = cast(MobileElectricalStorage, self.ports["vehicle"])
         soc[0] = vehicle.initial_state_of_charge
-        trip_infeasibility = np.zeros((T,))
-        delta = np.zeros((T,))
+        trip_infeasibility = np.zeros((available_len,))
+        delta = np.zeros((available_len,))
         max_capacity = vehicle.max_capacity
         charge_limit = vehicle.charging_power_limit
         charging_efficiency = vehicle.charging_efficiency
 
-        for t in range(T):
+        for t in range(available_len):
             if self.available[t] and (soc[t] < max_capacity):  # available to charge and not at max capacity
                 delta[t] = min(
                     charge_limit,
@@ -1137,7 +1146,7 @@ class EV(TransformNode):
             "EV usage port needs usage profile added.",
         )
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_node_to_model(model, profile)
         if self.charge_mode == EVChargeMode.V0G:
             # Fix the battery state of charge, the slack variable, and battery charging/discharging
@@ -1223,7 +1232,7 @@ class Inverter(Node):
             "All ports on inverter must be ac or dc.",
         )
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile) -> None:
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_node_to_model(model, profile)
 
         ac_port = self.ports[self.ac_port_name]

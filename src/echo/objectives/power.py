@@ -1,3 +1,4 @@
+from pyomo.core.expr import InequalityExpression
 import pyomo.environ as en
 from pydantic import PositiveFloat
 
@@ -13,14 +14,14 @@ class PeakPositivePower(Objective):
     component: Port
 
     @property
-    def max_pos(self):
+    def max_pos(self) -> str:
         return "max_pos_" + self.name
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         setattr(model, self.max_pos, en.Var(initialize=0, domain=en.NonNegativeReals))
 
-    def apply_constraints(self, model: EchoConcreteModel):
-        def max_value_rule(model: EchoConcreteModel, p, t):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
+        def max_value_rule(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return getattr(model, self.max_pos) >= getattr(model, self.component.pos)[p, t]
 
         if hasattr(model, self.component.pos) is False:
@@ -32,7 +33,7 @@ class PeakPositivePower(Objective):
             en.Constraint(model.Expansion, model.Time, rule=max_value_rule),
         )
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return getattr(model, self.max_pos)
 
 
@@ -42,17 +43,17 @@ class PeakNegativePower(Objective):
     component: Port
 
     @property
-    def max_neg(self):
+    def max_neg(self) -> str:
         return "max_neg_" + self.name
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         setattr(model, self.max_neg, en.Var(initialize=0, domain=en.NonPositiveReals))
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-        def max_value_rule(model: EchoConcreteModel, p, t):
+        def max_value_rule(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return getattr(model, self.max_neg) <= getattr(model, self.component.neg)[p, t]
 
         setattr(
@@ -61,7 +62,7 @@ class PeakNegativePower(Objective):
             en.Constraint(model.Expansion, model.Time, rule=max_value_rule),
         )
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return getattr(model, self.max_neg) * -1
 
 
@@ -71,12 +72,12 @@ class FinalChargeObjective(Objective):
     component: Storage
     rate: PositiveFloat
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         pass
         # if hasattr(model, self.component.pos) is False:
         #     self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         obj = sum(
             (self.component.max_capacity - getattr(model, self.component.soc_value)[p, model.Time.at(-1)]) * self.rate
             for p in model.Expansion
@@ -91,11 +92,11 @@ class NotFullyChargedPenalty(Objective):
     rate: PositiveFloat | None
     rate_array: list
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> None:
         if self.rate_array is None:
             self.rate_array = [self.rate] * len(model.Time)
         obj = sum(
@@ -113,11 +114,11 @@ class QuadraticPower(Objective):
 
     component: Port
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return sum(
             (getattr(model, self.component.port_name)[p, t] * getattr(model, self.component.port_name)[p, t])
             * model.discount_rates[p]
