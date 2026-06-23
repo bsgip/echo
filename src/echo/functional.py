@@ -3,7 +3,7 @@ from collections.abc import Iterable, Mapping
 
 
 def is_list(
-    obj: typing.Any,
+    obj: typing.Any,  # noqa ANN401
     scalars: tuple = (Mapping, str),
     iters: tuple[type[typing.Iterable]] = (Iterable,),
 ) -> bool:  # noqa ANN004
