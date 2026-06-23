@@ -38,7 +38,7 @@ class ImportTariff(Tariff):
     def import_tariff(self) -> str:
         return "import_tariff_" + self.name
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 

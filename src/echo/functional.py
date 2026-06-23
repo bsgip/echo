@@ -6,7 +6,7 @@ def is_list(
     obj: typing.Any,
     scalars: tuple = (Mapping, str),
     iters: tuple[type[typing.Iterable]] = (Iterable,),
-) -> bool:
+) -> bool:  # noqa ANN004
     """Return true if the object is iterable.
 
     Note:
@@ -46,7 +46,7 @@ def is_list(
     return isinstance(obj, iters) and not isinstance(obj, scalars or ())
 
 
-def maybe_list(obj: typing.Any, scalars: tuple = (Mapping, str)) -> list:
+def maybe_list(obj: typing.Any, scalars: tuple = (Mapping, str)) -> list:  # noqa ANN004
     """Return list of one element if ``l`` is a scalar.
 
     Taken from

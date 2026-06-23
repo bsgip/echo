@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, cast
 
+import matplotlib
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ import pyomo.environ as en
 import shortuuid
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
+from pyomo.core import RangeSet
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, TransformRule, Units
@@ -181,7 +183,23 @@ class Port(BaseModel):
         if self.units is Units.NA:
             raise ConfigurationError("The Units parameter has to be configured before instantiation.")
 
-    def _add_flow_variable_to_model(self, model: EchoConcreteModel, initial_value, domain) -> None:
+    def _add_flow_variable_to_model(
+        self,
+        model: EchoConcreteModel,
+        initial_value: float | Callable | None,
+        domain: RangeSet | Callable | None,
+    ) -> None:
+        """Adds the flow variable to the echo concrete model.
+
+        Args:
+            model: The echo concrete model for the flow variable to be added to.
+            initial_value: The initial value for the variable, or a rule that returns initial values.
+            domain : A Set that defines valid values for the variable (e.g., Reals, NonNegativeReals, Binary), or a
+                rule that returns Sets.
+
+        Returns:
+            None
+        """
         setattr(
             model,
             self.port_name,
@@ -341,8 +359,15 @@ class Port(BaseModel):
             en.Constraint(model.Expansion, model.Time, rule=export_cap_slack_max_rule),
         )
 
-    def _determine_initial_value(self, time_periods: int, expansion_periods: int, profile: pd.DataFrame):
+    def _determine_initial_value(
+        self,
+        time_periods: int,
+        expansion_periods: int,
+        profile: pd.DataFrame,
+    ) -> dict[tuple[int, int], float]:
+
         initial_value_scaling = self.initial_value_scaling or 1
+
         if self.initial_value_ref is not None:
             initial_val = to_initial_values(
                 profile,
@@ -354,6 +379,7 @@ class Port(BaseModel):
         else:
             # TODO: add scaling for explicit initial value
             initial_val = self.initial_value
+
         return initial_val
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
@@ -547,7 +573,7 @@ class Transform(BaseModel):
     lhs: list[TransformTerm] = []
     rhs = 0
 
-    def __init__(self, lhs_terms: list[TransformTerm], **data):
+    def __init__(self, lhs_terms: list[TransformTerm], **data) -> None:
         super().__init__(**data)
         if lhs_terms:
             self.lhs = lhs_terms
@@ -1352,7 +1378,13 @@ class OptimisationGraph(BaseModel):
                 en.Constraint(model.Expansion, model.Time, rule=only_inflow_or_outflow2),
             )
 
-    def draw_on_axes(self, axes, with_labels=False, labels=None, **kwargs) -> None:
+    def draw_on_axes(
+        self,
+        axes: matplotlib.axes.Axes,
+        with_labels: bool = False,
+        labels: dict[str, str] = None,
+        **kwargs,
+    ) -> None:
         """Draws the network on a matplotlib plot
 
         Args:
@@ -1361,9 +1393,8 @@ class OptimisationGraph(BaseModel):
                 Uses the node's names as the label.
             labels (dict): Optional way of supplying node labels as a dictionary of labels (strings) keyed by node.
                 Default = None.
-            **kwargs: Optional keyword arguments for customising the drawing of the network.
-                See https://networkx.org/documentation/stable/reference/generated/networkx.drawing.nx_pylab.draw_networkx.html  # noqa: E501
-                for more information.
+            **kwargs: Optional keyword arguments for customising the drawing of the network. See
+                networkx.drawing.nx_pylab.draw_networkx documentation for more information.
 
         Examples:
             The following example shows how to draw an already created OptimisationGraph with the name `network`

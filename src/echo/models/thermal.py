@@ -1284,7 +1284,7 @@ class ParameterisedHeatPump(Node):
         super().__init__(**data)
         self.create_ports()
 
-    def update(self, ambient_temperature_dict) -> None:
+    def update(self, ambient_temperature_dict: dict[float, float]) -> None:
         self.ambient_temperature_dict = ambient_temperature_dict
 
     def create_ports(self) -> None:

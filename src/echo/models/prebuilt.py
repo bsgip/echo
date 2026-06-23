@@ -86,7 +86,7 @@ class FlexNode(Node):
 
 
 class FlexElectricalNode(Node):
-    def __init__(self, port_name: str, **data):
+    def __init__(self, port_name: str, **data) -> None:
         super().__init__(**data)
         self.ports[port_name] = FlexPort(port_name=port_name, units=Units.KW)
 

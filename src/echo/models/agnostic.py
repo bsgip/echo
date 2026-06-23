@@ -98,10 +98,16 @@ class Sink(Port):
         nonnegative_load
     )  # Sink should have non negative initial values
 
-    def add_sink_profile(self, sink_values) -> None:
+    def add_sink_profile(self, sink_values: dict[tuple[int, int], float]) -> None:
         self.set_initial_value(sink_values)
 
-    def add_sink_profile_from_array(self, sink_values, expansion_periods=1, time_periods: int | None = None) -> None:
+    def add_sink_profile_from_array(
+        self,
+        sink_values: list[float] | np.ndarray,
+        expansion_periods: int = 1,
+        time_periods: int | None = None,
+    ) -> None:
+
         self.set_initial_value_from_array(
             array=sink_values, expansion_periods=expansion_periods, time_periods=time_periods
         )
@@ -112,7 +118,10 @@ class Demand(Sink):
         self.set_initial_value(demand)
 
     def add_demand_profile_from_array(
-        self, demand: TimeExpandableType, expansion_periods=1, time_periods: int | None = None
+        self,
+        demand: TimeExpandableType,
+        expansion_periods: int = 1,
+        time_periods: int | None = None,
     ) -> None:
         self.set_initial_value_from_array(array=demand, expansion_periods=expansion_periods, time_periods=time_periods)
 
@@ -159,23 +168,23 @@ class ThreeWayValveNode(TellegenNode):
     mutually_exclusive_port_flows: tuple[str, str] = None
 
     @property
-    def binary_variable_flow_through_mutually_exclusive_port_1(self):
+    def binary_variable_flow_through_mutually_exclusive_port_1(self) -> str:
         return f"binary_variable_flow_through_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
-    def constraint_neg_flow_mutually_exclusive_port_1(self):
+    def constraint_neg_flow_mutually_exclusive_port_1(self) -> str:
         return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
-    def constraint_pos_flow_mutually_exclusive_port_1(self):
+    def constraint_pos_flow_mutually_exclusive_port_1(self) -> str:
         return f"constraint_pos_flow_mutually_exclusive_{self.output_port_name_1}_{self.node_name}"
 
     @property
-    def constraint_neg_flow_mutually_exclusive_port_2(self):
+    def constraint_neg_flow_mutually_exclusive_port_2(self) -> str:
         return f"constraint_neg_flow_mutually_exclusive_{self.output_port_name_2}_{self.node_name}"
 
     @property
-    def constraint_pos_flow_mutually_exclusive_port_2(self):
+    def constraint_pos_flow_mutually_exclusive_port_2(self) -> str:
         return f"constraint_pos_flow_mutually_exclusive_port_{self.output_port_name_2}_{self.node_name}"
 
     def __init__(self, **data) -> None:
@@ -966,7 +975,10 @@ class AggregationNode(Node):
     def verify_node(self) -> None:
         super().verify_node()
 
-    def add_port(self, name: str, port: FlexSink = FlexSink()) -> None:
+    def add_port(self, name: str, port: FlexSink | None = None) -> None:
+        if port is None:
+            port = FlexSink()
+
         if self.ports.get(name) is None:
             if port.units == Units.NA:
                 port.units = self.port_units
