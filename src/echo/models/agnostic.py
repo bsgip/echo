@@ -237,28 +237,28 @@ class ThreeWayValveNode(TellegenNode):
 
         def mutual_exclusivity_rule_11(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """When _binary_var is 0, flow through output port 1 is constrained to be zero"""
-            return _binary_var[p, t] * -1 * model.bigM <= getattr(model, _port_name_1)[p, t]
+            return _binary_var[p, t] * -1 * model.big_m <= getattr(model, _port_name_1)[p, t]
 
         con_name = self.constraint_neg_flow_mutually_exclusive_port_1
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_11))
 
         def mutual_exclusivity_rule_12(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """When _binary_var is 0, flow through output port 1 is constrained to be zero"""
-            return getattr(model, _port_name_1)[p, t] <= _binary_var[p, t] * model.bigM
+            return getattr(model, _port_name_1)[p, t] <= _binary_var[p, t] * model.big_m
 
         con_name = self.constraint_pos_flow_mutually_exclusive_port_1
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_12))
 
         def mutual_exclusivity_rule_21(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """When _binary_var is 1, flow through output port 2 is constrained to be zero"""
-            return (1 - _binary_var[p, t]) * -1 * model.bigM <= getattr(model, _port_name_2)[p, t]
+            return (1 - _binary_var[p, t]) * -1 * model.big_m <= getattr(model, _port_name_2)[p, t]
 
         con_name = self.constraint_neg_flow_mutually_exclusive_port_2
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_21))
 
         def mutual_exclusivity_rule_22(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """When _binary_var is 1, flow through output port 2 is constrained to be zero"""
-            return getattr(model, _port_name_2)[p, t] <= (1 - _binary_var[p, t]) * model.bigM
+            return getattr(model, _port_name_2)[p, t] <= (1 - _binary_var[p, t]) * model.big_m
 
         con_name = self.constraint_pos_flow_mutually_exclusive_port_2
         setattr(model, con_name, en.Constraint(model.Expansion, model.Time, rule=mutual_exclusivity_rule_22))
@@ -785,7 +785,7 @@ class MobileStorage(Storage):
         if self.enable_trip_slack:
             total += (
                 sum(getattr(model, self.trip_slack)[p, t] for p in model.Expansion for t in model.Time)
-                * model.bigM
+                * model.big_m
                 * 20
             )  # we want this to be more important than import/export constraints
 

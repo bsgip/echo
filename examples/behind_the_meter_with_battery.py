@@ -42,8 +42,8 @@ Usage:
 engine_settings = EngineSettings(
     engine="cplex",
     engine_executable="",
-    bigM=5000000,  # This value has been arbitrarily chosen
-    smallM=0.0001,  # This value has been arbitrarily chosen
+    big_m=5000000,  # This value has been arbitrarily chosen
+    small_m=0.0001,  # This value has been arbitrarily chosen
 )
 
 # ----------------------------------------------------------------------------------------------------------------------

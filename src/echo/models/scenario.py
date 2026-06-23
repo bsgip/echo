@@ -22,23 +22,23 @@ class EngineSettings:
         engine: the name (str) of the optimiser e.g. "cplex"
         engine_executable: the path to the executable (str). An empty string causes echo
             to try to determine the path to the solver.
-        smallM: small bias value (float). A small fudge factor for reducing the size
+        small_m: small bias value (float). A small fudge factor for reducing the size
             of the solution set and achieving a unique optimisation solution.
-        bigM: big bias value (int). A bigM value for integer optimisation
+        big_m: big bias value (int). A big_m value for integer optimisation
     """
 
     engine: str
     engine_executable: str
-    smallM: float
-    bigM: int
+    small_m: float
+    big_m: int
 
 
 class EchoConcreteModel(ConcreteModel):
     """Extension to pyomo's ConcreteModel that documents all the echo specific variables that
     decorate the underlying ConcreteModel"""
 
-    smallM: Param  # A small fudge factor for reducing the size of the solution set and achieving a unique solution
-    bigM: Param  # A bigM value for integer optimisation
+    small_m: Param  # A small fudge factor for reducing the size of the solution set and achieving a unique solution
+    big_m: Param  # A big_m value for integer optimisation
     Time: RangeSet  # We use RangeSet to create a index for each of the time periods that we will optimise within.
     Expansion: RangeSet  # index for expansion periods
     discount_rates: Param
@@ -57,6 +57,6 @@ def engine_settings_from_environment(optimiser_engine: str | None = None) -> Eng
     return EngineSettings(
         engine=optimiser_engine,
         engine_executable=os.environ.get("OPTIMISER_ENGINE_EXECUTABLE", ""),
-        bigM=5000000,  # This value has been arbitrarily chosen
-        smallM=0.0001,  # This value has been arbitrarily chosen
+        big_m=5000000,  # This value has been arbitrarily chosen
+        small_m=0.0001,  # This value has been arbitrarily chosen
     )

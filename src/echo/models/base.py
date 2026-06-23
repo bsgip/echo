@@ -210,10 +210,10 @@ class Port(BaseModel):
         port_active_periods = self.active_periods
 
         def on_off_rule1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
-            return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.bigM
+            return getattr(model, self.port_name)[p, t] <= port_active_periods[p, t] * model.big_m
 
         def on_off_rule2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
-            return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.bigM
+            return getattr(model, self.port_name)[p, t] >= -port_active_periods[p, t] * model.big_m
 
         setattr(
             model,
@@ -447,7 +447,7 @@ class Port(BaseModel):
             )
 
             def only_pos_or_neg_one(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
-                return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.bigM
+                return getattr(model, self.pos)[p, t] <= getattr(model, self.is_pos)[p, t] * model.big_m
 
             setattr(
                 model,
@@ -456,7 +456,7 @@ class Port(BaseModel):
             )
 
             def only_pos_or_neg_two(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
-                return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.bigM
+                return getattr(model, self.neg)[p, t] >= (getattr(model, self.is_pos)[p, t] - 1) * model.big_m
 
             setattr(
                 model,
@@ -541,18 +541,18 @@ class Port(BaseModel):
         total = 0
         if self.slack is True:
             if hasattr(model, self.import_slack) is True:
-                total += -1 * getattr(model, self.import_slack_max) * model.bigM
+                total += -1 * getattr(model, self.import_slack_max) * model.big_m
                 total += (
                     -1
                     * sum(getattr(model, self.import_slack)[p, t] for p in model.Expansion for t in model.Time)
-                    * model.bigM
+                    * model.big_m
                     * 0.1
                 )
             if hasattr(model, self.export_slack) is True:
-                total += getattr(model, self.export_slack_max) * model.bigM
+                total += getattr(model, self.export_slack_max) * model.big_m
                 total += (
                     sum(getattr(model, self.export_slack)[p, t] for p in model.Expansion for t in model.Time)
-                    * model.bigM
+                    * model.big_m
                     * 0.1
                 )
 
@@ -1329,7 +1329,7 @@ class OptimisationGraph(BaseModel):
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
-                a <= getattr(model, current_node_obj.inflow)[p, t] * model.bigM
+                a <= getattr(model, current_node_obj.inflow)[p, t] * model.big_m
             )  # Incoming paths can only be non-zero if inflow=1
 
         def only_inflow_or_outflow2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
@@ -1338,7 +1338,7 @@ class OptimisationGraph(BaseModel):
                 if path.vertices[0] is current_node_name:  # If the path starts at the node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
-                a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.bigM
+                a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.big_m
             )  # Outgoing paths can only be non-zero if inflow=0
 
         sources_and_sinks = self.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes

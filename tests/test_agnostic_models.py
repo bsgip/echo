@@ -16,8 +16,8 @@ def empty_model():
         number_of_intervals=6,
         number_of_expansion_intervals=1,
     )
-    model.smallM = en.Param(initialize=engine_settings.smallM)
-    model.bigM = en.Param(initialize=engine_settings.bigM)
+    model.small_m = en.Param(initialize=engine_settings.small_m)
+    model.big_m = en.Param(initialize=engine_settings.big_m)
     model.scenario_settings = scenario_settings
     model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
     if scenario_settings.number_of_expansion_intervals == 0:

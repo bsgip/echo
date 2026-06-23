@@ -180,14 +180,16 @@ def validate_network_graph(graph: OptimisationGraph) -> None:
 def build_model_and_objective(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    smallM: float,
-    bigM: int,
+    small_m: float,
+    big_m: int,
     profile: pd.DataFrame | None,
     objective_set: ObjectiveSet | None,
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    model = _build_model(graph=graph, scenario_settings=scenario_settings, smallM=smallM, bigM=bigM, profile=profile)
+    model = _build_model(
+        graph=graph, scenario_settings=scenario_settings, small_m=small_m, big_m=big_m, profile=profile
+    )
     objective = _build_objective(model=model, graph=graph, objective_set=objective_set, profile=profile)
 
     return model, objective
@@ -196,13 +198,13 @@ def build_model_and_objective(
 def _build_model(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    smallM: float,
-    bigM: int,
+    small_m: float,
+    big_m: int,
     profile: pd.DataFrame | None,
 ) -> EchoConcreteModel:
     model = EchoConcreteModel()
-    model.smallM = en.Param(initialize=smallM)
-    model.bigM = en.Param(initialize=bigM)
+    model.small_m = en.Param(initialize=small_m)
+    model.big_m = en.Param(initialize=big_m)
     model.scenario_settings = scenario_settings
 
     # We use RangeSet to create an index for each of the time
@@ -300,8 +302,8 @@ def optimise(
     model, objective = build_model_and_objective(
         graph=graph,
         scenario_settings=scenario_settings,
-        smallM=engine_settings.smallM,
-        bigM=engine_settings.bigM,
+        small_m=engine_settings.small_m,
+        big_m=engine_settings.big_m,
         profile=profile,
         objective_set=objective_set,
     )

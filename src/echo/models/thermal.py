@@ -29,7 +29,7 @@ class SimpleChiller(Node):
     """
 
     max_cooling_capacity: PositiveFloat | None = None  # Max cooling load that can be serviced in KWT
-    # (if None, bounded by bigM value)
+    # (if None, bounded by big_m value)
     cooling_cop_time_series: dict | None  # Formatted dict of cooling COPs (coefficients of performance)
     cooling_cop_time_series_ref: str | None
     cooling_cop_constant: PositiveFloat | None = 1  # Constant COP value to use across all optimisation intervals
@@ -398,7 +398,7 @@ class ThermalNode(Node):
 
         def loss_or_gain1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Gains can only be non-zero if is_gain = 1"""
-            return getattr(model, self.gains)[p, t] <= getattr(model, self.is_gain)[p, t] * model.bigM
+            return getattr(model, self.gains)[p, t] <= getattr(model, self.is_gain)[p, t] * model.big_m
 
         setattr(
             model, "loss_gain_con2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=loss_or_gain1)
@@ -406,7 +406,7 @@ class ThermalNode(Node):
 
         def loss_or_gain2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Losses can only be non-zero if is_gain = 0"""
-            return getattr(model, self.losses)[p, t] >= (getattr(model, self.is_gain)[p, t] - 1) * model.bigM
+            return getattr(model, self.losses)[p, t] >= (getattr(model, self.is_gain)[p, t] - 1) * model.big_m
 
         setattr(
             model, "loss_gain_con3_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=loss_or_gain2)
@@ -751,10 +751,10 @@ class SimpleHeatPump(Node):
     """
 
     max_cooling_capacity: PositiveFloat = (
-        None  # Max cooling load that can be serviced in KWT (if None, bounded by bigM value)
+        None  # Max cooling load that can be serviced in KWT (if None, bounded by big_m value)
     )
     max_heating_capacity: PositiveFloat = (
-        None  # Max heating load that can be serviced in KWT (if None, bounded by bigM value)
+        None  # Max heating load that can be serviced in KWT (if None, bounded by big_m value)
     )
     heating_cop_time_series: dict | None  # Formatted dict of heating COPs (coefficients of performance)
     # per time period
@@ -844,8 +844,8 @@ class SimpleHeatPump(Node):
         # Split output port into +ve and -ve components. +ve component will be cooling,
         # -ve component will be heating
         self.ports[self.thermal_output_port_ref].constrain_pos_neg(model)
-        lower_bound = self.max_heating_capacity or model.bigM
-        upper_bound = self.max_cooling_capacity or model.bigM
+        lower_bound = self.max_heating_capacity or model.big_m
+        upper_bound = self.max_cooling_capacity or model.big_m
         set_float_var_bounds(
             model,
             self.ports[self.thermal_output_port_ref].port_name,
@@ -951,8 +951,8 @@ class SimpleHeatPump(Node):
 
         def only_heat_or_cool1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_heat variable.
-            power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< bigM value when is_cooling=0"""
-            return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
+            power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< big_m value when is_cooling=0"""
+            return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.big_m
 
         setattr(
             model,
@@ -962,8 +962,8 @@ class SimpleHeatPump(Node):
 
         def only_heat_or_cool2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_cool variable.
-            power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< bigM value when is_cooling=1"""
-            return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.bigM
+            power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< big_m value when is_cooling=1"""
+            return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.big_m
 
         setattr(
             model,
@@ -1068,8 +1068,8 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     def _set_ports_var_bounds(self, model: EchoConcreteModel) -> None:
         """Set cooling and heating port flow bounds based on the max heating and cooling capacity attribute if given."""
 
-        lower_bound = self.max_heating_capacity or model.bigM
-        upper_bound = self.max_cooling_capacity or model.bigM
+        lower_bound = self.max_heating_capacity or model.big_m
+        upper_bound = self.max_cooling_capacity or model.big_m
         set_float_var_bounds(model, self.ports[self.cooling_output_port_ref].port_name, ub=upper_bound, lb=0)
         set_float_var_bounds(model, self.ports[self.heating_output_port_ref].port_name, ub=0, lb=-1 * lower_bound)
 
@@ -1120,7 +1120,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
             """Positive value constraint"""
             return (
                 getattr(model, f"delta_heat_flow_{self.node_name}_pos")[p, t]
-                <= getattr(model, f"delta_heat_flow_{self.node_name}_is_pos")[p, t] * model.bigM
+                <= getattr(model, f"delta_heat_flow_{self.node_name}_is_pos")[p, t] * model.big_m
             )
 
         setattr(
@@ -1131,7 +1131,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
             """positive and negative component sum"""
             return (
                 getattr(model, f"delta_heat_flow_{self.node_name}_neg")[p, t]
-                >= (getattr(model, f"delta_heat_flow_{self.node_name}_is_pos")[p, t] - 1) * model.bigM
+                >= (getattr(model, f"delta_heat_flow_{self.node_name}_is_pos")[p, t] - 1) * model.big_m
             )
 
         setattr(
@@ -1377,8 +1377,8 @@ class ParameterisedHeatPump(Node):
 
         Split output port into non-positive and non-negative components.
         """
-        lower_bound = self.max_heating_capacity or model.bigM
-        upper_bound = self.max_cooling_capacity or model.bigM
+        lower_bound = self.max_heating_capacity or model.big_m
+        upper_bound = self.max_cooling_capacity or model.big_m
         set_float_var_bounds(
             model,
             self.ports[self.thermal_output_port_ref].port_name,
@@ -1451,8 +1451,8 @@ class ParameterisedHeatPump(Node):
 
         def only_heat_or_cool1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_heat variable.
-            power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< bigM value when is_cooling=0"""
-            return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.bigM
+            power_to_heat=0 when is_cooling=1. power_to_heat is positive real =< big_m value when is_cooling=0"""
+            return getattr(model, self.power_to_heat)[p, t] <= (1 - is_cooling[p, t]) * model.big_m
 
         setattr(
             model,
@@ -1462,8 +1462,8 @@ class ParameterisedHeatPump(Node):
 
         def only_heat_or_cool2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             """Constraint power_to_cool variable.
-            power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< bigM value when is_cooling=1"""
-            return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.bigM
+            power_to_cool=0 when is_cooling=0. power_to_cool is positive real =< big_m value when is_cooling=1"""
+            return getattr(model, self.power_to_cool)[p, t] <= is_cooling[p, t] * model.big_m
 
         setattr(
             model,
