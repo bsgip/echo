@@ -93,6 +93,14 @@ select = ["E", "W", "F", "I", "S", "C90", "B", "UP", "ANN", "N"]
 [tool.ruff.lint.mccabe]
 max-complexity = 15
 
+[tool.ruff.lint.pep8-naming]
+# Allow pydantic's @validator and @root_validator decorators to trigger class method treatment. 
+classmethod-decorators = [
+  "classmethod",
+  "pydantic.validator",
+  "pydantic.root_validator",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "src/**" = ["ANN003"]
 "tests/**" = ["S", "ANN", "N", "B017"]
@@ -100,13 +108,6 @@ max-complexity = 15
 [tool.ty.src]
 include = ["src", "tests"]
 
-[tool.ruff.pep8-naming]
-# Allow pydantic's @validator decorator to trigger class method treatment. 
-classmethod-decorators = [
-  "classmethod",
-  "pydantic.validator",
-  "pydantic.root_validator",
-]
 
 [tool.pytest.ini_options]
 pythonpath = ["src/"]
