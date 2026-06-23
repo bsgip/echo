@@ -17,7 +17,7 @@ from echo.validators import ArrayType
 
 DataArray = list[float] | set[float] | np.ndarray
 
-TimeExpandableType = float | list[float] | list[list[float]]
+TimeExpandableType = float | list[float] | list[list[float]] | np.ndarray
 """TimeExpandableType
 
 Variables with type `TimeExpandableType` should only contain numbers (int or float).
