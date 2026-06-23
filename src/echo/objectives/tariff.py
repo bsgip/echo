@@ -574,11 +574,23 @@ class DemandCharge(EchoBaseModel):
         return expr
 
 
+class ImportDemandCharge(DemandCharge):
+    import_demand = True
+    export_demand = False
+    min_demand: NonNegativeFloat = 0.0
+
+
+class ExportDemandCharge(DemandCharge):
+    import_demand = False
+    export_demand = True
+    min_demand: NonPositiveFloat = 0.0
+
+
 class DemandTariffObjective(Objective):
     """A demand tariff objective contains a set of one or more demand charges."""
 
     component: Port
-    demand_charges: list[DemandCharge]
+    demand_charges: list[DemandCharge | ImportDemandCharge | ExportDemandCharge]
     expansion_periods: PositiveInt | None = 1
 
     def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
@@ -675,15 +687,3 @@ class DemandTariffObjective(Objective):
         for dc in self.demand_charges:
             objective += dc.objective_expr(model)
         return objective
-
-
-class ImportDemandCharge(DemandCharge):
-    import_demand = True
-    export_demand = False
-    min_demand: NonNegativeFloat = 0.0
-
-
-class ExportDemandCharge(DemandCharge):
-    import_demand = False
-    export_demand = True
-    min_demand: NonPositiveFloat = 0.0
