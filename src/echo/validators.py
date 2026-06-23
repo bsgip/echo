@@ -10,7 +10,7 @@ FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
 
 
 class ArrayType(np.ndarray):
-    numpyArray: np.ndarray = Field(default_factory=lambda: np.zeros(10))
+    numpy_array: np.ndarray = Field(default_factory=lambda: np.zeros(10))
 
     @classmethod
     def __get_validators__(cls) -> Generator:
