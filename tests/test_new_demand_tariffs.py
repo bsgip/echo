@@ -159,3 +159,89 @@ def test_system_import_demand_tariff_two_resets():
 
     np.testing.assert_array_almost_equal(max_demand[0], 10 - minimum_demand)
     np.testing.assert_array_almost_equal(max_demand[1], 20 - minimum_demand)
+
+
+def test_demand_tariff_read_and_implemented_correctly():
+    """Test that the solution to fixing the closure construction has been implemented correctly."""
+
+    demand = np.array([25, 2014, 1, 2015, 9, 23, 1, 11, 999])
+
+    expansion_periods = 1
+    time_periods = len(demand)
+    interval_duration = 30
+
+    system = OptimisationGraph()
+
+    grid = Node()
+    grid.add_ports_from_list(["grid"], FlexPort, units=Units.KW)
+
+    load1 = Node()
+    l1 = ElectricalDemand()
+    l1.add_demand_profile_from_array(demand, expansion_periods)
+    load1.ports["demand"] = l1
+
+    system.add_node_obj([grid, load1])
+    system.connect_ports_and_create_edge(l1, grid.ports["grid"])
+
+    demand_charge_window_1 = [1] * 3 + [0] * 6
+    demand_charge_window_2 = [0] * 3 + [1] * 3 + [0] * 3
+    demand_charge_window_3 = [0] * 6 + [1] * 3
+
+    minimum_demand = 0.0
+    demand_tariff = DemandTariffObjective(
+        component=l1,
+        demand_charges=[
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_1,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_2,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_3,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+        ],
+    )
+
+    objective_set = ObjectiveSet(objective_list=[demand_tariff])
+
+    optimise_results = optimise(
+        scenario_settings=ScenarioSettings(
+            interval_duration=interval_duration,
+            number_of_intervals=time_periods,
+            number_of_expansion_intervals=expansion_periods,
+        ),
+        engine_settings=engine_settings_from_environment(),
+        graph=system,
+        objective_set=objective_set,
+    )
+
+    max_demand_1 = optimise_results.values(demand_tariff.demand_charges[0].max_demand_val, 0)
+    max_demand_2 = optimise_results.values(demand_tariff.demand_charges[1].max_demand_val, 0)
+    max_demand_3 = optimise_results.values(demand_tariff.demand_charges[2].max_demand_val, 0)
+    max_in_window_1 = max(np.multiply(demand, demand_charge_window_1))
+    max_in_window_2 = max(np.multiply(demand, demand_charge_window_2))
+    max_in_window_3 = max(np.multiply(demand, demand_charge_window_3))
+
+    print(max_demand_1)
+    print(max_demand_2)
+    print(max_demand_3)
+    print(max_in_window_1)
+    print(max_in_window_2)
+    print(max_in_window_3)
+    print(optimise_results.objective.args[0].value)
+    print(optimise_results.objective.args[1].value)
+    print(optimise_results.objective.args[2].value)
+
+    assert round(max_demand_1[0]) == max_in_window_1 == round(optimise_results.objective.args[0].value)
+    assert round(max_demand_2[0]) == max_in_window_2 == round(optimise_results.objective.args[1].value)
+    assert round(max_demand_3[0]) == max_in_window_3 == round(optimise_results.objective.args[2].value)
