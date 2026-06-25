@@ -2,6 +2,13 @@
 
 ## Releases
 
+### v2.2.2 (2026-06-xx)
+
+#### Changes
+
+- `echo.objectives.tariff.DemandTariffObjective.add_constraints()` uses a closure construction. These constructions don't work in python. Has been reimplemented using `functools.partial`.
+- `echo.models.agnostic.PartitionedMultiCommodityTellegenNode.apply_node_constraints()` gets around the above closure issue using a confusing implicit passing of looping variables. This has been reimplemented using `functools.partial`.
+
 ### v2.2.1 (2026-06-05)
 
 #### Adds
