@@ -1,13 +1,37 @@
 import numpy as np
+import pyomo.environ as en
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration
-from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import EchoConcreteModel, ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import DemandTariffObjective, ExportDemandCharge, ImportDemandCharge
+from echo.objectives.tariff import DemandCharge, DemandTariffObjective, ExportDemandCharge, ImportDemandCharge
 from echo.optimiser import optimise
+
+
+def empty_model(number_of_intervals: int = 6):
+    model = EchoConcreteModel()
+    engine_settings = engine_settings_from_environment()
+    scenario_settings = ScenarioSettings(
+        interval_duration=30,
+        number_of_intervals=number_of_intervals,
+        number_of_expansion_intervals=1,
+    )
+    model.small_m = en.Param(initialize=engine_settings.small_m)
+    model.big_m = en.Param(initialize=engine_settings.big_m)
+    model.scenario_settings = scenario_settings
+    model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
+    if scenario_settings.number_of_expansion_intervals == 0:
+        model.Expansion = en.RangeSet(0, 0)
+    else:
+        model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
+    discount_rates = {}
+    for ep in range(0, scenario_settings.number_of_expansion_intervals):
+        discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
+    model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
+    return model
 
 
 def test_system_import_demand_tariff():
@@ -245,3 +269,85 @@ def test_demand_tariff_read_and_implemented_correctly():
     assert round(max_demand_1[0]) == max_in_window_1 == round(optimise_results.objective.args[0].value)
     assert round(max_demand_2[0]) == max_in_window_2 == round(optimise_results.objective.args[1].value)
     assert round(max_demand_3[0]) == max_in_window_3 == round(optimise_results.objective.args[2].value)
+
+
+def test_demand_tariff_objective_apply_constraints_for_closure_issues():
+    model = empty_model(number_of_intervals=9)
+
+    expansion_periods = 1
+    demand = np.array([25, 2014, 1, 2015, 9, 23, 1, 11, 999])
+
+    load1 = Node()
+    l1 = ElectricalDemand()
+    l1.add_demand_profile_from_array(demand, expansion_periods)
+    load1.ports["demand"] = l1
+
+    load1.add_node_to_model(model, profile=demand)
+
+    demand_charge_window_1 = [1] * 3 + [0] * 6
+    demand_charge_window_2 = [0] * 3 + [1] * 3 + [0] * 3
+    demand_charge_window_3 = [0] * 6 + [1] * 3
+
+    minimum_demand = 0.0
+    demand_tariff = DemandTariffObjective(
+        component=l1,
+        demand_charges=[
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_1,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_2,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+            ImportDemandCharge(
+                rate=1.0,
+                window_array=demand_charge_window_3,
+                min_demand=minimum_demand,
+                reset_periods=[len(demand)],
+            ),
+        ],
+    )
+
+    demand_tariff.create_vars(model=model)
+    demand_tariff.create_params(model=model, df=None)
+    rules = demand_tariff.apply_constraints(model=model, return_rules=True)
+
+    uids = []
+    window_arrays = []
+
+    for _, rule in enumerate(rules):
+        for cell in rule.__closure__:
+            print("get here 1?")
+            print(type(cell.cell_contents))
+            if isinstance(cell.cell_contents, DemandCharge):
+                uids.append(cell.cell_contents.uid)
+                print("get here 2?")
+                window_arrays.append(cell.cell_contents.window_array)
+            if isinstance(cell.cell_contents, DemandTariffObjective):
+                for demand_charge in cell.cell_contents.demand_charges:
+                    uids.append(demand_charge.uid)
+                    print("get here 3?")
+                    window_arrays.append(demand_charge.window_array)
+
+                assert uids[0] != uids[1] != uids[2]
+                assert window_arrays[0] != window_arrays[1] != window_arrays[2]
+                assert (
+                    np.sum(np.array(window_arrays[0]))
+                    == np.sum(np.array(window_arrays[1]))
+                    == np.sum(np.array(window_arrays[2]))
+                    == 3
+                )
+
+    assert uids[0] != uids[1] != uids[2]
+    assert window_arrays[0] != window_arrays[1] != window_arrays[2]
+    assert (
+        np.sum(np.array(window_arrays[0]))
+        == np.sum(np.array(window_arrays[1]))
+        == np.sum(np.array(window_arrays[2]))
+        == 3
+    )
