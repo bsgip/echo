@@ -4,7 +4,22 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-dynamic = ["version", "readme"]
+dependencies = [
+  "deprecated>=1.3.1,<2",
+  "matplotlib>=3.11,<4",
+  "networkx>=3.1,<4"group,
+  "numpy>=1.26,<2",
+  "orjson>=3.9,<4",
+  "pandas>=2.1,<3",
+  "plotly>=5.22,<6",
+  "pydantic>=1.10,<2",
+  "pyomo>=6.6,<7",
+  "scikit-learn>=1.3,<2",
+  "seaborn>=0.12,<1",
+  "shortuuid>=1.0.11,<2",
+  "typing-extensions>=4.7,<5",
+  "scipy>=1.14.1,<2",
+]dynamic = ["version", "readme"]
 name = "echo"
 description = "The Energy and Commodity Holistic Optimiser (ECHO)."
 keywords = ["energy", "commodity", "modelling", "optimization"]
@@ -20,22 +35,6 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
-]
-dependencies = [
-  "deprecated>=1.3.1,<2",
-  "matplotlib>=3.11,<4",
-  "networkx>=3.1,<4",
-  "numpy>=1.26,<2",
-  "orjson>=3.9,<4",
-  "pandas>=2.1,<3",
-  "plotly>=5.22,<6",
-  "pydantic>=1.10,<2",
-  "pyomo>=6.6,<7",
-  "scikit-learn>=1.3,<2",
-  "seaborn>=0.12,<1",
-  "shortuuid>=1.0.11,<2",
-  "typing-extensions>=4.7,<5",
-  "scipy>=1.14.1,<2",
 ]
 requires-python = ">= 3.11"
 authors = [
