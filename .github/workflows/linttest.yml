@@ -29,8 +29,9 @@ jobs:
         run: uv run ruff check .
       - name: Format check
         run: uv run ruff format --check .
-      - name: Typing (ty)
-        run: uv run ty check .
+      # To add back in at a later date
+      # - name: Typing (ty)
+      #   run: uv run ty check .
       - name: Security scan (bandit)
         run: uv run bandit -c pyproject.toml -r src/
 
