@@ -41,6 +41,7 @@ Make sure you have the documentation dependencies installed
 1. Generate the documentation for the echo package (from docstrings)
    `sphinx-apidoc --force --implicit-namespaces --module-first --no-toc --separate -o docs/source/_reference src/echo`
    The auto-generated documentation can be found in `docs/source/_reference`
+
 2. Build the documentation (as html)
    `sphinx-build -b html docs/source docs/_build`
    The built documentation can be found in `docs/_build`. Warnings about duplicated labels can be safely ignored.
