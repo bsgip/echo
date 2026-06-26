@@ -9,10 +9,10 @@ To install this package you need to:
 1. Clone this repo:
    `git clone git@github.com:bsgip/echo.git`
 
-1. Change to the echo directory:
+2. Change to the echo directory:
    `cd echo`
 
-1. Install using uv (recommended):
+3. Install using uv (recommended):
    `uv sync --python 3.13 --all-extras`
    or pip:
    `pip install --group all`
