@@ -69,10 +69,4 @@ jobs:
           OPTIMISER_ENGINE: "cplex"
           OPTIMISER_ENGINE_EXECUTABLE: "/opt/cplex/cplex"
           PYTHONPATH: ./
-      
-      - name: Upload Results
-        uses: test-summary/action@v1
-        with:
-          paths: .test_report.xml
-        if: always()
 
