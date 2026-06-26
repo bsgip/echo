@@ -1,5 +1,8 @@
 """Commodity agnostic ports and nodes"""
 
+from collections.abc import Iterable
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
@@ -273,7 +276,12 @@ class MultiCommodityTellegenNode(Node):
     def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         """Apply Tellegen constraint for same commodity ports."""
 
-        def tellegen_node_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
+        def tellegen_node_rule(
+            commodity_ports: Iterable[Port],
+            model: EchoConcreteModel,
+            p: int,
+            t: int,
+        ) -> EqualityExpression:
             net_flow = 0
             for port in commodity_ports:
                 port_flow = getattr(model, port.port_name)
@@ -291,7 +299,11 @@ class MultiCommodityTellegenNode(Node):
             setattr(
                 model,
                 "node_con_" + str(commodity_type) + self.node_name,
-                en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule),
+                en.Constraint(
+                    model.Expansion,
+                    model.Time,
+                    rule=partial(tellegen_node_rule, commodity_ports),
+                ),
             )
 
 
@@ -341,7 +353,12 @@ class PartitionedMultiCommodityTellegenNode(Node):
     def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         """Apply Tellegen constraint for same commodity ports within each partition."""
 
-        def tellegen_node_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
+        def tellegen_node_rule(
+            partition_ports: Iterable[Port],
+            model: EchoConcreteModel,
+            p: int,
+            t: int,
+        ) -> EqualityExpression:
             net_flow = 0
             for port in partition_ports:
                 port_flow = getattr(model, port.port_name)
@@ -361,7 +378,11 @@ class PartitionedMultiCommodityTellegenNode(Node):
             setattr(
                 model,
                 "node_con_" + str(partition_commodity_type) + self.node_name,
-                en.Constraint(model.Expansion, model.Time, rule=tellegen_node_rule),
+                en.Constraint(
+                    model.Expansion,
+                    model.Time,
+                    rule=partial(tellegen_node_rule, partition_ports),
+                ),
             )
 
 
