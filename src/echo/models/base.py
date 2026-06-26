@@ -207,6 +207,9 @@ class Port(BaseModel):
         )
 
     def _add_active_period_constraints_to_model(self, model: EchoConcreteModel) -> None:
+        if self.active_periods is None:
+            raise ValueError("self.active_periods cannot be None.")
+
         port_active_periods = self.active_periods
 
         def on_off_rule1(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:

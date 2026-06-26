@@ -31,6 +31,18 @@ class ElectricalDemand(Demand):
     units = Units.KW
 
 
+class ElectricalPort(FlexPort):
+    """Flexible electrical port"""
+
+    units = Units.KW
+
+
+class FixedElectricalPort(FixedPort):
+    """An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
+
+    units = Units.KW
+
+
 class ElectricalGeneration(Source):
     """Electrical generation which can be fixed (non-curtailable) or variable (curtailable)"""
 
@@ -142,6 +154,7 @@ class EVBase(TransformNode):
 
     charge_mode: EVChargeMode | None = None
     connection_port_name: str = "cp"
+    ports: dict[str, ElectricalDemand | ElectricalPort | MobileElectricalStorage] = {}
 
     # Battery attributes
     charging_efficiency: float = 1
@@ -156,7 +169,7 @@ class EVBase(TransformNode):
     usage_power_limit: float | None = None
 
     # Stateful attributes
-    available: ArrayType | list | str | None
+    available: ArrayType | list | None
     initial_state_of_charge: float | None
     interval_duration: int | None
     set_stateful_attrs_at_init: bool = True
@@ -237,6 +250,10 @@ class EVBase(TransformNode):
 
         # Get the maximum power usage
         max_usage = np.max(np.array(self.usage))
+
+        # Check that self.usage_power_limit is not None
+        if self.usage_power_limit is None:
+            raise ValueError("A value has not been assigned for self.usage_power_limit.")
 
         # If the maximum power usage is larger than the usage power limit, raise an error.
         if max_usage > self.usage_power_limit * -1:
@@ -363,7 +380,8 @@ class EVBase(TransformNode):
             f"{self.node_name} connection_point port does not have available set.",
         )
         validate(
-            self.ports["vehicle"].initial_state_of_charge is not None,
+            (isinstance(self.ports["vehicle"], MobileElectricalStorage))
+            and (self.ports["vehicle"].initial_state_of_charge) is not None,
             f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
         )
 
@@ -444,8 +462,8 @@ class EVV0G(EVBase):
 
     def set_stateful_attrs(
         self,
-        available: ArrayType | list | str,
-        usage: ArrayType | list | str,
+        available: ArrayType | list,
+        usage: ArrayType | list,
         initial_state_of_charge: float,
         interval_duration: int,
         tod_charging: ArrayType | list | str | None = None,
@@ -598,7 +616,8 @@ class EVV0G(EVBase):
             f"{self.node_name} usage port needs does not have a usage profile set.",
         )
         validate(
-            self.ports["vehicle"].initial_state_of_charge is not None,
+            (isinstance(self.ports["vehicle"], MobileElectricalStorage))
+            and (self.ports["vehicle"].initial_state_of_charge) is not None,
             f"{self.node_name} vehicle port does not have a initial_state_of_charge set.",
         )
 
@@ -1160,18 +1179,6 @@ class EV(TransformNode):
             )
             power_profile = np.array(self.V0G_delta) + np.array(self.usage) * -1
             fix_port_variable(model, vehicle.port_name, power_profile, expansion_periods=1)
-
-
-class ElectricalPort(FlexPort):
-    """Flexible electrical port"""
-
-    units = Units.KW
-
-
-class FixedElectricalPort(FixedPort):
-    """An electrical port with fixed values (parameters). No constraints on whether the port is importing/exporting."""
-
-    units = Units.KW
 
 
 class Inverter(Node):
