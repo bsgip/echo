@@ -524,8 +524,8 @@ class DemandCharge(EchoBaseModel):
         index = 0  # for indexing each reset period
 
         for i in range(num_resets):
-            blank[i, index : index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in # noqa E203
-            index += reset_periods[i] - 1
+            blank[i, index : index + reset_periods[i]] = 1.0
+            index += reset_periods[i]
             new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(n_intervals):
                 initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
