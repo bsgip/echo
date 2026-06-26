@@ -256,16 +256,6 @@ def test_demand_tariff_read_and_implemented_correctly():
     max_in_window_2 = max(np.multiply(demand, demand_charge_window_2))
     max_in_window_3 = max(np.multiply(demand, demand_charge_window_3))
 
-    print(max_demand_1)
-    print(max_demand_2)
-    print(max_demand_3)
-    print(max_in_window_1)
-    print(max_in_window_2)
-    print(max_in_window_3)
-    print(optimise_results.objective.args[0].value)
-    print(optimise_results.objective.args[1].value)
-    print(optimise_results.objective.args[2].value)
-
     assert round(max_demand_1[0]) == max_in_window_1 == round(optimise_results.objective.args[0].value)
     assert round(max_demand_2[0]) == max_in_window_2 == round(optimise_results.objective.args[1].value)
     assert round(max_demand_3[0]) == max_in_window_3 == round(optimise_results.objective.args[2].value)
@@ -322,16 +312,12 @@ def test_demand_tariff_objective_apply_constraints_for_closure_issues():
 
     for _, rule in enumerate(rules):
         for cell in rule.__closure__:
-            print("get here 1?")
-            print(type(cell.cell_contents))
             if isinstance(cell.cell_contents, DemandCharge):
                 uids.append(cell.cell_contents.uid)
-                print("get here 2?")
                 window_arrays.append(cell.cell_contents.window_array)
             if isinstance(cell.cell_contents, DemandTariffObjective):
                 for demand_charge in cell.cell_contents.demand_charges:
                     uids.append(demand_charge.uid)
-                    print("get here 3?")
                     window_arrays.append(demand_charge.window_array)
 
                 assert uids[0] != uids[1] != uids[2]
@@ -344,6 +330,7 @@ def test_demand_tariff_objective_apply_constraints_for_closure_issues():
                 )
 
     assert uids[0] != uids[1] != uids[2]
+
     assert window_arrays[0] != window_arrays[1] != window_arrays[2]
     assert (
         np.sum(np.array(window_arrays[0]))
