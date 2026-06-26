@@ -1,5 +1,7 @@
+from collections.abc import Callable
 from datetime import time
 from enum import Enum
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -638,14 +640,23 @@ class DemandTariffObjective(Objective):
         for dc in self.demand_charges:
             dc.create_vars(model)
 
-    def apply_constraints(self, model: EchoConcreteModel) -> None:
+    def apply_constraints(self, model: EchoConcreteModel, return_rules: bool = False) -> None | list[Callable]:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
+
+        if return_rules:
+            rules = []
 
         for dc in self.demand_charges:
             if dc.import_demand is True:
 
-                def max_import_demand_rule(model: EchoConcreteModel, p: int, t: int, r: int) -> InequalityExpression:
+                def max_import_demand_rule(
+                    dc: ImportDemandCharge,
+                    model: EchoConcreteModel,
+                    p: int,
+                    t: int,
+                    r: int,
+                ) -> InequalityExpression:
                     return (
                         getattr(model, dc.max_demand_val)[r]
                         >= (getattr(model, self.component.pos)[p, t] - dc.min_demand)
@@ -659,12 +670,22 @@ class DemandTariffObjective(Objective):
                         model.Expansion,
                         model.Time,
                         dc.reset_index,
-                        rule=max_import_demand_rule,
+                        rule=partial(max_import_demand_rule, dc),
                     ),
                 )
+
+                if return_rules:
+                    rules.append(max_import_demand_rule)
+
             elif dc.export_demand is True:
 
-                def max_export_demand_rule(model: EchoConcreteModel, p: int, t: int, r: int) -> InequalityExpression:
+                def max_export_demand_rule(
+                    dc: ExportDemandCharge,
+                    model: EchoConcreteModel,
+                    p: int,
+                    t: int,
+                    r: int,
+                ) -> InequalityExpression:
                     return (
                         getattr(model, dc.max_demand_val)[r]
                         <= (getattr(model, self.component.neg)[p, t] - dc.min_demand)
@@ -678,9 +699,14 @@ class DemandTariffObjective(Objective):
                         model.Expansion,
                         model.Time,
                         dc.reset_index,
-                        rule=max_export_demand_rule,
+                        rule=partial(max_export_demand_rule, dc),
                     ),
                 )
+                if return_rules:
+                    rules.append(max_export_demand_rule)
+
+        if return_rules:
+            return rules
 
     def objective_expr(self, model: EchoConcreteModel) -> float:
         objective = 0
