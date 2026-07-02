@@ -40,7 +40,7 @@ class EchoConcreteModel(ConcreteModel):
 
     small_m: Param  # A small fudge factor for reducing the size of the solution set and achieving a unique solution
     big_m: Param  # A big_m value for integer optimisation
-    Time: FiniteScalarRangeSet  # We use RangeSet to create a index for each of the time periods that we will optimise within.
+    Time: FiniteScalarRangeSet  # index for time
     Expansion: FiniteScalarRangeSet  # index for expansion periods
     discount_rates: Param
 
