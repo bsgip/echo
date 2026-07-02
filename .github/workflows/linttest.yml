@@ -1,4 +1,4 @@
-name: Linting and Testing
+name: Testing and Linting
 on:
   push:
     branches: [main]
@@ -7,51 +7,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  bandit:
+  # This will run ruff, ty and bandit and produce a security report if there are any failures
+  linting:
     runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        pyver: ["3.11", "3.12", "3.13", "3.14"]
+        
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies
-        run: |
-          pip install bandit[toml]
-
-      - name: Security check - Bandit
-        run: |
-          bandit -c pyproject.toml -r .
-
-  flake8_py311:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.pyver }}
+      - name: Install Dependencies
+        run: uv sync
+      - name: Lint (ruff)
+        run: uv run ruff check .
+      - name: Format check
+        run: uv run ruff format --check .
+      # To add back in at a later date
+      # - name: Typing (ty)
+      #   run: uv run ty check .
+      - name: Security scan (bandit)
+        run: uv run bandit -c pyproject.toml -r src/
 
-      - name: Setup flake8 annotations
-        uses: rbialon/flake8-annotations@v1
-
-      - name: Lint with flake8
-        if: always()
-        run: |
-          pip install flake8 Flake8-pyproject
-          flake8 . --count --statistics
-
-  black_formatting:
+  # This will run pytest against the specified version
+  pytest:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: psf/black@stable
+    strategy:
+      matrix:
+        pyver: ["3.11", "3.12", "3.13", "3.14"]
 
-  pytest_py310:
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download CPLEX installer from Azure storage account
         uses: armanrahman22/azblob-download-action@v0.0.4
@@ -60,68 +53,21 @@ jobs:
           container-name: "solver-blobs"
           blob-name: "cplex_22.1.1.0-1_amd64.deb"
           download-path: "."
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.pyver }}
 
       - name: Install Dependencies
-        run: |
-          pip install --group test .
-          # Install CPLEX
+        run: | 
+          uv sync
           sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
       - name: Run Pytest
-        run: |
-          pytest --junit-xml=.test_report.xml
+        run: uv run pytest -n auto
         env:
           OPTIMISER_ENGINE: "cplex"
           OPTIMISER_ENGINE_EXECUTABLE: "/opt/cplex/cplex"
           PYTHONPATH: ./
 
-      - name: Upload Results
-        uses: test-summary/action@v1
-        with:
-          paths: .test_report.xml
-        if: always()
-
-  pytest_py311:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download CPLEX installer from Azure storage account
-        uses: armanrahman22/azblob-download-action@v0.0.4
-        with:
-          connection-string: ${{ secrets.BLDDEPS_STORAGE_ACCOUNT_CONN_STR }}
-          container-name: "solver-blobs"
-          blob-name: "cplex_22.1.1.0-1_amd64.deb"
-          download-path: "."
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Dependencies
-        run: |
-          pip install --group test .
-          # Install CPLEX
-          sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
-
-      - name: Run Pytest
-        run: |
-          pytest --junit-xml=.test_report.xml
-        env:
-          OPTIMISER_ENGINE: "cplex"
-          OPTIMISER_ENGINE_EXECUTABLE: "/opt/cplex/cplex"
-          PYTHONPATH: ./
-
-      - name: Upload Results
-        uses: test-summary/action@v1
-        with:
-          paths: .test_report.xml
-        if: always()

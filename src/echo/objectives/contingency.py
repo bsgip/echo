@@ -1,5 +1,6 @@
 import pyomo.environ as en
 from pydantic import PositiveFloat
+from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic import Storage
 from echo.models.base import Path
@@ -17,21 +18,21 @@ class ContingencyNegative(Contingency):
     duration: PositiveFloat  # todo this should just be the interval duration ?
 
     @property
-    def contingency_neg(self):
+    def contingency_neg(self) -> str:
         return "cont_neg_" + self.name
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         setattr(
             model, self.contingency_neg, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonPositiveReals)
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
-        def export_flow_con(model: EchoConcreteModel, p, t):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
+        def export_flow_con(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return getattr(model, self.contingency_neg)[p, t] >= (
                 port.export_constraint_value - getattr(model, port.port_name)[p, t]
             )
 
-        def import_flow_con(model: EchoConcreteModel, p, t):
+        def import_flow_con(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return (
                 getattr(model, self.contingency_neg)[p, t]
                 >= (port.import_constraint_value - getattr(model, port.port_name)[p, t]) * -1
@@ -59,7 +60,7 @@ class ContingencyNegative(Contingency):
         initial_port = self.component.edge_ports[0][0]
         if hasattr(initial_port, "soc_value"):
 
-            def contingency_energy_limited_soc(model: EchoConcreteModel, p, t):
+            def contingency_energy_limited_soc(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
                 return (
                     getattr(model, self.contingency_neg)[p, t] * self.duration / 60
                     >= getattr(model, initial_port.soc_value)[p, t] * -1
@@ -71,7 +72,7 @@ class ContingencyNegative(Contingency):
                 en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc),
             )
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> None:
         return sum(
             getattr(model, self.contingency_neg)[p, t] * model.discount_rates[p]
             for p in model.Expansion
@@ -85,22 +86,22 @@ class ContingencyPositive(Contingency):
     duration: PositiveFloat
 
     @property
-    def contingency_pos(self):
+    def contingency_pos(self) -> None:
         return "cont_pos_" + self.name
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         setattr(
             model, self.contingency_pos, en.Var(model.Expansion, model.Time, initialize=0, domain=en.NonNegativeReals)
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
-        def export_flow_con(model: EchoConcreteModel, p, t):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
+        def export_flow_con(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return (
                 getattr(model, self.contingency_pos)[p, t]
                 <= (port.export_constraint_value - getattr(model, port.port_name)[p, t]) * -1
             )
 
-        def import_flow_con(model: EchoConcreteModel, p, t):
+        def import_flow_con(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
             return getattr(model, self.contingency_pos)[p, t] <= (
                 port.import_constraint_value - getattr(model, port.port_name)[p, t]
             )
@@ -127,7 +128,7 @@ class ContingencyPositive(Contingency):
         initial_port = self.component.edge_ports[0][0]
         if isinstance(initial_port, Storage):
 
-            def contingency_energy_limited_soc(model: EchoConcreteModel, p, t):
+            def contingency_energy_limited_soc(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
                 return (
                     getattr(model, self.contingency_pos)[p, t] * self.duration / 60
                     <= initial_port.max_capacity - getattr(model, initial_port.soc_value)[p, t]
@@ -139,7 +140,7 @@ class ContingencyPositive(Contingency):
                 en.Constraint(model.Expansion, model.Time, rule=contingency_energy_limited_soc),
             )
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> None:
         return (
             sum(
                 getattr(model, self.contingency_pos)[p, t] * model.discount_rates[p]

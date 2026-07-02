@@ -1,7 +1,7 @@
-from typing import Optional
-
+import pandas as pd
 import pyomo.environ as en
 from pydantic import NonNegativeFloat, root_validator
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Units
 from echo.models.agnostic import FixedPort, FlexPort, InputOutputNode, OffOrConstrainedPort
@@ -45,7 +45,7 @@ class GasBoilerFixedCOP(InputOutputNode):
         )
         self.ports[self.output_port_ref] = FlexPort(units=self.output_port_unit)
 
-    def set_ports(self, gas_input_port: OffOrConstrainedPort, thermal_output_port: FlexPort):
+    def set_ports(self, gas_input_port: OffOrConstrainedPort, thermal_output_port: FlexPort) -> None:
         # Discard existing ports
         self.ports.clear()
         # Add the new ports
@@ -54,10 +54,10 @@ class GasBoilerFixedCOP(InputOutputNode):
         self.ports[self.input_port_ref] = gas_input_port
         self.ports[self.output_port_ref] = thermal_output_port
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
-        super(GasBoilerFixedCOP, self).apply_node_constraints(model)
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
+        super().apply_node_constraints(model)
 
-        def node_constraint(model: EchoConcreteModel, p, t):
+        def node_constraint(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             p_in = getattr(model, self.ports[self.input_port_ref].port_name)
             p_out = getattr(model, self.ports[self.output_port_ref].port_name)
             if p == 0 and t == 0:
@@ -91,17 +91,17 @@ class TempControlledBoiler(InputOutputNode):
     return_temp_bounds: tuple = (50, 80)
     deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
     cop: float  # coefficient of performance - determines how much of the input energy is delivered as heating energy
-    startup_cop: Optional[float]
+    startup_cop: float | None
 
     # pyomo vars
-    is_on: Optional[str]
+    is_on: str | None
     return_t: str = ""
     exit_t: str = ""
 
     check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
     set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self.ports[self.input_port_ref] = OffOrConstrainedPort(
             units=self.input_port_unit, lower_bound=self.min_input, upper_bound=self.max_input
@@ -113,8 +113,8 @@ class TempControlledBoiler(InputOutputNode):
         self.return_t = "inlet_temp_" + self.node_name
         self.exit_t = "outlet_temp_" + self.node_name
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(TempControlledBoiler, self).add_node_to_model(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
+        super().add_node_to_model(model, profile)
         # Define exit and return temperature variables and bound these appropriately
         setattr(
             model,
@@ -127,12 +127,12 @@ class TempControlledBoiler(InputOutputNode):
             en.Var(model.Expansion, model.Time, initialize=0, bounds=self.exit_temp_bounds, domain=en.Reals),
         )
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         # Retrieve some variables
         input_kw = getattr(model, self.ports[self.input_port_ref].port_name)
         output_kw = getattr(model, self.ports[self.output_port_ref].port_name)
 
-        def constraint2(model: EchoConcreteModel, p, t):
+        def constraint2(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             """return temp at time t - exiting temp at time t == energy removed at t"""
             return (
                 getattr(model, self.return_t)[p, t] - getattr(model, self.exit_t)[p, t]
@@ -142,7 +142,7 @@ class TempControlledBoiler(InputOutputNode):
             model, "boiler_temp_con2_" + self.node_name, en.Constraint(model.Expansion, model.Time, rule=constraint2)
         )
 
-        def constraint3(model: EchoConcreteModel, p, t):
+        def constraint3(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             """exiting temp at time t = return temp at time t + energy added at time t"""
             return (
                 input_kw[p, t]

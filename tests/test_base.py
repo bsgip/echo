@@ -1,16 +1,46 @@
-from __future__ import division
-
+import numpy as np
 import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
-from echo.models.base import Node, OptimisationGraph
+from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.electrical import EVV0G, EVV1G, EVV2G, ElectricalGeneration, Inverter
 from echo.models.prebuilt import FlexElectricalNode
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import ImportTariff
 from echo.optimiser import optimise
+
+
+def test_port_proccess_initial_value_types():
+    port = Port(port_name="port_name")
+
+    # Assert the initial value is None before it's set
+    assert port.initial_value is None
+
+    # Assert list of ints is processed
+    port.process_initial_value(initial_val=[1, 2, 3])
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert list of floats is processed
+    port.process_initial_value(initial_val=[1.0, 2.0, 3.0])
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
+
+    # Assert a dict of ints is processed
+    port.process_initial_value(initial_val={(0, 0): 1, (0, 1): 2, (0, 2): 3})
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert a dict of ints is processed
+    port.process_initial_value(initial_val={(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0})
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
+
+    # Assert a numpy array of ints is processed
+    port.process_initial_value(initial_val=np.array([1, 2, 3]))
+    assert port.initial_value == {(0, 0): 1, (0, 1): 2, (0, 2): 3}
+
+    # Assert a numpy array of floats is processed
+    port.process_initial_value(initial_val=np.array([1.0, 2.0, 3.0]))
+    assert port.initial_value == {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}
 
 
 def test_port_reference_is_made_in_edge():
@@ -49,10 +79,10 @@ def test_rebuild_all_edges():
     """Tests the rebuild_all_edges function usage after stateful data has been injected."""
 
     def assert_node_edge_port_values(
-        v0g_node_port_value: float,
-        v0g_edge_port_value: float,
-        v12g_node_value: float | None,
-        v12g_edge_value: float | None,
+        v0g_node_port_value: dict[tuple[int, int], float] | None,
+        v0g_edge_port_value: dict[tuple[int, int], float] | None,
+        v12g_node_value: dict[tuple[int, int], float] | None,
+        v12g_edge_value: dict[tuple[int, int], float] | None,
     ):
         # Assert that stateful attrs are blank
         if isinstance(ev, EVV0G):
@@ -61,7 +91,6 @@ def test_rebuild_all_edges():
 
             # Assert ev port on the edge is blank
             for edge_name in system.edge_list():
-                print(edge_name)
                 if "ev" in edge_name:
                     assert ev.ports["ev_to_cp"].initial_value == v0g_edge_port_value
         else:
@@ -70,7 +99,6 @@ def test_rebuild_all_edges():
 
             # Assert ev port on the edge is blank
             for edge_name in system.edge_list():
-                print(edge_name)
                 if "ev" in edge_name:
                     assert ev.ports["ev_to_cp"].active_periods == v12g_edge_value
 
@@ -145,8 +173,8 @@ def test_rebuild_all_edges():
         pv.add_generation_profile_from_array(solar_data, expansion_periods)
 
         assert_node_edge_port_values(
-            v0g_node_port_value=0,
-            v0g_edge_port_value=0,
+            v0g_node_port_value=None,
+            v0g_edge_port_value=None,
             v12g_node_value=None,
             v12g_edge_value=None,
         )

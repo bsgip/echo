@@ -2,6 +2,25 @@
 
 ## Releases
 
+### v2.2.2 (2026-06-26)
+
+#### Adds
+
+- uv as default package manager.
+- ty as default type checker. This is not yet implemented in `.github/workflows/linttest.yml`.
+
+#### Changes
+
+- Bumps supported python version to 3.11 - 3.14 inclusive.
+- Changes linter from black to ruff.
+- Changes package default package manager from pip to uv.
+- Implements all fixes suggested by ruff.
+- Updates README.md to reflect change to uv.
+- Updates `.github/workflows/linttest.yml` to use uv, ruff and ty (not yet implemented). Runs ruff and pytest across python versions 3.11-3.14 inclusive.
+- `echo.objectives.tariff.DemandTariffObjective.add_constraints()` uses a closure construction. These constructions don't work in python. Has been reimplemented using `functools.partial`.
+- Fixes off-by-one error in `echo.objectives.tariff.DemandCharge._get_active_periods()`.
+- `echo.models.agnostic.PartitionedMultiCommodityTellegenNode.apply_node_constraints()` gets around the above closure issue using a confusing implicit passing of looping variables. This has been reimplemented using `functools.partial`.
+
 ### v2.2.1 (2026-06-05)
 
 #### Adds

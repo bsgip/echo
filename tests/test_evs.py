@@ -1,7 +1,3 @@
-from __future__ import division
-
-from typing import List, Tuple
-
 import numpy as np
 import pytest
 
@@ -224,7 +220,7 @@ def test_v0g_with_stateful_data_injection():
     """
 
     # Available and usage combinations that work
-    good_available_usages: List[Tuple[np.array, np.array]] = [
+    good_available_usages: list[tuple[np.array, np.array]] = [
         (np.array([1, 1, 1, 1, 1, 1]), np.array([0, 0, 0, 0, 0, 0])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([1, 1, 1, 1, 1, 1])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([0, 0, 0, 0, 0, 0])),
@@ -1463,7 +1459,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
     """Ensure stateful data injection behaves appropriately for EVV1G with different parameters."""
 
     # Available and usage combinations that work
-    good_available_usages: List[Tuple[np.array, np.array]] = [
+    good_available_usages: list[tuple[np.array, np.array]] = [
         (np.array([1, 1, 1, 1, 1, 1]), np.array([0, 0, 0, 0, 0, 0])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([1, 1, 1, 1, 1, 1])),
         (np.array([0, 0, 0, 0, 0, 0]), np.array([0, 0, 0, 0, 0, 0])),
@@ -1471,7 +1467,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
         (np.array([1, 1, 0, 0, 1, 0]), np.array([0, 0, 25, 20, 0, 10])),
     ]
 
-    good_socs: List[np.array] = [
+    good_socs: list[np.array] = [
         np.array([50, 50, 50, 50, 50, 50]),
         np.array([49, 48, 47, 46, 45, 44]),
         np.array([50, 50, 50, 50, 50, 50]),
@@ -1591,7 +1587,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
 def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
     """Inject bad stateful data which should be detected and an error raised."""
 
-    bad_available_usages: List[Tuple[list, list]] = [
+    bad_available_usages: list[tuple[list, list]] = [
         ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]),
         ([0, 0, 1, 1, 0, 0], [0, 0, 1, 1, 0, 0]),
         ([1, 1, 0, 0, 1, 1], [0, 0, 40, 40, 0, 0]),
@@ -3039,7 +3035,7 @@ def test_ev_demand_profile_set_stateful_attrs():
     assert isinstance(ev.port_uid, str)
 
     # Inject some demand data into it
-    assert ev.ports["demand"].initial_value == 0
+    assert ev.ports["demand"].initial_value is None
     ev.set_stateful_attrs(demand=[1, 2, 3, 4, 5])
     assert isinstance(ev.ports["demand"].initial_value, dict)
     assert len(ev.ports["demand"].initial_value.keys()) == 5
@@ -3445,8 +3441,6 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
         interval_duration=interval_duration,
     )
 
-    # Ensure the ports on the edge connecting the ev and the connection_point
-    system.get_node("ev").ports
     # Optimising after setting stateful parameters will work now
     optimise(
         scenario_settings=ScenarioSettings(

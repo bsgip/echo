@@ -10,11 +10,7 @@ from echo.models.base import OptimisationGraph
 from echo.models.prebuilt import Battery, FlexNode, Load
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
-from echo.objectives.tariff import (
-    DemandTariffObjective,
-    ImportDemandCharge,
-    ThroughputCost,
-)
+from echo.objectives.tariff import DemandTariffObjective, ImportDemandCharge, ThroughputCost
 from echo.optimiser import optimise
 
 SOLVER = os.environ.get("OPTIMISER_ENGINE", "cplex")

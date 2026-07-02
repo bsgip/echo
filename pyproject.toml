@@ -16,42 +16,42 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "deprecated>=1.3.1,<2",
-    "networkx>=3.1,<4",
-    "numpy>=1.26,<2",
-    "orjson>=3.9,<4",
-    "pandas>=2.1,<3",
-    "plotly>=5.22,<6",
-    "pydantic>=1.10,<2",
-    "pyomo>=6.6,<7",
-    "scikit-learn>=1.3,<2",
-    "seaborn>=0.12,<1",
-    "shortuuid>=1.0.11,<2",
-    "typing-extensions>=4.7,<5",
-    "scipy>=1.14.1,<2",
+  "deprecated>=1.3.1,<2",
+  "matplotlib>=3.11,<4",
+  "networkx>=3.1,<4",
+  "numpy>=1.26,<2",
+  "orjson>=3.9,<4",
+  "pandas>=2.1,<3",
+  "plotly>=5.22,<6",
+  "pydantic>=1.10,<2",
+  "pyomo>=6.6,<7",
+  "scikit-learn>=1.3,<2",
+  "seaborn>=0.12,<1",
+  "shortuuid>=1.0.11,<2",
+  "typing-extensions>=4.7,<5",
+  "scipy>=1.14.1,<2",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 authors = [
-  {name = "Ruth Kravis"},
-  {name = "Johannes Hendriks"},
-  {name = "Anna Skobleva"},
-  {name = "Dora He"},
-  {name = "Benjamin Weise"},
-  {name = "Josh Vote"},
-  {name = "Antoine Desmet"},
-  {name = "Michael Thomas", email = "michael.thomas@anu.edu.au"},
-  {name = "Mike Turner", email = "mike.turner@anu.edu.au"}
+  { name = "Ruth Kravis" },
+  { name = "Johannes Hendriks" },
+  { name = "Anna Skobleva" },
+  { name = "Dora He" },
+  { name = "Benjamin Weise" },
+  { name = "Josh Vote" },
+  { name = "Antoine Desmet" },
+  { name = "Michael Thomas", email = "michael.thomas@anu.edu.au" },
+  { name = "Mike Turner", email = "mike.turner@anu.edu.au" },
 ]
 maintainers = [
-  {name = "Michael Thomas", email = "michael.thomas@anu.edu.au"},
-  {name = "Mike Turner", email = "mike.turner@anu.edu.au"}
+  { name = "Michael Thomas", email = "michael.thomas@anu.edu.au" },
+  { name = "Mike Turner", email = "mike.turner@anu.edu.au" },
 ]
 
 
@@ -60,21 +60,15 @@ maintainers = [
 #Documentation = "https://PROJECTNAME.readthedocs.io"
 Repository = "https://github.com/bsip/echo"
 Issues = "https://github.com/bsgip/echo/issues"
-Changelog = "https://github.com/bsgip/echo/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/bsgip/echo/blob/main/CHANGELOG.md"
 
 
 [dependency-groups]
-linters = ["bandit[toml]", "black", "coverage", "flake8", "Flake8-pyproject", "mypy", "pytest-cov","types-pytz" ]
-test = ["hypothesis[numpy]", "pytest", "pytest-timeout"]
+linters = ["bandit[toml]", "codespell", "coverage", "pytest-cov", "ruff", "ty"]
+test = ["hypothesis[numpy]", "pytest", "pytest-timeout", "pytest-xdist"]
 docs = ["sphinx", "sphinx-rtd-theme"]
-dev = [
-    {include-group = "linters"},
-    {include-group = "test"},
-]
-all = [
-    {include-group = "dev"},
-    {include-group = "docs"},
-]
+dev = [{ include-group = "linters" }, { include-group = "test" }]
+all = [{ include-group = "dev" }, { include-group = "docs" }]
 
 
 [tool.setuptools.package-data]
@@ -88,53 +82,33 @@ readme = { file = ["README.md"], content-type = "text/markdown" }
 [tool.bandit]
 exclude_dirs = ["tests"]
 
-
-[tool.black]
+[tool.ruff]
 line-length = 120
+extend-exclude = ["examples"]
 
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "S", "C90", "B", "UP", "ANN", "N"]
 
-# flake8 configuration permitted in pyproject.toml with "Flake8-pyproject".
-[tool.flake8]
-max-line-length = 120
-max-complexity = 20
-exclude = [
-    ".*/", # all hidden folders
-    "build",
-    "docs",
-    "tests",
-    "scripts",
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.pep8-naming]
+# Allow pydantic's @validator and @root_validator decorators to trigger class method treatment. 
+classmethod-decorators = [
+  "classmethod",
+  "pydantic.validator",
+  "pydantic.root_validator",
 ]
 
-[tool.isort]
-profile = "black"
-line_length = 120
+[tool.ruff.lint.per-file-ignores]
+"src/**" = ["ANN003"]
+"tests/**" = ["S", "ANN", "N", "B017"]
 
-
-[tool.mypy]
-exclude = ["docs/", "scripts/"]
-check_untyped_defs = true
-
-# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
-[[tool.mypy.overrides]]
-module = "pyomo.*"
-ignore_missing_imports = true
-
-# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
-[[tool.mypy.overrides]]
-module = "matplotlib.*"
-ignore_missing_imports = true
-
-# This disables the error "Skipping analyzing..." due to a lack of third party stubs / type hints
-[[tool.mypy.overrides]]
-module = "networkx.*"
-ignore_missing_imports = true
+[tool.ty.src]
+include = ["src", "tests"]
 
 
 [tool.pytest.ini_options]
 pythonpath = ["src/"]
 testpaths = "tests"
 filterwarnings = ["error::DeprecationWarning"]
-
-
-
-

@@ -28,7 +28,7 @@ INTERVAL_DURATION = 30
 NUM_EXPANSION_PERIODS = 1
 
 
-def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True):
+def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True) -> float:
     """Given volume of the cylinder in cubic meters, calculate surface area. Assuming height to diameter ration H/D=3.
 
     If include_bottom is False, do not include bottom surface.

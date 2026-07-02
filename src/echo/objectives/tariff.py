@@ -1,20 +1,14 @@
+from collections.abc import Callable
 from datetime import time
 from enum import Enum
-from typing import List, Optional, Union
+from functools import partial
 
 import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import (
-    Field,
-    NonNegativeFloat,
-    NonPositiveFloat,
-    PositiveFloat,
-    PositiveInt,
-    root_validator,
-    validator,
-)
+from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from pyomo.core.expr import InequalityExpression
 
 from echo.exceptions import validate
 from echo.models.base import BaseModel as EchoBaseModel
@@ -25,14 +19,14 @@ from echo.validators import ArrayType
 
 
 class Tariff(Objective):
-    tariff_array: Union[ArrayType, list]  # tariff array prices should always be positive
-    expansion_periods: Optional[PositiveInt] = 1
+    tariff_array: ArrayType | list  # tariff array prices should always be positive
+    expansion_periods: PositiveInt | None = 1
 
     @staticmethod
-    def return_tariff_dict(array, expansion_periods):
+    def return_tariff_dict(array: list[float] | np.ndarray, expansion_periods: int) -> dict:
         # todo update this to work for multiple expansion periods
         keys = [(x, i) for x in range(expansion_periods) for i in range(len(array))]
-        vals = dict(zip(keys, array))
+        vals = dict(zip(keys, array, strict=True))
         return vals
 
 
@@ -40,28 +34,28 @@ class ImportTariff(Tariff):
     """The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
 
     component: Port
-    import_tariff_dict: Optional[dict]
+    import_tariff_dict: dict | None
 
     @property
-    def import_tariff(self):
+    def import_tariff(self) -> str:
         return "import_tariff_" + self.name
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
-    def create_params(self, model: EchoConcreteModel, df):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
             model,
             self.import_tariff,
             en.Param(model.Expansion, model.Time, initialize=self.import_tariff_dict),
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return sum(
             getattr(model, self.component.pos)[p, t]
             * getattr(model, self.import_tariff)[p, t]
@@ -78,28 +72,28 @@ class ExportTariff(Tariff):
     to the negative (exporting) component of the specified port."""
 
     component: Port
-    export_tariff_dict: Optional[dict]
+    export_tariff_dict: dict | None
 
     @property
-    def export_tariff(self):
+    def export_tariff(self) -> str:
         return "export_tariff_" + self.name
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
-    def create_params(self, model: EchoConcreteModel, df):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
             model,
             self.export_tariff,
             en.Param(model.Expansion, model.Time, initialize=self.export_tariff_dict),
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return sum(
             getattr(model, self.component.neg)[p, t]
             * getattr(model, self.export_tariff)[p, t]
@@ -122,11 +116,11 @@ class BlockTariff(Objective):
     reset_index: en.RangeSet
 
     @property
-    def num_price_bands(self):
+    def num_price_bands(self) -> int:
         return len(self.rates)
 
     @root_validator
-    def check_block_rates(cls, values):
+    def check_block_rates(cls, values: dict) -> dict:
         validate(
             len(values.get("blocks")) + 1 == len(values.get("rates")),
             "Enter one more rate than num blocks",
@@ -134,7 +128,7 @@ class BlockTariff(Objective):
         return values
 
     @root_validator(pre=True)
-    def set_reset_index(cls, values):
+    def set_reset_index(cls, values: dict) -> dict:
         rp = values.get("reset_periods")
         if rp is not None:
             values["reset_index"] = en.RangeSet(0, len(rp) - 1)
@@ -142,7 +136,7 @@ class BlockTariff(Objective):
             values["reset_index"] = en.RangeSet(0, 0)
         return values
 
-    def get_block_var_name(self, i):
+    def get_block_var_name(self, i: int) -> str:
         return "block_" + str(i)
 
     def _get_active_periods(
@@ -179,10 +173,10 @@ class BlockTariff(Objective):
 
 class BlockImportTariff(BlockTariff):
     @property
-    def window_active(self):
+    def window_active(self) -> str:
         return "window_active_" + self.name
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         self.component.constrain_pos_neg(model)
         for i in range(self.num_price_bands):
             # Create a variable for each price band, and bound it
@@ -200,8 +194,8 @@ class BlockImportTariff(BlockTariff):
             en.Param(model.Expansion, self.reset_index, model.Time, initialize=initial_val),
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
-        def total_rule(model: EchoConcreteModel, r):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
+        def total_rule(model: EchoConcreteModel, r: int) -> InequalityExpression:
             all_blocks = 0
             for i in range(self.num_price_bands):
                 var = self.get_block_var_name(i)
@@ -217,7 +211,7 @@ class BlockImportTariff(BlockTariff):
         con_name = "total_energy_con_" + self.name
         setattr(model, con_name, en.Constraint(self.reset_index, rule=total_rule))
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         total = 0
         for i in range(self.num_price_bands):
             total += self.rates[i] * sum(getattr(model, self.get_block_var_name(i))[r] for r in self.reset_index)
@@ -228,27 +222,27 @@ class PathTariff(Tariff):
     """The PathTariff objective applies a cost per kW of power flow on a specified path."""
 
     component: Path
-    path_tariff_dict: Optional[dict]
+    path_tariff_dict: dict | None
 
     @property
-    def path_tariff(self):
+    def path_tariff(self) -> str:
         return "path_tariff_" + self.name
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
-    def create_params(self, model: EchoConcreteModel, df):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
             model,
             self.path_tariff,
             en.Param(model.Expansion, model.Time, initialize=self.path_tariff_dict),
         )
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         pass
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         return sum(
             getattr(model, self.component.flow_value)[p, t]
             * getattr(model, self.path_tariff)[p, t]
@@ -264,11 +258,11 @@ class ThroughputCost(Objective):
     component: Port
     rate: PositiveFloat
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         obj = (
             sum(
                 (getattr(model, self.component.pos)[p, t] - getattr(model, self.component.neg)[p, t])
@@ -328,7 +322,7 @@ class TimePeriod(EchoBaseModel):
             & (df.index.weekday >= allowed_days_of_week_start)
         ).astype(int)
 
-    def overlaps(self, other: "TimePeriod"):
+    def overlaps(self, other: "TimePeriod") -> bool:
         """Determines whether two :obj:`TimePeriod` objects are overlapping.
 
         Intended use if for validating :obj:`Window` objects.
@@ -372,10 +366,10 @@ class Window(EchoBaseModel):
     """Class for specifying window over which a tariff is calculated using datetimes"""
 
     time_periods: list[TimePeriod]
-    reset_periods: Optional[ResetPeriod] = None
+    reset_periods: ResetPeriod | None = None
 
     @validator("time_periods")
-    def non_overlapping_periods(cls, v):
+    def non_overlapping_periods(cls, v: list[TimePeriod]) -> list[TimePeriod]:
         for i in range(len(v)):
             for j in range(i + 1, len(v)):
                 if v[i].overlaps(v[j]):
@@ -390,17 +384,17 @@ class Window(EchoBaseModel):
         time_period_stack = np.column_stack([period.to_bool(df) for period in self.time_periods])
         return time_period_stack.any(axis=1).astype(int)
 
-    def get_reset_period_array(self, df: pd.DataFrame) -> list:
+    def get_reset_period_array(self, df: pd.DataFrame) -> list[int]:
         """Returns an array where each value is the number of time intervals within which the demand charge is
         calculated."""
         interval_duration = (df.index[1] - df.index[0]).seconds // 60  # get the interval duration in minutes
         total_intervals = len(df)
 
-        def _find_rollover(df, interval_duration):
+        def _find_rollover(df: pd.DataFrame, interval_duration: int) -> list[int]:
             """Finds when there is a rollover for a specified time period (year, month), and calculates the number
             of intervals in each rollover period"""
 
-            def perform_rollover_calc(diff_array):
+            def perform_rollover_calc(diff_array: np.ndarray) -> list[int]:
                 _reset_periods = []
                 # initialise a total to count how many intervals per reset period.
                 # =1 because the diff array has length n-1
@@ -458,8 +452,8 @@ class DemandCharge(EchoBaseModel):
     name: str
     rate: NonNegativeFloat
     min_demand: float = 0.0
-    window_array: Union[ArrayType, List]
-    reset_periods: Union[ArrayType, List]
+    window_array: ArrayType | list
+    reset_periods: ArrayType | list
     import_demand: bool = False
     export_demand: bool = False
 
@@ -467,23 +461,21 @@ class DemandCharge(EchoBaseModel):
     reset_index: en.RangeSet  # index for separating different reset periods
 
     @property
-    def max_demand_val(self):
+    def max_demand_val(self) -> str:
         return "max_demand_" + self.name
 
     @property
-    def window_active(self):
+    def window_active(self) -> str:
         return "window_active_" + self.name
 
     @root_validator(pre=True)
-    def check_reset_periods(cls, values):
+    def check_reset_periods(cls, values: dict) -> dict:
         rp = values.get("reset_periods")
         window_array = values.get("window_array")
         if rp is not None:
             validate(
                 sum(rp) == len(window_array),
-                "Sum of reset period lengths ({}) is not equal to window array length ({}).".format(
-                    sum(rp), len(window_array)
-                ),
+                f"Sum of reset period lengths ({sum(rp)}) is not equal to window array length ({len(window_array)}).",
             )
             values["num_reset_periods"] = len(rp)
         else:
@@ -493,10 +485,10 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @root_validator
-    def check_import_or_export(cls, values):
+    def check_import_or_export(cls, values: dict) -> dict:
         validate(
             values.get("import_demand") is True or values.get("export_demand") is True,
-            str(
+            (
                 "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
                 " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
                 "the demand charge to the demand tariff objective."
@@ -505,7 +497,7 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @root_validator(pre=True)
-    def check_name(cls, values):
+    def check_name(cls, values: dict) -> dict:
         if not values.get("uid"):
             values["uid"] = shortuuid.uuid()
 
@@ -514,30 +506,36 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @staticmethod
-    def _get_active_periods(window_bool, reset_periods):  # todo only works for single expansion period
-        """
-        Creates a dict for initialising the window_active pyomo var
+    def _get_active_periods(window_bool: np.ndarray, reset_periods: list[int]) -> dict[tuple[int, int, int], float]:
+        # todo only works for single expansion period
+        """Creates a dict for initialising the window_active pyomo var
+
         Args:
             window_bool: array of when charge applies, over entire optimisation period
             reset_periods: list of how many intervals per period in which a tariff is calculated.
         Returns:
             initial_window_val: triple indexed dict (expansion, reset index, time) for initialising demand charge var
         """
+
         initial_window_val = {}
         n_intervals = len(window_bool)
         num_resets = len(reset_periods)
         blank = np.zeros([num_resets, n_intervals])  # Create template blank array that we will populate with 1s
         index = 0  # for indexing each reset period
+
         for i in range(num_resets):
-            blank[i, index : index + reset_periods[i] - 1] = 1.0  # put the right number of 1s in # noqa E203
-            index += reset_periods[i] - 1
+            blank[i, index : index + reset_periods[i]] = 1.0
+            index += reset_periods[i]
             new_window = np.array(window_bool) * blank[i]  # use the blank array as a filter on the window bool array
             for t in range(n_intervals):
                 initial_window_val[(0, i, t)] = new_window[t]  # get the array into a dict with the right keys
+
         return initial_window_val
 
-    def create_params(self, model: EchoConcreteModel, df):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
+
         initial_val = self._get_active_periods(self.window_array, self.reset_periods)
+
         # Initialise binary parameter for when the demand charge applies, indexed by Expansion, reset period, Time
         setattr(
             model,
@@ -551,7 +549,7 @@ class DemandCharge(EchoBaseModel):
             ),
         )
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         if self.import_demand is True:
             setattr(
                 model,
@@ -565,7 +563,7 @@ class DemandCharge(EchoBaseModel):
                 en.Var(self.reset_index, initialize=0, domain=en.NonPositiveReals),
             )
 
-    def objective_expr(self, model: EchoConcreteModel):
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         objective = 0
         if self.import_demand:
             objective += sum(getattr(model, self.max_demand_val)[r] * self.rate for r in self.reset_index)
@@ -573,20 +571,32 @@ class DemandCharge(EchoBaseModel):
             objective += sum(getattr(model, self.max_demand_val)[r] * self.rate * -1 for r in self.reset_index)
         return objective
 
-    def get_objective_total(self, model: EchoConcreteModel):
+    def get_objective_total(self, model: EchoConcreteModel) -> float:
         expr = en.value(self.objective_expr(model))
         return expr
+
+
+class ImportDemandCharge(DemandCharge):
+    import_demand = True
+    export_demand = False
+    min_demand: NonNegativeFloat = 0.0
+
+
+class ExportDemandCharge(DemandCharge):
+    import_demand = False
+    export_demand = True
+    min_demand: NonPositiveFloat = 0.0
 
 
 class DemandTariffObjective(Objective):
     """A demand tariff objective contains a set of one or more demand charges."""
 
     component: Port
-    demand_charges: List[DemandCharge]
-    expansion_periods: Optional[PositiveInt] = 1
+    demand_charges: list[DemandCharge | ImportDemandCharge | ExportDemandCharge]
+    expansion_periods: PositiveInt | None = 1
 
-    def verify_objective(self, model: EchoConcreteModel, df):
-        def verify_non_overlapping():
+    def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
+        def verify_non_overlapping() -> None:
             """Check that windows are not overlapping if multiple demand charges defined"""
             prev_window = np.array([])
             prev_dc = None
@@ -600,7 +610,7 @@ class DemandTariffObjective(Objective):
                     prev_dc = dc
                     prev_window = np.array(dc.window_array)
 
-        def verify_same_length_windows():
+        def verify_same_length_windows() -> None:
             """Check that all windows have the same length, and that this length matches the number of model
             time intervals"""
 
@@ -622,22 +632,31 @@ class DemandTariffObjective(Objective):
         verify_non_overlapping()
         verify_same_length_windows()
 
-    def create_params(self, model: EchoConcreteModel, df):
+    def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         for dc in self.demand_charges:
             dc.create_params(model, df)
 
-    def create_vars(self, model: EchoConcreteModel):
+    def create_vars(self, model: EchoConcreteModel) -> None:
         for dc in self.demand_charges:
             dc.create_vars(model)
 
-    def apply_constraints(self, model: EchoConcreteModel):
+    def apply_constraints(self, model: EchoConcreteModel, return_rules: bool = False) -> None | list[Callable]:
         if hasattr(model, self.component.pos) is False:
             self.component.constrain_pos_neg(model)
+
+        if return_rules:
+            rules = []
 
         for dc in self.demand_charges:
             if dc.import_demand is True:
 
-                def max_import_demand_rule(model: EchoConcreteModel, p, t, r):
+                def max_import_demand_rule(
+                    dc: ImportDemandCharge,
+                    model: EchoConcreteModel,
+                    p: int,
+                    t: int,
+                    r: int,
+                ) -> InequalityExpression:
                     return (
                         getattr(model, dc.max_demand_val)[r]
                         >= (getattr(model, self.component.pos)[p, t] - dc.min_demand)
@@ -651,12 +670,22 @@ class DemandTariffObjective(Objective):
                         model.Expansion,
                         model.Time,
                         dc.reset_index,
-                        rule=max_import_demand_rule,
+                        rule=partial(max_import_demand_rule, dc),
                     ),
                 )
+
+                if return_rules:
+                    rules.append(max_import_demand_rule)
+
             elif dc.export_demand is True:
 
-                def max_export_demand_rule(model: EchoConcreteModel, p, t, r):
+                def max_export_demand_rule(
+                    dc: ExportDemandCharge,
+                    model: EchoConcreteModel,
+                    p: int,
+                    t: int,
+                    r: int,
+                ) -> InequalityExpression:
                     return (
                         getattr(model, dc.max_demand_val)[r]
                         <= (getattr(model, self.component.neg)[p, t] - dc.min_demand)
@@ -670,24 +699,17 @@ class DemandTariffObjective(Objective):
                         model.Expansion,
                         model.Time,
                         dc.reset_index,
-                        rule=max_export_demand_rule,
+                        rule=partial(max_export_demand_rule, dc),
                     ),
                 )
+                if return_rules:
+                    rules.append(max_export_demand_rule)
 
-    def objective_expr(self, model: EchoConcreteModel):
+        if return_rules:
+            return rules
+
+    def objective_expr(self, model: EchoConcreteModel) -> float:
         objective = 0
         for dc in self.demand_charges:
             objective += dc.objective_expr(model)
         return objective
-
-
-class ImportDemandCharge(DemandCharge):
-    import_demand = True
-    export_demand = False
-    min_demand: NonNegativeFloat = 0.0
-
-
-class ExportDemandCharge(DemandCharge):
-    import_demand = False
-    export_demand = True
-    min_demand: NonPositiveFloat = 0.0

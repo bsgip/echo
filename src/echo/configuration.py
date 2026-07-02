@@ -18,9 +18,9 @@ class Units(Enum):
     """Joules per second"""
     KWh = 5
     """Electrical energy kWh"""
-    kVA = 6
+    KVA = 6
     """Instantaneous electrical apparent power kVA """
-    kVAR = 7
+    KVAR = 7
     """Instantaneous electrical reactive power kVAR """
     LPS = 8
     """Liquid commodity flow in litres per second """

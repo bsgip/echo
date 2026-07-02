@@ -1,7 +1,7 @@
 import warnings
+from collections.abc import Collection, Generator
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
-from typing import Collection, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = se
 
 
 @contextmanager
-def logged_stdout(logfile: Optional[str], mode: str = "w"):
+def logged_stdout(logfile: str | None, mode: str = "w") -> Generator[None]:
     """Context manager that while held open will redirect all stdout to logfile. If the logfile is None then
     no redirection will occur"""
     if logfile is None:
@@ -47,12 +47,12 @@ class OptimisationResult:
     scenario_settings: ScenarioSettings
     objective: en.numeric_expr.NumericExpression
     model: EchoConcreteModel
-    objective_set: Optional[ObjectiveSet]
+    objective_set: ObjectiveSet | None
     graph: OptimisationGraph
     opt_status: SolverStatus
     termination_condition: TerminationCondition
 
-    def df(self):
+    def df(self) -> pd.DataFrame:
         """
         Extract all vars from the solution as a dataframe
         """
@@ -70,7 +70,7 @@ class OptimisationResult:
 
         return df
 
-    def df_by_node(self):
+    def df_by_node(self) -> pd.DataFrame:
         """Returns a df of results by node, using the port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
@@ -80,7 +80,7 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
-    def df_by_port(self):
+    def df_by_port(self) -> pd.DataFrame:
         """Returns a df of results by port, using port names given in each node's 'ports' dict"""
         dct = {}
         for node_name, node in self.graph.node_obj.items():
@@ -94,15 +94,20 @@ class OptimisationResult:
         df = pd.DataFrame(dct)
         return df
 
-    def df_objective_by_port(self, index={1}):
+    def df_objective_by_port(self, index: set | None = None) -> pd.DataFrame:
         """Return the value of each objective assigned to each port."""
+
+        # If the index is None, set it to {1}
+        if index is None:
+            index = {1}
+
         dct = {}
         for obj in self.objective_set.objective_list:
             dct[obj.component.port_name + "-" + obj.name] = self.get_single_objective_total_value(obj)
 
         return pd.DataFrame(dct, index=index)
 
-    def values(self, variable_name, expansion=0):
+    def values(self, variable_name: str, expansion: int = 0) -> np.ndarray:
         """Returns the value of a single specified variable during a single specified expansion period."""
 
         var_obj = getattr(self.model, variable_name)
@@ -132,22 +137,22 @@ class OptimisationResult:
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj: Node, expansion_period=0):
+    def node_values(self, node_obj: Node, expansion_period: int = 0) -> dict[str, np.ndarray]:
         """Returns all values of all ports in a specified node for a single specified expansion period."""
         outputs = {}
         for name, var_obj in node_obj.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
-    def get_single_objective_total_value(self, objective_obj: Objective):
+    def get_single_objective_total_value(self, objective_obj: Objective) -> float:
         """Returns the value of a single objective."""
         return objective_obj.get_objective_total(model=self.model)
 
-    def get_total_objective_value(self):
+    def get_total_objective_value(self) -> float:
         """Returns the value of the objective function."""
         return en.value(self.objective)
 
-    def get_total_objective_at_port(self, port_obj: Port):
+    def get_total_objective_at_port(self, port_obj: Port) -> float:
         """Sums all objectives that take the defined port as their component."""
         total = 0
         if self.objective_set:
@@ -157,7 +162,7 @@ class OptimisationResult:
         return total
 
 
-def validate_network_graph(graph: OptimisationGraph):
+def validate_network_graph(graph: OptimisationGraph) -> None:
     """
     Validates that a pyomo model can be built from the provided network graph. Checks for:
     - name consistency between objects (e.g. node.node_name) and graph nodes
@@ -166,7 +171,7 @@ def validate_network_graph(graph: OptimisationGraph):
     for node_name, node_obj in graph.node_obj.items():
         validate(
             node_obj.node_name == node_name,
-            "Node {} name has been updated after being added to the network graph.".format(node_name),
+            f"Node {node_name} name has been updated after being added to the network graph.",
         )
 
     graph.verify_graph()
@@ -175,14 +180,16 @@ def validate_network_graph(graph: OptimisationGraph):
 def build_model_and_objective(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    smallM: float,
-    bigM: int,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
+    small_m: float,
+    big_m: int,
+    profile: pd.DataFrame | None,
+    objective_set: ObjectiveSet | None,
 ) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    model = _build_model(graph=graph, scenario_settings=scenario_settings, smallM=smallM, bigM=bigM, profile=profile)
+    model = _build_model(
+        graph=graph, scenario_settings=scenario_settings, small_m=small_m, big_m=big_m, profile=profile
+    )
     objective = _build_objective(model=model, graph=graph, objective_set=objective_set, profile=profile)
 
     return model, objective
@@ -191,13 +198,13 @@ def build_model_and_objective(
 def _build_model(
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
-    smallM: float,
-    bigM: int,
-    profile: Optional[pd.DataFrame],
-):
+    small_m: float,
+    big_m: int,
+    profile: pd.DataFrame | None,
+) -> EchoConcreteModel:
     model = EchoConcreteModel()
-    model.smallM = en.Param(initialize=smallM)
-    model.bigM = en.Param(initialize=bigM)
+    model.small_m = en.Param(initialize=small_m)
+    model.big_m = en.Param(initialize=big_m)
     model.scenario_settings = scenario_settings
 
     # We use RangeSet to create an index for each of the time
@@ -242,10 +249,10 @@ def _build_model(
 def _build_objective(
     model: EchoConcreteModel,
     graph: OptimisationGraph,
-    profile: Optional[pd.DataFrame],
-    objective_set: Optional[ObjectiveSet],
-):
-    objective: Union[float, en.numeric_expr.NumericExpression] = 0
+    profile: pd.DataFrame | None,
+    objective_set: ObjectiveSet | None,
+) -> float | en.numeric_expr.NumericExpression:
+    objective: float | en.numeric_expr.NumericExpression = 0
 
     # Add objectives defined in the objective set
     if objective_set is not None:
@@ -263,6 +270,7 @@ def _build_objective(
     for path_obj in graph.paths.values():
         path_obj.add_objective(model)
         objective += path_obj.objective
+
     return objective
 
 
@@ -270,12 +278,12 @@ def optimise(
     scenario_settings: ScenarioSettings,
     engine_settings: EngineSettings,
     graph: OptimisationGraph,
-    objective_set: Optional[ObjectiveSet] = None,
-    profile: Optional[pd.DataFrame] = None,
+    objective_set: ObjectiveSet | None = None,
+    profile: pd.DataFrame | None = None,
     verbose: bool = False,
     show_solver_output: bool = False,
-    logfile: Optional[str] = None,
-    time_limit: int = None,
+    logfile: str | None = None,
+    time_limit: int | None = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
@@ -294,13 +302,13 @@ def optimise(
     model, objective = build_model_and_objective(
         graph=graph,
         scenario_settings=scenario_settings,
-        smallM=engine_settings.smallM,
-        bigM=engine_settings.bigM,
+        small_m=engine_settings.small_m,
+        big_m=engine_settings.big_m,
         profile=profile,
         objective_set=objective_set,
     )
 
-    def objective_function(model: EchoConcreteModel):
+    def objective_function(model: EchoConcreteModel) -> en.numeric_expr.NumericExpression:
         return objective
 
     model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
@@ -336,7 +344,7 @@ def optimise(
 
     if solver_status != SolverStatus.ok:
         if solver_status == SolverStatus.aborted:
-            warnings.warn(f"Solver status returned as {solver_status}")
+            warnings.warn(f"Solver status returned as {solver_status}", stacklevel=1)
         else:
             raise OptimiserResultError(f"Solver status returned as {solver_status}")
 

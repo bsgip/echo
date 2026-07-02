@@ -8,7 +8,7 @@ class OptimiserResultError(Exception):
     pass
 
 
-def validate(statement: bool, message: str):
+def validate(statement: bool, message: str) -> None:
     """Similar to assert but will NOT be optimised out by bytecode conversions (see bandit warning B101)"""
     if statement:
         return

@@ -3,11 +3,7 @@
 import pandas as pd
 
 from echo.configuration import Units
-from echo.models.agnostic import (
-    FlexPort,
-    PartitionedMultiCommodityTellegenNode,
-    Sink,
-)
+from echo.models.agnostic import FlexPort, PartitionedMultiCommodityTellegenNode, Sink
 from echo.models.base import Node, OptimisationGraph
 from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.optimiser import optimise

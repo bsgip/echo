@@ -142,7 +142,7 @@ def test_carbon_aggregation():
 
     import_tariff = ImportTariff(
         component=site1.ports["cp"],
-        tariff_array=np.array(([0.1] * 24 + [0.3] * 24)),
+        tariff_array=np.array([0.1] * 24 + [0.3] * 24),
         expansion_periods=expansion_periods,
     )
 

@@ -7,22 +7,15 @@ This package requires that you have python 3.7+ installed and it is recommended 
 To install this package you need to:
 
 1. Clone this repo:
+   `git clone git@github.com:bsgip/echo.git`
 
-```
-git clone git@github.com:bsgip/echo.git
-```
+2. Change to the echo directory:
+   `cd echo`
 
-1. Change to the echo directory:
-
-```
-cd echo
-```
-
-1. With your virtual environment active install using pip:
-
-```
-pip install --group all .
-```
+3. Install using uv (recommended):
+   `uv sync --python 3.13 --all-extras`
+   or pip:
+   `pip install --group all`
 
 NOTE: This package is not on pypi - `pip install echo` will NOT install this package. It will install a different package with the same name.
 
@@ -45,25 +38,13 @@ Open source:
 
 Make sure you have the documentation dependencies installed
 
-```
-pip install --group docs .
-```
-
 1. Generate the documentation for the echo package (from docstrings)
+   `sphinx-apidoc --force --implicit-namespaces --module-first --no-toc --separate -o docs/source/_reference src/echo`
+   The auto-generated documentation can be found in `docs/source/_reference`
 
-```
-sphinx-apidoc --force --implicit-namespaces --module-first --no-toc --separate -o docs/source/_reference src/echo
-```
-
-The auto-generated documentation can be found in `docs/source/_reference`
-
-1. Build the documentation (as html)
-
-```
-sphinx-build -b html docs/source docs/_build
-```
-
-The built documentation can be found in `docs/_build`. Warnings about duplicated labels can be safely ignored.
+2. Build the documentation (as html)
+   `sphinx-build -b html docs/source docs/_build`
+   The built documentation can be found in `docs/_build`. Warnings about duplicated labels can be safely ignored.
 
 ### Design (under creation)
 
@@ -75,10 +56,12 @@ Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issue
 
 ## Roadmap
 
-| Item                               | Status      | Reference                                | Completion Date |
-| ---------------------------------- | ----------- | ---------------------------------------- | --------------- |
-| Documentation update               | Underway    |                                          | June 2026       |
-| Examples update                    | Underway    |                                          | June 2026       |
-| Standardise data injection process | Planning    | <https://github.com/bsgip/echo/issues/103> | Aug 2026        |
+| Item                               | Status      | Reference                                  | Completion Date |
+| ---------------------------------- | ----------- | ------------------------------------------ | --------------- |
+| Add ruff and uv                    | Complete    |                                            | Jun 2026        |
+| Add ty                             | Planning    |                                            | Aug 2026        |
+| Documentation update               | Underway    |                                            | Sep 2026        |
+| Examples update                    | Underway    |                                            | Sep 2026        |
+| Standardise data injection process | Planning    | <https://github.com/bsgip/echo/issues/103> | Sep 2026        |
 | Upgrade to pydantic v2             | Not Started | <https://github.com/bsgip/echo/issues/101> | Oct 2026        |
 | Add linopy as parser option        | Planning    | <https://github.com/bsgip/echo/issues/102> | Dec 2026        |

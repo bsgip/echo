@@ -1,4 +1,6 @@
+import pandas as pd
 import pyomo.environ as en
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Flows, Units
 from echo.models.agnostic import FlexPort
@@ -28,19 +30,19 @@ class CarbonAggregation(Node):
     """This node has an additional variable, 'total', which equals the sum of all ports defined on the node."""
 
     @property
-    def total(self):
+    def total(self) -> str:
         return "total_CO2_" + self.node_name
 
-    def verify_node(self):
-        super(CarbonAggregation, self).verify_node()
+    def verify_node(self) -> None:
+        super().verify_node()
 
-    def add_node_to_model(self, model: EchoConcreteModel, profile):
-        super(CarbonAggregation, self).add_node_to_model(model, profile)
+    def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
+        super().add_node_to_model(model, profile)
         # Create a variable for the total CO2
         setattr(model, self.total, en.Var(model.Expansion, model.Time, initialize=0, domain=en.Reals))
 
-    def apply_node_constraints(self, model: EchoConcreteModel):
-        def sum_rule(model: EchoConcreteModel, p, t):
+    def apply_node_constraints(self, model: EchoConcreteModel) -> None:
+        def sum_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:
             a = 0
             for port in self.ports.values():
                 a += getattr(model, port.port_name)[p, t]
