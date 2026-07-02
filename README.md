@@ -2,7 +2,7 @@
 
 `echo` is a python-based multi-commodity energy system optimisation tool designed to answer grid integration questions.
 
-This project is developed and maintained by the ANU Centre for Energy Systems at the Australian National University.
+This project is developed and maintained by the [Centre for Energy Systems](https://energysystems.anu.edu.au/) at the Australian National University.
 
 ## Installation
 
