@@ -46,13 +46,13 @@ class OptimisationResult:
     """
 
     scenario_settings: ScenarioSettings
-    objective: Optional[en.numeric_expr.NumericExpression]
+    objective: en.numeric_expr.NumericExpression | None
     model: EchoConcreteModel
     objective_set: ObjectiveSet | None
     graph: OptimisationGraph
     opt_status: SolverStatus
     termination_condition: TerminationCondition
-    model_attribute_tracker: Optional[AttributeTracker] = None
+    model_attribute_tracker: AttributeTracker | None = None
 
     def df(self) -> pd.DataFrame:
         """
