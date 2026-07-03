@@ -209,15 +209,16 @@ def build_model_and_objective(
 
 
 def _build_model(
-    model: EchoConcreteModel,
     graph: OptimisationGraph,
     scenario_settings: ScenarioSettings,
     small_m: float,
     big_m: int,
     profile: pd.DataFrame | None,
     tracker: AttributeTracker,
+    model: EchoConcreteModel | None = None,
 ) -> EchoConcreteModel:
-    model = EchoConcreteModel()
+    if model is None:
+        model = EchoConcreteModel()
     model.small_m = en.Param(initialize=small_m)
     model.big_m = en.Param(initialize=big_m)
 
