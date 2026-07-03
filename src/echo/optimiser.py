@@ -341,7 +341,7 @@ def optimise(
 
     if objective is not None:
 
-        def cost_function(model: EchoConcreteModel):
+        def cost_function(model: EchoConcreteModel) -> en.numeric_expr.NumericExpression:
             return objective
 
         model.total_cost = en.Objective(rule=cost_function, sense=en.minimize)

@@ -197,4 +197,3 @@ fig = viz.PlotlyGraph.plot(
     edge_hover_text=edge_hover_text,
 )
 fig.show()
-

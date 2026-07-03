@@ -1,6 +1,7 @@
-from typing import Any, Callable
 from collections import defaultdict
+from collections.abc import Callable
 from itertools import pairwise
+from typing import Any
 
 
 class AttributeTracker:
@@ -25,12 +26,12 @@ class AttributeTracker:
     >>> tracker.to_html_string(foo, "setting-a")
     """
 
-    def __init__(self, object: Any):
+    def __init__(self, object: object) -> None:
         """Store the attributes for a checkpoint. The ordering of the keys (checkpoints) is important"""
         self.attributes: dict[str, list[str]] = {}
         self.object = object
 
-    def mark(self, checkpoint: str):
+    def mark(self, checkpoint: str) -> None:
         """Create a new checkpoint and associate it with the objects attributes."""
         self.attributes[checkpoint] = dir(self.object)
 
@@ -46,7 +47,7 @@ class AttributeTracker:
         result = ""
         for prev_checkpoint, checkpoint in pairwise(self.attributes.keys()):
             for attr_name in self.diff(prev_checkpoint, checkpoint):
-                result += f"- {attr_name} ({type(getattr(self.object,attr_name))})\n"
+                result += f"- {attr_name} ({type(getattr(self.object, attr_name))})\n"
 
         return result
 
