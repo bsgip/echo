@@ -17,6 +17,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Download CPLEX installer from Azure storage account
+        uses: armanrahman22/azblob-download-action@v0.0.4
+        with:
+          connection-string: ${{ secrets.BLDDEPS_STORAGE_ACCOUNT_CONN_STR }}
+          container-name: "solver-blobs"
+          blob-name: "cplex_22.1.1.0-1_amd64.deb"
+          download-path: "."
+
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -24,13 +32,18 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv sync 
+          uv sync --group dev
+          sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
       - name: Coverage (source branch)
         run: |
           echo "[run]" > .coveragecfg
           echo "data_file=.coverage-source" >> .coveragecfg
-          uv run pytest -n auto --cov=my_app --cov-config=.coveragecfg .
+          uv run pytest -n auto --cov=echo --cov-config=.coveragecfg .
+        env:
+          OPTIMISER_ENGINE: "cplex"
+          OPTIMISER_ENGINE_EXECUTABLE: "/opt/cplex/cplex"
+          PYTHONPATH: ./
 
       - name: Extract Coverage
         id: extract
@@ -57,6 +70,14 @@ jobs:
         with:
           ref: ${{ github.base_ref }}
 
+      - name: Download CPLEX installer from Azure storage account
+        uses: armanrahman22/azblob-download-action@v0.0.4
+        with:
+          connection-string: ${{ secrets.BLDDEPS_STORAGE_ACCOUNT_CONN_STR }}
+          container-name: "solver-blobs"
+          blob-name: "cplex_22.1.1.0-1_amd64.deb"
+          download-path: "."
+
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -64,13 +85,18 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv sync
+          uv sync --group dev
+          sudo apt install -f ./cplex_22.1.1.0-1_amd64.deb
 
       - name: Coverage (target branch)
         run: |
           echo "[run]" > .coveragecfg
           echo "data_file=.coverage-target" >> .coveragecfg
-          uv run pytest -n auto --cov=my_app --cov-config=.coveragecfg .
+          uv run pytest -n auto --cov=echo --cov-config=.coveragecfg .
+        env:
+          OPTIMISER_ENGINE: "cplex"
+          OPTIMISER_ENGINE_EXECUTABLE: "/opt/cplex/cplex"
+          PYTHONPATH: ./
 
       - name: Extract Coverage
         id: extract
