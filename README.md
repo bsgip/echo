@@ -38,7 +38,7 @@ There are three prerequisites to using a solver in `echo`:
    in `~/.bashrc` for linux systems using bash.
 3. `echo` needs to know which solver to use. There are two ways of doing this:
 
-- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal.
+- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal. Defaults to cplex.
 - Setting `echo.models.scenario.EngineSettings.engine`. Defaults to `"cplex"`
 
 The following solvers can be used.
@@ -75,12 +75,14 @@ Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issue
 
 ## Roadmap
 
-| Item                               | Status      | Reference                                  | Completion Date |
-| ---------------------------------- | ----------- | ------------------------------------------ | --------------- |
-| Add ruff and uv                    | Complete    |                                            | Jun 2026        |
-| Add ty                             | Planning    |                                            | Aug 2026        |
-| Documentation update               | Underway    |                                            | Sep 2026        |
-| Examples update                    | Underway    |                                            | Sep 2026        |
-| Standardise data injection process | Planning    | <https://github.com/bsgip/echo/issues/103> | Sep 2026        |
-| Upgrade to pydantic v2             | Not Started | <https://github.com/bsgip/echo/issues/101> | Oct 2026        |
-| Add linopy as parser option        | Planning    | <https://github.com/bsgip/echo/issues/102> | Dec 2026        |
+| Item | Status | Reference | Completion Date |
+| ---- | ------ | --------- | --------------- |
+
+- xpress
+  | Add ruff and uv | Complete | | Jun 2026 |
+  | Add ty | Planning | | Aug 2026 |
+  | Documentation update | Underway | | Sep 2026 |
+  | Examples update | Underway | | Sep 2026 |
+  | Standardise data injection process | Planning | <https://github.com/bsgip/echo/issues/103> | Sep 2026 |
+  | Upgrade to pydantic v2 | Not Started | <https://github.com/bsgip/echo/issues/101> | Oct 2026 |
+  | Add linopy as parser option | Planning | <https://github.com/bsgip/echo/issues/102> | Dec 2026 |
