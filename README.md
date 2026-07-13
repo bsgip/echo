@@ -75,14 +75,12 @@ Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issue
 
 ## Roadmap
 
-| Item | Status | Reference | Completion Date |
-| ---- | ------ | --------- | --------------- |
-
-- xpress
-  | Add ruff and uv | Complete | | Jun 2026 |
-  | Add ty | Planning | | Aug 2026 |
-  | Documentation update | Underway | | Sep 2026 |
-  | Examples update | Underway | | Sep 2026 |
-  | Standardise data injection process | Planning | <https://github.com/bsgip/echo/issues/103> | Sep 2026 |
-  | Upgrade to pydantic v2 | Not Started | <https://github.com/bsgip/echo/issues/101> | Oct 2026 |
-  | Add linopy as parser option | Planning | <https://github.com/bsgip/echo/issues/102> | Dec 2026 |
+| Item                               | Status      | Reference                                  | Completion Date |
+| ---------------------------------- | ----------- | ------------------------------------------ | --------------- |
+| Add ruff and uv                    | Complete    |                                            | Jun 2026        |
+| Add ty                             | Planning    |                                            | Aug 2026        |
+| Documentation update               | Underway    |                                            | Sep 2026        |
+| Examples update                    | Underway    |                                            | Sep 2026        |
+| Standardise data injection process | Planning    | <https://github.com/bsgip/echo/issues/103> | Sep 2026        |
+| Upgrade to pydantic v2             | Not Started | <https://github.com/bsgip/echo/issues/101> | Oct 2026        |
+| Add linopy as parser option        | Planning    | <https://github.com/bsgip/echo/issues/102> | Dec 2026        |
