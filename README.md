@@ -28,9 +28,9 @@ NOTE: This package is not on pypi - **`pip install echo` will NOT install this p
 
 ## Solver
 
-Different solvers can be used within echo. Solvers are installed separate to `echo`, see below for install instructions.
+Different solvers can be used within echo. Solvers are installed separately; see below for links to install instructions.
 
-There are a few prerequisites to using a solver:
+There are three prerequisites to using a solver in `echo`:
 
 1. The solver must be installed.
 2. The solver's executable must be in the `PATH` or equivalent. For example:
