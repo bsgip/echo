@@ -1,8 +1,12 @@
 # echo (energy and commodity holistic optimiser)
 
+`echo` is a python-based multi-commodity energy system optimisation tool designed to answer grid integration questions.
+
+This project is developed and maintained by the [Centre for Energy Systems](https://energysystems.anu.edu.au/) at the Australian National University.
+
 ## Installation
 
-This package requires that you have python 3.7+ installed and it is recommended you use a virtual environment.
+`echo` requires requires python 3.11-3.14.
 
 To install this package you need to:
 
@@ -12,12 +16,15 @@ To install this package you need to:
 2. Change to the echo directory:
    `cd echo`
 
-3. Install using uv (recommended):
+3. Install using `uv` (recommended):
+
    `uv sync --python 3.13 --all-extras`
-   or pip:
+
+   or `pip`:
+
    `pip install --group all`
 
-NOTE: This package is not on pypi - `pip install echo` will NOT install this package. It will install a different package with the same name.
+NOTE: This package is not on pypi - **`pip install echo` will NOT install this package**. It will install a different package with the same name.
 
 ## Solver
 
