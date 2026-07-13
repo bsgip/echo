@@ -38,7 +38,7 @@ There are three prerequisites to using a solver in `echo`:
    in `~/.bashrc` for linux systems using bash.
 3. `echo` needs to know which solver to use. There are two ways of doing this:
 
-- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal. Defaults to cplex.
+- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal. Defaults to `cplex`.
 - Setting `echo.models.scenario.EngineSettings.engine`. Defaults to `"cplex"`
 
 The following solvers can be used.
