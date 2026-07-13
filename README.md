@@ -28,16 +28,28 @@ NOTE: This package is not on pypi - **`pip install echo` will NOT install this p
 
 ## Solver
 
-The following solvers can be used
+Different solvers can be used within echo. Solvers are installed separately; see below for links to install instructions.
 
-Free for academic use only:
+There are three prerequisites to using a solver in `echo`:
 
-- CPLEX (recommended): This has been tested the most. It requires a license but is free for academic users. To install, follow instructions [here](https://www.ibm.com/products/ilog-cplex-optimization-studio). After installing CPLEX you will need to add the binaries to your system path.
-- GUROBI: Minimal testing: It requires a license but is free for academic users. Check their website for installation [instructions](https://www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html).
+1. The solver must be installed.
+2. The solver's executable must be in the `PATH` or equivalent. For example:
+   `PATH="/opt/cplex:$PATH`
+   in `~/.bashrc` for linux systems using bash.
+3. `echo` needs to know which solver to use. There are two ways of doing this:
 
-Open source:
+- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal. Defaults to `cplex`.
+- Setting `echo.models.scenario.EngineSettings.engine`. Defaults to `"cplex"`
 
-- CBC: This solver can be used provided you only include linear costs (no quadratic costs or regularisation). Information on the solver is available [here](https://github.com/coin-or/Cbc). For installing on ubuntu run `sudo apt-get install -y coinor-cbc`
+The following solvers can be used.
+
+| Solver | Testing Status  | License                                        | Installation                                                                                           | Known as in `echo` |
+| ------ | --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------ |
+| CPLEX  | Most tested     | Commercial, free for academic use with licence | [All OSs](https://www.ibm.com/products/ilog-cplex-optimization-studio)                                 | cplex              |
+| GUROBI | Minimal testing | Commercial, free for academic use with licence | [Linux](https:/./www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html)              | gurobi             |
+| CBC    | Minimal testing | Open source                                    | [All OSs](https://github.com/coin-or/cbc#download)                                                     | cbc                |
+| GLPK   | No testing      | Open source                                    | [Linux](https://www.gnu.org/software/glpk/#TOCdownloading)                                             | glpk               |
+| Xpress | No testing      | Commercial, free for academic use with licence | [All OSs](https://www.fico.com/fico-xpress-optimization/docs/latest/installguide/dhtml/chapinst1.html) | xpress             |
 
 ## Documentation
 
