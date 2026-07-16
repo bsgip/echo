@@ -1,3 +1,5 @@
+import pytest
+
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
@@ -106,4 +108,4 @@ def test_objectives_sum_correctly():
     dt = optimise_results.get_single_objective_total_value(demand_tariff)
     total = optimise_results.get_total_objective_value()
 
-    assert tp + it + et + dt == total
+    assert tp + it + et + dt == pytest.approx(total, rel=1e-12)

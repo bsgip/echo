@@ -12,6 +12,7 @@ from echo.exceptions import ConfigurationError, OptimiserResultError, validate
 from echo.models.base import Node, OptimisationGraph, Port
 from echo.models.scenario import EchoConcreteModel, EngineSettings, ScenarioSettings
 from echo.objectives.base import Objective, ObjectiveSet
+from echo.tracker import AttributeTracker
 
 # The default set of termination conditions that pyomo can return and echo will report as a success
 DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS: Collection[TerminationCondition] = set(
@@ -45,12 +46,13 @@ class OptimisationResult:
     """
 
     scenario_settings: ScenarioSettings
-    objective: en.numeric_expr.NumericExpression
+    objective: en.numeric_expr.NumericExpression | None
     model: EchoConcreteModel
     objective_set: ObjectiveSet | None
     graph: OptimisationGraph
     opt_status: SolverStatus
     termination_condition: TerminationCondition
+    model_attribute_tracker: AttributeTracker | None = None
 
     def df(self) -> pd.DataFrame:
         """
@@ -184,15 +186,26 @@ def build_model_and_objective(
     big_m: int,
     profile: pd.DataFrame | None,
     objective_set: ObjectiveSet | None,
-) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression]:
+) -> tuple[EchoConcreteModel, en.numeric_expr.NumericExpression | None, AttributeTracker]:
     """Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
     against the model"""
-    model = _build_model(
-        graph=graph, scenario_settings=scenario_settings, small_m=small_m, big_m=big_m, profile=profile
-    )
-    objective = _build_objective(model=model, graph=graph, objective_set=objective_set, profile=profile)
+    model = EchoConcreteModel()
+    tracker = AttributeTracker(model)
 
-    return model, objective
+    _build_model(
+        model=model,
+        graph=graph,
+        scenario_settings=scenario_settings,
+        small_m=small_m,
+        big_m=big_m,
+        profile=profile,
+        tracker=tracker,
+    )
+    objective = _build_objective(
+        model=model, graph=graph, objective_set=objective_set, profile=profile, tracker=tracker
+    )
+
+    return model, objective, tracker
 
 
 def _build_model(
@@ -201,10 +214,16 @@ def _build_model(
     small_m: float,
     big_m: int,
     profile: pd.DataFrame | None,
+    tracker: AttributeTracker,
+    model: EchoConcreteModel | None = None,
 ) -> EchoConcreteModel:
-    model = EchoConcreteModel()
+    if model is None:
+        model = EchoConcreteModel()
     model.small_m = en.Param(initialize=small_m)
     model.big_m = en.Param(initialize=big_m)
+
+    tracker.mark("model-init")
+
     model.scenario_settings = scenario_settings
 
     # We use RangeSet to create an index for each of the time
@@ -223,25 +242,29 @@ def _build_model(
         discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
     model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
 
+    tracker.mark("model-setup")
+
     # Initialise node variables/params and add node constraints
     for node_obj in graph.node_obj.values():
         node_obj.verify_node()
         node_obj.add_node_to_model(model, profile)
+        node_obj.apply_node_constraints(model)
+        tracker.mark(f"{node_obj.node_name}:node-constraints")
 
     # Initialise edge variables/params and add edge constraints
     for edge_obj in graph.edge_obj.values():
         edge_obj.verify_edge()
         edge_obj.add_edge_to_model(model)
+        tracker.mark(edge_obj.edge_name)
 
     # Initialise paths
     for path in graph.paths.values():
         path.add_path_to_model(model)
+        tracker.mark(path.path_name)
 
-    # Apply constraints
-    for obj in graph.node_obj.values():
-        obj.apply_node_constraints(model)
     if graph.paths:
         graph.apply_path_constraints(model)
+        tracker.mark("model-adding-path-constraints")
 
     return model
 
@@ -251,13 +274,15 @@ def _build_objective(
     graph: OptimisationGraph,
     profile: pd.DataFrame | None,
     objective_set: ObjectiveSet | None,
-) -> float | en.numeric_expr.NumericExpression:
-    objective: float | en.numeric_expr.NumericExpression = 0
+    tracker: AttributeTracker,
+    objective: en.numeric_expr.NumericExpression | float = 0,
+) -> en.numeric_expr.NumericExpression | float | None:
 
     # Add objectives defined in the objective set
     if objective_set is not None:
         objective_set.add_objectives_to_model(model, profile)
         objective += objective_set.get_objective_total(model)
+        tracker.mark("model-adding-objective-set")
 
     # Add any other costs that are defined on graph nodes/ports/paths
     for node_obj in graph.node_obj.values():
@@ -266,11 +291,17 @@ def _build_objective(
         for port_obj in node_obj.ports.values():
             port_obj.add_objective(model)  # populate the .objective attribute for each port
             objective += port_obj.objective  # add the newly populated attribute to our total
+        tracker.mark(f"{node_obj.node_name}:objectives")
 
     for path_obj in graph.paths.values():
         path_obj.add_objective(model)
         objective += path_obj.objective
 
+        tracker.mark(path_obj.path_name if path_obj.path_name is not None else "model-adding-path-objectives")
+
+    # Determine if we failed to build an objective
+    if isinstance(objective, float) and objective == 0:
+        return None
     return objective
 
 
@@ -299,7 +330,7 @@ def optimise(
 
     validate_network_graph(graph)
 
-    model, objective = build_model_and_objective(
+    model, objective, tracker = build_model_and_objective(
         graph=graph,
         scenario_settings=scenario_settings,
         small_m=engine_settings.small_m,
@@ -308,10 +339,12 @@ def optimise(
         objective_set=objective_set,
     )
 
-    def objective_function(model: EchoConcreteModel) -> en.numeric_expr.NumericExpression:
-        return objective
+    if objective is not None:
 
-    model.total_cost = en.Objective(rule=objective_function, sense=en.minimize)
+        def cost_function(model: EchoConcreteModel) -> en.numeric_expr.NumericExpression:
+            return objective
+
+        model.total_cost = en.Objective(rule=cost_function, sense=en.minimize)
 
     # Set the path to the solver
     if engine_settings.engine_executable:
@@ -361,4 +394,5 @@ def optimise(
         graph=graph,
         opt_status=solver_status,
         termination_condition=termination_condition,
+        model_attribute_tracker=tracker,
     )

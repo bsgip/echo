@@ -66,7 +66,7 @@ class Port(BaseModel):
     export_constraint_value: ConstraintValueType | None = None
     active_periods: dict[tuple[int, int], Any] | None = None
     slack: bool = False
-    objective: float | en.numeric_expr.NumericExpression = 0  # this will eventually be a pyomo expression
+    objective: en.numeric_expr.NumericExpression | float = 0  # this will eventually be a pyomo expression
 
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
@@ -602,7 +602,7 @@ class Node(BaseModel):
     node_name: str = ""
     uid: str = Field(default_factory=shortuuid.uuid)
     ports: dict[str, Port] = {}
-    objective: float | en.numeric_expr.NumericExpression = 0  # For adding any node objectives
+    objective: en.numeric_expr.NumericExpression | float = 0  # For adding any node objectives
 
     @property
     def inflow(self) -> str:
@@ -1003,7 +1003,7 @@ class Path(BaseModel):
     path_name: str | None = None
     units = Units.KW
     regularise: bool = False
-    objective: float | en.numeric_expr.NumericExpression = 0
+    objective: en.numeric_expr.NumericExpression | float = 0
 
     flow_value: str = ""
     contingency_neg: str | None
