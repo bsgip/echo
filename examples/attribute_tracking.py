@@ -183,6 +183,8 @@ def edge_hover_text(edge: Any, *_) -> str:
         return title + to_html_string(attrs)
     return ""
 
+def node_size(*_) -> int:
+    return 40
 
 # Use the new visualization function to plot the network/graph
 # This function takes callbacks for setting the node (colors, text/labels, hover text etc).
@@ -191,7 +193,7 @@ fig = viz.PlotlyGraph.plot(
     positions=positions,
     show_node_names=True,
     node_color=viz.echo_node_color,
-    node_size=viz.echo_node_size,
+    node_size=node_size,
     node_text=viz.echo_node_text,
     node_hover_text=node_hover_text,
     edge_hover_text=edge_hover_text,

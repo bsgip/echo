@@ -111,7 +111,6 @@ def echo_node_color(node: str, *args) -> str:  # noqa ANN002
 
 
 def echo_node_size(node: str, *args) -> int:  # noqa ANN002
-    return 6
     if node in ECHO_NODE_TO_VIZ_NODE:
         return SIZE_BY_NODE_TYPE[ECHO_NODE_TO_VIZ_NODE[node]]
     return DEFAULT_NODE_SIZE
