@@ -275,8 +275,8 @@ def _build_objective(
     profile: pd.DataFrame | None,
     objective_set: ObjectiveSet | None,
     tracker: AttributeTracker,
-    objective: en.numeric_expr.NumericExpression | int = 0,
-) -> en.numeric_expr.NumericExpression | None:
+    objective: en.numeric_expr.NumericExpression | float = 0,
+) -> en.numeric_expr.NumericExpression | float | None:
 
     # Add objectives defined in the objective set
     if objective_set is not None:
@@ -300,7 +300,7 @@ def _build_objective(
         tracker.mark(path_obj.path_name if path_obj.path_name is not None else "model-adding-path-objectives")
 
     # Determine if we failed to build an objective
-    if isinstance(objective, int):
+    if isinstance(objective, float) and objective == 0:
         return None
     return objective
 
