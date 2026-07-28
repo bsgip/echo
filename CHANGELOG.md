@@ -4,8 +4,16 @@
 
 ### v2.2.3 (2026-07-28)
 
+#### Adds
+
+- Adds `AttributeTracker` to track attributes of an object.
+- Adds visualisation of the `OptimisationGraph` topology via `visualization.PlotlyGraph`.
+- Adds examples for `AttributeTrack` and `visualization.PlotlyGraph`
+- Adds tests for `AttributeTrack` and `visualization.PlotlyGraph`
+
 #### Changes
 
+- Fixes `coverage` issues.
 - Fixes a bug in `EVBase._create_vehicle_port()` wherein the creation of the `MobileElectricalStorage` should receive `discharging_power_limit=self.usage_power_limit` not `discharging_power_limit=self.discharging_power_limit`.
 
 ### v2.2.2 (2026-06-26)
