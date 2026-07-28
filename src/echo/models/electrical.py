@@ -293,7 +293,7 @@ class EVBase(TransformNode):
         # Create the usage port and assign it to the EV object
         self.ports["vehicle"] = MobileElectricalStorage(
             charging_power_limit=self.charging_power_limit,
-            discharging_power_limit=self.discharging_power_limit,
+            discharging_power_limit=self.usage_power_limit,
             initial_state_of_charge=self.initial_state_of_charge,
             max_capacity=self.max_capacity,
             available=self.available,

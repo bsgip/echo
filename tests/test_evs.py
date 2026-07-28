@@ -4186,8 +4186,8 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
     )
 
     # Create availability and usage data for a V0G vehicle
-    ev_v0g_available = [1] * 36 + [0] * 12
-    ev_v0g_usage = [0] * 36 + [1.5] * 12
+    ev_v0g_available = [1] * 42 + [0] * 6
+    ev_v0g_usage = [0] * 42 + [6] * 6
 
     # Create V0G vehicle
     ev_v0g = EVV0G(
@@ -4197,7 +4197,7 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
         connection_port_name="cp",
         max_capacity=40,
         depth_of_discharge_limit=0,
-        charging_power_limit=10,
+        charging_power_limit=2.4,
         discharging_power_limit=0,
         charging_efficiency=1,
         discharging_efficiency=1,
@@ -4235,6 +4235,37 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
         engine_settings=engine_settings_from_environment(),
         graph=system,
     )
+
+
+def test_v0g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small():
+    # The duration in minutes between each data point in time series data
+    interval_duration = 30
+
+    # Create availability and usage data for a V0G vehicle
+    ev_v0g_available = [1] * 42 + [0] * 6
+    ev_v0g_usage = [0] * 42 + [6] * 6
+
+    with pytest.raises(Exception):
+        # Create V0G vehicle
+        EVV0G(
+            node_name="ev_v0g",
+            available=ev_v0g_available,
+            usage=ev_v0g_usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=2.4,
+            discharging_power_limit=0,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=None,
+        )
 
 
 def test_v1g_with_discharging_power_limit_and_usage_power_limit_greater_than_usage():
@@ -4354,7 +4385,34 @@ def test_v1g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
         )
 
 
-# -----------------------------------------------------------------
+def test_v1g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small():
+    # The duration in minutes between each data point in time series data
+    interval_duration = 30
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 42 + [0] * 6
+    usage = [0] * 42 + [6] * 6
+
+    with pytest.raises(Exception):
+        EVV1G(
+            node_name="ev_v0g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=2.4,
+            discharging_power_limit=0,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=None,
+        )
 
 
 def test_v2g_with_discharging_power_limit_and_usage_power_limit_greater_than_usage():
@@ -4423,7 +4481,7 @@ def test_v2g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
     usage = [0] * 36 + [1.5] * 12
     interval_duration = 30
 
-    EVV1G(
+    EVV2G(
         node_name="ev_v2g",
         available=available,
         usage=usage,
@@ -4471,4 +4529,34 @@ def test_v2g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
             tod_charging=None,
             trip_slack=False,
             usage_power_limit=-1,
+        )
+
+
+def test_v2g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small():
+    # The duration in minutes between each data point in time series data
+    interval_duration = 30
+
+    # Create availability and usage data for a V0G vehicle
+    available = [1] * 42 + [0] * 6
+    usage = [0] * 42 + [6] * 6
+
+    with pytest.raises(Exception):
+        EVV2G(
+            node_name="ev_v0g",
+            available=available,
+            usage=usage,
+            connection_port_name="cp",
+            max_capacity=40,
+            depth_of_discharge_limit=0,
+            charging_power_limit=2.4,
+            discharging_power_limit=-2.4,
+            charging_efficiency=1,
+            discharging_efficiency=1,
+            initial_state_of_charge=20,
+            soc_conserv=None,
+            soc_conserv_cost=0.0,
+            interval_duration=interval_duration,
+            tod_charging=None,
+            trip_slack=False,
+            usage_power_limit=None,
         )

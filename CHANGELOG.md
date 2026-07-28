@@ -2,6 +2,12 @@
 
 ## Releases
 
+### v2.2.3 (2026-07-28)
+
+#### Changes
+
+- Fixes a bug in `EVBase._create_vehicle_port()` wherein the creation of the `MobileElectricalStorage` should receive `discharging_power_limit=self.usage_power_limit` not `discharging_power_limit=self.discharging_power_limit`.
+
 ### v2.2.2 (2026-06-26)
 
 #### Adds
