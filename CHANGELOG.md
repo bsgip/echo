@@ -6,7 +6,7 @@
 
 #### Changes
 
-- Updates `matplotlib`` to 3.11.1, updating`pillow` to 12.3.0. Older versions of pillow have security vulnerabilities.
+- Updates `matplotlib` to 3.11.1, updating `pillow` to 12.3.0. Older versions of pillow have security vulnerabilities.
 
 ### v2.2.3 (2026-07-28)
 
