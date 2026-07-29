@@ -2,6 +2,12 @@
 
 ## Releases
 
+### v2.2.4 (2026-07-29)
+
+#### Changes
+
+- Updates `matplotlib`` to 3.11.1, updating`pillow` to 12.3.0. Older versions of pillow have security vulnerabilities.
+
 ### v2.2.3 (2026-07-28)
 
 #### Adds
