@@ -315,6 +315,8 @@ def optimise(
     show_solver_output: bool = False,
     logfile: str | None = None,
     time_limit: int | None = None,
+    mip_gap_relative: float | None = None,
+    mip_gap_absolute: float | None = None,
     acceptable_conditions: Collection[TerminationCondition] = DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS,
 ) -> OptimisationResult:
     """Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
@@ -322,11 +324,29 @@ def optimise(
 
     Will attempt to validate the graph and will raise exceptions if it appears invalid / unsolvable
 
-    verbose: If set to True the solver will operate in verbose mode and print additional output to stdout
-    logfile: If set to a file path - the stdout will be redirected to this file (for the duration of this run)
-    acceptable_conditions: OptimiserResultError will be raised if the pyomo termination condition is not in this set
-    time_limit: optional time_limit in seconds after which the solver should return a solution if
-     other termination conditions have not already been reached."""
+    Args:
+        scenario_settings: The settings that describe the optimisation problem.
+        engine_settings: Settings of the engine to be used for this optimisation.
+        graph: The OptimisationGraph that describes the optimisation problem.
+        objective_set: The set of objective functions for this optimisation. Defaults to None.
+        profile: The pandas dataframe containing node and objective timeseries data. Defaults to None.
+        verbose: If set to True the solver will operate in verbose mode and print additional output to stdout.
+            Defaults to False.
+        show_solver_output: If set to True, the optimiser will pass through its logs. Defaults to False.
+        logfile: If set to a file path, the stdout will be redirected to this file (for the duration of this run).
+        time_limit: Optional time_limit in seconds after which the solver should return a solution if
+            other termination conditions have not already been reached.
+        mip_gap_relative: The relative gap between known mixed integer problem solutions and the linearised version.
+            Optional. Defaults to None.
+        mip_gap_absolute: The absolute gap between known mixed integer problem solutions and the linearised version.
+            Optional. Defaults to None.
+        acceptable_conditions: OptimiserResultError will be raised if the pyomo termination condition is not in this
+            set. Defaults to DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS.
+
+    Returns:
+        OptimisationResult: A collection of outputs from the optimisation, including some relevant inputs, namely
+            scenario_settings, graph an objective_set.
+    """
 
     validate_network_graph(graph)
 
@@ -346,24 +366,24 @@ def optimise(
 
         model.total_cost = en.Objective(rule=cost_function, sense=en.minimize)
 
+    solver_name = engine_settings.engine
+
     # Set the path to the solver
     if engine_settings.engine_executable:
-        opt = SolverFactory(engine_settings.engine, executable=engine_settings.engine_executable)
+        opt = SolverFactory(solver_name, executable=engine_settings.engine_executable)
     else:
-        opt = SolverFactory(engine_settings.engine)
+        opt = SolverFactory(solver_name)
 
     if time_limit is not None:
-        solver_name = engine_settings.engine
-        if "cplex" in solver_name:
-            opt.options["timelimit"] = time_limit
-        elif "glpk" in solver_name:
-            opt.options["tmlim"] = time_limit
-        elif "gurobi" in solver_name:
-            opt.options["TimeLimit"] = time_limit
-        elif "xpress" in solver_name:
-            # Use the below instead for XPRESS versions before 9.0
-            # self.solver.options['maxtime'] = TIME_LIMIT
-            opt.options["soltimelimit"] = time_limit
+        _set_time_limit(opt=opt, solver_name=solver_name, time_limit=time_limit)
+
+    # Set the relative MIP gap tolerance
+    if mip_gap_relative is not None:
+        _set_mip_gap_relative(opt=opt, solver_name=solver_name, mip_gap_relative=mip_gap_relative)
+
+    # Set the absolute MIP gap tolerance
+    if mip_gap_absolute is not None:
+        _set_mip_gap_absolute(opt=opt, solver_name=solver_name, mip_gap_absolute=mip_gap_absolute)
 
     # Run the optimisation, logging everything to the specified file
     with logged_stdout(logfile):
@@ -396,3 +416,45 @@ def optimise(
         termination_condition=termination_condition,
         model_attribute_tracker=tracker,
     )
+
+
+def _set_time_limit(opt: object, solver_name: str, time_limit: int) -> None:
+    # Set the time limit of the solver
+    if "cplex" in solver_name:
+        opt.options["timelimit"] = time_limit
+    elif "glpk" in solver_name:
+        opt.options["tmlim"] = time_limit
+    elif "gurobi" in solver_name:
+        opt.options["TimeLimit"] = time_limit
+    elif "xpress" in solver_name:
+        # Use the below instead for XPRESS versions before 9.0
+        # self.solver.options['maxtime'] = TIME_LIMIT
+        opt.options["soltimelimit"] = time_limit
+    elif "cbc" in solver_name:
+        opt.options["timeLimit"] = time_limit
+
+
+def _set_mip_gap_relative(opt: object, solver_name: str, mip_gap_relative: float) -> None:
+    if "cplex" in solver_name:
+        opt.options["mipgap"] = mip_gap_relative
+    elif "glpk" in solver_name:
+        opt.options["mip_gap"] = mip_gap_relative
+    elif "gurobi" in solver_name:
+        opt.options["MIPGap"] = mip_gap_relative
+    elif "xpress" in solver_name:
+        opt.options["MIPRELSTOP"] = mip_gap_relative
+    elif "cbc" in solver_name:
+        opt.options["gapRel"] = mip_gap_relative
+
+
+def _set_mip_gap_absolute(opt: object, solver_name: str, mip_gap_absolute: float) -> None:
+    if "cplex" in solver_name:
+        opt.options["absmipgap"] = mip_gap_absolute
+    elif "glpk" in solver_name:
+        raise ValueError("GLPK does not have an absolute MIP gap input. Try mip_gap_tolerance instead.")
+    elif "gurobi" in solver_name:
+        opt.options["MIPGapAbs"] = mip_gap_absolute
+    elif "xpress" in solver_name:
+        opt.options["MIPABSSTOP"] = mip_gap_absolute
+    elif "cbc" in solver_name:
+        opt.options["gapAbs"] = mip_gap_absolute
