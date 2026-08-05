@@ -2,6 +2,12 @@
 
 ## Releases
 
+### v2.2.5 (2026-08-05)
+
+#### Changes
+
+- Updates `echo.optimiser.optimise()` to allow the passing through of absolute and relative mixed integer problem (MIP) gap tolerances, using `mip_gap_absolute` and `mip_gap_relative`, to the optimiser engine.
+
 ### v2.2.4 (2026-07-29)
 
 #### Changes
