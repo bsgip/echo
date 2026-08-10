@@ -449,7 +449,7 @@ def _set_mip_gap_relative(opt: object, solver_name: str, mip_gap_relative: float
 
 def _set_mip_gap_absolute(opt: object, solver_name: str, mip_gap_absolute: float) -> None:
     if "cplex" in solver_name:
-        opt.options["absmipgap"] = mip_gap_absolute
+        opt.options["mip tolerances absmipgap"] = mip_gap_absolute
     elif "glpk" in solver_name:
         raise ValueError("GLPK does not have an absolute MIP gap input. Try mip_gap_tolerance instead.")
     elif "gurobi" in solver_name:
