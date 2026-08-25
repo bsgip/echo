@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+#### Adds
+
+- Adds support for unconnected (dangling) ports by setting `all_dangling_port` to True.
+
+#### Changes
+
+- Prevents warnings for unconnected (dangling) ports on EVs.
+
+
 ## Releases
 
 ### v2.2.6 (2026-08-10)
