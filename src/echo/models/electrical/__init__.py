@@ -1,21 +1,23 @@
-from echo.models.electrical.electrical import (
+from echo.models.electrical.base import (
     BoundedElectricalLoad,
     ElectricalDemand,
-    ElectricalGeneration,
     ElectricalPort,
     ElectricalStorage,
-    EV,
-    EVBase,
-    EVWithProfile,
+    FixedElectricalPort,
+)
+from echo.models.electrical.ev import (
     EVV0G,
     EVV1G,
     EVV2G,
-    FixedElectricalPort,
-    Inverter,
+    EVBase,
+    EVWithProfile,
     MobileElectricalStorage,
 )
+from echo.models.electrical.ev.deprecated import EV
+from echo.models.electrical.generation import ElectricalGeneration
+from echo.models.electrical.inverter import Inverter
 
-__ALL__ = [
+__all__ = [
     "BoundedElectricalLoad",
     "ElectricalDemand",
     "ElectricalGeneration",
