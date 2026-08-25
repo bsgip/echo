@@ -68,6 +68,8 @@ class Port(BaseModel):
     slack: bool = False
     objective: en.numeric_expr.NumericExpression | float = 0  # this will eventually be a pyomo expression
 
+    allow_dangling_port: bool = False
+
     # Validators for import/export constraint values
     import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
     export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
@@ -1435,11 +1437,12 @@ class OptimisationGraph(BaseModel):
             for pn, p in n.ports.items():
                 print(pn, ", ", p.port_name)
 
-    def get_port_names_from_nodes(self) -> set[str]:
+    def get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
         output = set()
         for n in self.node_obj.values():
             for p in n.ports.values():
-                output.add(p.port_name)
+                if skip_dangling_ports and not p.allow_dangling_port:
+                    output.add(p.port_name)
         return output
 
     def get_port_names_from_edges(self) -> set[str]:
@@ -1454,7 +1457,7 @@ class OptimisationGraph(BaseModel):
         are unconnected ports"""
         validate(nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected.")
         # Check graph for ports that are not connected
-        ports_on_edges = self.get_port_names_from_nodes()
+        ports_on_edges = self.get_port_names_from_nodes(skip_dangling_ports=True)
         ports_on_nodes = self.get_port_names_from_edges()
         diff = ports_on_edges - ports_on_nodes  # check overlap
         if len(diff) != 0:

@@ -272,7 +272,8 @@ class EVBase(TransformNode):
         """
 
         # Create the usage port and assign it to the EV object
-        self.ports["usage"] = ElectricalDemand()
+        # Usage ports are not connected to other ports via edges so we set `allow_dangling_port` to True
+        self.ports["usage"] = ElectricalDemand(allow_dangling_port=True)
 
         # TODO: Set demand here if set_stateful_attrs_at_init is True
 
@@ -303,6 +304,7 @@ class EVBase(TransformNode):
             enable_trip_slack=self.enable_trip_slack,
             soc_conserv=self.soc_conserv,
             soc_conserv_cost=self.soc_conserv_cost,
+            allow_dangling_port=True,  # vehicle port is not connect to another port
         )
 
     def _create_connection_point_port(self) -> None:
