@@ -67,7 +67,6 @@ class Port(BaseModel):
     active_periods: dict[tuple[int, int], Any] | None = None
     slack: bool = False
     objective: en.numeric_expr.NumericExpression | float = 0  # this will eventually be a pyomo expression
-
     allow_dangling_port: bool = False
 
     # Validators for import/export constraint values
