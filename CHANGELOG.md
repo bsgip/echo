@@ -8,8 +8,9 @@
 
 #### Changes
 
-- Prevents warnings for unconnected (dangling) ports on EVs.
+- Prevent warnings for unconnected (dangling) ports on EVs.
 - NewSolar node renamed ScaledSolar.
+- Decompose the large model modules into smaller more manageable modules. 
 
 
 ## Releases
