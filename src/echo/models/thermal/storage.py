@@ -30,7 +30,7 @@ class ThermalStorage(Node):
     discharging_power_limit: NegativeFloat = (
         None  # Maximum energy flow out of the storage at each interval, in energy_flow_units
     )
-    ambient_temp: dict = None  # Ambient temp, formatted as dict with expansion-time keys
+    ambient_temp: dict | None = None  # Ambient temp, formatted as dict with expansion-time keys
     ambient_temp_ref: str | None  # Ambient temp by column name reference in profile dataframe
     ins_transmittance: NonNegativeFloat = (
         0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C

@@ -1,5 +1,5 @@
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.gas import FixedGasPort, FlexGasPort
+from echo.models.gas.base import FixedGasPort, FlexGasPort
 
 
 def test_build_flex_gas_port():
