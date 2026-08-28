@@ -1,37 +1,13 @@
 import numpy as np
-import pyomo.environ as en
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort
 from echo.models.base import Node, OptimisationGraph
 from echo.models.electrical import ElectricalDemand, ElectricalGeneration
-from echo.models.scenario import EchoConcreteModel, ScenarioSettings, engine_settings_from_environment
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.tariff import DemandCharge, DemandTariffObjective, ExportDemandCharge, ImportDemandCharge
 from echo.optimiser import optimise
-
-
-def empty_model(number_of_intervals: int = 6):
-    model = EchoConcreteModel()
-    engine_settings = engine_settings_from_environment()
-    scenario_settings = ScenarioSettings(
-        interval_duration=30,
-        number_of_intervals=number_of_intervals,
-        number_of_expansion_intervals=1,
-    )
-    model.small_m = en.Param(initialize=engine_settings.small_m)
-    model.big_m = en.Param(initialize=engine_settings.big_m)
-    model.scenario_settings = scenario_settings
-    model.Time = en.RangeSet(0, scenario_settings.number_of_intervals - 1)
-    if scenario_settings.number_of_expansion_intervals == 0:
-        model.Expansion = en.RangeSet(0, 0)
-    else:
-        model.Expansion = en.RangeSet(0, scenario_settings.number_of_expansion_intervals - 1)
-    discount_rates = {}
-    for ep in range(0, scenario_settings.number_of_expansion_intervals):
-        discount_rates[ep] = 1 / ((1 + scenario_settings.discount_rate) ** ep)
-    model.discount_rates = en.Param(model.Expansion, initialize=discount_rates)
-    return model
 
 
 def test_system_import_demand_tariff():
@@ -261,7 +237,7 @@ def test_demand_tariff_read_and_implemented_correctly():
     assert round(max_demand_3[0]) == max_in_window_3 == round(optimise_results.objective.args[2].value)
 
 
-def test_demand_tariff_objective_apply_constraints_for_closure_issues():
+def test_demand_tariff_objective_apply_constraints_for_closure_issues(empty_model):
     model = empty_model(number_of_intervals=9)
 
     expansion_periods = 1

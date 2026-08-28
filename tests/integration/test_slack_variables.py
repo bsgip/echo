@@ -8,8 +8,6 @@ from echo.models.scenario import ScenarioSettings, engine_settings_from_environm
 from echo.objectives.base import ObjectiveSet, TotalFlow
 from echo.optimiser import optimise
 
-N_INTERVALS = 48
-
 
 def test_export_slack_var_is_minimised():
     """Connect curtailable solar to a connection pt with a flow constraint and slack vars enabled.

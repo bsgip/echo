@@ -8,8 +8,6 @@ from echo.models.scenario import ScenarioSettings, engine_settings_from_environm
 from echo.objectives.base import ObjectiveSet, TotalFlow, TotalImportFlow
 from echo.optimiser import optimise
 
-N_INTERVALS = 48
-
 
 def test_solar_generation_limited_by_inverter_size():
     expansion_periods = 1
