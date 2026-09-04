@@ -46,22 +46,25 @@ class Node(BaseModel):
         for name in names:
             self.add_port(name, port_type(**kwargs))
 
-    def get_port(self, port_name: str) -> Port:
+    def get_port(self, port_name: str) -> Port | None:
         """Returns the Port object with the name port_name.
 
         Args:
             port_name: The name of the Port.
 
         Returns:
-            Port: The port object with the name port_name
+            Port: The port object with the name port_name, or None if the port isn't found
         """
 
-        port = self.ports.get(port_name)
+        return self.ports.get(port_name)
 
-        if port is not None:
-            return port
-        else:
-            raise ValueError(f"Port name: {port_name} does not correspond to any Port object.")
+    def num_ports(self) -> int:
+        """Returns the number of ports associated with this node.
+
+        Returns:
+            The number of ports for this node.
+        """
+        return len(self.ports)
 
     def verify_node(self) -> None:
         """Checks there is at least one port associated with this node.
@@ -70,8 +73,11 @@ class Node(BaseModel):
             ConfigurationError: If there are no ports present on this node.
         """
 
-        if bool(self.ports) is False:
+        if len(self.ports) < 1:
             raise ConfigurationError("A node must have at least one port.")
+
+        for port in self.ports.values():
+            port.verify_port()
 
     def add_node_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         """Add this node to a concrete model.
@@ -81,8 +87,8 @@ class Node(BaseModel):
             profile: The data associated with this node.
         """
 
+        self.verify_node()
         for port in self.ports.values():
-            port.verify_port()
             port.add_port_to_model(model, profile)
 
     # @abc.abstractmethod
@@ -112,24 +118,13 @@ class Node(BaseModel):
         Returns:
             None
         """
-        total = 0
-
-        self.objective += total
-
-    def num_ports(self) -> int:
-        """Returns the number of ports associated with this node.
-
-        Returns:
-            The number of ports for this node.
-        """
-
-        return len(self.ports)
+        pass
 
     # @abc.abstractmethod
     def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         """Apply constraints associated with this node to a concrete model.
 
-        Can be overwritten.
+        Intended to be overridden in subclasses.
 
         Define constraints as functions that returns a Constraint, EqualityExpression or InequalityExpression.
 
@@ -152,7 +147,6 @@ class Node(BaseModel):
         Returns:
             None
         """
-
         pass
 
     def get_port_name_to_port_dict_name_map(self) -> dict[str, str]:
