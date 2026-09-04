@@ -517,7 +517,8 @@ class Port(BaseModel):
         if time_periods is None:
             time_periods = len(array)
 
-        # We need an array which only contains 0 or 1 representing inactive (flow fixed to 0) or active (flow can be optimised)
+        # We need an array which only contains 0 or 1 representing inactive (flow fixed to 0)
+        # or active (flow can be optimised)
         # Convert bools to ints
         active_periods_as_ints = [int(i) for i in array]
         set_of_active_periods = set(active_periods_as_ints)
