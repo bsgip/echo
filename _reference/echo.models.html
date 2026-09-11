@@ -1,0 +1,1045 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.models package &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="echo.models.agnostic package" href="echo.models.agnostic.html" />
+    <link rel="prev" title="echo package" href="echo.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.models package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.html">echo.objectives package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+      <li class="breadcrumb-item active">echo.models package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.models">
+<span id="echo-models-package"></span><h1>echo.models package<a class="headerlink" href="#module-echo.models" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.agnostic.html">echo.models.agnostic package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode"><code class="docutils literal notranslate"><span class="pre">AggregationNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">AggregationNode.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.add_port"><code class="docutils literal notranslate"><span class="pre">AggregationNode.add_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.aggregator_unit_check"><code class="docutils literal notranslate"><span class="pre">AggregationNode.aggregator_unit_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">AggregationNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.port_units"><code class="docutils literal notranslate"><span class="pre">AggregationNode.port_units</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.total"><code class="docutils literal notranslate"><span class="pre">AggregationNode.total</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.AggregationNode.verify_node"><code class="docutils literal notranslate"><span class="pre">AggregationNode.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedLoad"><code class="docutils literal notranslate"><span class="pre">BoundedLoad</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedLoad.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">BoundedLoad.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedLoad.lower_bound_check"><code class="docutils literal notranslate"><span class="pre">BoundedLoad.lower_bound_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedLoad.upper_bound_check"><code class="docutils literal notranslate"><span class="pre">BoundedLoad.upper_bound_check()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedPort"><code class="docutils literal notranslate"><span class="pre">BoundedPort</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedPort.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">BoundedPort.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedPort.bound_check"><code class="docutils literal notranslate"><span class="pre">BoundedPort.bound_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedPort.lower_bound"><code class="docutils literal notranslate"><span class="pre">BoundedPort.lower_bound</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.BoundedPort.upper_bound"><code class="docutils literal notranslate"><span class="pre">BoundedPort.upper_bound</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledGen"><code class="docutils literal notranslate"><span class="pre">ControlledGen</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledGen.max_power"><code class="docutils literal notranslate"><span class="pre">ControlledGen.max_power</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledGen.min_power"><code class="docutils literal notranslate"><span class="pre">ControlledGen.min_power</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoad"><code class="docutils literal notranslate"><span class="pre">ControlledLoad</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoad.max_power"><code class="docutils literal notranslate"><span class="pre">ControlledLoad.max_power</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoad.min_power"><code class="docutils literal notranslate"><span class="pre">ControlledLoad.min_power</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.max_power"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.max_power</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.max_utilisation"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.max_utilisation</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.min_power"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.min_power</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.min_utilisation"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.min_utilisation</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ControlledLoadOrGen.units"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen.units</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Demand"><code class="docutils literal notranslate"><span class="pre">Demand</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Demand.add_demand_profile"><code class="docutils literal notranslate"><span class="pre">Demand.add_demand_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Demand.add_demand_profile_from_array"><code class="docutils literal notranslate"><span class="pre">Demand.add_demand_profile_from_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.FixedPort"><code class="docutils literal notranslate"><span class="pre">FixedPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.FlexPort"><code class="docutils literal notranslate"><span class="pre">FlexPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.FlexSink"><code class="docutils literal notranslate"><span class="pre">FlexSink</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.FlexSource"><code class="docutils literal notranslate"><span class="pre">FlexSource</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode"><code class="docutils literal notranslate"><span class="pre">InputOutputNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.input_port_ref"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.input_port_unit"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.input_port_unit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.max_input"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.max_input</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.max_output"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.max_output</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.min_input"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.min_input</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.min_output"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.min_output</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.output_port_ref"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.InputOutputNode.output_port_unit"><code class="docutils literal notranslate"><span class="pre">InputOutputNode.output_port_unit</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage"><code class="docutils literal notranslate"><span class="pre">MobileStorage</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.add_objective"><code class="docutils literal notranslate"><span class="pre">MobileStorage.add_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">MobileStorage.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.apply_conserv_soc_constraints"><code class="docutils literal notranslate"><span class="pre">MobileStorage.apply_conserv_soc_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.apply_modified_soc_constraints"><code class="docutils literal notranslate"><span class="pre">MobileStorage.apply_modified_soc_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.available"><code class="docutils literal notranslate"><span class="pre">MobileStorage.available</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.check_soc_conserv_has_cost"><code class="docutils literal notranslate"><span class="pre">MobileStorage.check_soc_conserv_has_cost()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.cons_slack"><code class="docutils literal notranslate"><span class="pre">MobileStorage.cons_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.enable_trip_slack"><code class="docutils literal notranslate"><span class="pre">MobileStorage.enable_trip_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.soc_conserv"><code class="docutils literal notranslate"><span class="pre">MobileStorage.soc_conserv</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.soc_conserv_cost"><code class="docutils literal notranslate"><span class="pre">MobileStorage.soc_conserv_cost</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MobileStorage.trip_slack"><code class="docutils literal notranslate"><span class="pre">MobileStorage.trip_slack</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MultiCommodityTellegenNode"><code class="docutils literal notranslate"><span class="pre">MultiCommodityTellegenNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.MultiCommodityTellegenNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">MultiCommodityTellegenNode.apply_node_constraints()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort.active"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort.active</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort.bounds_check"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort.bounds_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort.lower_bound"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort.lower_bound</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.OffOrConstrainedPort.upper_bound"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort.upper_bound</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode.add_port"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode.add_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode.default_partition"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode.default_partition</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode.partition_port_uniqueness_check"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode.partition_port_uniqueness_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.PartitionedMultiCommodityTellegenNode.partitions"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode.partitions</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Sink"><code class="docutils literal notranslate"><span class="pre">Sink</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Sink.add_sink_profile"><code class="docutils literal notranslate"><span class="pre">Sink.add_sink_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Sink.add_sink_profile_from_array"><code class="docutils literal notranslate"><span class="pre">Sink.add_sink_profile_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Sink.non_neg_check"><code class="docutils literal notranslate"><span class="pre">Sink.non_neg_check()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Source"><code class="docutils literal notranslate"><span class="pre">Source</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Source.add_source_profile"><code class="docutils literal notranslate"><span class="pre">Source.add_source_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Source.add_source_profile_from_array"><code class="docutils literal notranslate"><span class="pre">Source.add_source_profile_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Source.non_pos_check"><code class="docutils literal notranslate"><span class="pre">Source.non_pos_check()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage"><code class="docutils literal notranslate"><span class="pre">Storage</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.add_objective"><code class="docutils literal notranslate"><span class="pre">Storage.add_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">Storage.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.apply_soc_constraints"><code class="docutils literal notranslate"><span class="pre">Storage.apply_soc_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.charging_efficiency"><code class="docutils literal notranslate"><span class="pre">Storage.charging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.charging_power_limit"><code class="docutils literal notranslate"><span class="pre">Storage.charging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.create_storage_variables"><code class="docutils literal notranslate"><span class="pre">Storage.create_storage_variables()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.depth_of_discharge_limit"><code class="docutils literal notranslate"><span class="pre">Storage.depth_of_discharge_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.discharging_efficiency"><code class="docutils literal notranslate"><span class="pre">Storage.discharging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.discharging_power_limit"><code class="docutils literal notranslate"><span class="pre">Storage.discharging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.dod_check"><code class="docutils literal notranslate"><span class="pre">Storage.dod_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.fixed_storage_capacity"><code class="docutils literal notranslate"><span class="pre">Storage.fixed_storage_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.initial_state_of_charge"><code class="docutils literal notranslate"><span class="pre">Storage.initial_state_of_charge</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.max_capacity"><code class="docutils literal notranslate"><span class="pre">Storage.max_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.min_soc"><code class="docutils literal notranslate"><span class="pre">Storage.min_soc</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.optimised_capacity"><code class="docutils literal notranslate"><span class="pre">Storage.optimised_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.regularise"><code class="docutils literal notranslate"><span class="pre">Storage.regularise</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.soc_constraint"><code class="docutils literal notranslate"><span class="pre">Storage.soc_constraint</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.soc_value"><code class="docutils literal notranslate"><span class="pre">Storage.soc_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.Storage.storage_capacity_cost"><code class="docutils literal notranslate"><span class="pre">Storage.storage_capacity_cost</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TellegenNode"><code class="docutils literal notranslate"><span class="pre">TellegenNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TellegenNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">TellegenNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TellegenNode.tellegen_unit_check"><code class="docutils literal notranslate"><span class="pre">TellegenNode.tellegen_unit_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TellegenNode.verify_node"><code class="docutils literal notranslate"><span class="pre">TellegenNode.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.binary_variable_flow_through_mutually_exclusive_port_1"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.binary_variable_flow_through_mutually_exclusive_port_1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.constraint_neg_flow_mutually_exclusive_port_1"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.constraint_neg_flow_mutually_exclusive_port_1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.constraint_neg_flow_mutually_exclusive_port_2"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.constraint_neg_flow_mutually_exclusive_port_2</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.constraint_pos_flow_mutually_exclusive_port_1"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.constraint_pos_flow_mutually_exclusive_port_1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.constraint_pos_flow_mutually_exclusive_port_2"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.constraint_pos_flow_mutually_exclusive_port_2</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.create_ports"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.create_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.input_port_name"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.input_port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.mutually_exclusive_port_flows"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.mutually_exclusive_port_flows</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.output_port_name_1"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.output_port_name_1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.output_port_name_2"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.output_port_name_2</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.set_ports"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.ThreeWayValveNode.units"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode.units</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeDelayNode"><code class="docutils literal notranslate"><span class="pre">TimeDelayNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeDelayNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">TimeDelayNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeDelayNode.time_delay"><code class="docutils literal notranslate"><span class="pre">TimeDelayNode.time_delay</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.add_constant_input_points"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.add_constant_input_points()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.add_constant_output_points"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.add_constant_output_points()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.input_points"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.input_points</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.input_points_ref"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.input_points_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.load_input_output_values_from_profile"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.load_input_output_values_from_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.output_points"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.output_points</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.output_points_ref"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.output_points_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.piecewise_check"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.piecewise_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.populate_bounds"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.populate_bounds()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.html#echo.models.agnostic.TimeVaryingPiecewiseIONode.verify_points_values"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode.verify_points_values()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.tellegen.html">echo.models.agnostic.tellegen package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.tellegen.html#echo.models.agnostic.tellegen.MultiCommodityTellegenNode"><code class="docutils literal notranslate"><span class="pre">MultiCommodityTellegenNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.tellegen.html#echo.models.agnostic.tellegen.PartitionedMultiCommodityTellegenNode"><code class="docutils literal notranslate"><span class="pre">PartitionedMultiCommodityTellegenNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.tellegen.html#echo.models.agnostic.tellegen.TellegenNode"><code class="docutils literal notranslate"><span class="pre">TellegenNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.tellegen.html#echo.models.agnostic.tellegen.ThreeWayValveNode"><code class="docutils literal notranslate"><span class="pre">ThreeWayValveNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.tellegen.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.agnostic.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.aggregation.html">echo.models.agnostic.aggregation module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.aggregation.html#echo.models.agnostic.aggregation.AggregationNode"><code class="docutils literal notranslate"><span class="pre">AggregationNode</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.base.html">echo.models.agnostic.base module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.base.html#echo.models.agnostic.base.Demand"><code class="docutils literal notranslate"><span class="pre">Demand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.base.html#echo.models.agnostic.base.FixedPort"><code class="docutils literal notranslate"><span class="pre">FixedPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.base.html#echo.models.agnostic.base.OffOrConstrainedPort"><code class="docutils literal notranslate"><span class="pre">OffOrConstrainedPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.base.html#echo.models.agnostic.base.Sink"><code class="docutils literal notranslate"><span class="pre">Sink</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.base.html#echo.models.agnostic.base.Source"><code class="docutils literal notranslate"><span class="pre">Source</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.bounded.html">echo.models.agnostic.bounded module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.bounded.html#echo.models.agnostic.bounded.BoundedLoad"><code class="docutils literal notranslate"><span class="pre">BoundedLoad</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.bounded.html#echo.models.agnostic.bounded.BoundedPort"><code class="docutils literal notranslate"><span class="pre">BoundedPort</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.controlled.html">echo.models.agnostic.controlled module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.controlled.html#echo.models.agnostic.controlled.ControlledGen"><code class="docutils literal notranslate"><span class="pre">ControlledGen</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.controlled.html#echo.models.agnostic.controlled.ControlledLoad"><code class="docutils literal notranslate"><span class="pre">ControlledLoad</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.controlled.html#echo.models.agnostic.controlled.ControlledLoadOrGen"><code class="docutils literal notranslate"><span class="pre">ControlledLoadOrGen</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.flex.html">echo.models.agnostic.flex module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.flex.html#echo.models.agnostic.flex.FlexPort"><code class="docutils literal notranslate"><span class="pre">FlexPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.flex.html#echo.models.agnostic.flex.FlexSink"><code class="docutils literal notranslate"><span class="pre">FlexSink</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.flex.html#echo.models.agnostic.flex.FlexSource"><code class="docutils literal notranslate"><span class="pre">FlexSource</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.input_output.html">echo.models.agnostic.input_output module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.input_output.html#echo.models.agnostic.input_output.InputOutputNode"><code class="docutils literal notranslate"><span class="pre">InputOutputNode</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.storage.html">echo.models.agnostic.storage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.storage.html#echo.models.agnostic.storage.MobileStorage"><code class="docutils literal notranslate"><span class="pre">MobileStorage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.storage.html#echo.models.agnostic.storage.Storage"><code class="docutils literal notranslate"><span class="pre">Storage</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.time_delay.html">echo.models.agnostic.time_delay module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.time_delay.html#echo.models.agnostic.time_delay.TimeDelayNode"><code class="docutils literal notranslate"><span class="pre">TimeDelayNode</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.agnostic.time_varying.html">echo.models.agnostic.time_varying module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.agnostic.time_varying.html#echo.models.agnostic.time_varying.TimeVaryingPiecewiseIONode"><code class="docutils literal notranslate"><span class="pre">TimeVaryingPiecewiseIONode</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.base.html">echo.models.base package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.BaseModel"><code class="docutils literal notranslate"><span class="pre">BaseModel</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.BaseModel.Config"><code class="docutils literal notranslate"><span class="pre">BaseModel.Config</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.html#echo.models.base.BaseModel.Config.arbitrary_types_allowed"><code class="docutils literal notranslate"><span class="pre">BaseModel.Config.arbitrary_types_allowed</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.html#echo.models.base.BaseModel.Config.extra"><code class="docutils literal notranslate"><span class="pre">BaseModel.Config.extra</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.html#echo.models.base.BaseModel.Config.validate_assignment"><code class="docutils literal notranslate"><span class="pre">BaseModel.Config.validate_assignment</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.add_edge_to_model"><code class="docutils literal notranslate"><span class="pre">Edge.add_edge_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.add_vertices"><code class="docutils literal notranslate"><span class="pre">Edge.add_vertices()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.edge_name"><code class="docutils literal notranslate"><span class="pre">Edge.edge_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.get_max_flow_along_edge"><code class="docutils literal notranslate"><span class="pre">Edge.get_max_flow_along_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.nodes"><code class="docutils literal notranslate"><span class="pre">Edge.nodes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.tariff"><code class="docutils literal notranslate"><span class="pre">Edge.tariff</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.uid"><code class="docutils literal notranslate"><span class="pre">Edge.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.verify_edge"><code class="docutils literal notranslate"><span class="pre">Edge.verify_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Edge.vertices"><code class="docutils literal notranslate"><span class="pre">Edge.vertices</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node"><code class="docutils literal notranslate"><span class="pre">Node</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">Node.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.add_objective"><code class="docutils literal notranslate"><span class="pre">Node.add_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.add_port"><code class="docutils literal notranslate"><span class="pre">Node.add_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.add_ports_from_list"><code class="docutils literal notranslate"><span class="pre">Node.add_ports_from_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">Node.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.get_port"><code class="docutils literal notranslate"><span class="pre">Node.get_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.get_port_name_to_port_dict_name_map"><code class="docutils literal notranslate"><span class="pre">Node.get_port_name_to_port_dict_name_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.inflow"><code class="docutils literal notranslate"><span class="pre">Node.inflow</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.node_name"><code class="docutils literal notranslate"><span class="pre">Node.node_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.num_ports"><code class="docutils literal notranslate"><span class="pre">Node.num_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.objective"><code class="docutils literal notranslate"><span class="pre">Node.objective</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.ports"><code class="docutils literal notranslate"><span class="pre">Node.ports</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.uid"><code class="docutils literal notranslate"><span class="pre">Node.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Node.verify_node"><code class="docutils literal notranslate"><span class="pre">Node.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_edge"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_edge_obj"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_edge_obj()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_edges_from"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_edges_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_node"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_node_obj"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_node_obj()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.add_nodes_from"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.add_nodes_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.apply_path_constraints"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.apply_path_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.connect_ports_and_create_edge"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.connect_ports_and_create_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.convert_to_nx"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.convert_to_nx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.create_path_objects"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.create_path_objects()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.delete_edge"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.delete_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.delete_node"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.delete_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.draw_on_axes"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.draw_on_axes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.edge_list"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.edge_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.edge_obj"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.edge_obj</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_edge"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_node"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_path"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_port_names_from_edges"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_port_names_from_edges()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_port_names_from_nodes"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_port_names_from_nodes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_ports_on_edge_from_nodes"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_ports_on_edge_from_nodes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.get_sources_and_sinks"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.get_sources_and_sinks()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.inject_data_into_ev"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.inject_data_into_ev()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.lookup_node_names_from_port"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.lookup_node_names_from_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.node_name_list"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.node_name_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.node_obj"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.node_obj</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.paths"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.paths</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.print_port_names"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.print_port_names()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.rebuild_all_edges"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.rebuild_all_edges()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.split_graph_on_edge"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.split_graph_on_edge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.to_cytoscape_json"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.to_cytoscape_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.update_node"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.update_node()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.verify_graph"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.verify_graph()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.OptimisationGraph.verify_paths"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph.verify_paths()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path"><code class="docutils literal notranslate"><span class="pre">Path</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.add_objective"><code class="docutils literal notranslate"><span class="pre">Path.add_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.add_path_to_model"><code class="docutils literal notranslate"><span class="pre">Path.add_path_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.add_vertices"><code class="docutils literal notranslate"><span class="pre">Path.add_vertices()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.contingency_neg"><code class="docutils literal notranslate"><span class="pre">Path.contingency_neg</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.contingency_pos"><code class="docutils literal notranslate"><span class="pre">Path.contingency_pos</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.edge_ports"><code class="docutils literal notranslate"><span class="pre">Path.edge_ports</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.flow_value"><code class="docutils literal notranslate"><span class="pre">Path.flow_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.objective"><code class="docutils literal notranslate"><span class="pre">Path.objective</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.path_name"><code class="docutils literal notranslate"><span class="pre">Path.path_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.path_tariff"><code class="docutils literal notranslate"><span class="pre">Path.path_tariff</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.regularise"><code class="docutils literal notranslate"><span class="pre">Path.regularise</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.slack"><code class="docutils literal notranslate"><span class="pre">Path.slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.uid"><code class="docutils literal notranslate"><span class="pre">Path.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Path.vertices"><code class="docutils literal notranslate"><span class="pre">Path.vertices</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port"><code class="docutils literal notranslate"><span class="pre">Port</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.active_periods"><code class="docutils literal notranslate"><span class="pre">Port.active_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.add_objective"><code class="docutils literal notranslate"><span class="pre">Port.add_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">Port.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.allow_dangling_port"><code class="docutils literal notranslate"><span class="pre">Port.allow_dangling_port</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.constrain_pos_neg"><code class="docutils literal notranslate"><span class="pre">Port.constrain_pos_neg()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_con_sign"><code class="docutils literal notranslate"><span class="pre">Port.export_con_sign()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_con_val"><code class="docutils literal notranslate"><span class="pre">Port.export_con_val</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_constraint"><code class="docutils literal notranslate"><span class="pre">Port.export_constraint</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_constraint_value"><code class="docutils literal notranslate"><span class="pre">Port.export_constraint_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_slack"><code class="docutils literal notranslate"><span class="pre">Port.export_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.export_slack_max"><code class="docutils literal notranslate"><span class="pre">Port.export_slack_max</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.factory_pos_neg_flows"><code class="docutils literal notranslate"><span class="pre">Port.factory_pos_neg_flows()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.flow_type"><code class="docutils literal notranslate"><span class="pre">Port.flow_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.flows"><code class="docutils literal notranslate"><span class="pre">Port.flows</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_con_sign"><code class="docutils literal notranslate"><span class="pre">Port.import_con_sign()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_con_val"><code class="docutils literal notranslate"><span class="pre">Port.import_con_val</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_constraint"><code class="docutils literal notranslate"><span class="pre">Port.import_constraint</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_constraint_value"><code class="docutils literal notranslate"><span class="pre">Port.import_constraint_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_slack"><code class="docutils literal notranslate"><span class="pre">Port.import_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.import_slack_max"><code class="docutils literal notranslate"><span class="pre">Port.import_slack_max</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.initial_value"><code class="docutils literal notranslate"><span class="pre">Port.initial_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.initial_value_ref"><code class="docutils literal notranslate"><span class="pre">Port.initial_value_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.initial_value_scaling"><code class="docutils literal notranslate"><span class="pre">Port.initial_value_scaling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.is_pos"><code class="docutils literal notranslate"><span class="pre">Port.is_pos</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.neg"><code class="docutils literal notranslate"><span class="pre">Port.neg</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.objective"><code class="docutils literal notranslate"><span class="pre">Port.objective</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.port_name"><code class="docutils literal notranslate"><span class="pre">Port.port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.pos"><code class="docutils literal notranslate"><span class="pre">Port.pos</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.process_initial_value"><code class="docutils literal notranslate"><span class="pre">Port.process_initial_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.set_active_periods_from_array"><code class="docutils literal notranslate"><span class="pre">Port.set_active_periods_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.set_flow_constraints"><code class="docutils literal notranslate"><span class="pre">Port.set_flow_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.set_initial_value"><code class="docutils literal notranslate"><span class="pre">Port.set_initial_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.set_initial_value_from_array"><code class="docutils literal notranslate"><span class="pre">Port.set_initial_value_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.set_initial_value_from_timeseriesdata"><code class="docutils literal notranslate"><span class="pre">Port.set_initial_value_from_timeseriesdata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.slack"><code class="docutils literal notranslate"><span class="pre">Port.slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.uid"><code class="docutils literal notranslate"><span class="pre">Port.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.units"><code class="docutils literal notranslate"><span class="pre">Port.units</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Port.verify_port"><code class="docutils literal notranslate"><span class="pre">Port.verify_port()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.Transform"><code class="docutils literal notranslate"><span class="pre">Transform</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Transform.lhs"><code class="docutils literal notranslate"><span class="pre">Transform.lhs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Transform.transform_name"><code class="docutils literal notranslate"><span class="pre">Transform.transform_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.Transform.uid"><code class="docutils literal notranslate"><span class="pre">Transform.uid</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode"><code class="docutils literal notranslate"><span class="pre">TransformNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.add_emission_transformation"><code class="docutils literal notranslate"><span class="pre">TransformNode.add_emission_transformation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.add_input_output_transformation"><code class="docutils literal notranslate"><span class="pre">TransformNode.add_input_output_transformation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.add_transformation"><code class="docutils literal notranslate"><span class="pre">TransformNode.add_transformation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">TransformNode.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.transformations"><code class="docutils literal notranslate"><span class="pre">TransformNode.transformations</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformNode.verify_node"><code class="docutils literal notranslate"><span class="pre">TransformNode.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformTerm"><code class="docutils literal notranslate"><span class="pre">TransformTerm</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformTerm.rule"><code class="docutils literal notranslate"><span class="pre">TransformTerm.rule</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformTerm.var"><code class="docutils literal notranslate"><span class="pre">TransformTerm.var</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.html#echo.models.base.TransformTerm.weight"><code class="docutils literal notranslate"><span class="pre">TransformTerm.weight</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.base.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.base_model.html">echo.models.base.base_model module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.base_model.html#echo.models.base.base_model.BaseModel"><code class="docutils literal notranslate"><span class="pre">BaseModel</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.edge.html">echo.models.base.edge module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.edge.html#echo.models.base.edge.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.node.html">echo.models.base.node module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.node.html#echo.models.base.node.Node"><code class="docutils literal notranslate"><span class="pre">Node</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.optimisation_graph.html">echo.models.base.optimisation_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph"><code class="docutils literal notranslate"><span class="pre">OptimisationGraph</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.path.html">echo.models.base.path module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.path.html#echo.models.base.path.Path"><code class="docutils literal notranslate"><span class="pre">Path</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.port.html">echo.models.base.port module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.port.html#echo.models.base.port.Port"><code class="docutils literal notranslate"><span class="pre">Port</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.transform.html">echo.models.base.transform module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.transform.html#echo.models.base.transform.Transform"><code class="docutils literal notranslate"><span class="pre">Transform</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.transform.html#echo.models.base.transform.TransformNode"><code class="docutils literal notranslate"><span class="pre">TransformNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.base.transform.html#echo.models.base.transform.TransformTerm"><code class="docutils literal notranslate"><span class="pre">TransformTerm</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.base.types.html">echo.models.base.types module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.carbon.html">echo.models.carbon package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonAggregation"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonAggregation.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonAggregation.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonAggregation.total"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation.total</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonAggregation.verify_node"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonPort"><code class="docutils literal notranslate"><span class="pre">CarbonPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonSink"><code class="docutils literal notranslate"><span class="pre">CarbonSink</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.carbon.html#echo.models.carbon.CarbonSource"><code class="docutils literal notranslate"><span class="pre">CarbonSource</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.carbon.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.aggregation.html">echo.models.carbon.aggregation module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.carbon.aggregation.html#echo.models.carbon.aggregation.CarbonAggregation"><code class="docutils literal notranslate"><span class="pre">CarbonAggregation</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.carbon.base.html">echo.models.carbon.base module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.carbon.base.html#echo.models.carbon.base.CarbonPort"><code class="docutils literal notranslate"><span class="pre">CarbonPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.carbon.base.html#echo.models.carbon.base.CarbonSink"><code class="docutils literal notranslate"><span class="pre">CarbonSink</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.carbon.base.html#echo.models.carbon.base.CarbonSource"><code class="docutils literal notranslate"><span class="pre">CarbonSource</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.electrical.html">echo.models.electrical package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.BoundedElectricalLoad"><code class="docutils literal notranslate"><span class="pre">BoundedElectricalLoad</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV"><code class="docutils literal notranslate"><span class="pre">EV</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.V0G_SOC"><code class="docutils literal notranslate"><span class="pre">EV.V0G_SOC</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.V0G_delta"><code class="docutils literal notranslate"><span class="pre">EV.V0G_delta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.V0G_trip_infeasibility"><code class="docutils literal notranslate"><span class="pre">EV.V0G_trip_infeasibility</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">EV.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.available"><code class="docutils literal notranslate"><span class="pre">EV.available</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.charge_mode"><code class="docutils literal notranslate"><span class="pre">EV.charge_mode</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.charge_status"><code class="docutils literal notranslate"><span class="pre">EV.charge_status</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.charging_efficiency"><code class="docutils literal notranslate"><span class="pre">EV.charging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.charging_power_limit"><code class="docutils literal notranslate"><span class="pre">EV.charging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.connection_port_name"><code class="docutils literal notranslate"><span class="pre">EV.connection_port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.create_ev_transformation"><code class="docutils literal notranslate"><span class="pre">EV.create_ev_transformation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.depth_of_discharge_limit"><code class="docutils literal notranslate"><span class="pre">EV.depth_of_discharge_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.discharging_efficiency"><code class="docutils literal notranslate"><span class="pre">EV.discharging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.discharging_power_limit"><code class="docutils literal notranslate"><span class="pre">EV.discharging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.initial_state_of_charge"><code class="docutils literal notranslate"><span class="pre">EV.initial_state_of_charge</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.interval_duration"><code class="docutils literal notranslate"><span class="pre">EV.interval_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.max_capacity"><code class="docutils literal notranslate"><span class="pre">EV.max_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.port_dict_name_to_port_name_map"><code class="docutils literal notranslate"><span class="pre">EV.port_dict_name_to_port_name_map</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.port_dict_name_to_port_uid_map"><code class="docutils literal notranslate"><span class="pre">EV.port_dict_name_to_port_uid_map</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.process_v0g_charging"><code class="docutils literal notranslate"><span class="pre">EV.process_v0g_charging()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.soc_conserv"><code class="docutils literal notranslate"><span class="pre">EV.soc_conserv</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.soc_conserv_cost"><code class="docutils literal notranslate"><span class="pre">EV.soc_conserv_cost</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.tod_charging"><code class="docutils literal notranslate"><span class="pre">EV.tod_charging</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.trip_slack"><code class="docutils literal notranslate"><span class="pre">EV.trip_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.update"><code class="docutils literal notranslate"><span class="pre">EV.update()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.usage"><code class="docutils literal notranslate"><span class="pre">EV.usage</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.v0g_charging"><code class="docutils literal notranslate"><span class="pre">EV.v0g_charging()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EV.verify_node"><code class="docutils literal notranslate"><span class="pre">EV.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase"><code class="docutils literal notranslate"><span class="pre">EVBase</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.available"><code class="docutils literal notranslate"><span class="pre">EVBase.available</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.charge_mode"><code class="docutils literal notranslate"><span class="pre">EVBase.charge_mode</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.charging_efficiency"><code class="docutils literal notranslate"><span class="pre">EVBase.charging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.charging_power_limit"><code class="docutils literal notranslate"><span class="pre">EVBase.charging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.connection_port_name"><code class="docutils literal notranslate"><span class="pre">EVBase.connection_port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.depth_of_discharge_limit"><code class="docutils literal notranslate"><span class="pre">EVBase.depth_of_discharge_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.discharging_efficiency"><code class="docutils literal notranslate"><span class="pre">EVBase.discharging_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.discharging_power_limit"><code class="docutils literal notranslate"><span class="pre">EVBase.discharging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.enable_trip_slack"><code class="docutils literal notranslate"><span class="pre">EVBase.enable_trip_slack</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.initial_state_of_charge"><code class="docutils literal notranslate"><span class="pre">EVBase.initial_state_of_charge</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.interval_duration"><code class="docutils literal notranslate"><span class="pre">EVBase.interval_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.max_capacity"><code class="docutils literal notranslate"><span class="pre">EVBase.max_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.port_dict_name_to_port_name_map"><code class="docutils literal notranslate"><span class="pre">EVBase.port_dict_name_to_port_name_map</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.port_dict_name_to_port_uid_map"><code class="docutils literal notranslate"><span class="pre">EVBase.port_dict_name_to_port_uid_map</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.ports"><code class="docutils literal notranslate"><span class="pre">EVBase.ports</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.set_port_uid_maps"><code class="docutils literal notranslate"><span class="pre">EVBase.set_port_uid_maps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.set_stateful_attrs_at_init"><code class="docutils literal notranslate"><span class="pre">EVBase.set_stateful_attrs_at_init</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.soc_conserv"><code class="docutils literal notranslate"><span class="pre">EVBase.soc_conserv</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.soc_conserv_cost"><code class="docutils literal notranslate"><span class="pre">EVBase.soc_conserv_cost</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.tod_charging"><code class="docutils literal notranslate"><span class="pre">EVBase.tod_charging</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.usage"><code class="docutils literal notranslate"><span class="pre">EVBase.usage</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.usage_power_limit"><code class="docutils literal notranslate"><span class="pre">EVBase.usage_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVBase.verify_node"><code class="docutils literal notranslate"><span class="pre">EVBase.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G"><code class="docutils literal notranslate"><span class="pre">EVV0G</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.V0G_SOC"><code class="docutils literal notranslate"><span class="pre">EVV0G.V0G_SOC</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.V0G_delta"><code class="docutils literal notranslate"><span class="pre">EVV0G.V0G_delta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.V0G_trip_infeasibility"><code class="docutils literal notranslate"><span class="pre">EVV0G.V0G_trip_infeasibility</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">EVV0G.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.charge_status"><code class="docutils literal notranslate"><span class="pre">EVV0G.charge_status</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV0G.set_stateful_attrs"><code class="docutils literal notranslate"><span class="pre">EVV0G.set_stateful_attrs()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV1G"><code class="docutils literal notranslate"><span class="pre">EVV1G</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV1G.set_stateful_attrs"><code class="docutils literal notranslate"><span class="pre">EVV1G.set_stateful_attrs()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV2G"><code class="docutils literal notranslate"><span class="pre">EVV2G</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVV2G.set_stateful_attrs"><code class="docutils literal notranslate"><span class="pre">EVV2G.set_stateful_attrs()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile"><code class="docutils literal notranslate"><span class="pre">EVWithProfile</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.charge_mode"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.charge_mode</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.charging_power_limit"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.charging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.demand"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.demand</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.port_name"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.port_uid"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.port_uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.set_stateful_attrs"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.set_stateful_attrs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.set_stateful_attrs_at_init"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.set_stateful_attrs_at_init</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.EVWithProfile.verify_node"><code class="docutils literal notranslate"><span class="pre">EVWithProfile.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalDemand"><code class="docutils literal notranslate"><span class="pre">ElectricalDemand</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalGeneration"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalGeneration.add_generation_profile"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration.add_generation_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalGeneration.add_generation_profile_from_array"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration.add_generation_profile_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalGeneration.add_port_to_model"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration.add_port_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalGeneration.curtailable"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration.curtailable</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalPort"><code class="docutils literal notranslate"><span class="pre">ElectricalPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.ElectricalStorage"><code class="docutils literal notranslate"><span class="pre">ElectricalStorage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.FixedElectricalPort"><code class="docutils literal notranslate"><span class="pre">FixedElectricalPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter"><code class="docutils literal notranslate"><span class="pre">Inverter</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.ac_dc_efficiency"><code class="docutils literal notranslate"><span class="pre">Inverter.ac_dc_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.ac_port_name"><code class="docutils literal notranslate"><span class="pre">Inverter.ac_port_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.add_ac_port"><code class="docutils literal notranslate"><span class="pre">Inverter.add_ac_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.add_dc_port"><code class="docutils literal notranslate"><span class="pre">Inverter.add_dc_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">Inverter.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.dc_ac_efficiency"><code class="docutils literal notranslate"><span class="pre">Inverter.dc_ac_efficiency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.dc_port_names"><code class="docutils literal notranslate"><span class="pre">Inverter.dc_port_names</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.max_export"><code class="docutils literal notranslate"><span class="pre">Inverter.max_export</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.max_import"><code class="docutils literal notranslate"><span class="pre">Inverter.max_import</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.Inverter.verify_node"><code class="docutils literal notranslate"><span class="pre">Inverter.verify_node()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#echo.models.electrical.MobileElectricalStorage"><code class="docutils literal notranslate"><span class="pre">MobileElectricalStorage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.ev.html">echo.models.electrical.ev package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.EVBase"><code class="docutils literal notranslate"><span class="pre">EVBase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.EVV0G"><code class="docutils literal notranslate"><span class="pre">EVV0G</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.EVV1G"><code class="docutils literal notranslate"><span class="pre">EVV1G</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.EVV2G"><code class="docutils literal notranslate"><span class="pre">EVV2G</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.EVWithProfile"><code class="docutils literal notranslate"><span class="pre">EVWithProfile</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#echo.models.electrical.ev.MobileElectricalStorage"><code class="docutils literal notranslate"><span class="pre">MobileElectricalStorage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.ev.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.electrical.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.base.html">echo.models.electrical.base module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.BoundedElectricalLoad"><code class="docutils literal notranslate"><span class="pre">BoundedElectricalLoad</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalDemand"><code class="docutils literal notranslate"><span class="pre">ElectricalDemand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalPort"><code class="docutils literal notranslate"><span class="pre">ElectricalPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalStorage"><code class="docutils literal notranslate"><span class="pre">ElectricalStorage</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.FixedElectricalPort"><code class="docutils literal notranslate"><span class="pre">FixedElectricalPort</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.generation.html">echo.models.electrical.generation module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.generation.html#echo.models.electrical.generation.ElectricalGeneration"><code class="docutils literal notranslate"><span class="pre">ElectricalGeneration</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.electrical.inverter.html">echo.models.electrical.inverter module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.electrical.inverter.html#echo.models.electrical.inverter.Inverter"><code class="docutils literal notranslate"><span class="pre">Inverter</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.gas.html">echo.models.gas package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.FixedGasPort"><code class="docutils literal notranslate"><span class="pre">FixedGasPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.FlexGasPort"><code class="docutils literal notranslate"><span class="pre">FlexGasPort</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.check_cop"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.check_cop()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.cop"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.set_bounds"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.set_bounds()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.set_ports"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.GasBoilerFixedCOP.startup_cop"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP.startup_cop</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.check_eta"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.check_eta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.cop"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.deg_to_kw"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.deg_to_kw</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.exit_t"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.exit_t</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.exit_temp_bounds"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.exit_temp_bounds</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.is_on"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.is_on</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.max_input"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.max_input</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.min_input"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.min_input</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.return_t"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.return_t</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.return_temp_bounds"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.return_temp_bounds</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.set_output_bounds"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.set_output_bounds()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.html#echo.models.gas.TempControlledBoiler.startup_cop"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler.startup_cop</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.gas.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.base.html">echo.models.gas.base module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.gas.base.html#echo.models.gas.base.FixedGasPort"><code class="docutils literal notranslate"><span class="pre">FixedGasPort</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.gas.base.html#echo.models.gas.base.FlexGasPort"><code class="docutils literal notranslate"><span class="pre">FlexGasPort</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.boiler_fixedcop.html">echo.models.gas.boiler_fixedcop module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.gas.boiler_fixedcop.html#echo.models.gas.boiler_fixedcop.GasBoilerFixedCOP"><code class="docutils literal notranslate"><span class="pre">GasBoilerFixedCOP</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.gas.boiler_tempcontrolled.html">echo.models.gas.boiler_tempcontrolled module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.gas.boiler_tempcontrolled.html#echo.models.gas.boiler_tempcontrolled.TempControlledBoiler"><code class="docutils literal notranslate"><span class="pre">TempControlledBoiler</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.prebuilt.html">echo.models.prebuilt package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.Battery"><code class="docutils literal notranslate"><span class="pre">Battery</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.DieselGenerator"><code class="docutils literal notranslate"><span class="pre">DieselGenerator</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.DieselGenerator.C02Intensity"><code class="docutils literal notranslate"><span class="pre">DieselGenerator.C02Intensity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.DieselGenerator.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">DieselGenerator.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.DieselGenerator.cop"><code class="docutils literal notranslate"><span class="pre">DieselGenerator.cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.DieselGenerator.startup_efficiency"><code class="docutils literal notranslate"><span class="pre">DieselGenerator.startup_efficiency</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.FlexElectricalNode"><code class="docutils literal notranslate"><span class="pre">FlexElectricalNode</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.FlexNode"><code class="docutils literal notranslate"><span class="pre">FlexNode</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.FlexNodeWithEmissions"><code class="docutils literal notranslate"><span class="pre">FlexNodeWithEmissions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.Load"><code class="docutils literal notranslate"><span class="pre">Load</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.ScaledSolar"><code class="docutils literal notranslate"><span class="pre">ScaledSolar</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#echo.models.prebuilt.Solar"><code class="docutils literal notranslate"><span class="pre">Solar</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.prebuilt.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.battery.html">echo.models.prebuilt.battery module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.battery.html#echo.models.prebuilt.battery.Battery"><code class="docutils literal notranslate"><span class="pre">Battery</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.diesel_generator.html">echo.models.prebuilt.diesel_generator module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.diesel_generator.html#echo.models.prebuilt.diesel_generator.DieselGenerator"><code class="docutils literal notranslate"><span class="pre">DieselGenerator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.flex.html">echo.models.prebuilt.flex module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.flex.html#echo.models.prebuilt.flex.FlexElectricalNode"><code class="docutils literal notranslate"><span class="pre">FlexElectricalNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.flex.html#echo.models.prebuilt.flex.FlexNode"><code class="docutils literal notranslate"><span class="pre">FlexNode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.flex.html#echo.models.prebuilt.flex.FlexNodeWithEmissions"><code class="docutils literal notranslate"><span class="pre">FlexNodeWithEmissions</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.load.html">echo.models.prebuilt.load module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.load.html#echo.models.prebuilt.load.Load"><code class="docutils literal notranslate"><span class="pre">Load</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.scaled_solar.html">echo.models.prebuilt.scaled_solar module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.scaled_solar.html#echo.models.prebuilt.scaled_solar.ScaledSolar"><code class="docutils literal notranslate"><span class="pre">ScaledSolar</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.prebuilt.solar.html">echo.models.prebuilt.solar module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.prebuilt.solar.html#echo.models.prebuilt.solar.Solar"><code class="docutils literal notranslate"><span class="pre">Solar</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.thermal.html">echo.models.thermal package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.ambient_temperature_dict"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.ambient_temperature_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.ambient_temperature_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.ambient_temperature_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.constant_ambient_temperature"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.constant_ambient_temperature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.electrical_input_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.electrical_input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.heat_rejection_coefficient"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.heat_rejection_coefficient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.heat_rejection_port"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.heat_rejection_port</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.heat_rejection_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.heat_rejection_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.input_port_unit"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.input_port_unit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.max_cooling_capacity"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.max_cooling_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.nominal_cop"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.nominal_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.output_port_unit"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.output_port_unit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.partial_load_cop"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.partial_load_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.partial_load_cop_check"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.partial_load_cop_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.set_ports"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.temperature_cop_check"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.temperature_cop_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.temperature_cop_param"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.temperature_cop_param</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.temperature_dependent_cop"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.temperature_dependent_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.thermal_output_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.thermal_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedChiller.update"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.ambient_temperature_dict"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.ambient_temperature_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.ambient_temperature_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.ambient_temperature_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.constant_ambient_temperature"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.constant_ambient_temperature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.create_ports"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.create_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.electrical_input_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.electrical_input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.heat_intake_rejection_coefficient"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.heat_intake_rejection_coefficient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.heat_intake_rejection_port"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.heat_intake_rejection_port</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.heat_intake_rejection_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.heat_intake_rejection_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.input_points_cooling"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.input_points_cooling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.input_points_heating"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.input_points_heating</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.max_cooling_capacity"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.max_cooling_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.max_heating_capacity"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.max_heating_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.nominal_cooling_cop"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.nominal_cooling_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.nominal_heating_cop"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.nominal_heating_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.output_points_cooling"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.output_points_cooling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.output_points_heating"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.output_points_heating</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.partial_load_cop_cooling"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.partial_load_cop_cooling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.partial_load_cop_heating"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.partial_load_cop_heating</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.power_to_cool"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.power_to_cool</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.power_to_heat"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.power_to_heat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.set_ports"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.temperature_cop_cooling_param"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.temperature_cop_cooling_param</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.temperature_cop_heating_param"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.temperature_cop_heating_param</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.temperature_dependent_cop_cooling"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.temperature_dependent_cop_cooling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.temperature_dependent_cop_heating"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.temperature_dependent_cop_heating</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.thermal_output_port_ref"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.thermal_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ParameterisedHeatPump.update"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller"><code class="docutils literal notranslate"><span class="pre">SimpleChiller</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.cooling_cop"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.cooling_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.cooling_cop_check"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.cooling_cop_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.cooling_cop_constant"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.cooling_cop_constant</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.cooling_cop_time_series"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.cooling_cop_time_series</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.cooling_cop_time_series_ref"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.cooling_cop_time_series_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.electrical_input_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.electrical_input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.max_cooling_capacity"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.max_cooling_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.set_ports"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.thermal_output_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.thermal_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleChiller.update"><code class="docutils literal notranslate"><span class="pre">SimpleChiller.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.cooling_cop"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.cooling_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.cooling_cop_check"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.cooling_cop_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.cooling_cop_constant"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.cooling_cop_constant</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.cooling_cop_time_series"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.cooling_cop_time_series</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.cooling_cop_time_series_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.cooling_cop_time_series_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.create_ports"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.create_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.electrical_input_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.electrical_input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.heating_cop"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.heating_cop</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.heating_cop_check"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.heating_cop_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.heating_cop_constant"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.heating_cop_constant</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.heating_cop_time_series"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.heating_cop_time_series</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.heating_cop_time_series_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.heating_cop_time_series_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.max_cooling_capacity"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.max_cooling_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.max_heating_capacity"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.max_heating_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.power_to_cool"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.power_to_cool</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.power_to_heat"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.power_to_heat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.set_ports"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.thermal_output_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.thermal_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPump.update"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.apply_node_constraints"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.apply_node_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.cooling_output_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.cooling_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.create_ports"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.create_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.delta_heat_flow"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.delta_heat_flow</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.electrical_input_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.electrical_input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.heating_out_adjusted"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.heating_out_adjusted</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.heating_output_port_ref"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.heating_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.recovered_waste_heat"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.recovered_waste_heat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.set_ports"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.SimpleHeatPumpDualOutput.waste_heat_recovery_coeff"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput.waste_heat_recovery_coeff</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage"><code class="docutils literal notranslate"><span class="pre">ThermalStorage</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.add_node_to_model"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.add_node_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.ambient_temp"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.ambient_temp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.ambient_temp_ref"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.ambient_temp_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.charging_power_limit"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.charging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.discharging_power_limit"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.discharging_power_limit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.energy_flow_units"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.energy_flow_units</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.energy_units_conversion"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.energy_units_conversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.enforce_end_temperature_value"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.enforce_end_temperature_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.initial_temp"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.initial_temp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.input_output_port_ref"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.input_output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.input_port_ref"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.input_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.ins_transmittance"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.ins_transmittance</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.internal_temp"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.internal_temp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.lump_capacitance"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.lump_capacitance</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.lump_conductance"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.lump_conductance</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.max_heat_storage_capacity"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.max_heat_storage_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.max_temp"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.max_temp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.min_temp"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.min_temp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.net_loss_gain"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.net_loss_gain</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.optimised_capacity"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.optimised_capacity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.output_port_ref"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.output_port_ref</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.separate_in_out_ports"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.separate_in_out_ports</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.set_flow_constraints_one_port"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.set_flow_constraints_one_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.set_flow_constraints_separate_ports"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.set_flow_constraints_separate_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.set_port"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.set_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.set_ports"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.set_ports()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.soc_constraint"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.soc_constraint</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.soc_value"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.soc_value</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.specific_heat"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.specific_heat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.storage_mass"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.storage_mass</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.surface_area"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.surface_area</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.html#echo.models.thermal.ThermalStorage.update"><code class="docutils literal notranslate"><span class="pre">ThermalStorage.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.thermal.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.base.html">echo.models.thermal.base module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.base.html#echo.models.thermal.base.ThermalNode"><code class="docutils literal notranslate"><span class="pre">ThermalNode</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.parameterised_chiller.html">echo.models.thermal.parameterised_chiller module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.parameterised_chiller.html#echo.models.thermal.parameterised_chiller.ParameterisedChiller"><code class="docutils literal notranslate"><span class="pre">ParameterisedChiller</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.parameterised_heatpump.html">echo.models.thermal.parameterised_heatpump module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.parameterised_heatpump.html#echo.models.thermal.parameterised_heatpump.ParameterisedHeatPump"><code class="docutils literal notranslate"><span class="pre">ParameterisedHeatPump</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.simple_chiller.html">echo.models.thermal.simple_chiller module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.simple_chiller.html#echo.models.thermal.simple_chiller.SimpleChiller"><code class="docutils literal notranslate"><span class="pre">SimpleChiller</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.simple_heatpump.html">echo.models.thermal.simple_heatpump module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.simple_heatpump.html#echo.models.thermal.simple_heatpump.SimpleHeatPump"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPump</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.simple_heatpump_dualoutput.html">echo.models.thermal.simple_heatpump_dualoutput module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.simple_heatpump_dualoutput.html#echo.models.thermal.simple_heatpump_dualoutput.SimpleHeatPumpDualOutput"><code class="docutils literal notranslate"><span class="pre">SimpleHeatPumpDualOutput</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.thermal.storage.html">echo.models.thermal.storage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.thermal.storage.html#echo.models.thermal.storage.ThermalStorage"><code class="docutils literal notranslate"><span class="pre">ThermalStorage</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="echo.models.scenario.html">echo.models.scenario module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.Expansion"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.Expansion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.Time"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.Time</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.big_m"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.big_m</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.discount_rates"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.discount_rates</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.scenario_settings"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.scenario_settings</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel.small_m"><code class="docutils literal notranslate"><span class="pre">EchoConcreteModel.small_m</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings"><code class="docutils literal notranslate"><span class="pre">EngineSettings</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings.big_m"><code class="docutils literal notranslate"><span class="pre">EngineSettings.big_m</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings.engine"><code class="docutils literal notranslate"><span class="pre">EngineSettings.engine</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings.engine_executable"><code class="docutils literal notranslate"><span class="pre">EngineSettings.engine_executable</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings.small_m"><code class="docutils literal notranslate"><span class="pre">EngineSettings.small_m</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings"><code class="docutils literal notranslate"><span class="pre">ScenarioSettings</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings.discount_rate"><code class="docutils literal notranslate"><span class="pre">ScenarioSettings.discount_rate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings.interval_duration"><code class="docutils literal notranslate"><span class="pre">ScenarioSettings.interval_duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings.number_of_expansion_intervals"><code class="docutils literal notranslate"><span class="pre">ScenarioSettings.number_of_expansion_intervals</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings.number_of_intervals"><code class="docutils literal notranslate"><span class="pre">ScenarioSettings.number_of_intervals</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.engine_settings_from_environment"><code class="docutils literal notranslate"><span class="pre">engine_settings_from_environment()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.html" class="btn btn-neutral float-left" title="echo package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.models.agnostic.html" class="btn btn-neutral float-right" title="echo.models.agnostic package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

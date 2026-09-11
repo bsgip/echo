@@ -1,0 +1,379 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.objectives package &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="echo.objectives.base module" href="echo.objectives.base.html" />
+    <link rel="prev" title="echo.models.scenario module" href="echo.models.scenario.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="echo.models.html">echo.models package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.objectives package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+      <li class="breadcrumb-item active">echo.objectives package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.objectives.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.objectives">
+<span id="echo-objectives-package"></span><h1>echo.objectives package<a class="headerlink" href="#module-echo.objectives" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="echo.objectives.base.html">echo.objectives.base module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective"><code class="docutils literal notranslate"><span class="pre">Objective</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.apply_constraints"><code class="docutils literal notranslate"><span class="pre">Objective.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.component"><code class="docutils literal notranslate"><span class="pre">Objective.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.create_params"><code class="docutils literal notranslate"><span class="pre">Objective.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.create_vars"><code class="docutils literal notranslate"><span class="pre">Objective.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.get_objective_total"><code class="docutils literal notranslate"><span class="pre">Objective.get_objective_total()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.name"><code class="docutils literal notranslate"><span class="pre">Objective.name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.objective_expr"><code class="docutils literal notranslate"><span class="pre">Objective.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.uid"><code class="docutils literal notranslate"><span class="pre">Objective.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.verify_objective"><code class="docutils literal notranslate"><span class="pre">Objective.verify_objective()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective.weight"><code class="docutils literal notranslate"><span class="pre">Objective.weight</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet"><code class="docutils literal notranslate"><span class="pre">ObjectiveSet</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet.add_objectives_to_model"><code class="docutils literal notranslate"><span class="pre">ObjectiveSet.add_objectives_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet.get_objective_total"><code class="docutils literal notranslate"><span class="pre">ObjectiveSet.get_objective_total()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet.objective_list"><code class="docutils literal notranslate"><span class="pre">ObjectiveSet.objective_list</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalExportFlow"><code class="docutils literal notranslate"><span class="pre">TotalExportFlow</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalExportFlow.apply_constraints"><code class="docutils literal notranslate"><span class="pre">TotalExportFlow.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalExportFlow.component"><code class="docutils literal notranslate"><span class="pre">TotalExportFlow.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalExportFlow.minimise"><code class="docutils literal notranslate"><span class="pre">TotalExportFlow.minimise</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalExportFlow.objective_expr"><code class="docutils literal notranslate"><span class="pre">TotalExportFlow.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalFlow"><code class="docutils literal notranslate"><span class="pre">TotalFlow</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalFlow.component"><code class="docutils literal notranslate"><span class="pre">TotalFlow.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalFlow.minimise"><code class="docutils literal notranslate"><span class="pre">TotalFlow.minimise</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalFlow.objective_expr"><code class="docutils literal notranslate"><span class="pre">TotalFlow.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalImportFlow"><code class="docutils literal notranslate"><span class="pre">TotalImportFlow</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalImportFlow.apply_constraints"><code class="docutils literal notranslate"><span class="pre">TotalImportFlow.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalImportFlow.component"><code class="docutils literal notranslate"><span class="pre">TotalImportFlow.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalImportFlow.minimise"><code class="docutils literal notranslate"><span class="pre">TotalImportFlow.minimise</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.TotalImportFlow.objective_expr"><code class="docutils literal notranslate"><span class="pre">TotalImportFlow.objective_expr()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.objectives.contingency.html">echo.objectives.contingency module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.Contingency"><code class="docutils literal notranslate"><span class="pre">Contingency</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.Contingency.component"><code class="docutils literal notranslate"><span class="pre">Contingency.component</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative.apply_constraints"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative.contingency_neg"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative.contingency_neg</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative.create_vars"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative.duration"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative.duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyNegative.objective_expr"><code class="docutils literal notranslate"><span class="pre">ContingencyNegative.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive.apply_constraints"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive.contingency_pos"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive.contingency_pos</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive.create_vars"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive.duration"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive.duration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.contingency.html#echo.objectives.contingency.ContingencyPositive.objective_expr"><code class="docutils literal notranslate"><span class="pre">ContingencyPositive.objective_expr()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.objectives.power.html">echo.objectives.power module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.FinalChargeObjective"><code class="docutils literal notranslate"><span class="pre">FinalChargeObjective</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.FinalChargeObjective.apply_constraints"><code class="docutils literal notranslate"><span class="pre">FinalChargeObjective.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.FinalChargeObjective.component"><code class="docutils literal notranslate"><span class="pre">FinalChargeObjective.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.FinalChargeObjective.objective_expr"><code class="docutils literal notranslate"><span class="pre">FinalChargeObjective.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.FinalChargeObjective.rate"><code class="docutils literal notranslate"><span class="pre">FinalChargeObjective.rate</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty.apply_constraints"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty.component"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty.objective_expr"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty.rate"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty.rate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.NotFullyChargedPenalty.rate_array"><code class="docutils literal notranslate"><span class="pre">NotFullyChargedPenalty.rate_array</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower.apply_constraints"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower.component"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower.create_vars"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower.max_neg"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower.max_neg</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakNegativePower.objective_expr"><code class="docutils literal notranslate"><span class="pre">PeakNegativePower.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower.apply_constraints"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower.component"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower.create_vars"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower.max_pos"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower.max_pos</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.PeakPositivePower.objective_expr"><code class="docutils literal notranslate"><span class="pre">PeakPositivePower.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.QuadraticPower"><code class="docutils literal notranslate"><span class="pre">QuadraticPower</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.QuadraticPower.apply_constraints"><code class="docutils literal notranslate"><span class="pre">QuadraticPower.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.QuadraticPower.component"><code class="docutils literal notranslate"><span class="pre">QuadraticPower.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.power.html#echo.objectives.power.QuadraticPower.objective_expr"><code class="docutils literal notranslate"><span class="pre">QuadraticPower.objective_expr()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="echo.objectives.tariff.html">echo.objectives.tariff module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockImportTariff"><code class="docutils literal notranslate"><span class="pre">BlockImportTariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockImportTariff.apply_constraints"><code class="docutils literal notranslate"><span class="pre">BlockImportTariff.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockImportTariff.create_vars"><code class="docutils literal notranslate"><span class="pre">BlockImportTariff.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockImportTariff.objective_expr"><code class="docutils literal notranslate"><span class="pre">BlockImportTariff.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockImportTariff.window_active"><code class="docutils literal notranslate"><span class="pre">BlockImportTariff.window_active</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff"><code class="docutils literal notranslate"><span class="pre">BlockTariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.blocks"><code class="docutils literal notranslate"><span class="pre">BlockTariff.blocks</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.check_block_rates"><code class="docutils literal notranslate"><span class="pre">BlockTariff.check_block_rates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.component"><code class="docutils literal notranslate"><span class="pre">BlockTariff.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.get_block_var_name"><code class="docutils literal notranslate"><span class="pre">BlockTariff.get_block_var_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.num_price_bands"><code class="docutils literal notranslate"><span class="pre">BlockTariff.num_price_bands</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.rates"><code class="docutils literal notranslate"><span class="pre">BlockTariff.rates</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.reset_index"><code class="docutils literal notranslate"><span class="pre">BlockTariff.reset_index</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.reset_periods"><code class="docutils literal notranslate"><span class="pre">BlockTariff.reset_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.BlockTariff.set_reset_index"><code class="docutils literal notranslate"><span class="pre">BlockTariff.set_reset_index()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Day"><code class="docutils literal notranslate"><span class="pre">Day</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Day.holiday"><code class="docutils literal notranslate"><span class="pre">Day.holiday</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Day.weekday"><code class="docutils literal notranslate"><span class="pre">Day.weekday</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Day.weekend"><code class="docutils literal notranslate"><span class="pre">Day.weekend</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge"><code class="docutils literal notranslate"><span class="pre">DemandCharge</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.check_import_or_export"><code class="docutils literal notranslate"><span class="pre">DemandCharge.check_import_or_export()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.check_name"><code class="docutils literal notranslate"><span class="pre">DemandCharge.check_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.check_reset_periods"><code class="docutils literal notranslate"><span class="pre">DemandCharge.check_reset_periods()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.create_params"><code class="docutils literal notranslate"><span class="pre">DemandCharge.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.create_vars"><code class="docutils literal notranslate"><span class="pre">DemandCharge.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.export_demand"><code class="docutils literal notranslate"><span class="pre">DemandCharge.export_demand</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.get_objective_total"><code class="docutils literal notranslate"><span class="pre">DemandCharge.get_objective_total()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.import_demand"><code class="docutils literal notranslate"><span class="pre">DemandCharge.import_demand</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.max_demand_val"><code class="docutils literal notranslate"><span class="pre">DemandCharge.max_demand_val</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.min_demand"><code class="docutils literal notranslate"><span class="pre">DemandCharge.min_demand</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.name"><code class="docutils literal notranslate"><span class="pre">DemandCharge.name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.num_reset_periods"><code class="docutils literal notranslate"><span class="pre">DemandCharge.num_reset_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.objective_expr"><code class="docutils literal notranslate"><span class="pre">DemandCharge.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.rate"><code class="docutils literal notranslate"><span class="pre">DemandCharge.rate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.reset_index"><code class="docutils literal notranslate"><span class="pre">DemandCharge.reset_index</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.reset_periods"><code class="docutils literal notranslate"><span class="pre">DemandCharge.reset_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.uid"><code class="docutils literal notranslate"><span class="pre">DemandCharge.uid</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.window_active"><code class="docutils literal notranslate"><span class="pre">DemandCharge.window_active</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandCharge.window_array"><code class="docutils literal notranslate"><span class="pre">DemandCharge.window_array</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.apply_constraints"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.component"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.create_params"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.create_vars"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.create_vars()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.demand_charges"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.demand_charges</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.expansion_periods"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.expansion_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.objective_expr"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.DemandTariffObjective.verify_objective"><code class="docutils literal notranslate"><span class="pre">DemandTariffObjective.verify_objective()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportDemandCharge"><code class="docutils literal notranslate"><span class="pre">ExportDemandCharge</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportDemandCharge.min_demand"><code class="docutils literal notranslate"><span class="pre">ExportDemandCharge.min_demand</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff"><code class="docutils literal notranslate"><span class="pre">ExportTariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.apply_constraints"><code class="docutils literal notranslate"><span class="pre">ExportTariff.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.component"><code class="docutils literal notranslate"><span class="pre">ExportTariff.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.create_params"><code class="docutils literal notranslate"><span class="pre">ExportTariff.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.export_tariff"><code class="docutils literal notranslate"><span class="pre">ExportTariff.export_tariff</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.export_tariff_dict"><code class="docutils literal notranslate"><span class="pre">ExportTariff.export_tariff_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ExportTariff.objective_expr"><code class="docutils literal notranslate"><span class="pre">ExportTariff.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportDemandCharge"><code class="docutils literal notranslate"><span class="pre">ImportDemandCharge</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportDemandCharge.min_demand"><code class="docutils literal notranslate"><span class="pre">ImportDemandCharge.min_demand</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff"><code class="docutils literal notranslate"><span class="pre">ImportTariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.apply_constraints"><code class="docutils literal notranslate"><span class="pre">ImportTariff.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.component"><code class="docutils literal notranslate"><span class="pre">ImportTariff.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.create_params"><code class="docutils literal notranslate"><span class="pre">ImportTariff.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.import_tariff"><code class="docutils literal notranslate"><span class="pre">ImportTariff.import_tariff</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.import_tariff_dict"><code class="docutils literal notranslate"><span class="pre">ImportTariff.import_tariff_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ImportTariff.objective_expr"><code class="docutils literal notranslate"><span class="pre">ImportTariff.objective_expr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff"><code class="docutils literal notranslate"><span class="pre">PathTariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.apply_constraints"><code class="docutils literal notranslate"><span class="pre">PathTariff.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.component"><code class="docutils literal notranslate"><span class="pre">PathTariff.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.create_params"><code class="docutils literal notranslate"><span class="pre">PathTariff.create_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.objective_expr"><code class="docutils literal notranslate"><span class="pre">PathTariff.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.path_tariff"><code class="docutils literal notranslate"><span class="pre">PathTariff.path_tariff</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.PathTariff.path_tariff_dict"><code class="docutils literal notranslate"><span class="pre">PathTariff.path_tariff_dict</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod"><code class="docutils literal notranslate"><span class="pre">ResetPeriod</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod.day"><code class="docutils literal notranslate"><span class="pre">ResetPeriod.day</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod.month"><code class="docutils literal notranslate"><span class="pre">ResetPeriod.month</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod.quarter"><code class="docutils literal notranslate"><span class="pre">ResetPeriod.quarter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod.week"><code class="docutils literal notranslate"><span class="pre">ResetPeriod.week</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ResetPeriod.year"><code class="docutils literal notranslate"><span class="pre">ResetPeriod.year</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Tariff"><code class="docutils literal notranslate"><span class="pre">Tariff</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Tariff.expansion_periods"><code class="docutils literal notranslate"><span class="pre">Tariff.expansion_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Tariff.return_tariff_dict"><code class="docutils literal notranslate"><span class="pre">Tariff.return_tariff_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Tariff.tariff_array"><code class="docutils literal notranslate"><span class="pre">Tariff.tariff_array</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ThroughputCost"><code class="docutils literal notranslate"><span class="pre">ThroughputCost</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ThroughputCost.apply_constraints"><code class="docutils literal notranslate"><span class="pre">ThroughputCost.apply_constraints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ThroughputCost.component"><code class="docutils literal notranslate"><span class="pre">ThroughputCost.component</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ThroughputCost.objective_expr"><code class="docutils literal notranslate"><span class="pre">ThroughputCost.objective_expr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.ThroughputCost.rate"><code class="docutils literal notranslate"><span class="pre">ThroughputCost.rate</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod"><code class="docutils literal notranslate"><span class="pre">TimePeriod</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod.day_type"><code class="docutils literal notranslate"><span class="pre">TimePeriod.day_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod.end_time"><code class="docutils literal notranslate"><span class="pre">TimePeriod.end_time</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod.overlaps"><code class="docutils literal notranslate"><span class="pre">TimePeriod.overlaps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod.start_time"><code class="docutils literal notranslate"><span class="pre">TimePeriod.start_time</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.TimePeriod.to_bool"><code class="docutils literal notranslate"><span class="pre">TimePeriod.to_bool()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window"><code class="docutils literal notranslate"><span class="pre">Window</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window.get_reset_period_array"><code class="docutils literal notranslate"><span class="pre">Window.get_reset_period_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window.non_overlapping_periods"><code class="docutils literal notranslate"><span class="pre">Window.non_overlapping_periods()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window.reset_periods"><code class="docutils literal notranslate"><span class="pre">Window.reset_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window.time_periods"><code class="docutils literal notranslate"><span class="pre">Window.time_periods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.tariff.html#echo.objectives.tariff.Window.to_bool_periods"><code class="docutils literal notranslate"><span class="pre">Window.to_bool_periods()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.models.scenario.html" class="btn btn-neutral float-left" title="echo.models.scenario module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.objectives.base.html" class="btn btn-neutral float-right" title="echo.objectives.base module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

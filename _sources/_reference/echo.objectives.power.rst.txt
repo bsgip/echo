@@ -1,0 +1,7 @@
+echo.objectives.power module
+============================
+
+.. automodule:: echo.objectives.power
+   :members:
+   :show-inheritance:
+   :undoc-members:

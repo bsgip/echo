@@ -1,0 +1,7 @@
+echo.models.thermal.parameterised\_chiller module
+=================================================
+
+.. automodule:: echo.models.thermal.parameterised_chiller
+   :members:
+   :show-inheritance:
+   :undoc-members:

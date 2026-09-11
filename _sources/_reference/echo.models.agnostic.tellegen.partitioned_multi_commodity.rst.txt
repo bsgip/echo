@@ -1,0 +1,7 @@
+echo.models.agnostic.tellegen.partitioned\_multi\_commodity module
+==================================================================
+
+.. automodule:: echo.models.agnostic.tellegen.partitioned_multi_commodity
+   :members:
+   :show-inheritance:
+   :undoc-members:

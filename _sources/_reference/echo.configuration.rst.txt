@@ -1,0 +1,7 @@
+echo.configuration module
+=========================
+
+.. automodule:: echo.configuration
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,7 @@
+echo.models.electrical.base module
+==================================
+
+.. automodule:: echo.models.electrical.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

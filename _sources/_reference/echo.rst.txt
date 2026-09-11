@@ -1,0 +1,32 @@
+echo package
+============
+
+.. automodule:: echo
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models
+   echo.objectives
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.configuration
+   echo.constants
+   echo.exceptions
+   echo.functional
+   echo.optimiser
+   echo.tracker
+   echo.utils
+   echo.validators
+   echo.visualization

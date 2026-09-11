@@ -1,0 +1,7 @@
+echo.models.carbon.aggregation module
+=====================================
+
+.. automodule:: echo.models.carbon.aggregation
+   :members:
+   :show-inheritance:
+   :undoc-members:
