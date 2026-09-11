@@ -1,4 +1,3 @@
-from pyomo.core.base.var import IndexedVar
 from dataclasses import dataclass
 
 import numpy as np
@@ -6,13 +5,14 @@ import pandas as pd
 import pyomo as pyo
 import pytest
 from pydantic import ValidationError
+from pyomo.core.base.var import IndexedVar
 
+from echo import constants
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.exceptions import ConfigurationError
 from echo.models.base.port import Port
 from echo.models.base.types import InitialValue, InitialValueInput
 from echo.utils import TimeSeriesData
-from echo import constants
 
 
 @pytest.mark.parametrize(
