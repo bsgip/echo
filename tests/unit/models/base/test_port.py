@@ -1,3 +1,4 @@
+from pyomo.core.base.var import IndexedVar
 from dataclasses import dataclass
 
 import numpy as np
@@ -11,6 +12,7 @@ from echo.exceptions import ConfigurationError
 from echo.models.base.port import Port
 from echo.models.base.types import InitialValue, InitialValueInput
 from echo.utils import TimeSeriesData
+from echo import constants
 
 
 @pytest.mark.parametrize(
@@ -352,5 +354,71 @@ def test_enabling_slack(
     assert lower_bounds == [None] * number_of_intervals
 
 
+@pytest.mark.parametrize(
+    "flow_type, is_fixed", [(OptimisationType.Variable, False), (OptimisationType.Parameter, True)]
+)
+def test_port_flow_type(flow_type: OptimisationType, is_fixed: bool, empty_model):
+    """A port flow can be variable or a "parameter"
+
+    Parameters are still indexed variables but have been fixed using calling `.fix()`
+    """
+    number_of_intervals = 6
+    port_params = {
+        "flows": Flows.Both,
+        "import_constraint": FlowConstraint.NoConstraint,
+        "export_constraint": FlowConstraint.NoConstraint,
+        "flow_type": flow_type,
+        "units": Units.KW,
+        "slack": True,
+    }
+
+    port = Port(**port_params, port_name="port")
+
+    model = empty_model(number_of_intervals=number_of_intervals)
+    port.add_port_to_model(model, profile=None)
+    assert hasattr(model, port.port_name)
+    flow = getattr(model, port.port_name)
+    assert isinstance(flow, IndexedVar)
+
+    def indexed_var_is_fixed(var: IndexedVar) -> bool:
+        return all([v.fixed for v in var.values()])
+
+    assert indexed_var_is_fixed(flow) == is_fixed
+
+
 def test_splitting_flow_variable(empty_model):
-    pass
+    number_of_intervals = 6
+    port_params = {
+        "flows": Flows.Both,
+        "import_constraint": FlowConstraint.NoConstraint,
+        "export_constraint": FlowConstraint.NoConstraint,
+        "flow_type": OptimisationType.Variable,
+        "units": Units.KW,
+        "slack": True,
+    }
+
+    port = Port(**port_params, port_name="port")
+
+    model = empty_model(number_of_intervals=number_of_intervals)
+    port.add_port_to_model(model, profile=None)
+
+    # Check variables before splitting
+    assert hasattr(model, port.port_name)
+    assert not hasattr(model, port.pos)
+    assert not hasattr(model, port.neg)
+    assert not hasattr(model, port.is_pos)
+
+    port.constrain_pos_neg(model)
+
+    # Check variables
+    assert hasattr(model, port.port_name)
+    assert hasattr(model, port.pos)
+    assert hasattr(model, port.neg)
+    assert hasattr(model, port.is_pos)
+
+    # Check constraints
+    assert hasattr(
+        model, f"{constants.positive_variable_component}{constants.negative_variable_component}{port.port_name}"
+    )
+    assert hasattr(model, f"pos_neg_con1_{port.port_name}")
+    assert hasattr(model, f"pos_neg_con2_{port.port_name}")
