@@ -15,7 +15,7 @@ from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError
 from echo.models.base import BaseModel
-from echo.models.base.types import ConstraintValueType, InitialValueInput
+from echo.models.base.types import ConstraintValueType, InitialValue, InitialValueInput
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
     TimeSeriesData,
@@ -121,7 +121,7 @@ class Port(BaseModel):
 
     def process_initial_value(
         self,
-        initial_val: InitialValueInput,
+        initial_val: InitialValueInput | str,
         expansion_periods: int = 1,
         time_periods: int | None = None,
     ) -> None:
@@ -348,8 +348,8 @@ class Port(BaseModel):
         self,
         time_periods: int,
         expansion_periods: int,
-        profile: pd.DataFrame,
-    ) -> dict[tuple[int, int], float]:
+        profile: pd.DataFrame | None,
+    ) -> InitialValue:
 
         initial_value_scaling = self.initial_value_scaling or 1
 
@@ -367,7 +367,7 @@ class Port(BaseModel):
 
         return initial_val
 
-    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
+    def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame | None) -> None:
         """Creates pyomo vars, params, and constraints for the port."""
         initial_value = self._determine_initial_value(
             time_periods=len(model.Time),
@@ -388,8 +388,14 @@ class Port(BaseModel):
         if self.import_constraint is FlowConstraint.Fixed:  # only apply import/export constraints to variables
             self._add_import_constraints_to_model(model=model)
 
+        if self.import_constraint in [FlowConstraint.Series, FlowConstraint.InRange]:
+            raise NotImplementedError("Series and InRange import flow constraints are not implemented")
+
         if self.export_constraint is FlowConstraint.Fixed:  # only apply these constraints to variables
             self._add_export_constraints_to_model(model=model)
+
+        if self.export_constraint in [FlowConstraint.Series, FlowConstraint.InRange]:
+            raise NotImplementedError("Series and InRange export flow constraints are not implemented")
 
         if self.active_periods is not None:
             self._add_active_period_constraints_to_model(model=model)
@@ -499,7 +505,7 @@ class Port(BaseModel):
         self.set_initial_value_from_timeseriesdata(time_series_data=time_series_data)
 
     def set_active_periods_from_array(
-        self, array: list[bool], expansion_periods: int = 1, time_periods: int | None = None
+        self, array: list[bool] | list[int], expansion_periods: int = 1, time_periods: int | None = None
     ) -> None:
         """Sets port active periods
 
@@ -511,8 +517,17 @@ class Port(BaseModel):
         if time_periods is None:
             time_periods = len(array)
 
+        # We need an array which only contains 0 or 1 representing inactive (flow fixed to 0)
+        # or active (flow can be optimised)
+        # Convert bools to ints
+        active_periods_as_ints = [int(i) for i in array]
+        set_of_active_periods = set(active_periods_as_ints)
+
+        if set_of_active_periods not in [{0}, {1}, {0, 1}]:
+            raise ValueError("Active periods must be a list of booleans or a list only containing 0's or 1's")
+
         time_series_data = TimeSeriesData(
-            value=array,
+            value=active_periods_as_ints,
             num_time_intervals=time_periods,
             num_expansion_intervals=expansion_periods,
         )
