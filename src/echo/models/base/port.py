@@ -7,14 +7,13 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field, validator
+from attrs import define, field, validators
 from pyomo.core import RangeSet
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
 from echo.constants import negative_variable_component, positive_variable_component
 from echo.exceptions import ConfigurationError
-from echo.models.base import BaseModel
 from echo.models.base.types import ConstraintValueType, InitialValue, InitialValueInput
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -28,31 +27,45 @@ from echo.utils import (
 from echo.validators import export_cons_check, import_cons_check
 
 
-class Port(BaseModel):
-    # Pydantic attribute declaration follows this format:
-    # attribute_name: type = default_value
+@define
+class Port:
+    uid: str = field(factory=shortuuid.uuid)
+    port_name: str = field()
+
+    @port_name.default
+    def _set_port_name_default(self) -> str:
+        return "port_" + str(self.uid)
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
     initial_value: dict[tuple[int, int], float] | None = None
     initial_value_ref: str | None = None  # string ref to df column
     initial_value_scaling: int | None = None  # scaling factor for initial values
     flow_type: OptimisationType = OptimisationType.NA
-    uid: str | None = Field(default_factory=shortuuid.uuid)
-    port_name: str = ""
+
     flows: Flows = Flows.NA  # What flow directions are possible (import, export, both)
     # Used to define the nature of import / export directions and constraints
     import_constraint: FlowConstraint = FlowConstraint.NA
-    import_constraint_value: ConstraintValueType | None = None
+    import_constraint_value: ConstraintValueType | None = field(
+        default=None, validator=validators.instance_of(ConstraintValueType | None)
+    )
+
+    @import_constraint_value.validator
+    def _validate_import_constraint_value(self, attribute, value):  # noqa: ANN001, ANN202
+        return import_cons_check(value)
+
     export_constraint: FlowConstraint = FlowConstraint.NA
-    export_constraint_value: ConstraintValueType | None = None
+    export_constraint_value: ConstraintValueType | None = field(
+        default=None, validator=validators.instance_of(ConstraintValueType | None)
+    )
+
+    @export_constraint_value.validator
+    def _validate_import_constraint_value(self, attribute, value):  # noqa: ANN001, ANN202
+        return export_cons_check(value)
+
     active_periods: dict[tuple[int, int], Any] | None = None
     slack: bool = False
     objective: en.numeric_expr.NumericExpression | float = 0  # this will eventually be a pyomo expression
     allow_dangling_port: bool = False
-
-    # Validators for import/export constraint values
-    import_con_sign = validator("import_constraint_value", allow_reuse=True)(import_cons_check)
-    export_con_sign = validator("export_constraint_value", allow_reuse=True)(export_cons_check)
 
     @property
     def pos(self) -> str:
@@ -89,11 +102,6 @@ class Port(BaseModel):
     @property
     def export_slack_max(self) -> str:
         return f"export_slack_max_{self.port_name}"
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        if not self.port_name:  # if no name is provided, give it a default name using the uid
-            self.port_name = "port_" + str(self.uid)
 
     def set_flow_constraints(
         self,
