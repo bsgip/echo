@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from typing import Any
+from numbers import Number
 
 import numpy as np
 from pydantic import Field
@@ -32,38 +33,45 @@ def var_in_range(var1: float, range_min: float, range_max: float) -> ValueError 
         return ValueError()
 
 
-def is_non_negative(v: FloatData, err_msg: str) -> FloatData:
-    if v is not None:
-        if hasattr(v, "__iter__"):
-            if isinstance(v, dict):
-                for i in v.values():
-                    if i < 0:
-                        raise ValueError(err_msg)
-            else:
-                for i in v:
-                    if i < 0:
-                        raise ValueError(err_msg)
-        else:
-            if v < 0:
-                raise ValueError(err_msg)
+def is_non_negative(v: FloatData | None, err_msg: str) -> FloatData | None:
+    """Tests is a 'v' is non negative
+
+    A value of 0 is considered non-negative (i.e. doesn't raise a ValueError) for the purposes of this test
+    """
+    if v is None:
+        return v
+
+    if isinstance(v, Number):
+        values = [v]
+    elif isinstance(v, dict):
+        values = v.values()
+    else:
+        values = v  # v is list, set or numpy array
+
+    if any([i < 0 for i in values]):
+        raise ValueError(err_msg)
 
     return v
 
 
-def is_non_positive(v: FloatData, err_msg: str) -> FloatData:
-    if v is not None:
-        if hasattr(v, "__iter__"):
-            if type(v) is dict:
-                for i in v.values():
-                    if i > 0:
-                        raise ValueError(err_msg)
-            else:
-                for i in v:
-                    if i > 0:
-                        raise ValueError(err_msg)
-        else:
-            if v > 0:
-                raise ValueError(err_msg)
+def is_non_positive(v: FloatData | None, err_msg: str) -> FloatData | None:
+    """Tests is a 'v' is non positive
+
+    A value of 0 is considered non-positive (i.e. doesn't raise a ValueError) for the purposes of this test
+    """
+    if v is None:
+        return v
+
+    if isinstance(v, Number):
+        values = [v]
+    elif isinstance(v, dict):
+        values = v.values()
+    else:
+        values = v  # v is list, set or numpy array
+
+    if any([i > 0 for i in values]):
+        raise ValueError(err_msg)
+
     return v
 
 
