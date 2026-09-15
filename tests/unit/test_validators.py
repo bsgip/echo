@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from echo.validators import is_non_negative, is_non_positive
 

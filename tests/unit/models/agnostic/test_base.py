@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from echo.models.agnostic.base import Source, Sink
+from echo.models.agnostic.base import Sink, Source
 
 
 @pytest.mark.parametrize(

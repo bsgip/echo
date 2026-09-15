@@ -1,6 +1,6 @@
 from collections.abc import Generator
-from typing import Any
 from numbers import Number
+from typing import Any
 
 import numpy as np
 from pydantic import Field
