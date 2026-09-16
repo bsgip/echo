@@ -107,7 +107,7 @@ def test_port_raises_configuration_error(port_params: dict):
         (np.array([1.0, 2.0, 3.0]), {(0, 0): 1.0, (0, 1): 2.0, (0, 2): 3.0}),  # np array of floats
     ],
 )
-def test_port_proccess_initial_value(raw_initial_val: list, expected_initial_val: dict):
+def test_port_process_initial_value(raw_initial_val: list, expected_initial_val: dict):
     port = Port(port_name="port_name")
 
     assert port.initial_value is None
