@@ -2,7 +2,6 @@ from echo.models.agnostic.aggregation import AggregationNode
 from echo.models.agnostic.base import (
     Demand,
     FixedPort,
-    OffOrConstrainedPort,
     Sink,
     Source,
 )
@@ -12,7 +11,7 @@ from echo.models.agnostic.controlled import (
     ControlledLoad,
     ControlledLoadOrGen,
 )
-from echo.models.agnostic.flex import FlexPort, FlexSink, FlexSource
+from echo.models.agnostic.flex import FlexPort, FlexSink, FlexSource, OffOrConstrainedPort
 from echo.models.agnostic.input_output import InputOutputNode
 from echo.models.agnostic.storage import MobileStorage, Storage
 from echo.models.agnostic.tellegen import (
