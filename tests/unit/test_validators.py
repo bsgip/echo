@@ -18,7 +18,8 @@ from echo.validators import is_non_negative, is_non_positive
         ({0, -1.5, -2.7, -150.3}, True),
         ({0: 0, 1: 1, 2: 2}, False),  # dicts
         ({0: 0, 1: -1, 2: -2}, True),
-        (np.array([1, 2, -49]), True),  # numpy arrays
+        (np.array([1, 2, 49]), False),  # numpy arrays
+        (np.array([1, 2, -49]), True),
         (np.array([-1, -2, -49]), True),
     ],
 )
@@ -44,7 +45,8 @@ def test_is_non_negative(value, should_raise_value_error):
         ({0, 1.5, 2.7, 150.3}, True),
         ({0: 0, 1: -1, 2: -2}, False),  # dicts
         ({0: 0, 1: 1, 2: 2}, True),
-        (np.array([-1, -2, 49]), True),  # numpy arrays
+        (np.array([-1, -2, -49]), False),  # numpy arrays
+        (np.array([-1, -2, 49]), True),
         (np.array([1, 2, 49]), True),
     ],
 )
