@@ -1,0 +1,7 @@
+echo.objectives.contingency module
+==================================
+
+.. automodule:: echo.objectives.contingency
+   :members:
+   :show-inheritance:
+   :undoc-members:

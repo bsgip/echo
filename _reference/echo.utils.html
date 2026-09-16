@@ -1,0 +1,533 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.utils module &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="echo.validators module" href="echo.validators.html" />
+    <link rel="prev" title="echo.tracker module" href="echo.tracker.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="echo.html#subpackages">Subpackages</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.constants.html">echo.constants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.exceptions.html">echo.exceptions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.functional.html">echo.functional module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.optimiser.html">echo.optimiser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.tracker.html">echo.tracker module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.utils module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.TimeExpandableType"><code class="docutils literal notranslate"><span class="pre">TimeExpandableType</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.TimeSeriesData"><code class="docutils literal notranslate"><span class="pre">TimeSeriesData</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.UnexpandableTimeSeriesDataError"><code class="docutils literal notranslate"><span class="pre">UnexpandableTimeSeriesDataError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.clamp"><code class="docutils literal notranslate"><span class="pre">clamp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.create_input_output_pts_from_coefficients"><code class="docutils literal notranslate"><span class="pre">create_input_output_pts_from_coefficients()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.create_named_constraint_with_rule"><code class="docutils literal notranslate"><span class="pre">create_named_constraint_with_rule()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.do_multivariate_regression"><code class="docutils literal notranslate"><span class="pre">do_multivariate_regression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.domain_from_flow"><code class="docutils literal notranslate"><span class="pre">domain_from_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.expand_as_array"><code class="docutils literal notranslate"><span class="pre">expand_as_array()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.expand_as_dict"><code class="docutils literal notranslate"><span class="pre">expand_as_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.fix_port_variable"><code class="docutils literal notranslate"><span class="pre">fix_port_variable()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.generate_array_constraint"><code class="docutils literal notranslate"><span class="pre">generate_array_constraint()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.generate_dict_with_pyomo_keys_from_array"><code class="docutils literal notranslate"><span class="pre">generate_dict_with_pyomo_keys_from_array()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.generate_input_output_values_from_polynomial_coeff_array"><code class="docutils literal notranslate"><span class="pre">generate_input_output_values_from_polynomial_coeff_array()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.generate_piecewise_input_output_arrays"><code class="docutils literal notranslate"><span class="pre">generate_piecewise_input_output_arrays()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.orjson_dumps"><code class="docutils literal notranslate"><span class="pre">orjson_dumps()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.populate_values_across_time_and_expansion_indices"><code class="docutils literal notranslate"><span class="pre">populate_values_across_time_and_expansion_indices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.set_float_var_bounds"><code class="docutils literal notranslate"><span class="pre">set_float_var_bounds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.set_var_bounds_from_dict"><code class="docutils literal notranslate"><span class="pre">set_var_bounds_from_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.tile_array_over_expansion_periods"><code class="docutils literal notranslate"><span class="pre">tile_array_over_expansion_periods()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.to_initial_values"><code class="docutils literal notranslate"><span class="pre">to_initial_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.utils.to_initial_values_for_array"><code class="docutils literal notranslate"><span class="pre">to_initial_values_for_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.validators.html">echo.validators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.visualization.html">echo.visualization module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+      <li class="breadcrumb-item active">echo.utils module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.utils">
+<span id="echo-utils-module"></span><h1>echo.utils module<a class="headerlink" href="#module-echo.utils" title="Link to this heading"></a></h1>
+<dl class="py data">
+<dt class="sig sig-object py" id="echo.utils.TimeExpandableType">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">TimeExpandableType</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">float</span> <span class="pre">|</span> <span class="pre">list[float]</span> <span class="pre">|</span> <span class="pre">list[list[float]]</span> <span class="pre">|</span> <span class="pre">numpy.ndarray</span></span><a class="headerlink" href="#echo.utils.TimeExpandableType" title="Link to this definition"></a></dt>
+<dd><p>TimeExpandableType</p>
+<p>Variables with type <cite>TimeExpandableType</cite> should only contain numbers (int or float).
+They should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, …]
+or a 2-dimensional list of number e.g. [[1,2,3,4, …], [5, 6, 7, 8, …]].</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.utils.TimeSeriesData">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">TimeSeriesData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_time_intervals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_expansion_intervals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.utils.TimeSeriesData" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A dataclass to hold a compressed way of describing time series data.</p>
+<p>The TimeSeriesData object describes a potentially compressed form of time-series data by
+allowing you to store only a minimal set of values.</p>
+<p><cite>value</cite> has type <code class="docutils literal notranslate"><span class="pre">TimeExpandableType</span></code>. It should only contain numbers (int or float).
+It should be either a single number e.g 37.3, a list containing a single number e.g. [5],
+a 1-dimensional list of numbers e.g. [1.1, 2.2, 3.3, 4.4, …]
+or a 2-dimensional list of number e.g. [[1,2,3,4, …], [5, 6, 7, 8, …]].</p>
+<p>For 1-dimensional and 2-dimensional lists, it is important to match the number of elements in the lists to the
+<cite>num_time_intervals</cite> and <cite>num_expansion_intervals</cite>.
+1-dimensional lists:</p>
+<blockquote>
+<div><p><cite>len(value) == num_time_intervals * num_expansion_intervals</cite></p>
+</div></blockquote>
+<dl class="simple">
+<dt>2-dimensional lists:</dt><dd><p><cite>len(value) == num_expansion_intervals</cite> AND the sublists in <cite>value</cite> should have
+<cite>len(sublist) == num_time_intervals</cite></p>
+</dd>
+</dl>
+<p>For example, if we have 4 time-intervals and 2 expansion-intervals, then the following would be valid:
+value = [[1, 2, 3, 4], [5, 6, 7, 8]] (2-dimensional list). Remember: the first index into a 2-dimensional list is
+the expansion interval and the second index is the time interval.</p>
+<p>or we could flatten the above list into a 1-dimensional list:
+value = [1, 2, 3, 4, 5, 6, 7, 8] since len(value) == 4 * 2. The first four value (1, 2, 3, 4) would apply to the
+first expansion period and the next four values (5, 6, 7, 8) would apply to the second expansion period.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>TimeSeriesData performs no validation. In other words it is possible to create invalid TimeSeriesData objects.
+For example, <cite>TimeSeriesData(value=[1,2,3], num_time_intervals=5, num_expansion_intervals=1)</cite>
+would be invalid because the <cite>num_time_intervals</cite> (5) is greater than the number of elements in the value
+(only 3).</p>
+</div>
+<p>TimeSeriesData objects serve as input to the <cite>expand_as_array</cite> and <cite>expand_as_dict</cite> functions. These functions
+serve to expand a TimeSeriesData description into a full set of time series data.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.utils.TimeSeriesData.value">
+<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#echo.utils.TimeSeriesData.value" title="Link to this definition"></a></dt>
+<dd><p>time series data. See above for more information on valid values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#echo.utils.TimeExpandableType" title="echo.utils.TimeExpandableType">TimeExpandableType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.utils.TimeSeriesData.num_time_intervals">
+<span class="sig-name descname"><span class="pre">num_time_intervals</span></span><a class="headerlink" href="#echo.utils.TimeSeriesData.num_time_intervals" title="Link to this definition"></a></dt>
+<dd><p>the number of time intervals for the time series data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.utils.TimeSeriesData.num_expansion_intervals">
+<span class="sig-name descname"><span class="pre">num_expansion_intervals</span></span><a class="headerlink" href="#echo.utils.TimeSeriesData.num_expansion_intervals" title="Link to this definition"></a></dt>
+<dd><p>the number of expansion intervals for the time series data. Minimum value is 1,
+which can be thought as having no expansion intervals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">num_expansion_intervals</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">num_time_intervals</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#id1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">value</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#id2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="echo.utils.UnexpandableTimeSeriesDataError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">UnexpandableTimeSeriesDataError</span></span><a class="headerlink" href="#echo.utils.UnexpandableTimeSeriesDataError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.clamp">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">clamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smallest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">largest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#echo.utils.clamp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.create_input_output_pts_from_coefficients">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">create_input_output_pts_from_coefficients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temp_coef</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_coef</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xpts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.create_input_output_pts_from_coefficients" title="Link to this definition"></a></dt>
+<dd><p>Generates a set of output (y) points based on two coefficient arrays,
+one that applies to the input variable and one that applies to temperature, and non decreasing xpts.
+:param temp_coef: list of coefficients, right to left in increasing order
+:param input_coef: list of coefficients, right to left in increasing order
+:param temperature_array: list of temperature data for time intervals T
+:param xpts: number of x points we want to do our piecewise evaluation over
+:param time_periods: number of optimisation time periods</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>a dict of lists, where keys are the index set, defining the set of domain breakpoints for</dt><dd><p>the piecewise linear function.</p>
+</dd>
+<dt>y: a dict of lists, where keys are the index set, defining the set of domain breakpoints for</dt><dd><p>the piecewise linear function.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>x</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.create_named_constraint_with_rule">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">create_named_constraint_with_rule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rule</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Expression</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.create_named_constraint_with_rule" title="Link to this definition"></a></dt>
+<dd><p>Util function for creating pyomo constraints from a rule.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.do_multivariate_regression">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">do_multivariate_regression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.do_multivariate_regression" title="Link to this definition"></a></dt>
+<dd><p>Performs multivariate regression on provided data.</p>
+<p>Implementation of sklean.linear_model.LinearRegression.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Test samples. Array-like of shape (n_samples, n_features).</p></li>
+<li><p><strong>y</strong> – array-like of shape (n_samples,) or (n_samples, n_outputs). True values for x.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>coefficient array
+R^2</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.domain_from_flow">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">domain_from_flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.Flows" title="echo.configuration.Flows"><span class="pre">Flows</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RangeSet</span></span></span><a class="headerlink" href="#echo.utils.domain_from_flow" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.expand_as_array">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">expand_as_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#echo.utils.TimeSeriesData" title="echo.utils.TimeSeriesData"><span class="pre">TimeSeriesData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.expand_as_array" title="Link to this definition"></a></dt>
+<dd><p>Expands a TimeSeriesData object into a numpy array.</p>
+<p>The TimeSeriesData object described (potentially) compressed form of time-series data by only
+stor</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">TimeSeriesData</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span><span class="n">num_time_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">num_expansion_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expand_as_array</span><span class="p">()</span>
+<span class="go">array([[1, 2],</span>
+<span class="go">    [3, 4]])</span>
+</pre></div>
+</div>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">TimeSeriesData</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mf">89.2</span><span class="p">,</span><span class="n">num_time_intervals</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">num_expansion_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expand_as_array</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+<span class="go">array([[89.2, 89.2, 89.2],</span>
+<span class="go">    [89.2, 89.2, 89.2]])</span>
+</pre></div>
+</div>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">TimeSeriesData</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mf">12.1</span><span class="p">,</span><span class="mf">12.2</span><span class="p">],</span><span class="n">num_time_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">num_expansion_intervals</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expand_as_array</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+<span class="go">array([[12.1, 12.2],</span>
+<span class="go">    [12.1, 12.2],</span>
+<span class="go">    [12.1, 12.2],</span>
+<span class="go">    [12.1, 12.2]])</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="#echo.utils.TimeSeriesData" title="echo.utils.TimeSeriesData"><em>TimeSeriesData</em></a>) – A TimeSeriesData object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An 2-dimensional array of time series data. The first index is the expansion interval
+and the second index is the time period.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#echo.utils.UnexpandableTimeSeriesDataError" title="echo.utils.UnexpandableTimeSeriesDataError"><strong>UnexpandableTimeSeriesDataError</strong></a> – If there are too few or too many time series values for the given number of</p></li>
+<li><p><strong>time periods/expansion periods.</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.expand_as_dict">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">expand_as_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#echo.utils.TimeSeriesData" title="echo.utils.TimeSeriesData"><span class="pre">TimeSeriesData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.expand_as_dict" title="Link to this definition"></a></dt>
+<dd><p>Converts a TimeSeriesData object to a dictionary of time-series values keyed by the expansion and time intervals.</p>
+<p>Calls <cite>expand_as_array</cite> internally to produce enough values for the time and expansion intervals.
+See <cite>expand_as_array</cite> for an explanation of how this works.</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">expand_as_dict</span><span class="p">(</span><span class="n">TimeSeriesData</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]],</span><span class="n">num_time_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">num_expansion_intervals</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">{(0, 0): 1, (0, 1): 2, (1, 0): 3, (1, 1): 4}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="#echo.utils.TimeSeriesData" title="echo.utils.TimeSeriesData"><em>TimeSeriesData</em></a>) – A TimeSeriesData object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(expansion interval, time interval)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionary of time series values keyed by a tuple of the form</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#echo.utils.UnexpandableTimeSeriesDataError" title="echo.utils.UnexpandableTimeSeriesDataError"><strong>UnexpandableTimeSeriesDataError</strong></a> – If there are too few or too many time series values for the given number of</p></li>
+<li><p><strong>time periods/expansion periods.</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.fix_port_variable">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">fix_port_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.fix_port_variable" title="Link to this definition"></a></dt>
+<dd><p>Updates existing pyomo variable to have fixed values.
+:param model: pyomo concrete model
+:param var_name: pyomo variable name (str)
+:param new_values: array or list of new values
+:param expansion_periods: number of expansion periods (int)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_array_constraint">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_array_constraint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#echo.utils.generate_array_constraint" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>constraint</strong> – float or array</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a formatted dict to be used in constraining a variable</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>d</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_dict_with_pyomo_keys_from_array">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_dict_with_pyomo_keys_from_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.generate_dict_with_pyomo_keys_from_array" title="Link to this definition"></a></dt>
+<dd><p>Generates a dict suitable for initializing a pyomo var or param.</p>
+<p>The dict keys are a tuple (expansion period, time period).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_input_output_values_from_polynomial_coeff_array">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_input_output_values_from_polynomial_coeff_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.generate_input_output_values_from_polynomial_coeff_array" title="Link to this definition"></a></dt>
+<dd><p>Generates x and y values for the polynomial function with coefficients defined by the coeff array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> (<em>coeff</em>) – list of polynomial function coefficients</p></li>
+<li><p><strong>pts</strong> – list of x values for which we want to evaluate the function described by the coeff array</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The pts array returned.
+y: List of values at values of x for polynomial coefficients coeff_array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>x</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.generate_piecewise_input_output_arrays">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">generate_piecewise_input_output_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coeff_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.generate_piecewise_input_output_arrays" title="Link to this definition"></a></dt>
+<dd><p>Generates x and y values for the polynomial function with coefficients defined by the coeff array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> (<em>coeff</em>) – list of polynomial function coefficients, indexed by time</p></li>
+<li><p><strong>pts</strong> – list of x values for which we want to evaluate the function described by the coeff array</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.orjson_dumps">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">orjson_dumps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#echo.utils.orjson_dumps" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.populate_values_across_time_and_expansion_indices">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">populate_values_across_time_and_expansion_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.populate_values_across_time_and_expansion_indices" title="Link to this definition"></a></dt>
+<dd><p>Takes some input (values) - could be array, or int. Adds a time_period and expansion period key.</p>
+<p class="rubric">Example</p>
+<p>values=10
+time_periods=4
+expansion_periods=2</p>
+<p>populate_values_across_time_and_expansion_indices(values, time_periods, expansion_periods)
+{(0, 0): 10, (0, 1): 10, (0, 2): 10, (0, 3): 10, (1, 0): 10, (1, 1): 10, (1, 2): 10, (1, 3): 10}</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.set_float_var_bounds">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">set_float_var_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ub</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.set_float_var_bounds" title="Link to this definition"></a></dt>
+<dd><p>Updates the bounds on a pyomo variable. Only floats can be used as bounds.
+:param model: pyomo concrete model
+:param var_name: variable name (str) corresponding to a variable in the model
+:param ub: upper bound value, or None
+:param lb: lower bound value, or None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.set_var_bounds_from_dict">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">set_var_bounds_from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ub</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.utils.set_var_bounds_from_dict" title="Link to this definition"></a></dt>
+<dd><p>Updates the bounds on a pyomo variable using an array of floats.
+:param var: pyomo variable
+:param ub: dict of floats, where dict keys match variable index sets, or None
+:param lb: dict of floats, where dict keys match variable index sets, or None</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.tile_array_over_expansion_periods">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">tile_array_over_expansion_periods</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#echo.utils.tile_array_over_expansion_periods" title="Link to this definition"></a></dt>
+<dd><p>Constructs an array by repeating ‘array’ input x times where x = num of expansion periods</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.to_initial_values">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">to_initial_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaling</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.to_initial_values" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.utils.to_initial_values_for_array">
+<span class="sig-prename descclassname"><span class="pre">echo.utils.</span></span><span class="sig-name descname"><span class="pre">to_initial_values_for_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaling</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.utils.to_initial_values_for_array" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.tracker.html" class="btn btn-neutral float-left" title="echo.tracker module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.validators.html" class="btn btn-neutral float-right" title="echo.validators module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

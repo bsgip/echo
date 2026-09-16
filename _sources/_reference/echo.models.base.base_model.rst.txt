@@ -1,0 +1,7 @@
+echo.models.base.base\_model module
+===================================
+
+.. automodule:: echo.models.base.base_model
+   :members:
+   :show-inheritance:
+   :undoc-members:

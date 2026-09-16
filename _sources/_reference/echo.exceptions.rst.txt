@@ -1,0 +1,7 @@
+echo.exceptions module
+======================
+
+.. automodule:: echo.exceptions
+   :members:
+   :show-inheritance:
+   :undoc-members:

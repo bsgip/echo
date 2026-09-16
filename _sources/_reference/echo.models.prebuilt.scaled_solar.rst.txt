@@ -1,0 +1,7 @@
+echo.models.prebuilt.scaled\_solar module
+=========================================
+
+.. automodule:: echo.models.prebuilt.scaled_solar
+   :members:
+   :show-inheritance:
+   :undoc-members:

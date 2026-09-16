@@ -1,0 +1,7 @@
+echo.models.electrical.generation module
+========================================
+
+.. automodule:: echo.models.electrical.generation
+   :members:
+   :show-inheritance:
+   :undoc-members:

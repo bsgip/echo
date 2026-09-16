@@ -1,0 +1,7 @@
+echo.objectives.tariff module
+=============================
+
+.. automodule:: echo.objectives.tariff
+   :members:
+   :show-inheritance:
+   :undoc-members:
