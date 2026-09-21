@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.agnostic.flex import OffOrConstrainedPort
 
@@ -9,8 +8,8 @@ from echo.models.agnostic.flex import OffOrConstrainedPort
     [
         (0, 100, None),
         (0.1, 0.2, None),
-        (100, 0, ValidationError),  # lower bound > upper bound
-        (50, 50, ValidationError),  # lower bound == upper bound
+        (100, 0, ValueError),  # lower bound > upper bound
+        (50, 50, ValueError),  # lower bound == upper bound
     ],
 )
 def test_offorconstrainedport_validation(lower_bound: float, upper_bound: float, expected_error):

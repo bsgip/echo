@@ -1,6 +1,6 @@
 import pytest
-from pydantic import ValidationError
 
+# from pydantic import ValueError
 from echo.models.agnostic.bounded import BoundedLoad, BoundedPort
 
 
@@ -9,8 +9,8 @@ from echo.models.agnostic.bounded import BoundedLoad, BoundedPort
     [
         (0, 100, None),
         (0.1, 0.2, None),
-        (100, 0, ValidationError),  # lower bound > upper bound
-        (50, 50, ValidationError),  # lower bound == upper bound
+        (100, 0, ValueError),  # lower bound > upper bound
+        (50, 50, ValueError),  # lower bound == upper bound
     ],
 )
 def test_boundedport_validation(lower_bound: float, upper_bound: float, expected_error):
@@ -26,10 +26,10 @@ def test_boundedport_validation(lower_bound: float, upper_bound: float, expected
     [
         (0, 100, None),
         (0.1, 0.2, None),
-        (100, 0, ValidationError),  # lower bound > upper bound
-        (50, 50, ValidationError),  # lower bound == upper bound
-        (-100, 100, ValidationError),  # lower bound -ve
-        (-100, -50, ValidationError),  # both bounds -ve
+        (100, 0, ValueError),  # lower bound > upper bound
+        (50, 50, ValueError),  # lower bound == upper bound
+        (-100, 100, ValueError),  # lower bound -ve
+        (-100, -50, ValueError),  # both bounds -ve
     ],
 )
 def test_boundedload_validation(lower_bound: float, upper_bound: float, expected_error):

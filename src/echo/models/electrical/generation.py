@@ -8,13 +8,15 @@ from echo.models.agnostic import Source
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import set_var_bounds_from_dict
 from echo.validators import ArrayType
+from attrs import define, field
 
 
+@define
 class ElectricalGeneration(Source):
     """Electrical generation which can be fixed (non-curtailable) or variable (curtailable)"""
 
-    units = Units.KW
-    curtailable: bool = False
+    units = field(default=Units.KW)
+    curtailable: bool = field(default=False)
 
     def add_generation_profile(self, generation: dict) -> None:
         self.set_initial_value(generation)

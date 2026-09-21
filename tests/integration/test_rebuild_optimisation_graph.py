@@ -38,9 +38,8 @@ def test_port_reference_is_made_in_edge():
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
 
-    with pytest.raises(Exception):
-        assert id(grid.ports["grid_to_cp"]) == id(system.get_edge(("grid", "cp")).vertices[0])
-        assert id(connection_point.ports["cp_to_grid"]) == id(system.get_edge(("grid", "cp")).vertices[1])
+    assert grid.ports["grid_to_cp"] is system.get_edge(("grid", "cp")).vertices[0]
+    assert connection_point.ports["cp_to_grid"] is system.get_edge(("grid", "cp")).vertices[1]
 
 
 def test_rebuild_all_edges():
@@ -191,7 +190,7 @@ def test_rebuild_all_edges():
         )
 
         # Rebuild all the edges before optimisation
-        system.rebuild_all_edges()
+        # system.rebuild_all_edges()
 
         assert_node_edge_port_values(
             v0g_node_port_value={

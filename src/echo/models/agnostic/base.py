@@ -1,5 +1,5 @@
 import numpy as np
-from pydantic import validator
+from attrs import define, field
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType
 from echo.models.base import Port
@@ -12,24 +12,31 @@ from echo.validators import (
 )
 
 
+@define
 class FixedPort(Port):
     """Fixed port (parameter), can either import or export."""
 
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
+    flows = field(default=Flows.Both)
+    import_constraint = field(default=FlowConstraint.NoConstraint)
+    export_constraint = field(default=FlowConstraint.NoConstraint)
+    flow_type = field(default=OptimisationType.Parameter)
 
 
+@define
 class Source(Port):
     """A fixed source of a commodity."""
 
-    flows = Flows.Export
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
+    flows = field(default=Flows.Export)
+    export_constraint = field(default=FlowConstraint.NoConstraint)
+    flow_type = field(default=OptimisationType.Parameter)
+    initial_value: dict[tuple[int, int], float] | None = field(default=None)
+
+    @initial_value.validator
+    def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
+        nonpositive_generation(value)
 
     # Source should have non positive initial values
-    non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
+    # non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
 
     def add_source_profile(self, source_values: dict) -> None:
         self.set_initial_value(source_values)
@@ -45,16 +52,23 @@ class Source(Port):
         )
 
 
+@define
 class Sink(Port):
     """A fixed sink for a commodity."""
 
-    flows = Flows.Import
-    import_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Parameter
+    flows = field(default=Flows.Import)
+    import_constraint = field(default=FlowConstraint.NoConstraint)
+    flow_type = field(default=OptimisationType.Parameter)
 
-    non_neg_check = validator("initial_value", allow_reuse=True)(
-        nonnegative_load
-    )  # Sink should have non negative initial values
+    initial_value: dict[tuple[int, int], float] | None = field(default=None)
+
+    @initial_value.validator
+    def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
+        nonnegative_load(value)
+
+    # non_neg_check = validator("initial_value", allow_reuse=True)(
+    #     nonnegative_load
+    # )  # Sink should have non negative initial values
 
     def add_sink_profile(self, sink_values: dict[tuple[int, int], float]) -> None:
         self.set_initial_value(sink_values)

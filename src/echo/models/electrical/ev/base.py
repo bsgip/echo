@@ -14,10 +14,12 @@ from echo.models.base import Transform, TransformNode, TransformTerm
 from echo.models.electrical.base import ElectricalDemand, ElectricalPort
 from echo.utils import TimeExpandableType
 from echo.validators import ArrayType
+from attrs import define, field
 
 
+@define
 class MobileElectricalStorage(MobileStorage):
-    units = Units.KW
+    units = field(default=Units.KW)
 
 
 class EVBase(TransformNode):

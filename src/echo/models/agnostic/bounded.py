@@ -1,5 +1,6 @@
+import attr
 import pandas as pd
-from pydantic import root_validator, validator
+from attrs import define, field
 
 from echo.configuration import FlowConstraint
 from echo.models.agnostic.flex import FlexPort
@@ -15,13 +16,16 @@ from echo.validators import (
 )
 
 
+@define
 class BoundedPort(FlexPort):
     """A flex port with an upper and lower bound"""
 
-    upper_bound: ArrayType | float
-    lower_bound: ArrayType | float
+    upper_bound: ArrayType | float = field(kw_only=True)
+    lower_bound: ArrayType | float = field(kw_only=True)
 
-    bound_check = root_validator(allow_reuse=True)(check_bound_order)  # check lower bound < upper bound
+    def __attrs_post_init__(self) -> None:
+        # check lower bound < upper bound
+        check_bound_order(self, attr.asdict(self))
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
@@ -31,14 +35,23 @@ class BoundedPort(FlexPort):
         set_var_bounds_from_dict(model=model, var_name=self.port_name, ub=ub_dict, lb=lb_dict)
 
 
+@define
 class BoundedLoad(BoundedPort):
     """A port where the load has to be within a max and min value which is specified at each timestep."""
 
-    import_constraint = FlowConstraint.NoConstraint
+    import_constraint = field(default=FlowConstraint.NoConstraint)
+
+    upper_bound: ArrayType | float = field(kw_only=True)
+    lower_bound: ArrayType | float = field(kw_only=True)
 
     # Do additional validation to make sure both bounds are >= 0
-    upper_bound_check = validator("upper_bound", allow_reuse=True)(nonnegative_load)
-    lower_bound_check = validator("lower_bound", allow_reuse=True)(nonnegative_load)
+    @upper_bound.validator
+    def _validate_upper_bound(self, attribute, value):  # noqa: ANN001, ANN202
+        nonnegative_load(value)
+
+    @lower_bound.validator
+    def _validate_lower_bound(self, attribute, value):  # noqa: ANN001, ANN202
+        nonnegative_load(value)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
