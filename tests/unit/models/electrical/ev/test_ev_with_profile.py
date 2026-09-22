@@ -1,8 +1,9 @@
-from echo.configuration import EVChargeMode
-from echo.models.electrical.ev import EVWithProfile
 import pytest
 from pydantic import ValidationError
+
+from echo.configuration import EVChargeMode
 from echo.models.electrical.base import ElectricalDemand
+from echo.models.electrical.ev import EVWithProfile
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,7 @@
-from echo.exceptions import ConfigurationError
 import pytest
 
 from echo.configuration import Units
+from echo.exceptions import ConfigurationError
 from echo.models.agnostic.flex import FlexPort
 from echo.models.agnostic.tellegen.partitioned_multi_commodity import PartitionedMultiCommodityTellegenNode
 

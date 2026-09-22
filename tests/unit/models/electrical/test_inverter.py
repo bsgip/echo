@@ -1,7 +1,7 @@
-from echo.models.electrical import ElectricalPort
 import pytest
 from pydantic import ValidationError
 
+from echo.models.electrical import ElectricalPort
 from echo.models.electrical.inverter import Inverter
 
 
