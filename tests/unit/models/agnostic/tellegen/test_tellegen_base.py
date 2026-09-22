@@ -1,8 +1,8 @@
-from echo.exceptions import ConfigurationError
 import pytest
 
+from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
+from echo.exceptions import ConfigurationError
 from echo.models.agnostic.tellegen.base import TellegenNode
-from echo.configuration import Units, Flows, FlowConstraint, OptimisationType
 from echo.models.base.port import Port
 
 
