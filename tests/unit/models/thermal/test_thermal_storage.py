@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from echo.models.thermal.storage import ThermalStorage
 from echo.configuration import Units
+from echo.models.thermal.storage import ThermalStorage
 
 positivefloat_values = [(1, None), (0, ValidationError), (-1, ValidationError)]
 positivefloat_attributes = [
