@@ -17,7 +17,7 @@ test_data = [({attribute: value}, error) for attribute in positivefloat_attribut
 
 
 @pytest.mark.parametrize("param_to_override, expected_error", test_data)
-def test_heatpump_validation_heat_intake_rejection_coefficient(param_to_override, expected_error):
+def test_heatpump_validation(param_to_override, expected_error):
     required_params = {
         "nominal_heating_cop": 1,
         "nominal_cooling_cop": 1,
