@@ -1,9 +1,7 @@
 import pytest
-
 from pydantic import ValidationError
 
 from echo.models.prebuilt.diesel_generator import DieselGenerator
-
 
 nonnegativefloat_values = [(1, None), (0, None), (-1, ValidationError)]
 nonnegativefloat_attributes = [
