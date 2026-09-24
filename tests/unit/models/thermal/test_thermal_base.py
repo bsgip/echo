@@ -1,7 +1,6 @@
 import pytest
 from pydantic import ValidationError
 
-from echo.configuration import Units
 from echo.models.thermal.base import ThermalNode
 
 positivefloat_values = [(1, None), (0, ValidationError), (-1, ValidationError)]
