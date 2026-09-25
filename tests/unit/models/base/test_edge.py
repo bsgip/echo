@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from echo.models.base.edge import Edge
 from echo.models.base.port import Port
 
-SHORT_UID_LENGTH = 22
+SHORTUUID_LENGTH = 22
 
 
 def test_edge_initialisation_missing_required_params():
@@ -20,7 +20,7 @@ def test_edge_initialisation(edge_name):
 
     edge = Edge(edge_name=edge_name, **required_params)
 
-    assert len(edge.uid) == SHORT_UID_LENGTH
+    assert len(edge.uid) == SHORTUUID_LENGTH
 
     assert edge.edge_name is not None
     if edge_name:

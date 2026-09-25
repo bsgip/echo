@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from echo.models.base.path import Path
 
-SHORT_UID_LENGTH = 22
+SHORTUUID_LENGTH = 22
 
 
 def test_path_initialisation_missing_required_params():
@@ -18,7 +18,7 @@ def test_path_initialisation(path_name):
 
     path = Path(path_name=path_name, **required_params)
 
-    assert len(path.uid) == SHORT_UID_LENGTH
+    assert len(path.uid) == SHORTUUID_LENGTH
 
     assert path.path_name is not None
     if path_name:
