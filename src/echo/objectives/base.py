@@ -1,7 +1,6 @@
-import uuid
-
 import pandas as pd
 import pyomo.environ as en
+import shortuuid
 from pydantic import Field
 
 from echo.models.base import BaseModel as EchoBaseModel
@@ -11,14 +10,14 @@ from echo.models.scenario import EchoConcreteModel
 
 class Objective(EchoBaseModel):
     component: Port | Path | None
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4)
+    uid: str = Field(default_factory=shortuuid.uuid)
     name: str = ""
     weight: float = 1
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
         if not self.name:
-            self.name = "obj_" + str(self.uid)
+            self.name = "obj_" + self.uid
 
     def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame | None) -> None:
         pass
