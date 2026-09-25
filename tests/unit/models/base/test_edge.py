@@ -8,6 +8,7 @@ SHORT_UID_LENGTH = 22
 
 
 def test_edge_initialisation_missing_required_params():
+    # required parameters: vertices
     with pytest.raises(ValidationError):
         Edge()
 
