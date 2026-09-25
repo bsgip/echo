@@ -1,9 +1,11 @@
+from datetime import time
+
 import pyomo.environ as en
 import pytest
 from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
-from echo.objectives.tariff import DemandCharge, ExportDemandCharge, ImportDemandCharge
+from echo.objectives.tariff import Day, DemandCharge, ExportDemandCharge, ImportDemandCharge, TimePeriod, Window
 
 SHORTUUID_LENGTH = 22
 
@@ -28,7 +30,7 @@ def test_demandcharge_validation(rate, expected_error):
     }
 
     if expected_error:
-        with pytest.raises(ValidationError):
+        with pytest.raises(expected_error):
             DemandCharge(rate=rate, **required_params)
     else:
         DemandCharge(rate=rate, **required_params)
@@ -130,7 +132,7 @@ def test_importdemandcharge_validation(min_demand, expected_error):
     }
 
     if expected_error:
-        with pytest.raises(ValidationError):
+        with pytest.raises(expected_error):
             ImportDemandCharge(min_demand=min_demand, **required_params)
     else:
         ImportDemandCharge(min_demand=min_demand, **required_params)
@@ -144,7 +146,49 @@ def test_exportdemandcharge_validation(min_demand, expected_error):
     }
 
     if expected_error:
-        with pytest.raises(ValidationError):
+        with pytest.raises(expected_error):
             ExportDemandCharge(min_demand=min_demand, **required_params)
     else:
         ExportDemandCharge(min_demand=min_demand, **required_params)
+
+
+@pytest.mark.parametrize(
+    "time_periods,expected_error",
+    [
+        (
+            [
+                TimePeriod(start_time=time(0, 0), end_time=time(14, 0), day_type=[Day.weekday]),
+                TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.weekday]),
+            ],
+            None,
+        ),  # no overlap
+        (
+            [
+                TimePeriod(start_time=time(0, 0), end_time=time(18, 0), day_type=[Day.weekday]),
+                TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.weekday]),
+            ],
+            None,
+        ),  # no overlap
+        (
+            [
+                TimePeriod(start_time=time(0, 0), end_time=time(19, 0), day_type=[Day.weekday]),
+                TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.weekday]),
+            ],
+            ValidationError,
+        ),  # 1 hour overlap
+        (
+            [
+                TimePeriod(start_time=time(0, 0), end_time=time(19, 0), day_type=[Day.weekday, Day.holiday]),
+                TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.holiday]),
+            ],
+            ValidationError,
+        ),  # 1 hour overlap on holidays
+    ],
+)
+def test_window_validation_non_overlapping_periods(time_periods, expected_error):
+
+    if expected_error:
+        with pytest.raises(expected_error):
+            Window(time_periods=time_periods)
+    else:
+        Window(time_periods=time_periods)
