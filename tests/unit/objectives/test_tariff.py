@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
-from echo.objectives.tariff import DemandCharge
+from echo.objectives.tariff import DemandCharge, ImportDemandCharge, ExportDemandCharge
 
 SHORTUUID_LENGTH = 22
 
@@ -120,3 +120,17 @@ def test_demandcharge_validation_set_uid_and_name(override_params, expected_uid,
         assert dc.name == expected_name
     else:
         assert dc.name.endswith(dc.uid)
+
+
+@pytest.mark.parametrize("min_demand,expected_error", [(1, None), (0, None), (-1, ValidationError)])
+def test_importdemandcharge_validation(min_demand, expected_error):
+    required_params = {
+        "rate": 1,
+        "window_array": [],
+    }
+
+    if expected_error:
+        with pytest.raises(ValidationError):
+            ImportDemandCharge(min_demand=min_demand, **required_params)
+    else:
+        ImportDemandCharge(min_demand=min_demand, **required_params)
