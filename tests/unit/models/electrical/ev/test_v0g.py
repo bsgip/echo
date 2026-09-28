@@ -1,4 +1,3 @@
-
 from echo.configuration import EVChargeMode
 from echo.models.electrical.ev.v0g import EVV0G
 
