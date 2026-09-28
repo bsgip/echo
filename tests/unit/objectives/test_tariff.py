@@ -5,7 +5,19 @@ import pytest
 from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
-from echo.objectives.tariff import Day, DemandCharge, ExportDemandCharge, ImportDemandCharge, TimePeriod, Window
+from echo.models.base.port import Port
+from echo.objectives.tariff import (
+    BlockTariff,
+    Day,
+    DemandCharge,
+    DemandTariffObjective,
+    ExportDemandCharge,
+    ImportDemandCharge,
+    Tariff,
+    ThroughputCost,
+    TimePeriod,
+    Window,
+)
 
 SHORTUUID_LENGTH = 22
 
@@ -192,3 +204,99 @@ def test_window_validation_non_overlapping_periods(time_periods, expected_error)
             Window(time_periods=time_periods)
     else:
         Window(time_periods=time_periods)
+
+
+@pytest.mark.parametrize(
+    "expansion_periods, expected_error",
+    [
+        (1, None),
+        (0, ValidationError),  # 0 is not a pydantic PositiveFloat
+        (-1, ValidationError),  # not a PostiveFloat
+        (-1.0, ValidationError),  # not an int
+        (0.0, ValidationError),  # not an int
+        (-1.0, ValidationError),  # not an int
+    ],
+)
+def test_demandtariffobjective_validation(expansion_periods, expected_error):
+    required_params = {"component": Port(), "demand_charges": []}
+
+    if expected_error:
+        with pytest.raises(expected_error):
+            DemandTariffObjective(expansion_periods=expansion_periods, **required_params)
+    else:
+        DemandTariffObjective(expansion_periods=expansion_periods, **required_params)
+
+
+@pytest.mark.parametrize(
+    "rate, expected_error",
+    [
+        (1.0, None),
+        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValidationError),  # not a PostiveFloat
+    ],
+)
+def test_throughputcost_validation(rate, expected_error):
+    required_params = {"component": Port(), "demand_charges": []}
+
+    if expected_error:
+        with pytest.raises(expected_error):
+            ThroughputCost(rate=rate, **required_params)
+    else:
+        ThroughputCost(rate=rate, **required_params)
+
+
+@pytest.mark.parametrize(
+    "expansion_periods, expected_error",
+    [
+        (1, None),
+        (0, ValidationError),  # 0 is not a pydantic PositiveFloat
+        (-1, ValidationError),  # not a PostiveFloat
+        (-1.0, ValidationError),  # not an int
+        (0.0, ValidationError),  # not an int
+        (-1.0, ValidationError),  # not an int
+    ],
+)
+def test_tariff_validation(expansion_periods, expected_error):
+    required_params = {"tariff_array": []}
+
+    if expected_error:
+        with pytest.raises(expected_error):
+            Tariff(expansion_periods=expansion_periods, **required_params)
+    else:
+        Tariff(expansion_periods=expansion_periods, **required_params)
+
+
+@pytest.mark.parametrize(
+    "blocks,rates,expected_error",
+    [
+        ([], [1], None),
+        ([], [], ConfigurationError),  # rates should be 1 larger than blocks
+        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], None),
+        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], ConfigurationError),  # rates should be 1 larger than blocks
+    ],
+)
+def test_blocktariff_validation_check_block_rates(blocks, rates, expected_error):
+    if expected_error:
+        with pytest.raises(expected_error):
+            BlockTariff(component=Port(), blocks=blocks, rates=rates)
+    else:
+        BlockTariff(component=Port(), blocks=blocks, rates=rates)
+
+
+@pytest.mark.parametrize(
+    "reset_periods,expected_reset_index",
+    [
+        ([], en.RangeSet(0, -1)),  # TODO this passes but a negative index is probably not correct
+        (list(range(1)), en.RangeSet(0, 1 - 1)),
+        (list(range(157)), en.RangeSet(0, 157 - 1)),
+    ],
+)
+def test_blocktariff_validation_set_reset_index(reset_periods, expected_reset_index):
+    required_params = {
+        "component": Port(),
+        "blocks": [],
+        "rates": [1],
+    }
+    bt = BlockTariff(reset_periods=reset_periods, **required_params)
+
+    assert bt.reset_index == expected_reset_index
