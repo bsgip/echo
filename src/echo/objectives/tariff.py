@@ -355,10 +355,11 @@ class TimePeriod(EchoBaseModel):
                 ]
             else:
                 other_ranges = [(other.start_time, end_time)]
-        for self_range in self_ranges:
-            for other_range in other_ranges:
-                if self_range[0] < other_range[1] and other_range[0] < self_range[1]:
-                    return True
+
+            for self_range in self_ranges:
+                for other_range in other_ranges:
+                    if self_range[0] < other_range[1] and other_range[0] < self_range[1]:
+                        return True
         return False
 
 
@@ -497,7 +498,7 @@ class DemandCharge(EchoBaseModel):
         return values
 
     @root_validator(pre=True)
-    def check_name(cls, values: dict) -> dict:
+    def set_uid_and_name(cls, values: dict) -> dict:
         if not values.get("uid"):
             values["uid"] = shortuuid.uuid()
 

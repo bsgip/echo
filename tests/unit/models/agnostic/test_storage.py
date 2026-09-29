@@ -31,7 +31,7 @@ def test_storage_validation_storage_capactity_cost(
 ):
     storage_params = {"max_capacity": 0, "charging_power_limit": 0, "discharging_power_limit": 0}
     if expected_error:
-        with pytest.raises(ValidationError):
+        with pytest.raises(expected_error):
             Storage(storage_capacity_cost=storage_capacity_cost, **storage_params)
     else:
         Storage(storage_capacity_cost=storage_capacity_cost, **storage_params)
@@ -48,7 +48,7 @@ def test_storage_validation_storage_capactity_cost(
 def test_storage_validation_depth_of_discharge_check(storage_params, expected_error):
     common_storage_params = {"max_capacity": 0, "charging_power_limit": 0, "discharging_power_limit": 0}
     if expected_error:
-        with pytest.raises(ValidationError):
+        with pytest.raises(expected_error):
             Storage(**common_storage_params, **storage_params)
     else:
         Storage(**common_storage_params, **storage_params)
@@ -78,7 +78,7 @@ def test_storage_validation_depth_of_discharge_check(storage_params, expected_er
 #         # (see function dod_checks)
 #     }
 #     if expected_error:
-#         with pytest.raises(ValidationError):
+#         with pytest.raises(expected_error):
 #             Storage(initial_state_of_charge=initial_state_of_charge, **storage_params)
 #     else:
 #         Storage(initial_state_of_charge=initial_state_of_charge, **storage_params)

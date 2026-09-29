@@ -24,10 +24,10 @@ class ThermalNode(Node):
     initial_internal_temp: float = 0  # initial internal temperature
 
     # Pyomo vars/params
-    internal_temp: str
-    is_gain: str
-    losses: str
-    gains: str
+    internal_temp: str = ""
+    is_gain: str = ""
+    losses: str = ""
+    gains: str = ""
 
     def __init__(self, **data) -> None:
         super().__init__(**data)

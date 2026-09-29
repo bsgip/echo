@@ -1,6 +1,7 @@
 import pytest
 
 from echo.configuration import Units
+from echo.exceptions import ConfigurationError
 from echo.models.agnostic.flex import FlexPort
 from echo.models.agnostic.tellegen.partitioned_multi_commodity import PartitionedMultiCommodityTellegenNode
 
@@ -40,13 +41,39 @@ def test_partitioned_node_add_port():
     assert len(node.ports) == start_number_ports + 1
 
 
-def test_partitioned_node_error():
+def test_partitioned_node_validation_ports_or_partitions_only():
     """Test only ports or partitions validation error"""
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         PartitionedMultiCommodityTellegenNode(
             partitions={
                 "partition_1": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
                 "partition_2": [FlexPort(units=Units.KW), FlexPort(units=Units.KW)],
             },
             ports={"port_1": FlexPort(units=Units.KW)},
+        )
+
+
+def test_partitioned_node_validation_partition_ports_same_name():
+    partition_1_ports = [FlexPort(port_name="same_name", units=Units.KW)]
+    partition_2_ports = [FlexPort(port_name="same_name", units=Units.KW)]
+
+    with pytest.raises(ConfigurationError):
+        PartitionedMultiCommodityTellegenNode(
+            partitions={
+                "partition_1": partition_1_ports,
+                "partition_2": partition_2_ports,
+            },
+        )
+
+
+def test_partitioned_node_validation_partition_ports_same_id():
+    # Same ports, therefore ports in different partitions have the same uid
+    partition_ports = [FlexPort(port_name="same_name", units=Units.KW)]
+
+    with pytest.raises(ConfigurationError):
+        PartitionedMultiCommodityTellegenNode(
+            partitions={
+                "partition_1": partition_ports,
+                "partition_2": partition_ports,
+            },
         )
