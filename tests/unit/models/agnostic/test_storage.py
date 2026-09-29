@@ -75,7 +75,7 @@ def test_storage_validation_depth_of_discharge_check(storage_params, expected_er
 #         # (see function dod_checks)
 #     }
 #     if expected_error:
-#         with pytest.raises(ValidationError):
+#         with pytest.raises(expected_error):
 #             Storage(initial_state_of_charge=initial_state_of_charge, **storage_params)
 #     else:
 #         Storage(initial_state_of_charge=initial_state_of_charge, **storage_params)
