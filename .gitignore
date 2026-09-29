@@ -178,3 +178,4 @@ cplex.log
 *.pyc
 .direnv
 local/
+worktrees/
