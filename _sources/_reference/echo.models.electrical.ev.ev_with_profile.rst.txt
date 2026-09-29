@@ -1,0 +1,7 @@
+echo.models.electrical.ev.ev\_with\_profile module
+==================================================
+
+.. automodule:: echo.models.electrical.ev.ev_with_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:

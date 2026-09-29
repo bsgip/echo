@@ -1,0 +1,18 @@
+echo.models.agnostic.tellegen package
+=====================================
+
+.. automodule:: echo.models.agnostic.tellegen
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.agnostic.tellegen.base
+   echo.models.agnostic.tellegen.multi_commodity
+   echo.models.agnostic.tellegen.partitioned_multi_commodity
+   echo.models.agnostic.tellegen.three_way_valve

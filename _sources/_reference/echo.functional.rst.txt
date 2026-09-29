@@ -1,0 +1,7 @@
+echo.functional module
+======================
+
+.. automodule:: echo.functional
+   :members:
+   :show-inheritance:
+   :undoc-members:

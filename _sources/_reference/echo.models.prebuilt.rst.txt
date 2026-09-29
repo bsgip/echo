@@ -1,0 +1,20 @@
+echo.models.prebuilt package
+============================
+
+.. automodule:: echo.models.prebuilt
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.prebuilt.battery
+   echo.models.prebuilt.diesel_generator
+   echo.models.prebuilt.flex
+   echo.models.prebuilt.load
+   echo.models.prebuilt.scaled_solar
+   echo.models.prebuilt.solar

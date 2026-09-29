@@ -1,0 +1,7 @@
+echo.models.agnostic.tellegen.three\_way\_valve module
+======================================================
+
+.. automodule:: echo.models.agnostic.tellegen.three_way_valve
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,348 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.models.electrical.ev.base module &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="echo.models.electrical.ev.deprecated module" href="echo.models.electrical.ev.deprecated.html" />
+    <link rel="prev" title="echo.models.electrical.ev package" href="echo.models.electrical.ev.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="echo.models.html">echo.models package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="echo.models.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="echo.models.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.objectives.html">echo.objectives package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="echo.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+          <li class="breadcrumb-item"><a href="echo.models.html">echo.models package</a></li>
+          <li class="breadcrumb-item"><a href="echo.models.electrical.html">echo.models.electrical package</a></li>
+          <li class="breadcrumb-item"><a href="echo.models.electrical.ev.html">echo.models.electrical.ev package</a></li>
+      <li class="breadcrumb-item active">echo.models.electrical.ev.base module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.models.electrical.ev.base.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.models.electrical.ev.base">
+<span id="echo-models-electrical-ev-base-module"></span><h1>echo.models.electrical.ev.base module<a class="headerlink" href="#module-echo.models.electrical.ev.base" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.models.electrical.ev.base.</span></span><span class="sig-name descname"><span class="pre">EVBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalDemand" title="echo.models.electrical.base.ElectricalDemand"><span class="pre">ElectricalDemand</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalPort" title="echo.models.electrical.base.ElectricalPort"><span class="pre">ElectricalPort</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#echo.models.electrical.ev.base.MobileElectricalStorage" title="echo.models.electrical.ev.base.MobileElectricalStorage"><span class="pre">MobileElectricalStorage</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NumericExpression</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transformations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="echo.models.base.transform.html#echo.models.base.transform.Transform" title="echo.models.base.transform.Transform"><span class="pre">Transform</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.EVChargeMode" title="echo.configuration.EVChargeMode"><span class="pre">EVChargeMode</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_port_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cp'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charging_efficiency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charging_power_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_of_discharge_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharging_efficiency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharging_power_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_trip_slack</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soc_conserv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soc_conserv_cost</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">usage_power_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">available</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state_of_charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">set_stateful_attrs_at_init</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tod_charging</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">usage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port_dict_name_to_port_name_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port_dict_name_to_port_uid_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="echo.models.base.transform.html#echo.models.base.transform.TransformNode" title="echo.models.base.transform.TransformNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">TransformNode</span></code></a></p>
+<p>Base class for EVV0G, EVV1G and EVV2G.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>available</strong> (<a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><em>ArrayType</em></a><em> | </em><em>list</em><em> | </em><em>str</em><em> | </em><em>None</em>) – A List or ArrayType of bools representing the ability for the
+EV to charge. The bools can have values of [False, True] or [0, 1]. 0 and False indicate the EV is not
+available for charging, 1 and True indicate the EV is available for charging. If
+set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, this must
+be provided later using set_stateful_attrs(). ArrayType | list represents data, while a str represents the
+column name in a pandas dataframe.</p></li>
+<li><p><strong>charge_mode</strong> (<a class="reference internal" href="echo.configuration.html#echo.configuration.EVChargeMode" title="echo.configuration.EVChargeMode"><em>EVChargeMode</em></a><em> | </em><em>None</em>) – Charge mode of the EV. This is set upon instantiation of EV child classes.
+Defaults to None.</p></li>
+<li><p><strong>charging_efficiency</strong> (<em>float</em><em> | </em><em>None</em>) – The efficiency of the battery charging process for the EV. Float as
+a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.</p></li>
+<li><p><strong>charging_power_limit</strong> (<em>float</em>) – The maximum charging rate of the EV’s battery. Positive float in power units.</p></li>
+<li><p><strong>connection_point_name</strong> (<em>str</em><em> | </em><em>None</em>) – Name of connection point port. Defaults to “cp”.</p></li>
+<li><p><strong>depth_of_discharge_limit</strong> (<em>float</em><em>, </em><em>optional</em>) – The minimum value of the state of ElectricalStorage of the EV. Same
+as min_soc but expressed as percentage, not energy. Float as a percentage (of max_capacity) between 0.0
+and 100.0. Unitless. Defaults to 0.0.</p></li>
+<li><p><strong>discharging_efficiency</strong> (<em>float</em><em> | </em><em>None</em>) – The efficiency of the battery discharging process for the EV. Float as
+a fraction between 0.0 and 1.0 inclusive. Unitless. Defaults to 1.0.</p></li>
+<li><p><strong>discharging_power_limit</strong> (<em>float</em>) – The maximum discharging rate of the EV’s battery. This includes
+discharging for travelling and V2G actions. If usage_power_limit is set then
+discharging_power_limit represents maximum V2G generation power only. Negative float in power units.</p></li>
+<li><p><strong>enable_trip_slack</strong> (<em>bool</em><em> | </em><em>None</em>) – Enabling trip slack allows the EV to meet usage requirements even if
+other constraints/requirements are breached. That is, it allows the state of charge of the EV’s battery
+to go below min to avoid the optimisation failing due to infeasible EV trips. For example, an EV can
+complete a journey requiring 20 kWh of energy if though there is only 15 kWh of energy in the EV
+battery. Setting enable_trip_slack to True will introduce additional energy into the system, though
+there is a cost to do so. This can cause issues when conducting analysis on systems with
+enable_trip_slack=True, so use with caution. Defaults to False.</p></li>
+<li><p><strong>initial_state_of_charge</strong> (<em>float</em><em> | </em><em>None</em>) – The initial charge present in the EV’s battery. If
+set_state_attrs_at_init is True, this must be supplied. If set_stateful_attrs_at_init is False, it must be
+provided later using set_stateful_attrs(). Positive float with units of energy (not percentage).</p></li>
+<li><p><strong>interval_duration</strong> (<em>int</em>) – Length of time interval between time series data points. Used mostly for conversion
+between power and energy. If set_stateful_attrs_at_init is False, this can be set after EV object
+instantiation using self.set_state_attrs(). Units of minutes.</p></li>
+<li><p><strong>max_capacity</strong> (<em>float</em>) – The storage capacity of the EV’s battery. Positive float in energy units.</p></li>
+<li><p><strong>port_dict_name_to_port_name_map</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Defines port name to port object map. It is recommended
+not to use this unless you know what you are doing. If None, it will defined once ports are built. Defaults
+to None.</p></li>
+<li><p><strong>port_dict_name_to_port_uid_map</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Defines port uid to port object map. It is recommended
+not to use this unless you know what you are doing. If None, it will defined once ports are built. Defaults
+to None.</p></li>
+<li><p><strong>set_stateful_attrs_at_init</strong> (<em>bool</em><em> | </em><em>None</em>) – Set attributes with state at object instantiation (True) or
+defer to later (False). If deferring to later, self.set_stateful_attrs() must be used to set these
+attributes. Attributes with state are available and initial_state_of_charge. Defaults to True.</p></li>
+<li><p><strong>soc_conserv</strong> (<a class="reference internal" href="echo.utils.html#echo.utils.TimeExpandableType" title="echo.utils.TimeExpandableType"><em>TimeExpandableType</em></a><em> | </em><em>None</em>) – Conservative state of charge limit below which the EV should not
+discharge to the grid. This reflects that an EV owner would want to ensure a certain amount of charge is
+available impromptu trips. This lower bound only applies while the EV is available to charge. Defaults to
+None.</p></li>
+<li><p><strong>soc_conserv_cost</strong> (<em>float</em><em> | </em><em>None</em>) – The cost placed on going below the conservative state of charge limit. That
+is, the conservative state of charge lower limit will be ignored if it would result in saving (or gaining)
+more money than this cost. Units of $/kWh. Defaults to None.</p></li>
+<li><p><strong>tod_charging</strong> (<a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><em>ArrayType</em></a><em> | </em><em>list</em><em> | </em><em>str</em><em> | </em><em>None</em>) – Time of day charging allows the EV to charge only during certain
+time windows (1=allowed, 0=not allowed). Most commonly used with V0G charging. Defaults to None.</p></li>
+<li><p><strong>usage</strong> (<a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><em>ArrayType</em></a><em> | </em><em>list</em><em> | </em><em>None</em>) – An array representing the average power consumption from driving of the EV
+during a time interval. Units of power.</p></li>
+<li><p><strong>usage_power_limit</strong> (<em>float</em><em> | </em><em>None</em>) – The maximum power that can be used during an EV trip. If not None, it allows
+discharging_power_limit to represent only the maximum power flow from an EVV2G back into an electrical
+network, and not the maximum power output during a trip. Negative float in power units. Defaults to None,
+however if None, it will be set to discharging_power_limit.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.available">
+<span class="sig-name descname"><span class="pre">available</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.available" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.charge_mode">
+<span class="sig-name descname"><span class="pre">charge_mode</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.configuration.html#echo.configuration.EVChargeMode" title="echo.configuration.EVChargeMode"><span class="pre">EVChargeMode</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.charge_mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.charging_efficiency">
+<span class="sig-name descname"><span class="pre">charging_efficiency</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.charging_efficiency" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.charging_power_limit">
+<span class="sig-name descname"><span class="pre">charging_power_limit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.charging_power_limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.connection_port_name">
+<span class="sig-name descname"><span class="pre">connection_port_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.connection_port_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.depth_of_discharge_limit">
+<span class="sig-name descname"><span class="pre">depth_of_discharge_limit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.depth_of_discharge_limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.discharging_efficiency">
+<span class="sig-name descname"><span class="pre">discharging_efficiency</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.discharging_efficiency" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.discharging_power_limit">
+<span class="sig-name descname"><span class="pre">discharging_power_limit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.discharging_power_limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.enable_trip_slack">
+<span class="sig-name descname"><span class="pre">enable_trip_slack</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.enable_trip_slack" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.initial_state_of_charge">
+<span class="sig-name descname"><span class="pre">initial_state_of_charge</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.initial_state_of_charge" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.interval_duration">
+<span class="sig-name descname"><span class="pre">interval_duration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.interval_duration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.max_capacity">
+<span class="sig-name descname"><span class="pre">max_capacity</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.max_capacity" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.port_dict_name_to_port_name_map">
+<span class="sig-name descname"><span class="pre">port_dict_name_to_port_name_map</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.port_dict_name_to_port_name_map" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.port_dict_name_to_port_uid_map">
+<span class="sig-name descname"><span class="pre">port_dict_name_to_port_uid_map</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.port_dict_name_to_port_uid_map" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.ports">
+<span class="sig-name descname"><span class="pre">ports</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalDemand" title="echo.models.electrical.base.ElectricalDemand"><span class="pre">ElectricalDemand</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="echo.models.electrical.base.html#echo.models.electrical.base.ElectricalPort" title="echo.models.electrical.base.ElectricalPort"><span class="pre">ElectricalPort</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#echo.models.electrical.ev.base.MobileElectricalStorage" title="echo.models.electrical.ev.base.MobileElectricalStorage"><span class="pre">MobileElectricalStorage</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.ports" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.set_port_uid_maps">
+<span class="sig-name descname"><span class="pre">set_port_uid_maps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.set_port_uid_maps" title="Link to this definition"></a></dt>
+<dd><p>Sets the two maps for port names and port uids, if they aren’t already set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>None</strong></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.set_stateful_attrs_at_init">
+<span class="sig-name descname"><span class="pre">set_stateful_attrs_at_init</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.set_stateful_attrs_at_init" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.soc_conserv">
+<span class="sig-name descname"><span class="pre">soc_conserv</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.soc_conserv" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.soc_conserv_cost">
+<span class="sig-name descname"><span class="pre">soc_conserv_cost</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.soc_conserv_cost" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.tod_charging">
+<span class="sig-name descname"><span class="pre">tod_charging</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.tod_charging" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.usage">
+<span class="sig-name descname"><span class="pre">usage</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.usage" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.usage_power_limit">
+<span class="sig-name descname"><span class="pre">usage_power_limit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.usage_power_limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.EVBase.verify_node">
+<span class="sig-name descname"><span class="pre">verify_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.models.electrical.ev.base.EVBase.verify_node" title="Link to this definition"></a></dt>
+<dd><p>Checks data with state has been set for the node and each port.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>None</strong></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.models.electrical.ev.base.MobileElectricalStorage">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.models.electrical.ev.base.</span></span><span class="sig-name descname"><span class="pre">MobileElectricalStorage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.Units" title="echo.configuration.Units"><span class="pre">Units</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Units.KW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_value_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_value_scaling</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flow_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.OptimisationType" title="echo.configuration.OptimisationType"><span class="pre">OptimisationType</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">OptimisationType.Variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.Flows" title="echo.configuration.Flows"><span class="pre">Flows</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Flows.Both</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">import_constraint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.FlowConstraint" title="echo.configuration.FlowConstraint"><span class="pre">FlowConstraint</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">FlowConstraint.Fixed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">import_constraint_value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_constraint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.configuration.html#echo.configuration.FlowConstraint" title="echo.configuration.FlowConstraint"><span class="pre">FlowConstraint</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">FlowConstraint.Fixed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_constraint_value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active_periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slack</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NumericExpression</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_dangling_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_of_discharge_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_soc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charging_power_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharging_power_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charging_efficiency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharging_efficiency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_storage_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">storage_capacity_cost</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PositiveFloat</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regularise</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state_of_charge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_trip_slack</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soc_conserv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soc_conserv_cost</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">available</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.validators.html#echo.validators.ArrayType" title="echo.validators.ArrayType"><span class="pre">ArrayType</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.models.electrical.ev.base.MobileElectricalStorage" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="echo.models.agnostic.storage.html#echo.models.agnostic.storage.MobileStorage" title="echo.models.agnostic.storage.MobileStorage"><code class="xref py py-class docutils literal notranslate"><span class="pre">MobileStorage</span></code></a></p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.models.electrical.ev.html" class="btn btn-neutral float-left" title="echo.models.electrical.ev package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.models.electrical.ev.deprecated.html" class="btn btn-neutral float-right" title="echo.models.electrical.ev.deprecated module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

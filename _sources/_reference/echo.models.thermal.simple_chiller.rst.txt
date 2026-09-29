@@ -1,0 +1,7 @@
+echo.models.thermal.simple\_chiller module
+==========================================
+
+.. automodule:: echo.models.thermal.simple_chiller
+   :members:
+   :show-inheritance:
+   :undoc-members:

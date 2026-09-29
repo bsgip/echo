@@ -1,0 +1,7 @@
+echo.models.prebuilt.flex module
+================================
+
+.. automodule:: echo.models.prebuilt.flex
+   :members:
+   :show-inheritance:
+   :undoc-members:

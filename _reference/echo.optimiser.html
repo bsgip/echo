@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.optimiser module &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="echo.tracker module" href="echo.tracker.html" />
+    <link rel="prev" title="echo.functional module" href="echo.functional.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="echo.html#subpackages">Subpackages</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.constants.html">echo.constants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.exceptions.html">echo.exceptions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.functional.html">echo.functional module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.optimiser module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#echo.optimiser.OptimisationResult"><code class="docutils literal notranslate"><span class="pre">OptimisationResult</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.optimiser.build_model_and_objective"><code class="docutils literal notranslate"><span class="pre">build_model_and_objective()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.optimiser.logged_stdout"><code class="docutils literal notranslate"><span class="pre">logged_stdout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.optimiser.optimise"><code class="docutils literal notranslate"><span class="pre">optimise()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.optimiser.validate_network_graph"><code class="docutils literal notranslate"><span class="pre">validate_network_graph()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="echo.tracker.html">echo.tracker module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.utils.html">echo.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.validators.html">echo.validators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.visualization.html">echo.visualization module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+      <li class="breadcrumb-item active">echo.optimiser module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.optimiser.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.optimiser">
+<span id="echo-optimiser-module"></span><h1>echo.optimiser module<a class="headerlink" href="#module-echo.optimiser" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.optimiser.</span></span><span class="sig-name descname"><span class="pre">OptimisationResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scenario_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings" title="echo.models.scenario.ScenarioSettings"><span class="pre">ScenarioSettings</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NumericExpression</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective_set</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet" title="echo.objectives.base.ObjectiveSet"><span class="pre">ObjectiveSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph" title="echo.models.base.optimisation_graph.OptimisationGraph"><span class="pre">OptimisationGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt_status</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SolverStatus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">termination_condition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">TerminationCondition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_attribute_tracker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.tracker.html#echo.tracker.AttributeTracker" title="echo.tracker.AttributeTracker"><span class="pre">AttributeTracker</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.optimiser.OptimisationResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Describes the set of results from a successful optimisation run. It will provide a set of utilities
+for accessing result data for the scenario that created this result</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.df">
+<span class="sig-name descname"><span class="pre">df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.df" title="Link to this definition"></a></dt>
+<dd><p>Extract all vars from the solution as a dataframe</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.df_by_node">
+<span class="sig-name descname"><span class="pre">df_by_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.df_by_node" title="Link to this definition"></a></dt>
+<dd><p>Returns a df of results by node, using the port names given in each node’s ‘ports’ dict</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.df_by_port">
+<span class="sig-name descname"><span class="pre">df_by_port</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.df_by_port" title="Link to this definition"></a></dt>
+<dd><p>Returns a df of results by port, using port names given in each node’s ‘ports’ dict</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.df_objective_by_port">
+<span class="sig-name descname"><span class="pre">df_objective_by_port</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.df_objective_by_port" title="Link to this definition"></a></dt>
+<dd><p>Return the value of each objective assigned to each port.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.get_single_objective_total_value">
+<span class="sig-name descname"><span class="pre">get_single_objective_total_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objective_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.Objective" title="echo.objectives.base.Objective"><span class="pre">Objective</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.get_single_objective_total_value" title="Link to this definition"></a></dt>
+<dd><p>Returns the value of a single objective.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.get_total_objective_at_port">
+<span class="sig-name descname"><span class="pre">get_total_objective_at_port</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">port_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.port.html#echo.models.base.port.Port" title="echo.models.base.port.Port"><span class="pre">Port</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.get_total_objective_at_port" title="Link to this definition"></a></dt>
+<dd><p>Sums all objectives that take the defined port as their component.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.get_total_objective_value">
+<span class="sig-name descname"><span class="pre">get_total_objective_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.get_total_objective_value" title="Link to this definition"></a></dt>
+<dd><p>Returns the value of the objective function.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.graph">
+<span class="sig-name descname"><span class="pre">graph</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph" title="echo.models.base.optimisation_graph.OptimisationGraph"><span class="pre">OptimisationGraph</span></a></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.graph" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.model">
+<span class="sig-name descname"><span class="pre">model</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.model" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.model_attribute_tracker">
+<span class="sig-name descname"><span class="pre">model_attribute_tracker</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.tracker.html#echo.tracker.AttributeTracker" title="echo.tracker.AttributeTracker"><span class="pre">AttributeTracker</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.model_attribute_tracker" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.node_values">
+<span class="sig-name descname"><span class="pre">node_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.node.html#echo.models.base.node.Node" title="echo.models.base.node.Node"><span class="pre">Node</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.node_values" title="Link to this definition"></a></dt>
+<dd><p>Returns all values of all ports in a specified node for a single specified expansion period.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.objective">
+<span class="sig-name descname"><span class="pre">objective</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NumericExpression</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.objective" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.objective_set">
+<span class="sig-name descname"><span class="pre">objective_set</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet" title="echo.objectives.base.ObjectiveSet"><span class="pre">ObjectiveSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.objective_set" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.opt_status">
+<span class="sig-name descname"><span class="pre">opt_status</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">SolverStatus</span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.opt_status" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.scenario_settings">
+<span class="sig-name descname"><span class="pre">scenario_settings</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings" title="echo.models.scenario.ScenarioSettings"><span class="pre">ScenarioSettings</span></a></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.scenario_settings" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.termination_condition">
+<span class="sig-name descname"><span class="pre">termination_condition</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">TerminationCondition</span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.termination_condition" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.optimiser.OptimisationResult.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expansion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#echo.optimiser.OptimisationResult.values" title="Link to this definition"></a></dt>
+<dd><p>Returns the value of a single specified variable during a single specified expansion period.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.optimiser.build_model_and_objective">
+<span class="sig-prename descclassname"><span class="pre">echo.optimiser.</span></span><span class="sig-name descname"><span class="pre">build_model_and_objective</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph" title="echo.models.base.optimisation_graph.OptimisationGraph"><span class="pre">OptimisationGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">scenario_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings" title="echo.models.scenario.ScenarioSettings"><span class="pre">ScenarioSettings</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">small_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">big_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective_set</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet" title="echo.objectives.base.ObjectiveSet"><span class="pre">ObjectiveSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EchoConcreteModel" title="echo.models.scenario.EchoConcreteModel"><span class="pre">EchoConcreteModel</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">NumericExpression</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="echo.tracker.html#echo.tracker.AttributeTracker" title="echo.tracker.AttributeTracker"><span class="pre">AttributeTracker</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.optimiser.build_model_and_objective" title="Link to this definition"></a></dt>
+<dd><p>Builds an EchoConcreteModel for a particular Echo Scenario definition and a related objective to optimise
+against the model</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.optimiser.logged_stdout">
+<span class="sig-prename descclassname"><span class="pre">echo.optimiser.</span></span><span class="sig-name descname"><span class="pre">logged_stdout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'w'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#echo.optimiser.logged_stdout" title="Link to this definition"></a></dt>
+<dd><p>Context manager that while held open will redirect all stdout to logfile. If the logfile is None then
+no redirection will occur</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.optimiser.optimise">
+<span class="sig-prename descclassname"><span class="pre">echo.optimiser.</span></span><span class="sig-name descname"><span class="pre">optimise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scenario_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.ScenarioSettings" title="echo.models.scenario.ScenarioSettings"><span class="pre">ScenarioSettings</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">engine_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.scenario.html#echo.models.scenario.EngineSettings" title="echo.models.scenario.EngineSettings"><span class="pre">EngineSettings</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph" title="echo.models.base.optimisation_graph.OptimisationGraph"><span class="pre">OptimisationGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">objective_set</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.objectives.base.html#echo.objectives.base.ObjectiveSet" title="echo.objectives.base.ObjectiveSet"><span class="pre">ObjectiveSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_solver_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mip_gap_relative</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mip_gap_absolute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acceptable_conditions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Collection</span><span class="p"><span class="pre">[</span></span><span class="pre">TerminationCondition</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{TerminationCondition.feasible,</span> <span class="pre">TerminationCondition.globallyOptimal,</span> <span class="pre">TerminationCondition.locallyOptimal,</span> <span class="pre">TerminationCondition.maxIterations,</span> <span class="pre">TerminationCondition.maxTimeLimit,</span> <span class="pre">TerminationCondition.optimal}</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#echo.optimiser.OptimisationResult" title="echo.optimiser.OptimisationResult"><span class="pre">OptimisationResult</span></a></span></span><a class="headerlink" href="#echo.optimiser.optimise" title="Link to this definition"></a></dt>
+<dd><p>Runs the optimiser with the specified settings. Returns an OptimisationResult that can be queried
+using the supplied graph.</p>
+<p>Will attempt to validate the graph and will raise exceptions if it appears invalid / unsolvable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scenario_settings</strong> – The settings that describe the optimisation problem.</p></li>
+<li><p><strong>engine_settings</strong> – Settings of the engine to be used for this optimisation.</p></li>
+<li><p><strong>graph</strong> – The OptimisationGraph that describes the optimisation problem.</p></li>
+<li><p><strong>objective_set</strong> – The set of objective functions for this optimisation. Defaults to None.</p></li>
+<li><p><strong>profile</strong> – The pandas dataframe containing node and objective timeseries data. Defaults to None.</p></li>
+<li><p><strong>verbose</strong> – If set to True the solver will operate in verbose mode and print additional output to stdout.
+Defaults to False.</p></li>
+<li><p><strong>show_solver_output</strong> – If set to True, the optimiser will pass through its logs. Defaults to False.</p></li>
+<li><p><strong>logfile</strong> – If set to a file path, the stdout will be redirected to this file (for the duration of this run).</p></li>
+<li><p><strong>time_limit</strong> – Optional time_limit in seconds after which the solver should return a solution if
+other termination conditions have not already been reached.</p></li>
+<li><p><strong>mip_gap_relative</strong> – The relative gap between known mixed integer problem solutions and the linearised version.
+Optional. Defaults to None.</p></li>
+<li><p><strong>mip_gap_absolute</strong> – The absolute gap between known mixed integer problem solutions and the linearised version.
+Optional. Defaults to None.</p></li>
+<li><p><strong>acceptable_conditions</strong> – OptimiserResultError will be raised if the pyomo termination condition is not in this
+set. Defaults to DEFAULT_ACCEPTABLE_TERMINATION_CONDITIONS.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A collection of outputs from the optimisation, including some relevant inputs, namely</dt><dd><p>scenario_settings, graph an objective_set.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#echo.optimiser.OptimisationResult" title="echo.optimiser.OptimisationResult">OptimisationResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.optimiser.validate_network_graph">
+<span class="sig-prename descclassname"><span class="pre">echo.optimiser.</span></span><span class="sig-name descname"><span class="pre">validate_network_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="echo.models.base.optimisation_graph.html#echo.models.base.optimisation_graph.OptimisationGraph" title="echo.models.base.optimisation_graph.OptimisationGraph"><span class="pre">OptimisationGraph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#echo.optimiser.validate_network_graph" title="Link to this definition"></a></dt>
+<dd><p>Validates that a pyomo model can be built from the provided network graph. Checks for:
+- name consistency between objects (e.g. node.node_name) and graph nodes
+- floating nodes that have no edge connecting them to another node</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.functional.html" class="btn btn-neutral float-left" title="echo.functional module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="echo.tracker.html" class="btn btn-neutral float-right" title="echo.tracker module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

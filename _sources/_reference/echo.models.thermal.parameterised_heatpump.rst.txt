@@ -1,0 +1,7 @@
+echo.models.thermal.parameterised\_heatpump module
+==================================================
+
+.. automodule:: echo.models.thermal.parameterised_heatpump
+   :members:
+   :show-inheritance:
+   :undoc-members:

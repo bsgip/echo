@@ -1,0 +1,22 @@
+echo.models.base package
+========================
+
+.. automodule:: echo.models.base
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.base.base_model
+   echo.models.base.edge
+   echo.models.base.node
+   echo.models.base.optimisation_graph
+   echo.models.base.path
+   echo.models.base.port
+   echo.models.base.transform
+   echo.models.base.types

@@ -1,0 +1,7 @@
+echo.models.gas.boiler\_fixedcop module
+=======================================
+
+.. automodule:: echo.models.gas.boiler_fixedcop
+   :members:
+   :show-inheritance:
+   :undoc-members:
