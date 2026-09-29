@@ -61,7 +61,7 @@ def test_demandcharge_validation(rate, expected_error):
             {"window_array": [], "reset_periods": []},
             {"num_reset_periods": 0, "reset_periods": [], "reset_index": en.RangeSet(0, -1)},
             None,
-        ),  # TODO This passes the validation but probably shouldn't be allowed.
+        ),
         (
             {"window_array": [1, 2, 3, 4, 5, 6], "reset_periods": [1, 3, 2]},
             {"num_reset_periods": 3, "reset_periods": [1, 3, 2], "reset_index": en.RangeSet(0, 2)},
@@ -286,7 +286,7 @@ def test_blocktariff_validation_check_block_rates(blocks, rates, expected_error)
 @pytest.mark.parametrize(
     "reset_periods,expected_reset_index",
     [
-        ([], en.RangeSet(0, -1)),  # TODO this passes but a negative index is probably not correct
+        ([], en.RangeSet(0, -1)),
         (list(range(1)), en.RangeSet(0, 1 - 1)),
         (list(range(157)), en.RangeSet(0, 157 - 1)),
     ],
