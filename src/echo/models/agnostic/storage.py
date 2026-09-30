@@ -27,10 +27,10 @@ from echo.validators import (
 class Storage(Port):
     """Same as old storage but without all the EV attributes"""
 
-    flows = field(default=Flows.Both)
-    flow_type = field(default=OptimisationType.Variable)
-    import_constraint = field(default=FlowConstraint.Fixed)
-    export_constraint = field(default=FlowConstraint.Fixed)
+    flows: Flows = Flows.Both
+    flow_type: OptimisationType = OptimisationType.Variable
+    import_constraint: FlowConstraint = FlowConstraint.Fixed
+    export_constraint: FlowConstraint = FlowConstraint.Fixed
     max_capacity: float = field(kw_only=True)
     depth_of_discharge_limit: float = field(
         default=0

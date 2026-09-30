@@ -19,7 +19,7 @@ from attrs import define, field
 
 @define
 class MobileElectricalStorage(MobileStorage):
-    units = field(default=Units.KW)
+    units: Units = Units.KW
 
 
 class EVBase(TransformNode):

@@ -16,24 +16,24 @@ from echo.validators import (
 class FlexPort(Port):
     """Flexible variable port, which can import and export without constraints."""
 
-    flows = field(default=Flows.Both)
-    import_constraint = field(default=FlowConstraint.NoConstraint)
-    export_constraint = field(default=FlowConstraint.NoConstraint)
-    flow_type = field(default=OptimisationType.Variable)
+    flows: Flows = Flows.Both
+    import_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    export_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    flow_type: OptimisationType = OptimisationType.Variable
 
 
 @define
 class FlexSink(FlexPort):
     """Flexible port, imports only"""
 
-    flows = field(default=Flows.Import)
+    flows: Flows = Flows.Import
 
 
 @define
 class FlexSource(FlexPort):
     """Flexible ports, exports only"""
 
-    flows = field(default=Flows.Export)
+    flows: Flows = Flows.Export
 
 
 @define

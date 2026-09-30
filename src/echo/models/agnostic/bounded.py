@@ -39,7 +39,7 @@ class BoundedPort(FlexPort):
 class BoundedLoad(BoundedPort):
     """A port where the load has to be within a max and min value which is specified at each timestep."""
 
-    import_constraint = field(default=FlowConstraint.NoConstraint)
+    import_constraint: FlowConstraint = FlowConstraint.NoConstraint
 
     upper_bound: ArrayType | float = field(kw_only=True)
     lower_bound: ArrayType | float = field(kw_only=True)

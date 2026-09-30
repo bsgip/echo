@@ -16,19 +16,19 @@ from echo.validators import (
 class FixedPort(Port):
     """Fixed port (parameter), can either import or export."""
 
-    flows = field(default=Flows.Both)
-    import_constraint = field(default=FlowConstraint.NoConstraint)
-    export_constraint = field(default=FlowConstraint.NoConstraint)
-    flow_type = field(default=OptimisationType.Parameter)
+    flows: Flows = Flows.Both
+    import_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    export_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    flow_type: OptimisationType = OptimisationType.Parameter
 
 
 @define
 class Source(Port):
     """A fixed source of a commodity."""
 
-    flows = field(default=Flows.Export)
-    export_constraint = field(default=FlowConstraint.NoConstraint)
-    flow_type = field(default=OptimisationType.Parameter)
+    flows: Flows = Flows.Export
+    export_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    flow_type: OptimisationType = OptimisationType.Parameter
     initial_value: dict[tuple[int, int], float] | None = field(default=None)
 
     @initial_value.validator
@@ -56,9 +56,9 @@ class Source(Port):
 class Sink(Port):
     """A fixed sink for a commodity."""
 
-    flows = field(default=Flows.Import)
-    import_constraint = field(default=FlowConstraint.NoConstraint)
-    flow_type = field(default=OptimisationType.Parameter)
+    flows: Flows = Flows.Import
+    import_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    flow_type: OptimisationType = OptimisationType.Parameter
 
     initial_value: dict[tuple[int, int], float] | None = field(default=None)
 

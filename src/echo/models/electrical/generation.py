@@ -15,7 +15,7 @@ from attrs import define, field
 class ElectricalGeneration(Source):
     """Electrical generation which can be fixed (non-curtailable) or variable (curtailable)"""
 
-    units = field(default=Units.KW)
+    units: Units = Units.KW
     curtailable: bool = field(default=False)
 
     def add_generation_profile(self, generation: dict) -> None:
