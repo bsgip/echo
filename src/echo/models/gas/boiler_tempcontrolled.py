@@ -1,43 +1,48 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import root_validator
 from pyomo.core.expr import EqualityExpression
+from attrs import define, field, validators
 
 from echo.configuration import Units
 from echo.models.agnostic import InputOutputNode, OffOrConstrainedPort
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    set_output_bounds_from_input_bounds_and_cop_and_startup_cop,
-    validate_startup_efficiency,
+    startup_efficiency_validator,
+    set_output_bounds_validator,
 )
 
 
+@define
 class TempControlledBoiler(InputOutputNode):
     """
     A temp controlled boiler has an input and output port.
     It has two internal temperature variables, one for exiting water temp and one for returning water temp.
     """
 
-    input_port_unit = Units.JPS
-    output_port_unit = Units.KWT
-    max_input: float
-    min_input: float
+    input_port_unit: Units = Units.JPS
+    output_port_unit: Units = Units.KWT
     exit_temp_bounds: tuple = (75, 80)
     return_temp_bounds: tuple = (50, 80)
-    deg_to_kw: float  # factor for converting a temperature difference to kW required to achieve that delta T
-    cop: float  # coefficient of performance - determines how much of the input energy is delivered as heating energy
-    startup_cop: float | None
+
+    # factor for converting a temperature difference to kW required to achieve that delta T
+    deg_to_kw: float = field(kw_only=True)
+
+    min_input: float | None = field(default=None, validator=set_output_bounds_validator)
+
+    # coefficient of performance - determines how much of the input energy is delivered as heating energy
+    cop: float = field(
+        default=1, validator=[validators.ge(0), startup_efficiency_validator, set_output_bounds_validator]
+    )
+
+    startup_cop: float | None = field(
+        default=None, validator=[startup_efficiency_validator, set_output_bounds_validator]
+    )
 
     # pyomo vars
-    is_on: str | None
     return_t: str = ""
     exit_t: str = ""
 
-    check_eta = root_validator(allow_reuse=True)(validate_startup_efficiency)
-    set_output_bounds = root_validator(allow_reuse=True)(set_output_bounds_from_input_bounds_and_cop_and_startup_cop)
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         self.ports[self.input_port_ref] = OffOrConstrainedPort(
             units=self.input_port_unit, lower_bound=self.min_input, upper_bound=self.max_input
         )
