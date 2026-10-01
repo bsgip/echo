@@ -1,8 +1,9 @@
+from attrs import define
+
 from echo.configuration import (
     Units,
 )
 from echo.models.agnostic import BoundedLoad, Demand, FixedPort, FlexPort, Storage
-from attrs import define
 
 
 @define

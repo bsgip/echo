@@ -1,4 +1,5 @@
 import numpy as np
+from attrs import define
 
 from echo.configuration import (
     EVChargeMode,
@@ -14,7 +15,6 @@ from echo.models.base import Transform, TransformNode, TransformTerm
 from echo.models.electrical.base import ElectricalDemand, ElectricalPort
 from echo.utils import TimeExpandableType
 from echo.validators import ArrayType
-from attrs import define, field
 
 
 @define

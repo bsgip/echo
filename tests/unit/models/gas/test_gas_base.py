@@ -1,7 +1,8 @@
-from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.gas.base import FixedGasPort, FlexGasPort
-from echo.models.base.port import Port
 import attr
+
+from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
+from echo.models.base.port import Port
+from echo.models.gas.base import FixedGasPort, FlexGasPort
 
 
 def test_build_flex_gas_port():

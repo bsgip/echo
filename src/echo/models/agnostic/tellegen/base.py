@@ -1,6 +1,6 @@
 import pyomo.environ as en
-from pyomo.core.expr import EqualityExpression
 from attrs import define, field
+from pyomo.core.expr import EqualityExpression
 
 from echo.exceptions import validate
 from echo.models.base import Node, Port

@@ -1,6 +1,7 @@
+from attrs import define, field
+
 from echo.configuration import Units
 from echo.models.agnostic import FixedPort, FlexPort
-from attrs import define, field
 
 
 @define

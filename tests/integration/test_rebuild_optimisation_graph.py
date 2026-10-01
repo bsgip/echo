@@ -1,4 +1,3 @@
-import pytest
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode

@@ -1,4 +1,5 @@
 import pandas as pd
+from attrs import define, field
 
 from echo.configuration import (
     OptimisationType,
@@ -8,7 +9,6 @@ from echo.models.agnostic import Source
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import set_var_bounds_from_dict
 from echo.validators import ArrayType
-from attrs import define, field
 
 
 @define

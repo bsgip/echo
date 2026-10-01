@@ -1,6 +1,7 @@
+from attrs import define
+
 from echo.configuration import Flows, Units
 from echo.models.agnostic import FlexPort
-from attrs import define
 
 
 @define
