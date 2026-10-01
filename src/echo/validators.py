@@ -194,6 +194,16 @@ def set_bounds_from_piecewise_points_validator(instance, attributes, value) -> N
         instance.min_output = min(min(output_points.values()))
 
 
+def set_output_bounds_validator(instance, attributes, values) -> None:  # noqa ANN001
+    if instance.min_input is None:
+        raise ValueError("'min_input' must be set on GasBoilerFixedCOP.")
+    instance.max_output = instance.max_input * instance.cop * -1
+    if instance.startup_cop is not None:
+        instance.min_output = instance.min_input * instance.startup_cop * -1
+    else:
+        instance.min_output = instance.min_input * instance.cop * -1
+
+
 def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values: dict) -> dict:  # noqa ANN001
     cop = values.get("cop")
     eta = values.get("startup_cop")
@@ -205,6 +215,14 @@ def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values: dic
     else:
         values["min_output"] = min_in * cop * -1
     return values
+
+
+def startup_efficiency_validator(instance, attributes, value) -> None:  # noqa ANN001
+    if instance.startup_cop is not None:
+        validate(
+            instance.cop >= instance.startup_cop,
+            "Startup efficiency should be less than coefficient of performance (cop)",
+        )
 
 
 def validate_startup_efficiency(cls, values: dict) -> dict:  # noqa ANN001

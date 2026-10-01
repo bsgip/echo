@@ -1,10 +1,9 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
 from echo.models.gas.boiler_fixedcop import GasBoilerFixedCOP
 
-nonnegativefloat_values = [(1, None), (0, None), (-1, ValidationError)]
+nonnegativefloat_values = [(1, None), (0, None), (-1, ValueError)]
 
 
 @pytest.mark.parametrize(
@@ -12,8 +11,8 @@ nonnegativefloat_values = [(1, None), (0, None), (-1, ValidationError)]
     [
         ({"startup_cop": 0.5, "cop": 1}, None),
         ({"startup_cop": 0, "cop": 1}, None),
-        ({"startup_cop": -0.5, "cop": 1}, ValidationError),
-        ({"startup_cop": -0.5, "cop": -0.1}, ValidationError),
+        ({"startup_cop": -0.5, "cop": 1}, ValueError),
+        ({"startup_cop": -0.5, "cop": -0.1}, ValueError),
         ({"startup_cop": 1, "cop": 0.5}, ConfigurationError),
     ],
 )
