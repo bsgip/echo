@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import pyomo.environ as en
 import shortuuid
+from attrs import define, field
 from pydantic import Field
 from pyomo.core.expr.relational_expr import EqualityExpression
 
@@ -51,10 +52,11 @@ class Transform(BaseModel):
                 var.constrain_pos_neg(model)
 
 
+@define
 class TransformNode(Node):
     """Implements node constraints using Transforms"""
 
-    transformations: dict[str, Transform] = {}
+    transformations: dict[str, Transform] = field(factory=dict)
 
     def add_transformation(self, transformation_obj: Transform) -> None:
         """Adds a transformation object to a node.
