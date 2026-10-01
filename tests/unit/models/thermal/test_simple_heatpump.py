@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.configuration import FlowConstraint, Units
 from echo.models.agnostic.flex import FlexPort, FlexSink
@@ -15,7 +14,7 @@ def test_simple_heatpump(cooling_cop_dict, heating_cop_dict):
     assert len(hp.ports) == 2
 
 
-positivefloat_values = [(1, None), (0, ValidationError), (-1, ValidationError)]
+positivefloat_values = [(1, None), (0, ValueError), (-1, ValueError)]
 positivefloat_attributes = [
     "max_cooling_capacity",
     "max_heating_capacity",

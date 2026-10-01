@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.configuration import FlowConstraint, Units
 from echo.models.agnostic.flex import FlexSink
@@ -11,7 +10,7 @@ def test_simple_chiller(cooling_cop_dict):
     SimpleChiller(max_cooling_capacity=20, cooling_cop_time_series=cooling_cop_dict)
 
 
-positivefloat_values = [(1, None), (0, ValidationError), (-1, ValidationError)]
+positivefloat_values = [(1, None), (0, ValueError), (-1, ValueError)]
 positivefloat_attributes = [
     "max_cooling_capacity",
     "cooling_cop_constant",

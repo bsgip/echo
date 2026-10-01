@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import PositiveFloat, validator
+from attrs import define, field, validators
 from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import FlowConstraint, Units
@@ -12,9 +12,10 @@ from echo.utils import (
     expand_as_dict,
     to_initial_values,
 )
-from echo.validators import non_negative_cop_check
+from echo.validators import non_negative_cop_validator
 
 
+@define
 class SimpleChiller(Node):
     """A simple chiller model that uses predefined COP (coefficient of performance) values for cooling.
 
@@ -24,19 +25,22 @@ class SimpleChiller(Node):
     performance (COP) time series data.
     """
 
-    max_cooling_capacity: PositiveFloat | None = None  # Max cooling load that can be serviced in KWT
+    max_cooling_capacity: float | None = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )  # Max cooling load that can be serviced in KWT
     # (if None, bounded by big_m value)
-    cooling_cop_time_series: dict | None  # Formatted dict of cooling COPs (coefficients of performance)
-    cooling_cop_time_series_ref: str | None
-    cooling_cop_constant: PositiveFloat | None = 1  # Constant COP value to use across all optimisation intervals
-
-    cooling_cop_check = validator("cooling_cop_time_series", allow_reuse=True)(non_negative_cop_check)
+    cooling_cop_time_series: dict | None = field(
+        default=None, validator=non_negative_cop_validator
+    )  # Formatted dict of cooling COPs (coefficients of performance)
+    cooling_cop_time_series_ref: str | None = None
+    cooling_cop_constant: float = field(
+        default=1, validator=validators.gt(0)
+    )  # Constant COP value to use across all optimisation intervals
 
     electrical_input_port_ref: str = "input"
     thermal_output_port_ref: str = "output"
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         # Constraint flow of the thermal port
         if self.max_cooling_capacity:
             thermal_import_constraint = FlowConstraint.Fixed

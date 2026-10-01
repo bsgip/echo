@@ -292,6 +292,10 @@ def validate_temperature_dependent_cop(cls, values: dict) -> dict:  # noqa ANN00
     return values
 
 
+def non_negative_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
+    is_non_negative(value, "Coefficient of performance for heating and cooling must be given as non_negative value")
+
+
 def non_negative_cop_check(v: FloatData) -> FloatData:
     v = is_non_negative(v, "Coefficient of performance for heating and cooling must be given as non_negative value")
     return v
