@@ -159,7 +159,7 @@ def check_bound_order(cls, values: dict) -> dict:  # noqa ANN001
 def ports_have_same_units_validator(obj, attributes, value) -> None:  # noqa ANN001
     """Raises a ConfigurationError if the units of the ports are not the same"""
     port_units = set([port.units for port in value.values()])
-    validate(len(port_units) == 1, "Tellegen and Aggregation Node ports must have the same units.")
+    validate(len(port_units) <= 1, "Tellegen and Aggregation Node ports must have the same units.")
 
 
 def ports_match_nominal_units_validator(obj, attributes, value) -> None:  # noqa ANN001
