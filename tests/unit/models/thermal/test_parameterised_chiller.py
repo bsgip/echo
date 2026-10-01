@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.thermal import ParameterisedChiller
 
@@ -8,10 +7,10 @@ from echo.models.thermal import ParameterisedChiller
     "nominal_cop, max_cooling_capacity, expected_error",
     [
         (1, 1, None),
-        (0, 1, ValidationError),  # nominal cop 0
-        (1, 0, ValidationError),  # max_cooling_capacity 0
-        (-0.5, 1, ValidationError),  # nominal cop -ve
-        (1, -0.5, ValidationError),  # max_cooling_capacity -ve
+        (0, 1, ValueError),  # nominal cop 0
+        (1, 0, ValueError),  # max_cooling_capacity 0
+        (-0.5, 1, ValueError),  # nominal cop -ve
+        (1, -0.5, ValueError),  # max_cooling_capacity -ve
     ],
 )
 def test_parameterisedchiller_validation(nominal_cop, max_cooling_capacity, expected_error):

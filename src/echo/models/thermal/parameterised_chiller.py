@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import PositiveFloat, root_validator
+from attrs import define, field, validators
 from pyomo.core.expr import EqualityExpression
 from scipy import interpolate
 
@@ -13,9 +13,13 @@ from echo.utils import (
     expand_as_dict,
     to_initial_values,
 )
-from echo.validators import validate_partial_load_cop, validate_temperature_dependent_cop
+from echo.validators import (
+    partial_load_cop_validator,
+    temperature_dependent_cop_validator,
+)
 
 
+@define
 class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     """A chiller has one electrical input port and one cooling output (thermal sink) port.
 
@@ -24,40 +28,57 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     for all time periods.
     """
 
-    nominal_cop: PositiveFloat  # Nominal coefficient of performance COP = output/input
-    max_cooling_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
-    partial_load_cop: dict = {
-        0: 0,
-        0.25: 0.8,
-        0.5: 0.9,
-        0.75: 1,
-        1: 0.85,
-    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
-    temperature_dependent_cop: dict = {
-        0: 0.7,
-        10: 1,
-        20: 0.5,
-        30: 0.35,
-        45: 0.2,
-    }  # Scaling factor for the nominal COP (coefficient of performance) depending on
+    nominal_cop: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # Nominal coefficient of performance COP = output/input
+
+    max_cooling_capacity: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    partial_load_cop: dict = field(
+        default={
+            0: 0,
+            0.25: 0.8,
+            0.5: 0.9,
+            0.75: 1,
+            1: 0.85,
+        },
+        validator=partial_load_cop_validator,
+    )  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    temperature_dependent_cop: dict = field(
+        default={
+            0: 0.7,
+            10: 1,
+            20: 0.5,
+            30: 0.35,
+            45: 0.2,
+        },
+        validator=temperature_dependent_cop_validator,
+    )  # Scaling factor for the nominal COP (coefficient of performance) depending on \
     # the ambient/condenser temperature value
-    ambient_temperature_dict: dict = (
-        None  # Condenser side temperature ambient air temperature or condenser
-        # water temperature for water cooled chiller
-    )
-    ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
+    ambient_temperature_dict: dict = field(
+        factory=dict
+    )  # Condenser side temperature ambient air temperature or condenser \
+    # water temperature for water cooled chiller
+    ambient_temperature_ref: str | None = None  # Ambient temperature array passed by string reference
     constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
     # when no array data is provided
     input_port_unit: Units = Units.KW  # Input port units
     output_port_unit: Units = Units.KWT  # Output port units TODO: implementation for output units JPS
     heat_rejection_port: bool = False  # If True, add heat rejection port
-    heat_rejection_coefficient: PositiveFloat = 1  # Heat rejection coefficient cooling_delivered/heat_rejected
-
-    partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
-    temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
+    heat_rejection_coefficient: float = field(
+        default=1, validator=validators.gt(0)
+    )  # Heat rejection coefficient cooling_delivered/heat_rejected
 
     # The input_port_ref and output_port_ref are defined on the parent class (TimeVaryingPiecewiseIONode)
     heat_rejection_port_ref: str = "heat_rejection"
+
+    def __attrs_post_init__(self) -> None:
+        # A chiller has one electrical input port and one cooling output (thermal sink) port
+        self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
+        self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)
+        if self.heat_rejection_port:
+            self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
     @property
     def temperature_cop_param(self) -> str:
@@ -70,14 +91,6 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     @property
     def thermal_output_port_ref(self) -> str:
         return self.output_port_ref
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        # A chiller has one electrical input port and one cooling output (thermal sink) port
-        self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
-        self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)
-        if self.heat_rejection_port:
-            self.ports[self.heat_rejection_port_ref] = FlexSource(units=self.output_port_unit)
 
     def update(self, ambient_temperature_dict: dict[float, float]) -> None:
         self.ambient_temperature_dict = ambient_temperature_dict

@@ -233,6 +233,18 @@ def validate_startup_efficiency(cls, values: dict) -> dict:  # noqa ANN001
     return values
 
 
+def partial_load_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
+    for k, v in instance.partial_load_cop.items():
+        validate(
+            0 <= k <= 1,
+            f"All keys in partial load cop must be float values between 0 and 1, offending key {k}",
+        )
+        validate(
+            0 <= v <= 1,
+            f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
+        )
+
+
 def validate_partial_load_cop(cls, values: dict) -> dict:  # noqa ANN001
     partial_load_cop = values.get("partial_load_cop")
     for k, v in partial_load_cop.items():
@@ -245,6 +257,21 @@ def validate_partial_load_cop(cls, values: dict) -> dict:  # noqa ANN001
             f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
         )
     return values
+
+
+def temperature_dependent_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
+    for k, v in instance.temperature_dependent_cop.items():
+        validate(
+            -10 <= k <= 50,
+            # TODO: reasonable value range is different between air cooled and water cooled chillers.
+            #  Do this validation better
+            f"All keys in temperature dependent cop must be float values representing ambient operational "
+            f"temperature expecting values between -10 and 50, offending key {k}",
+        )
+        validate(
+            0 < v <= 1,
+            f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
+        )
 
 
 def validate_temperature_dependent_cop(cls, values: dict) -> dict:  # noqa ANN001
