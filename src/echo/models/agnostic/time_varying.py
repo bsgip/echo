@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import root_validator
+from attrs import define, field
 
 from echo.exceptions import validate
 from echo.models.agnostic.input_output import InputOutputNode
@@ -10,11 +10,12 @@ from echo.utils import (
     set_float_var_bounds,
 )
 from echo.validators import (
-    set_bounds_from_piecewise_points,
-    validate_piecewise_arrays,
+    piecewise_arrays_validator,
+    set_bounds_from_piecewise_points_validator,
 )
 
 
+@define
 class TimeVaryingPiecewiseIONode(InputOutputNode):
     """A Node with an input and output and time varying piecewise relationship between input and output.
 
@@ -23,15 +24,22 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
     Attributes input_port_unit and output_port_unit define node's commodity.
     """
 
-    input_points: dict | None  # dict where the keys are planning-time period tuple, and value is input pt array
-    output_points: dict | None  # dict where the keys are planning-time period tuple, and value is output pt array
-    input_points_ref: str | None  # Ref to profile dataframe column with input points array to be used across all times
-    output_points_ref: str | None  # Ref to profile dataframe column with input points array to be used across all times
+    # dict where the keys are planning-time period tuple, and value is input pt array
+    input_points: dict | None = field(
+        default=None, validator=[piecewise_arrays_validator, set_bounds_from_piecewise_points_validator]
+    )
 
-    piecewise_check = root_validator(allow_reuse=True)(validate_piecewise_arrays)  # validate input/output points
-    populate_bounds = root_validator(allow_reuse=True)(
-        set_bounds_from_piecewise_points
-    )  # set attributes max_output,  min_output, max_input, min_input from input points/output points
+    # dict where the keys are planning-time period tuple, and value is output pt array
+    output_points: dict | None = field(
+        default=None, validator=[piecewise_arrays_validator, set_bounds_from_piecewise_points_validator]
+    )
+
+    input_points_ref: str | None = (
+        None  # Ref to profile dataframe column with input points array to be used across all times
+    )
+    output_points_ref: str | None = (
+        None  # Ref to profile dataframe column with input points array to be used across all times
+    )
 
     def verify_points_values(self) -> None:
         validate(self.input_points is not None, "No input points defined")

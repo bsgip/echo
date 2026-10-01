@@ -172,9 +172,9 @@ def ports_match_nominal_units_validator(obj, attributes, value) -> None:  # noqa
                 )
 
 
-def validate_piecewise_arrays(cls, values: dict) -> dict:  # noqa ANN001
-    input_points = values.get("input_points")
-    output_points = values.get("output_points")
+def piecewise_arrays_validator(instance, attributes, value) -> None:  # noqa ANN001
+    input_points = instance.input_points if hasattr(instance, "input_points") else None
+    output_points = instance.output_points if hasattr(instance, "output_points") else None
     if input_points is not None and output_points is not None:
         validate(len(input_points) == len(output_points), "Mismatched indices for input and output dictionaries.")
         for k, _ in input_points.items():
@@ -183,18 +183,15 @@ def validate_piecewise_arrays(cls, values: dict) -> dict:  # noqa ANN001
                 f"Input and output arrays are not equal lengths for index {k}",
             )
 
-    return values
 
-
-def set_bounds_from_piecewise_points(cls, values: dict) -> dict:  # noqa ANN001
-    input_points = values.get("input_points")
-    output_points = values.get("output_points")
+def set_bounds_from_piecewise_points_validator(instance, attributes, value) -> None:  # noqa ANN001
+    input_points = instance.input_points
+    output_points = instance.output_points
     if input_points is not None and output_points is not None:
-        values["max_input"] = max(max(input_points.values()))
-        values["min_input"] = min(min(input_points.values()))
-        values["max_output"] = max(max(output_points.values()))
-        values["min_output"] = min(min(output_points.values()))
-    return values
+        instance.max_input = max(max(input_points.values()))
+        instance.min_input = min(min(input_points.values()))
+        instance.max_output = max(max(output_points.values()))
+        instance.min_output = min(min(output_points.values()))
 
 
 def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values: dict) -> dict:  # noqa ANN001
