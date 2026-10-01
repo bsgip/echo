@@ -1,6 +1,6 @@
 import pyomo.environ as en
-from pydantic import NonNegativeFloat
 from pyomo.core.expr import EqualityExpression
+from attrs import define, field, validators
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexSink, InputOutputNode, OffOrConstrainedPort
@@ -8,22 +8,22 @@ from echo.models.carbon import CarbonSource
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class DieselGenerator(InputOutputNode):
     """
     A diesel generator node. Converts diesel into electricity at a fixed rate of cop which is in units of
     kW/liters per second
     """
 
-    input_port_unit = Units.LPS
-    output_port_unit = Units.KW
-    cop: NonNegativeFloat = 0.4 * 3600  # kW / litres per second
-    startup_efficiency: NonNegativeFloat = (
-        0.5  # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
-    )
-    C02Intensity: NonNegativeFloat = 2.7  # emissions intensity kg per sec / litre per sec = kg/litre
+    input_port_unit: Units = Units.LPS
+    output_port_unit: Units = Units.KW
+    cop: float = field(default=0.4 * 3600, validator=validators.ge(0))  # kW / litres per second
+    # ratio of efficiency in startup and shutdown period, # todo: ensure between 0-1 (confloat??)
+    startup_efficiency: float = field(default=0.5, validator=validators.ge(0))
+    # emissions intensity kg per sec / litre per sec = kg/litre
+    C02Intensity: float = field(default=2.7, validator=validators.ge(0))
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         # add an input and output node, and create appropriate transformations
         self.ports["output"] = OffOrConstrainedPort(
             upper_bound=self.min_output, lower_bound=self.max_output, units=self.output_port_unit
