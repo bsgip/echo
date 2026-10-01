@@ -1,7 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.expr import EqualityExpression
 from attrs import define, field
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Units
 from echo.exceptions import ConfigurationError

@@ -172,25 +172,6 @@ def ports_match_nominal_units_validator(obj, attributes, value) -> None:  # noqa
                 )
 
 
-def node_unit_validator(cls, values: dict) -> dict:  # noqa ANN001
-    """Checks that a tellegen and aggregation nodes' ports all have the same units."""
-    ports = values.get("ports")
-    u = None
-    nominal_units = values.get("port_units")
-    if ports is not None:
-        for port_key, p in ports.items():
-            if u is not None:
-                validate(p.units == u, "Tellegen and Aggregation Node ports must have the same units.")
-            else:
-                u = p.units
-            if nominal_units is not None:
-                validate(
-                    p.units == nominal_units, f"Port {port_key} units do not match nominal node units {nominal_units}."
-                )
-
-    return values
-
-
 def validate_piecewise_arrays(cls, values: dict) -> dict:  # noqa ANN001
     input_points = values.get("input_points")
     output_points = values.get("output_points")
@@ -274,19 +255,19 @@ def non_negative_cop_check(v: FloatData) -> FloatData:
     return v
 
 
-def validate_partition_ports(cls, values: dict) -> dict:  # noqa ANN001
+def partitions_port_validator(obj, attributes, value) -> None:  # noqa ANN001
     """Validate that set of ports defined across different partitions are unique"""
-    partitions = values.get("partitions")
+    partitions = value
+    node_name = obj.node_name if hasattr(obj, "node_name") else "unknown-node"
     port_name_list = [_port.port_name for v in partitions.values() for _port in v]
     port_uid_list = [_port.uid for v in partitions.values() for _port in v]
     validate(
         len(port_name_list) == len(set(port_name_list)),
         "All ports defined across partitions of PartitionedMultiCommodityTellegenNode must have unique names."
-        f"Offending node {values.get('node_name')}",
+        f"Offending node '{node_name}'",
     )
     validate(
         len(port_uid_list) == len(set(port_uid_list)),
         "All ports defined across partitions of PartitionedMultiCommodityTellegenNode must have unique uids."
-        f"Offending node {values.get('node_name')}",
+        f"Offending node '{node_name}'",
     )
-    return values
