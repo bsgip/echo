@@ -1,14 +1,14 @@
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.expr import EqualityExpression
 from attrs import define, field, validators
+from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Units
 from echo.models.agnostic import InputOutputNode, OffOrConstrainedPort
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    startup_efficiency_validator,
     set_output_bounds_validator,
+    startup_efficiency_validator,
 )
 
 
