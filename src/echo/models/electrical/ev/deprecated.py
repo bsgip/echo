@@ -3,6 +3,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 from deprecated import deprecated
+from attrs import define, field
 
 from echo.configuration import (
     EVChargeMode,
@@ -22,21 +23,22 @@ from echo.validators import ArrayType
     version="2.1.14",
     reason="Supeseded by EVV0G, EVV1G, EVV2G, EVWithProfile and EVBase classes",
 )
+@define
 class EV(TransformNode):
     charge_mode: EVChargeMode | None = None
-    available: ArrayType | list | str
-    usage: ArrayType | list
+    available: ArrayType | list | str = field(kw_only=True)
+    usage: ArrayType | list = field(kw_only=True)
     connection_port_name: str = "cp"
     tod_charging: ArrayType | list | str | None = None
-    interval_duration: int
+    interval_duration: int = field(kw_only=True)
     # Battery attributes
-    max_capacity: float
+    max_capacity: float = field(kw_only=True)
     depth_of_discharge_limit: float = 0
-    charging_power_limit: float
-    discharging_power_limit: float
+    charging_power_limit: float = field(kw_only=True)
+    discharging_power_limit: float = field(kw_only=True)
     charging_efficiency: float = 1
     discharging_efficiency: float = 1
-    initial_state_of_charge: float
+    initial_state_of_charge: float = field(kw_only=True)
 
     # next variable is for allowing soc to go below min so as to avoid optimisation failing if there infeasible ev trips
     trip_slack: bool = False  # todo call this 'enable_trip_slack' so we can give it straight to port
@@ -44,17 +46,15 @@ class EV(TransformNode):
     soc_conserv: TimeExpandableType | None = None
     soc_conserv_cost: float | None = None
 
-    V0G_delta: ArrayType | list | None
-    V0G_SOC: ArrayType | list | None
-    V0G_trip_infeasibility: ArrayType | list | None
-    charge_status: EVChargeStatus | None
+    V0G_delta: ArrayType | list | None = None
+    V0G_SOC: ArrayType | list | None = None
+    V0G_trip_infeasibility: ArrayType | list | None = None
+    charge_status: EVChargeStatus | None = None
 
     port_dict_name_to_port_uid_map: dict[str, str] | None = None
     port_dict_name_to_port_name_map: dict[str, str] | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-
+    def __attrs_post_init__(self) -> None:
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         for i in self.usage:
             if i > self.discharging_power_limit * -1:
