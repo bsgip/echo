@@ -1,7 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NonNegativeFloat
 from pyomo.core.expr import EqualityExpression, InequalityExpression
+from attrs import define, field, validators
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexSink, FlexSource
@@ -12,6 +12,7 @@ from echo.utils import (
 )
 
 
+@define
 class SimpleHeatPumpDualOutput(SimpleHeatPump):
     """A simple dual output (four-pipe) heatpump model that uses predefined COP values for heating and cooling.
 
@@ -24,13 +25,14 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     performance (COP) time series data.
     """
 
-    waste_heat_recovery_coeff: NonNegativeFloat = 1  # Waste heat recovery coefficient from cooling to heating loop
+    waste_heat_recovery_coeff: float = field(
+        default=1, validator=validators.ge(0)
+    )  # Waste heat recovery coefficient from cooling to heating loop
     electrical_input_port_ref: str = "input"
     cooling_output_port_ref: str = "cooling_output"
     heating_output_port_ref: str = "heating_output"
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         # Create input and output ports: electrical input port, cooling output port and heating output port
         self.create_ports()
 
