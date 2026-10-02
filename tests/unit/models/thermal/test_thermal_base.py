@@ -1,16 +1,15 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.thermal.base import ThermalNode
 
-positivefloat_values = [(1, None), (0, ValidationError), (-1, ValidationError)]
+positivefloat_values = [(1, None), (0, ValueError), (-1, ValueError)]
 positivefloat_attributes = ["temp_to_energy_coef"]
 positivefloat_data = [
     ({attribute: value}, error) for attribute in positivefloat_attributes for value, error in positivefloat_values
 ]
 
 
-nonnegativefloat_values = [(1, None), (0, None), (-1, ValidationError)]
+nonnegativefloat_values = [(1, None), (0, None), (-1, ValueError)]
 nonnegativefloat_attributes = [
     "loss_factor",
     "gain_factor",

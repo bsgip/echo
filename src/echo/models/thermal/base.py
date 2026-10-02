@@ -1,13 +1,14 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NonNegativeFloat, PositiveFloat
 from pyomo.core.expr import EqualityExpression, InequalityExpression
+from attrs import define, field, validators
 
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import set_var_bounds_from_dict
 
 
+@define
 class ThermalNode(Node):
     """
     A thermal node has an internal temperature variable, which can be bounded.
@@ -15,12 +16,22 @@ class ThermalNode(Node):
     All the ports are related to temp by an energy balance constraint.
     """
 
-    temp_ub: dict  # Upper bound of acceptable temperature for each time interval: dict with expansion-time keys
-    temp_lb: dict  # Lower bound of acceptable temperature for each time interval: dict with expansion-time keys
-    external_temp: dict  # External (ambient) temp, formatted as dict with expansion-time keys
-    loss_factor: NonNegativeFloat = 0  # Losses due to ambient temp being lower than internal temp
-    gain_factor: NonNegativeFloat = 0  # Free gains due to ambient temp being higher than internal temp
-    temp_to_energy_coef: PositiveFloat = 1  # Conversion factor * temp change = added energy
+    temp_ub: dict = field(
+        kw_only=True
+    )  # Upper bound of acceptable temperature for each time interval: dict with expansion-time keys
+    temp_lb: dict = field(
+        kw_only=True
+    )  # Lower bound of acceptable temperature for each time interval: dict with expansion-time keys
+    external_temp: dict = field(kw_only=True)  # External (ambient) temp, formatted as dict with expansion-time keys
+    loss_factor: float = field(
+        default=0, validator=validators.ge(0)
+    )  # Losses due to ambient temp being lower than internal temp
+    gain_factor: float = field(
+        default=0, validator=validators.ge(0)
+    )  # Free gains due to ambient temp being higher than internal temp
+    temp_to_energy_coef: float = field(
+        default=1, validator=validators.gt(0)
+    )  # Conversion factor * temp change = added energy
     initial_internal_temp: float = 0  # initial internal temperature
 
     # Pyomo vars/params
@@ -29,8 +40,7 @@ class ThermalNode(Node):
     losses: str = ""
     gains: str = ""
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         self.internal_temp = "internal_temp_" + self.node_name
         self.is_gain = "is_gain_" + self.node_name
         self.losses = "losses_" + self.node_name
