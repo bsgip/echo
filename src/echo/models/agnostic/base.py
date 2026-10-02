@@ -35,9 +35,6 @@ class Source(Port):
     def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
         nonpositive_generation(value)
 
-    # Source should have non positive initial values
-    # non_pos_check = validator("initial_value", allow_reuse=True)(nonpositive_generation)
-
     def add_source_profile(self, source_values: dict) -> None:
         self.set_initial_value(source_values)
 
@@ -65,10 +62,6 @@ class Sink(Port):
     @initial_value.validator
     def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
         nonnegative_load(value)
-
-    # non_neg_check = validator("initial_value", allow_reuse=True)(
-    #     nonnegative_load
-    # )  # Sink should have non negative initial values
 
     def add_sink_profile(self, sink_values: dict[tuple[int, int], float]) -> None:
         self.set_initial_value(sink_values)

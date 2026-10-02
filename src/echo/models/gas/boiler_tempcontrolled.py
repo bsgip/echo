@@ -43,6 +43,8 @@ class TempControlledBoiler(InputOutputNode):
     exit_t: str = ""
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
         self.ports[self.input_port_ref] = OffOrConstrainedPort(
             units=self.input_port_unit, lower_bound=self.min_input, upper_bound=self.max_input
         )

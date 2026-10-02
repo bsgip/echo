@@ -24,6 +24,8 @@ class DieselGenerator(InputOutputNode):
     C02Intensity: float = field(default=2.7, validator=validators.ge(0))
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
         # add an input and output node, and create appropriate transformations
         self.ports["output"] = OffOrConstrainedPort(
             upper_bound=self.min_output, lower_bound=self.max_output, units=self.output_port_unit

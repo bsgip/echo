@@ -30,6 +30,8 @@ class GasBoilerFixedCOP(InputOutputNode):
     )  # efficiency in startup period
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
         # Add an input and output node, and create the appropriate transformation object
         self.ports[self.input_port_ref] = OffOrConstrainedPort(
             upper_bound=self.max_input, lower_bound=self.min_input, units=self.input_port_unit

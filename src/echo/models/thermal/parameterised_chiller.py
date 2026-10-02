@@ -74,6 +74,8 @@ class ParameterisedChiller(TimeVaryingPiecewiseIONode):
     heat_rejection_port_ref: str = "heat_rejection"
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
         # A chiller has one electrical input port and one cooling output (thermal sink) port
         self.ports[self.input_port_ref] = FlexSink(units=self.input_port_unit)
         self.ports[self.output_port_ref] = FlexSink(units=self.output_port_unit)

@@ -33,6 +33,7 @@ class SimpleHeatPumpDualOutput(SimpleHeatPump):
     heating_output_port_ref: str = "heating_output"
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         # Create input and output ports: electrical input port, cooling output port and heating output port
         self.create_ports()
 

@@ -1,6 +1,6 @@
 import pyomo.environ as en
-from pyomo.core.expr import InequalityExpression
 from attrs import define, field
+from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic.flex import FlexSink, FlexSource
 from echo.models.agnostic.input_output import InputOutputNode

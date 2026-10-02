@@ -41,6 +41,9 @@ class TimeVaryingPiecewiseIONode(InputOutputNode):
         None  # Ref to profile dataframe column with input points array to be used across all times
     )
 
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
+
     def verify_points_values(self) -> None:
         validate(self.input_points is not None, "No input points defined")
         validate(self.output_points is not None, "No output points defined")

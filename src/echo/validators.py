@@ -188,9 +188,10 @@ def piecewise_arrays_validator(instance, attributes, value) -> None:  # noqa ANN
 def set_bounds_from_piecewise_points_validator(instance, attributes, value) -> None:  # noqa ANN001
     input_points = instance.input_points
     output_points = instance.output_points
-    if input_points is not None and output_points is not None:
+    if input_points is not None:
         instance.max_input = max(max(input_points.values()))
         instance.min_input = min(min(input_points.values()))
+    if output_points is not None:
         instance.max_output = max(max(output_points.values()))
         instance.min_output = min(min(output_points.values()))
 
