@@ -4215,7 +4215,7 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4272,7 +4272,7 @@ def test_v0g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )
 
@@ -4300,7 +4300,7 @@ def test_v1g_with_discharging_power_limit_and_usage_power_limit_greater_than_usa
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-15,
     )
 
@@ -4330,7 +4330,7 @@ def test_v1g_with_usage_power_limit_less_than_usage():
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4359,7 +4359,7 @@ def test_v1g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4389,7 +4389,7 @@ def test_v1g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4419,7 +4419,7 @@ def test_v1g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )
 
@@ -4447,7 +4447,7 @@ def test_v2g_with_discharging_power_limit_and_usage_power_limit_greater_than_usa
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-15,
     )
 
@@ -4477,7 +4477,7 @@ def test_v2g_with_usage_power_limit_less_than_usage():
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4506,7 +4506,7 @@ def test_v2g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4536,7 +4536,7 @@ def test_v2g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4566,6 +4566,6 @@ def test_v2g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )
