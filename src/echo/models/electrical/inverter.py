@@ -1,7 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.expr.relational_expr import EqualityExpression
 from attrs import define, field, validators
+from pyomo.core.expr.relational_expr import EqualityExpression
 
 from echo.exceptions import validate
 from echo.models.base import Node

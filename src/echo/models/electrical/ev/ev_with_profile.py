@@ -1,6 +1,6 @@
 import numpy as np
 import shortuuid
-from pydantic import Field, NonNegativeFloat
+from attrs import define, field, validators
 
 from echo.configuration import (
     EVChargeMode,
@@ -11,6 +11,7 @@ from echo.models.electrical.base import ElectricalDemand
 from echo.validators import ArrayType
 
 
+@define
 class EVWithProfile(Node):
     """An EV defined through a timeseries profile of demand.
 
@@ -27,16 +28,15 @@ class EVWithProfile(Node):
     """
 
     charge_mode: EVChargeMode = EVChargeMode.DemandProfile
-    port_name: str | None = "demand"
-    port_uid: str | None = Field(default_factory=shortuuid.uuid)
-    charging_power_limit: NonNegativeFloat | None
+    port_name: str = "demand"
+    port_uid: str = field(factory=shortuuid.uuid)
+    charging_power_limit: float = field(default=None, validator=validators.optional(validators.ge(0)))
 
     # Stateful attributes
     set_stateful_attrs_at_init: bool = True
-    demand: dict | ArrayType | list | None
+    demand: dict | ArrayType | list | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
 
         # Set the EV charge mode
         self.charge_mode: EVChargeMode = EVChargeMode.DemandProfile

@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.configuration import EVChargeMode
 from echo.models.electrical.base import ElectricalDemand
@@ -12,8 +11,8 @@ from echo.models.electrical.ev import EVWithProfile
         (0, None),
         (1, None),
         (100, None),
-        (-85, ValidationError),  # -ve
-        (-1, ValidationError),  # -ve
+        (-85, ValueError),  # -ve
+        (-1, ValueError),  # -ve
     ],
 )
 def test_ev_with_profile_validation_charging_power_limit(charging_power_limit, expected_error):
