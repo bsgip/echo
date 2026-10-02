@@ -2,8 +2,8 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
-from deprecated import deprecated
 from attrs import define, field
+from deprecated import deprecated
 
 from echo.configuration import (
     EVChargeMode,
@@ -54,7 +54,7 @@ class EV(TransformNode):
     port_dict_name_to_port_uid_map: dict[str, str] | None = None
     port_dict_name_to_port_name_map: dict[str, str] | None = None
 
-    def __attrs_post_init__(self) -> None:
+    def __attrs_post_init__(self, **data) -> None:
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         for i in self.usage:
             if i > self.discharging_power_limit * -1:

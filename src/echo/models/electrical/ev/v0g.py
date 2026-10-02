@@ -2,7 +2,7 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
-from attrs import define, field
+from attrs import define
 
 from echo.configuration import (
     EVChargeMode,

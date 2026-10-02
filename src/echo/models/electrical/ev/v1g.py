@@ -1,4 +1,5 @@
 from attrs import define
+
 from echo.configuration import (
     EVChargeMode,
 )
