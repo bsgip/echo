@@ -1,3 +1,4 @@
+from attrs import define
 from echo.configuration import (
     EVChargeMode,
 )
@@ -5,13 +6,14 @@ from echo.models.electrical.ev.base import EVBase
 from echo.validators import ArrayType, check_initial_state_of_charge_within_bounds
 
 
+@define
 class EVV2G(EVBase):
     """An EV with demand managed charging and generation managed discharging for purposes of providing energy to an
     electrical network.
     """
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
 
         # Set the charge_mode
         self.charge_mode = EVChargeMode.V2G
