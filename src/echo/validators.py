@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 from pydantic import Field
 
+from echo.configuration import Units
 from echo.exceptions import validate
 
 FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
@@ -317,3 +318,18 @@ def partitions_port_validator(obj, attributes, value) -> None:  # noqa ANN001
         "All ports defined across partitions of PartitionedMultiCommodityTellegenNode must have unique uids."
         f"Offending node '{node_name}'",
     )
+
+
+def thermal_units_validator(instance, attributes, value) -> None:  # noqa ANN001
+    allowable_thermal_units = {Units.JPS, Units.KWT}
+    if value not in allowable_thermal_units:
+        raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS). Received {value}")
+
+
+def temperature_range_validator(instance, attributes, value) -> None:  # noqa ANN001
+    """Temperature range must be non-zero and positive"""
+    if instance.max_temp - instance.min_temp <= 0:
+        raise ValueError(
+            "Temperature range must be non-zero and positive."
+            f"Max temp ('{instance.max_temp}') <= min temp ('{instance.min_temp}')."
+        )

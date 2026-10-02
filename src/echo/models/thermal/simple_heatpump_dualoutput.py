@@ -1,7 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.expr import EqualityExpression, InequalityExpression
 from attrs import define, field, validators
+from pyomo.core.expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import Units
 from echo.models.agnostic import FlexSink, FlexSource

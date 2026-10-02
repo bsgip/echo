@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import NegativeFloat, NonNegativeFloat, PositiveFloat, root_validator, validator
+from attrs import define, field, validators
 from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import FlowConstraint, Units
@@ -11,8 +11,10 @@ from echo.utils import (
     set_float_var_bounds,
     to_initial_values,
 )
+from echo.validators import temperature_range_validator, thermal_units_validator
 
 
+@define
 class ThermalStorage(Node):
     """Model of sensible thermal storage with liquid or solid storage medium.
 
@@ -20,37 +22,42 @@ class ThermalStorage(Node):
     storage volume.
     """
 
-    max_temp: float  # Maximum operational temperature in degrees  Celsius
-    min_temp: float  # Minimum operational temperature in degrees  Celsius
-    storage_mass: PositiveFloat  # Mass of storage medium in kg
-    specific_heat: PositiveFloat  # Specific heat capacity in Joule/kg*C
-    charging_power_limit: PositiveFloat = (
-        None  # Maximum energy flow into the storage at each interval, in energy_flow_units
-    )
-    discharging_power_limit: NegativeFloat = (
-        None  # Maximum energy flow out of the storage at each interval, in energy_flow_units
-    )
+    max_temp: float = field(
+        kw_only=True, validator=temperature_range_validator
+    )  # Maximum operational temperature in degrees  Celsius
+    min_temp: float = field(
+        kw_only=True, validator=temperature_range_validator
+    )  # Minimum operational temperature in degrees  Celsius
+    storage_mass: float = field(kw_only=True, validator=validators.gt(0))  # Mass of storage medium in kg
+    specific_heat: float = field(kw_only=True, validator=validators.gt(0))  # Specific heat capacity in Joule/kg*C
+    charging_power_limit: float | None = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )  # Maximum energy flow into the storage at each interval, in energy_flow_units
+    discharging_power_limit: float | None = field(
+        default=None, validator=validators.optional(validators.lt(0))
+    )  # Maximum energy flow out of the storage at each interval, in energy_flow_units
     ambient_temp: dict | None = None  # Ambient temp, formatted as dict with expansion-time keys
-    ambient_temp_ref: str | None  # Ambient temp by column name reference in profile dataframe
-    ins_transmittance: NonNegativeFloat = (
-        0  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
-    )
-    surface_area: NonNegativeFloat = 0  # Surface area of Thermal Energy Storage in square meters, default value=0
-    # means zero heat loss/gain
-    initial_temp: float = None  # initial internal temperature in degrees  Celsius
+    ambient_temp_ref: str | None = None  # Ambient temp by column name reference in profile dataframe
+    ins_transmittance: float = field(
+        default=0, validator=validators.ge(0)
+    )  # Thermal transmittance U-value of Thermal Energy Storage insulation in W/sqm*C
+    surface_area: float = field(
+        default=0, validator=validators.ge(0)
+    )  # Surface area of Thermal Energy Storage in square meters, default value=0 means zero heat loss/gain
+    initial_temp: float | None = None  # initial internal temperature in degrees  Celsius
     optimised_capacity: bool = False  # If True, set heat storage capacity (size of storage) to be optimisation variable
     enforce_end_temperature_value: bool = True  # If True, the internal temperature value at the end of the
     # last optimisation interval is required to be equal initial value
-    energy_flow_units: Units = Units.KWT  # Thermal energy flow units to use, expecting KW Thermal or JPS
+    energy_flow_units: Units = field(
+        default=Units.KWT, validator=thermal_units_validator
+    )  # Thermal energy flow units to use, expecting KW Thermal or JPS
     separate_in_out_ports: bool = False  # Create two thermal ports charge and discharge, else 1 two-way port
 
     input_port_ref: str = "input"
     output_port_ref: str = "output"
     input_output_port_ref: str = "input_output"
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-
+    def __attrs_post_init__(self) -> None:
         if self.separate_in_out_ports:
             self.ports[self.input_port_ref] = FlexSink(units=self.energy_flow_units)
             self.ports[self.output_port_ref] = FlexSource(units=self.energy_flow_units)
@@ -115,24 +122,6 @@ class ThermalStorage(Node):
         if self.discharging_power_limit:
             self.ports[self.input_output_port_ref].export_constraint = FlowConstraint.Fixed
             self.ports[self.input_output_port_ref].export_constraint_value = self.discharging_power_limit
-
-    @root_validator
-    def _non_zero_temp_range(cls, values: dict) -> dict:
-        """Temperature range must be non-zero and positive for Thermal Energy Storage to be operational"""
-        if "max_temp" in values and "min_temp" in values and values["max_temp"] - values["min_temp"] <= 0:
-            raise ValueError(
-                "Temperature range must be non-zero and positive for Thermal Energy Storage to be operational."
-                f"Was given max temperature {values['max_temp']} "
-                f"and min temperature {values['min_temp']}, "
-                f"resulting in range {values['max_temp'] - values['min_temp']}"
-            )
-        return values
-
-    @validator("energy_flow_units", allow_reuse=True)
-    def _units_are_allowed(cls, v: Units) -> Units:
-        if v and v not in {Units.JPS, Units.KWT}:
-            raise ValueError(f"Only allowed units are KW Thermal (KWT) and Joules per second (JPS). Received {v}")
-        return v
 
     @property
     def internal_temp(self) -> str:

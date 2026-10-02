@@ -1,7 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
-from pyomo.core.expr import EqualityExpression, InequalityExpression
 from attrs import define, field, validators
+from pyomo.core.expr import EqualityExpression, InequalityExpression
 
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
