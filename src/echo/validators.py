@@ -157,19 +157,19 @@ def check_bound_order(cls, values: dict) -> dict:  # noqa ANN001
     return values
 
 
-def ports_have_same_units_validator(obj, attributes, value) -> None:  # noqa ANN001
+def ports_have_same_units_validator(instance, attributes, value) -> None:  # noqa ANN001
     """Raises a ConfigurationError if the units of the ports are not the same"""
     port_units = set([port.units for port in value.values()])
     validate(len(port_units) <= 1, "Tellegen and Aggregation Node ports must have the same units.")
 
 
-def ports_match_nominal_units_validator(obj, attributes, value) -> None:  # noqa ANN001
-    if hasattr(obj, "nominal_units"):
-        if obj.nominal_units is not None:
+def ports_match_nominal_units_validator(instance, attributes, value) -> None:  # noqa ANN001
+    if hasattr(instance, "nominal_units"):
+        if instance.nominal_units is not None:
             for port_name, port in value.items():
                 validate(
-                    port.units == obj.nominal_units,
-                    f"Port '{port_name}' units do not match nominal node units '{obj.nominal_units}'.",
+                    port.units == instance.nominal_units,
+                    f"Port '{port_name}' units do not match nominal node units '{instance.nominal_units}'.",
                 )
 
 
@@ -302,10 +302,10 @@ def non_negative_cop_check(v: FloatData) -> FloatData:
     return v
 
 
-def partitions_port_validator(obj, attributes, value) -> None:  # noqa ANN001
+def partitions_port_validator(instance, attributes, value) -> None:  # noqa ANN001
     """Validate that set of ports defined across different partitions are unique"""
     partitions = value
-    node_name = obj.node_name if hasattr(obj, "node_name") else "unknown-node"
+    node_name = instance.node_name if hasattr(instance, "node_name") else "unknown-node"
     port_name_list = [_port.port_name for v in partitions.values() for _port in v]
     port_uid_list = [_port.uid for v in partitions.values() for _port in v]
     validate(
