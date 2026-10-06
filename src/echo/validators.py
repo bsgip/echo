@@ -29,11 +29,6 @@ class ArrayType(np.ndarray):
         arbitrary_types_allowed = True
 
 
-def var_in_range(var1: float, range_min: float, range_max: float) -> ValueError | None:
-    if var1 < range_min or var1 > range_max:
-        return ValueError()
-
-
 def is_non_negative(v: FloatData | None, err_msg: str) -> FloatData | None:
     """Tests is a 'v' is non negative
 
@@ -76,29 +71,20 @@ def is_non_positive(v: FloatData | None, err_msg: str) -> FloatData | None:
     return v
 
 
-def import_cons_check(v: FloatData) -> FloatData:
-    v = is_non_negative(v, "Import constraint should be positive, following positive load convention")
-    return v
+def import_constraint_validator(instance, attributes, value) -> None:  # noqa ANN001
+    is_non_negative(value, "Import constraint should be positive, following positive load convention")
 
 
-def export_cons_check(v: FloatData) -> FloatData:
-    v = is_non_positive(v, "Export constraint should be negative following positive load convention.")
-    return v
+def export_constraint_validator(instance, attributes, value) -> None:  # noqa ANN001
+    is_non_positive(value, "Export constraint should be negative following positive load convention.")
 
 
-def nonnegative_load(v: FloatData) -> FloatData:
-    v = is_non_negative(v, "Load array entries should all be non negative.")
-    return v
+def nonnegative_load_validator(instance, attributes, value) -> None:  # noqa ANN001
+    is_non_negative(value, "Load array entries should all be non negative.")
 
 
-def nonpositive_generation(v: FloatData) -> FloatData:
-    v = is_non_positive(v, "Generation array entries should all be non positive.")
-    return v
-
-
-def nonnegative_costs(v: FloatData) -> FloatData:
-    v = is_non_negative(v, "Costs should be positive")
-    return v
+def nonpositive_generation_validator(instance, attributes, value) -> None:  # noqa ANN001
+    is_non_positive(value, "Generation array entries should all be non positive.")
 
 
 def dod_checks(cls, values: dict) -> dict:  # noqa ANN001
@@ -206,33 +192,12 @@ def set_output_bounds_validator(instance, attributes, values) -> None:  # noqa A
         instance.min_output = instance.min_input * instance.cop * -1
 
 
-def set_output_bounds_from_input_bounds_and_cop_and_startup_cop(cls, values: dict) -> dict:  # noqa ANN001
-    cop = values.get("cop")
-    eta = values.get("startup_cop")
-    max_in = values.get("max_input")
-    min_in = values.get("min_input")
-    values["max_output"] = max_in * cop * -1
-    if eta is not None:
-        values["min_output"] = min_in * eta * -1
-    else:
-        values["min_output"] = min_in * cop * -1
-    return values
-
-
 def startup_efficiency_validator(instance, attributes, value) -> None:  # noqa ANN001
     if instance.startup_cop is not None:
         validate(
             instance.cop >= instance.startup_cop,
             "Startup efficiency should be less than coefficient of performance (cop)",
         )
-
-
-def validate_startup_efficiency(cls, values: dict) -> dict:  # noqa ANN001
-    cop = values.get("cop")
-    eta = values.get("startup_cop")
-    if eta is not None:
-        validate(cop >= eta, "Startup efficiency should be less than coefficient of performance (cop)")
-    return values
 
 
 def partial_load_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
@@ -245,20 +210,6 @@ def partial_load_cop_validator(instance, attributes, value) -> None:  # noqa ANN
             0 <= v <= 1,
             f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
         )
-
-
-def validate_partial_load_cop(cls, values: dict) -> dict:  # noqa ANN001
-    partial_load_cop = values.get("partial_load_cop")
-    for k, v in partial_load_cop.items():
-        validate(
-            0 <= k <= 1,
-            f"All keys in partial load cop must be float values between 0 and 1, offending key {k}",
-        )
-        validate(
-            0 <= v <= 1,
-            f"All values in partial load cop must be float values between 0 and 1, offending value {v}",
-        )
-    return values
 
 
 def temperature_dependent_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
@@ -276,31 +227,8 @@ def temperature_dependent_cop_validator(instance, attributes, value) -> None:  #
         )
 
 
-def validate_temperature_dependent_cop(cls, values: dict) -> dict:  # noqa ANN001
-    """Validate temperature dependent cop dictionary"""
-    temperature_cop_coeff = values.get("temperature_dependent_cop")
-    for k, v in temperature_cop_coeff.items():
-        validate(
-            -10 <= k <= 50,
-            # TODO: reasonable value range is different between air cooled and water cooled chillers.
-            #  Do this validation better
-            f"All keys in temperature dependent cop must be float values representing ambient operational "
-            f"temperature expecting values between -10 and 50, offending key {k}",
-        )
-        validate(
-            0 < v <= 1,
-            f"All values in temperature dependent cop must be float values between 0 and 1, offending value {v}",
-        )
-    return values
-
-
 def non_negative_cop_validator(instance, attributes, value) -> None:  # noqa ANN001
     is_non_negative(value, "Coefficient of performance for heating and cooling must be given as non_negative value")
-
-
-def non_negative_cop_check(v: FloatData) -> FloatData:
-    v = is_non_negative(v, "Coefficient of performance for heating and cooling must be given as non_negative value")
-    return v
 
 
 def partitions_port_validator(instance, attributes, value) -> None:  # noqa ANN001

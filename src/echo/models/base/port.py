@@ -24,7 +24,10 @@ from echo.utils import (
     set_var_bounds_from_dict,
     to_initial_values,
 )
-from echo.validators import export_cons_check, import_cons_check
+from echo.validators import (
+    import_constraint_validator,
+    export_constraint_validator,
+)
 
 
 @define
@@ -48,21 +51,13 @@ class Port:
     # Used to define the nature of import / export directions and constraints
     import_constraint: FlowConstraint = FlowConstraint.NA
     import_constraint_value: ConstraintValueType | None = field(
-        default=None, validator=validators.instance_of(ConstraintValueType | None)
+        default=None, validator=[validators.instance_of(ConstraintValueType | None), import_constraint_validator]
     )
-
-    @import_constraint_value.validator
-    def _validate_import_constraint_value(self, attribute, value):  # noqa: ANN001, ANN202
-        return import_cons_check(value)
 
     export_constraint: FlowConstraint = FlowConstraint.NA
     export_constraint_value: ConstraintValueType | None = field(
-        default=None, validator=validators.instance_of(ConstraintValueType | None)
+        default=None, validator=[validators.instance_of(ConstraintValueType | None), export_constraint_validator]
     )
-
-    @export_constraint_value.validator
-    def _validate_import_constraint_value(self, attribute, value):  # noqa: ANN001, ANN202
-        return export_cons_check(value)
 
     active_periods: dict[tuple[int, int], Any] | None = None
     slack: bool = False

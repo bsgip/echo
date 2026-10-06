@@ -7,8 +7,8 @@ from echo.utils import (
     TimeExpandableType,
 )
 from echo.validators import (
-    nonnegative_load,
-    nonpositive_generation,
+    nonnegative_load_validator,
+    nonpositive_generation_validator,
 )
 
 
@@ -29,11 +29,7 @@ class Source(Port):
     flows: Flows = Flows.Export
     export_constraint: FlowConstraint = FlowConstraint.NoConstraint
     flow_type: OptimisationType = OptimisationType.Parameter
-    initial_value: dict[tuple[int, int], float] | None = field(default=None)
-
-    @initial_value.validator
-    def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
-        nonpositive_generation(value)
+    initial_value: dict[tuple[int, int], float] | None = field(default=None, validator=nonpositive_generation_validator)
 
     def add_source_profile(self, source_values: dict) -> None:
         self.set_initial_value(source_values)
@@ -57,11 +53,7 @@ class Sink(Port):
     import_constraint: FlowConstraint = FlowConstraint.NoConstraint
     flow_type: OptimisationType = OptimisationType.Parameter
 
-    initial_value: dict[tuple[int, int], float] | None = field(default=None)
-
-    @initial_value.validator
-    def _validate_initial_value(self, attribute, value):  # noqa: ANN001, ANN202
-        nonnegative_load(value)
+    initial_value: dict[tuple[int, int], float] | None = field(default=None, validator=nonnegative_load_validator)
 
     def add_sink_profile(self, sink_values: dict[tuple[int, int], float]) -> None:
         self.set_initial_value(sink_values)

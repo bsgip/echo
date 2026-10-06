@@ -12,7 +12,7 @@ from echo.utils import (
 from echo.validators import (
     ArrayType,
     check_bound_order,
-    nonnegative_load,
+    nonnegative_load_validator,
 )
 
 
@@ -41,17 +41,8 @@ class BoundedLoad(BoundedPort):
 
     import_constraint: FlowConstraint = FlowConstraint.NoConstraint
 
-    upper_bound: ArrayType | float = field(kw_only=True)
-    lower_bound: ArrayType | float = field(kw_only=True)
-
-    # Do additional validation to make sure both bounds are >= 0
-    @upper_bound.validator
-    def _validate_upper_bound(self, attribute, value):  # noqa: ANN001, ANN202
-        nonnegative_load(value)
-
-    @lower_bound.validator
-    def _validate_lower_bound(self, attribute, value):  # noqa: ANN001, ANN202
-        nonnegative_load(value)
+    upper_bound: ArrayType | float = field(kw_only=True, validator=nonnegative_load_validator)
+    lower_bound: ArrayType | float = field(kw_only=True, validator=nonnegative_load_validator)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
