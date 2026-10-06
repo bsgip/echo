@@ -78,6 +78,7 @@ class Sink(Port):
         )
 
 
+@define
 class Demand(Sink):
     def add_demand_profile(self, demand: dict) -> None:
         self.set_initial_value(demand)
