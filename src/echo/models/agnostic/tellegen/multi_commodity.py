@@ -2,12 +2,14 @@ from collections.abc import Iterable
 from functools import partial
 
 import pyomo.environ as en
+from attrs import define
 from pyomo.core.expr import EqualityExpression
 
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class MultiCommodityTellegenNode(Node):
     """
     A node with ports that have multiple commodities.
