@@ -87,13 +87,17 @@ def nonpositive_generation_validator(instance, attributes, value) -> None:  # no
     is_non_positive(value, "Generation array entries should all be non positive.")
 
 
-def dod_checks(cls, values: dict) -> dict:  # noqa ANN001
+def update_constraint_values(instance, attributes, value) -> None:  # noqa ANN001
+    # Keeps the charging/discharging power limits in sync the import/export constraint limits
+    instance.import_constraint_value = instance.charging_power_limit
+    instance.export_constraint_value = instance.discharging_power_limit
+
+
+def depth_of_discharge_validator(instance, attributes, value) -> None:  # noqa ANN001
     """Validator for depth of discharge."""
     # Check which dod representation we have
-    dod_lim = values.get("depth_of_discharge_limit")
-    max_cap = values.get("max_capacity")
-    init_soc = values.get("initial_state_of_charge")
-    set_stateful_attrs_at_init = values.get("set_stateful_attrs_at_init")
+    dod_lim = instance.depth_of_discharge_limit
+    max_cap = instance.max_capacity
 
     # Check dod representation
     if 0 <= dod_lim <= 1:
@@ -105,15 +109,17 @@ def dod_checks(cls, values: dict) -> dict:  # noqa ANN001
     else:
         raise ValueError("DoD must be entered as decimal fraction or percentage of max capacity")
 
-    values["min_soc"] = min_soc
+    instance.min_soc = min_soc
 
-    # Check initial soc is within bounds
-    if set_stateful_attrs_at_init:
-        check_initial_state_of_charge_within_bounds(
-            initial_state_of_charge=init_soc, min_soc=min_soc, max_capacity=max_cap
-        )
 
-    return values
+def soc_conserv_validator(instance, attributes, value) -> None:  # noqa ANN001
+    """Check there is a converv cost and availability when soc conserv is enabled"""
+    soc_conserv = instance.soc_conserv
+    soc_conserv_cost = instance.soc_conserv_cost
+    available = instance.available
+    if soc_conserv is not None:
+        validate(soc_conserv_cost is not None, "soc_conserv requires soc_conserv_cost")
+        validate(available is not None, "soc_conserve requires available")
 
 
 def check_initial_state_of_charge_within_bounds(
@@ -127,10 +133,10 @@ def check_initial_state_of_charge_within_bounds(
         )
 
 
-def check_bound_order(cls, values: dict) -> dict:  # noqa ANN001
+def bound_order_validator(instance, attributes, value) -> None:  # noqa ANN001
     """Checks that lower bound is smaller than upper bound."""
-    lb = values.get("lower_bound")
-    ub = values.get("upper_bound")
+    lb = instance.lower_bound
+    ub = instance.upper_bound
     if (lb is not None) and (ub is not None):
         if hasattr(lb, "__iter__"):
             validate(len(lb) == len(ub), "Lower bound and upper bound are mismatched lengths.")
@@ -140,7 +146,6 @@ def check_bound_order(cls, values: dict) -> dict:  # noqa ANN001
         else:
             if lb >= ub:
                 raise ValueError("Lower bound should be less than upper bound.")
-    return values
 
 
 def ports_have_same_units_validator(instance, attributes, value) -> None:  # noqa ANN001

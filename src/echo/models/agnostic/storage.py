@@ -1,6 +1,5 @@
 from types import NoneType
 
-import attr
 import attrs
 import pandas as pd
 import pyomo.environ as en
@@ -8,7 +7,6 @@ from attrs import define, field
 from pyomo.core.expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType
-from echo.exceptions import validate
 from echo.models.base import Port
 from echo.models.scenario import EchoConcreteModel
 from echo.utils import (
@@ -19,7 +17,9 @@ from echo.utils import (
 )
 from echo.validators import (
     ArrayType,
-    dod_checks,
+    depth_of_discharge_validator,
+    soc_conserv_validator,
+    update_constraint_values,
 )
 
 
@@ -31,13 +31,13 @@ class Storage(Port):
     flow_type: OptimisationType = OptimisationType.Variable
     import_constraint: FlowConstraint = FlowConstraint.Fixed
     export_constraint: FlowConstraint = FlowConstraint.Fixed
-    max_capacity: float = field(kw_only=True)
+    max_capacity: float = field(kw_only=True, validator=depth_of_discharge_validator)
     depth_of_discharge_limit: float = field(
-        default=0
+        default=0, validator=depth_of_discharge_validator
     )  # DoD limit is the percent soc to which you can discharge the storage
     min_soc: float = field(default=0)
-    charging_power_limit: float = field(kw_only=True)
-    discharging_power_limit: float = field(kw_only=True)
+    charging_power_limit: float = field(kw_only=True, validator=update_constraint_values)
+    discharging_power_limit: float = field(kw_only=True, validator=update_constraint_values)
     charging_efficiency: float = field(default=1)
     discharging_efficiency: float = field(default=1)
     fixed_storage_capacity: bool = field(default=True)
@@ -46,12 +46,6 @@ class Storage(Port):
     )
     regularise: bool = field(default=False)
     initial_state_of_charge: float | None = field(default=None, kw_only=True)
-
-    def __attrs_post_init__(self) -> None:
-        dod_checks(self, attr.asdict(self))
-
-        self.import_constraint_value = self.charging_power_limit
-        self.export_constraint_value = self.discharging_power_limit
 
     @property
     def soc_value(self) -> str:
@@ -174,10 +168,10 @@ class MobileStorage(Storage):
     enable_trip_slack: bool = field(default=False)
     # next three variables are for having a 'conservative' ev user lower bound on the soc while it is plugged in
     # soc_conserv: Union[ArrayType,list,float, None, dict] = None
-    soc_conserv: TimeExpandableType | None = field(default=None)
-    soc_conserv_cost: float | None = field(default=None)
+    soc_conserv: TimeExpandableType | None = field(default=None, validator=soc_conserv_validator)
+    soc_conserv_cost: float | None = field(default=None, validator=soc_conserv_validator)
     # soc_conserve: scalarOrArray
-    available: ArrayType | list | None = field(default=None)
+    available: ArrayType | list | None = field(default=None, validator=soc_conserv_validator)
 
     @property
     def cons_slack(self) -> str:
@@ -186,21 +180,6 @@ class MobileStorage(Storage):
     @property
     def trip_slack(self) -> str:
         return "trip_slack_" + self.port_name
-
-    def check_soc_conserv_has_cost(self, values: dict) -> dict:
-        soc_conserv = values.get("soc_conserv")
-        soc_conserv_cost = values.get("soc_conserv_cost")
-        available = values.get("available")
-        if soc_conserv is not None:
-            validate(soc_conserv_cost is not None, "soc_conserv requires soc_conserv_cost")
-            validate(available is not None, "soc_conserve requires available")
-        return values
-
-    def __attrs_post_init__(self) -> None:
-        # Storage superclass has post init function which must
-        # be called
-        super().__attrs_post_init__()
-        self.check_soc_conserv_has_cost(attr.asdict(self))
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super(Storage, self).add_port_to_model(model, profile)

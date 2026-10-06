@@ -25,8 +25,8 @@ from echo.utils import (
     to_initial_values,
 )
 from echo.validators import (
-    import_constraint_validator,
     export_constraint_validator,
+    import_constraint_validator,
 )
 
 

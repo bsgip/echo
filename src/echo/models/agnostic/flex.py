@@ -1,4 +1,3 @@
-import attr
 import pandas as pd
 import pyomo.environ as en
 from attrs import define, field
@@ -8,7 +7,7 @@ from echo.configuration import FlowConstraint, Flows, OptimisationType
 from echo.models.base import Port
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    check_bound_order,
+    bound_order_validator,
 )
 
 
@@ -40,12 +39,8 @@ class FlexSource(FlexPort):
 class OffOrConstrainedPort(FlexPort):
     """A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
 
-    lower_bound: float = field(kw_only=True)
-    upper_bound: float = field(kw_only=True)
-
-    def __attrs_post_init__(self) -> None:
-        # check lower bound < upper bound
-        check_bound_order(self, attr.asdict(self))
+    lower_bound: float = field(kw_only=True, validator=bound_order_validator)
+    upper_bound: float = field(kw_only=True, validator=bound_order_validator)
 
     @property
     def active(self) -> str:

@@ -1,4 +1,3 @@
-import attr
 import pandas as pd
 from attrs import define, field
 
@@ -11,7 +10,7 @@ from echo.utils import (
 )
 from echo.validators import (
     ArrayType,
-    check_bound_order,
+    bound_order_validator,
     nonnegative_load_validator,
 )
 
@@ -20,12 +19,8 @@ from echo.validators import (
 class BoundedPort(FlexPort):
     """A flex port with an upper and lower bound"""
 
-    upper_bound: ArrayType | float = field(kw_only=True)
-    lower_bound: ArrayType | float = field(kw_only=True)
-
-    def __attrs_post_init__(self) -> None:
-        # check lower bound < upper bound
-        check_bound_order(self, attr.asdict(self))
+    upper_bound: ArrayType | float = field(kw_only=True, validator=bound_order_validator)
+    lower_bound: ArrayType | float = field(kw_only=True, validator=bound_order_validator)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
@@ -41,8 +36,8 @@ class BoundedLoad(BoundedPort):
 
     import_constraint: FlowConstraint = FlowConstraint.NoConstraint
 
-    upper_bound: ArrayType | float = field(kw_only=True, validator=nonnegative_load_validator)
-    lower_bound: ArrayType | float = field(kw_only=True, validator=nonnegative_load_validator)
+    upper_bound: ArrayType | float = field(kw_only=True, validator=[nonnegative_load_validator, bound_order_validator])
+    lower_bound: ArrayType | float = field(kw_only=True, validator=[nonnegative_load_validator, bound_order_validator])
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
