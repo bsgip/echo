@@ -2,7 +2,6 @@ from datetime import time
 
 import pyomo.environ as en
 import pytest
-from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
 from echo.models.base.port import Port
@@ -209,11 +208,11 @@ def test_window_validation_non_overlapping_periods(time_periods, expected_error)
     "expansion_periods, expected_error",
     [
         (1, None),
-        (0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1, ValidationError),  # not a PostiveFloat
-        (-1.0, ValidationError),  # not an int
-        (0.0, ValidationError),  # not an int
-        (-1.0, ValidationError),  # not an int
+        (0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1, ValueError),  # not a PostiveFloat
+        (-1.0, ValueError),  # not an int
+        (0.0, ValueError),  # not an int
+        (-1.0, ValueError),  # not an int
     ],
 )
 def test_demandtariffobjective_validation(expansion_periods, expected_error):
@@ -230,12 +229,12 @@ def test_demandtariffobjective_validation(expansion_periods, expected_error):
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
 def test_throughputcost_validation(rate, expected_error):
-    required_params = {"component": Port(), "demand_charges": []}
+    required_params = {"component": Port()}
 
     if expected_error:
         with pytest.raises(expected_error):
@@ -248,11 +247,11 @@ def test_throughputcost_validation(rate, expected_error):
     "expansion_periods, expected_error",
     [
         (1, None),
-        (0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1, ValidationError),  # not a PostiveFloat
-        (-1.0, ValidationError),  # not an int
-        (0.0, ValidationError),  # not an int
-        (-1.0, ValidationError),  # not an int
+        (0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1, ValueError),  # not a PostiveFloat
+        (-1.0, ValueError),  # not an int
+        (0.0, ValueError),  # not an int
+        (-1.0, ValueError),  # not an int
     ],
 )
 def test_tariff_validation(expansion_periods, expected_error):

@@ -2,23 +2,21 @@ import pandas as pd
 import pyomo.environ as en
 import shortuuid
 from attrs import define, field
-from pydantic import Field
 
-from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.scenario import EchoConcreteModel
 
 
-class Objective(EchoBaseModel):
-    component: Port | Path | None
-    uid: str = Field(default_factory=shortuuid.uuid)
-    name: str = ""
+@define
+class Objective:
+    component: Port | Path | None = None
     weight: float = 1
+    uid: str = field(factory=shortuuid.uuid)
+    name: str = field()
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        if not self.name:
-            self.name = "obj_" + self.uid
+    @name.default
+    def _set_name_default(self) -> str:
+        return "obj_" + str(self.uid)
 
     def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame | None) -> None:
         pass
@@ -57,10 +55,11 @@ class ObjectiveSet:
         return sum([obj.objective_expr(model) * obj.weight for obj in self.objective_list])
 
 
+@define
 class TotalFlow(Objective):
     """Minimises flow at a specified port across all time periods/expansions."""
 
-    component: Port
+    component: Port = field(kw_only=True)
     minimise: bool = True
 
     def objective_expr(self, model: EchoConcreteModel) -> float:
@@ -68,10 +67,11 @@ class TotalFlow(Objective):
         return sign * sum(getattr(model, self.component.port_name)[p, t] for p in model.Expansion for t in model.Time)
 
 
+@define
 class TotalImportFlow(Objective):
     """Minimises import at a specified port across all time periods/expansions."""
 
-    component: Port
+    component: Port = field(kw_only=True)
     minimise: bool = True
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:
@@ -83,10 +83,11 @@ class TotalImportFlow(Objective):
         return sign * sum(getattr(model, self.component.pos)[p, t] for p in model.Expansion for t in model.Time)
 
 
+@define
 class TotalExportFlow(Objective):
     """Minimises export at a specified port across all time periods/expansions."""
 
-    component: Port
+    component: Port = field(kw_only=True)
     minimise: bool = True
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:

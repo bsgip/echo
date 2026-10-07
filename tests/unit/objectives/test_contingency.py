@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.base import Path
 from echo.objectives.contingency import ContingencyNegative, ContingencyPositive
@@ -9,8 +8,8 @@ from echo.objectives.contingency import ContingencyNegative, ContingencyPositive
     "duration, expected_error",
     [
         (1.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
 def test_contingencypositive_validation(duration, expected_error):
@@ -29,8 +28,8 @@ def test_contingencypositive_validation(duration, expected_error):
     "duration, expected_error",
     [
         (1.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
 def test_contingencynegative_validation(duration, expected_error):

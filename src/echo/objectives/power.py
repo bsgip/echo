@@ -1,5 +1,5 @@
 import pyomo.environ as en
-from pydantic import PositiveFloat
+from attrs import define, field, validators
 from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic import Storage
@@ -8,10 +8,11 @@ from echo.models.scenario import EchoConcreteModel
 from echo.objectives.base import Objective
 
 
+@define
 class PeakPositivePower(Objective):
     """The PeakPositivePower objective minimises the peak positive (imported) power at the specified port."""
 
-    component: Port
+    component: Port = field(kw_only=True)
 
     @property
     def max_pos(self) -> str:
@@ -37,10 +38,11 @@ class PeakPositivePower(Objective):
         return getattr(model, self.max_pos)
 
 
+@define
 class PeakNegativePower(Objective):
     """The PeakNegativePower objective minimises the peak negative (exported) power at the specified port."""
 
-    component: Port
+    component: Port = field(kw_only=True)
 
     @property
     def max_neg(self) -> str:
@@ -66,11 +68,12 @@ class PeakNegativePower(Objective):
         return getattr(model, self.max_neg) * -1
 
 
+@define
 class FinalChargeObjective(Objective):
     """A cost on the final state of charge of a storage asset being below full."""
 
-    component: Storage
-    rate: PositiveFloat
+    component: Storage = field(kw_only=True)
+    rate: float = field(kw_only=True, validator=validators.gt(0))
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:
         pass
@@ -85,12 +88,13 @@ class FinalChargeObjective(Objective):
         return obj
 
 
+@define
 class NotFullyChargedPenalty(Objective):
     """A penalty objective for penalising a storage asset for not being fulling charged."""
 
-    component: Storage
-    rate: PositiveFloat | None
-    rate_array: list
+    component: Storage = field(kw_only=True)
+    rate: float | None = field(default=None, validator=validators.optional(validators.gt(0)))
+    rate_array: list = field(factory=list)
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
@@ -109,10 +113,11 @@ class NotFullyChargedPenalty(Objective):
         return obj
 
 
+@define
 class QuadraticPower(Objective):
     """The QuadraticPower objective minimises flow^2 at a specified port."""
 
-    component: Port
+    component: Port = field(kw_only=True)
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:

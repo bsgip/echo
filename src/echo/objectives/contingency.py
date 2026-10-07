@@ -1,5 +1,5 @@
 import pyomo.environ as en
-from pydantic import PositiveFloat
+from attrs import define, field, validators
 from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic import Storage
@@ -8,14 +8,18 @@ from echo.models.scenario import EchoConcreteModel
 from echo.objectives.base import Objective
 
 
+@define
 class Contingency(Objective):
-    component: Path
+    component: Path = field(kw_only=True)
 
 
+@define
 class ContingencyNegative(Contingency):
     """FCAS Raise"""
 
-    duration: PositiveFloat  # todo this should just be the interval duration ?
+    duration: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # todo this should just be the interval duration ?
 
     @property
     def contingency_neg(self) -> str:
@@ -80,10 +84,13 @@ class ContingencyNegative(Contingency):
         )
 
 
+@define
 class ContingencyPositive(Contingency):
     """FCAS Lower"""
 
-    duration: PositiveFloat
+    duration: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # todo this should just be the interval duration ?
 
     @property
     def contingency_pos(self) -> None:

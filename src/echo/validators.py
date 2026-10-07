@@ -295,3 +295,10 @@ def reset_periods_validator(instance, attributes, value) -> None:  # noqa ANN001
 
     instance.num_reset_periods = len(instance.reset_periods)
     instance.reset_index = en.RangeSet(0, instance.num_reset_periods - 1)
+
+
+def block_rates_validator(instance, attributes, value) -> None:  # noqa ANN001
+    validate(
+        len(instance.blocks) + 1 == len(instance.rates),
+        "Enter one more rate than num blocks",
+    )
