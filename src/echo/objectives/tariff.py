@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from attrs import define, field
+from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator
 from pyomo.core.expr import InequalityExpression
 
 from echo.exceptions import validate
@@ -289,7 +290,8 @@ class Day(Enum):
     holiday = "holiday"
 
 
-class TimePeriod(EchoBaseModel):
+@define
+class TimePeriod:
     start_time: time
     end_time: time
     day_type: list[Day]
@@ -363,19 +365,19 @@ class TimePeriod(EchoBaseModel):
         return False
 
 
-class Window(EchoBaseModel):
+@define
+class Window:
     """Class for specifying window over which a tariff is calculated using datetimes"""
 
-    time_periods: list[TimePeriod]
+    time_periods: list[TimePeriod] = field(factory=list)
     reset_periods: ResetPeriod | None = None
 
-    @validator("time_periods")
-    def non_overlapping_periods(cls, v: list[TimePeriod]) -> list[TimePeriod]:
-        for i in range(len(v)):
-            for j in range(i + 1, len(v)):
-                if v[i].overlaps(v[j]):
-                    raise ValueError(f"TimePeriod {v[i]} overlaps with TimePeriod {v[j]}")
-        return v
+    @time_periods.validator
+    def _non_overlapping_periods(self, attributes, value) -> None:  # noqa ANN001
+        for i in range(len(value)):
+            for j in range(i + 1, len(value)):
+                if value[i].overlaps(value[j]):
+                    raise ValueError(f"TimePeriod {value[i]} overlaps with TimePeriod {value[j]}")
 
     def to_bool_periods(self, df: pd.DataFrame) -> np.ndarray:
         """To convert a window to a bool array"""

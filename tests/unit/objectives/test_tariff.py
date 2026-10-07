@@ -186,14 +186,14 @@ def test_exportdemandcharge_validation(min_demand, expected_error):
                 TimePeriod(start_time=time(0, 0), end_time=time(19, 0), day_type=[Day.weekday]),
                 TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.weekday]),
             ],
-            ValidationError,
+            ValueError,
         ),  # 1 hour overlap
         (
             [
                 TimePeriod(start_time=time(0, 0), end_time=time(19, 0), day_type=[Day.weekday, Day.holiday]),
                 TimePeriod(start_time=time(18, 0), end_time=time(23, 59), day_type=[Day.holiday]),
             ],
-            ValidationError,
+            ValueError,
         ),  # 1 hour overlap on holidays
     ],
 )
