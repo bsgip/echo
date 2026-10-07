@@ -1,6 +1,7 @@
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
+from attrs import define, field
 from pydantic import Field
 
 from echo.models.base import BaseModel as EchoBaseModel
@@ -39,10 +40,11 @@ class Objective(EchoBaseModel):
         return en.value(obj_expr)  # Return the value of the summed expression
 
 
-class ObjectiveSet(EchoBaseModel):
+@define
+class ObjectiveSet:
     """Objective Set is an object containing a list of defined objectives that can be passed to the echo optimiser"""
 
-    objective_list: list[Objective]
+    objective_list: list[Objective] = field(factory=list)
 
     def add_objectives_to_model(self, model: EchoConcreteModel, df: pd.DataFrame | None = None) -> None:
         for obj in self.objective_list:
