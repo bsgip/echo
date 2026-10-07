@@ -30,11 +30,11 @@ def test_demandcharge_initialisation_required_params(parameter_to_remove):
     }
     del required_params[parameter_to_remove]
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(TypeError):
         DemandCharge(import_demand=True, **required_params)
 
 
-@pytest.mark.parametrize("rate,expected_error", [(1, None), (0, None), (-1, ValidationError)])
+@pytest.mark.parametrize("rate,expected_error", [(1, None), (0, None), (-1, ValueError)])
 def test_demandcharge_validation(rate, expected_error):
     required_params = {
         "window_array": [],
@@ -117,7 +117,6 @@ def test_demandcharge_validation_check_import_or_export(import_demand, export_de
 )
 def test_demandcharge_validation_set_uid_and_name(override_params, expected_uid, expected_name):
     required_params = {
-        "name": None,
         "rate": 1,
         "window_array": [],
         "import_demand": True,
@@ -136,7 +135,7 @@ def test_demandcharge_validation_set_uid_and_name(override_params, expected_uid,
         assert dc.name.endswith(dc.uid)
 
 
-@pytest.mark.parametrize("min_demand,expected_error", [(1, None), (0, None), (-1, ValidationError)])
+@pytest.mark.parametrize("min_demand,expected_error", [(1, None), (0, None), (-1, ValueError)])
 def test_importdemandcharge_validation(min_demand, expected_error):
     required_params = {
         "rate": 1,
@@ -150,7 +149,7 @@ def test_importdemandcharge_validation(min_demand, expected_error):
         ImportDemandCharge(min_demand=min_demand, **required_params)
 
 
-@pytest.mark.parametrize("min_demand,expected_error", [(-1, None), (0, None), (1, ValidationError)])
+@pytest.mark.parametrize("min_demand,expected_error", [(-1, None), (0, None), (1, ValueError)])
 def test_exportdemandcharge_validation(min_demand, expected_error):
     required_params = {
         "rate": 1,

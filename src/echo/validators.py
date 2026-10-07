@@ -2,11 +2,13 @@ from collections.abc import Generator
 from numbers import Number
 from typing import Any
 
+import attrs
 import numpy as np
+import pyomo.environ as en
 from pydantic import Field
 
 from echo.configuration import Units
-from echo.exceptions import validate
+from echo.exceptions import ConfigurationError, validate
 
 FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
 
@@ -267,3 +269,29 @@ def temperature_range_validator(instance, attributes, value) -> None:  # noqa AN
             "Temperature range must be non-zero and positive."
             f"Max temp ('{instance.max_temp}') <= min temp ('{instance.min_temp}')."
         )
+
+
+def import_or_export_demand_set_validator(instance, attributes, value) -> None:  # noqa ANN001
+    if not instance.import_demand and not instance.export_demand:
+        raise ConfigurationError(
+            "Please use set either DemandCharge.import_demand or Demand.export_demand."
+            " Alternatively use instances of ImportDemandCharge or ExportDemandCharge."
+        )
+
+
+def reset_periods_validator(instance, attributes, value) -> None:  # noqa ANN001
+    if instance.reset_periods is not None:
+        validate(
+            sum(instance.reset_periods) == len(instance.window_array),
+            (
+                f"Sum of reset period lengths ({sum(instance.reset_periods)}) is not equal"
+                f" to window array length ({len(instance.window_array)})."
+            ),
+        )
+    else:
+        # Prevent attrs from retriggering this validator again when we set 'reset_periods' from within the validator
+        with attrs.validators.disabled():
+            instance.reset_periods = [len(instance.window_array)]
+
+    instance.num_reset_periods = len(instance.reset_periods)
+    instance.reset_index = en.RangeSet(0, instance.num_reset_periods - 1)
