@@ -2,36 +2,41 @@ from __future__ import annotations  # Deprecating in python 3.15 in favour of la
 
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field
+from attrs import define, field
 
 from echo.configuration import Units
-from echo.models.base import BaseModel
 from echo.models.base.port import Port
 from echo.models.scenario import EchoConcreteModel
 
 
-class Path(BaseModel):
+@define
+class Path:
     """A path is a sequence of distinct vertices (nodes)."""
 
-    edge_ports: list[tuple[Port, Port]] = []  # list of edge name tuples
     vertices: list  # list of node names
-    uid: str = Field(default_factory=shortuuid.uuid)
-    path_name: str | None = None
-    units = Units.KW
+
+    edge_ports: list[tuple[Port, Port]] = field(factory=list)  # list of edge name tuples
+    units: Units = Units.KW
     regularise: bool = False
     objective: en.numeric_expr.NumericExpression | float = 0
 
-    flow_value: str = ""
-    contingency_neg: str | None
-    contingency_pos: str | None
-    path_tariff: str | None
-    slack: str | None
+    contingency_neg: str | None = None
+    contingency_pos: str | None = None
+    path_tariff: str | None = None
+    slack: str | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        if self.path_name is None:
-            self.path_name = "path_" + str(self.uid)
-        self.flow_value = "flow_value_" + self.path_name
+    uid: str = field(factory=shortuuid.uuid)
+    path_name: str = field()
+
+    @path_name.default
+    def _set_path_name_default(self) -> str:
+        return "path_" + str(self.uid)
+
+    flow_value: str = field()
+
+    @flow_value.default
+    def _set_flow_value_default(self) -> str:
+        return "flow_value_" + self.path_name
 
     def add_vertices(self, vertex_list: list) -> None:
         if hasattr(vertex_list[0], "node_name"):
