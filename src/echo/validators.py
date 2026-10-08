@@ -1,34 +1,20 @@
-from collections.abc import Generator
 from numbers import Number
 from typing import Any
 
 import attrs
 import numpy as np
 import pyomo.environ as en
-from pydantic import Field
 
 from echo.configuration import Units
 from echo.exceptions import ConfigurationError, validate
 
 FloatData = dict[Any, float] | list[float] | set[float] | float | np.ndarray
 
-
-class ArrayType(np.ndarray):
-    numpy_array: np.ndarray = Field(default_factory=lambda: np.zeros(10))
-
-    @classmethod
-    def __get_validators__(cls) -> Generator:
-        yield cls.validate
-
-    # todo actually validate this type
-    @classmethod
-    def validate(cls, v: np.ndarray) -> np.ndarray:
-        if type(v) is str:
-            raise ValueError("Array Type cannot be a string.")
-        return v
-
-    class Config:
-        arbitrary_types_allowed = True
+# ArrayType is a type alias for np.ndarray
+# Originally ArrayType was a subclass of np.ndarray with added pydantic type validation
+# This is not possible in attrs (type annotation have no runtime effects outside of pydantic
+# and so can't "trigger" any validation) hence we replace the ArrayType class with a type alias.
+ArrayType = np.ndarray
 
 
 def is_non_negative(v: FloatData | None, err_msg: str) -> FloatData | None:
