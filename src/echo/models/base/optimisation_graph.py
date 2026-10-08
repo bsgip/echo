@@ -1,6 +1,7 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 
 import copy
+import os
 import warnings
 from typing import cast
 
@@ -237,11 +238,12 @@ class OptimisationGraph:
     ) -> None:
         """Creates path objects according to source/sink lists provided."""
 
-        warnings.warn(
-            "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider "
-            + "whether you can convert these tariffs to point/port tariffs.",
-            stacklevel=1,
-        )
+        if os.environ["ECHO_DISABLE_EXPERIMENTAL_PATH_WARNING"] != "1":
+            warnings.warn(
+                "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider "
+                + "whether you can convert these tariffs to point/port tariffs.",
+                stacklevel=1,
+            )
 
         all_paths = {}
         graph = self.convert_to_nx()

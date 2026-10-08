@@ -5,6 +5,8 @@ import pytest
 
 from echo.models.scenario import EchoConcreteModel, ScenarioSettings, engine_settings_from_environment
 
+os.environ["ECHO_DISABLE_EXPERIMENTAL_PATH_WARNING"] = "1"
+
 
 @pytest.fixture
 def can_optimiser_do_non_linear_optimisation() -> bool:
