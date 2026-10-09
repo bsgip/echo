@@ -5,6 +5,8 @@
 #### Adds
 
 - Adds support for unconnected (dangling) ports by setting `all_dangling_port` to True.
+- Adds support for `ECHO_DISABLE_PATH_WARNING` environment variable. This is enabled by default when running pytest.
+- Adds [attrs](https://www.attrs.org/en/stable/index.html) as a project dependency.
 
 #### Changes
 
@@ -16,6 +18,12 @@
 - The `get_port` method on Node now returns None rather than raising a ValueError, if no such port with that name can be found.
 - `verify_node` now called when adding nodes to models and `verify_node` modified to now verify not only check the node but also verify (via call to `verify_port`) any ports attached to the node. 
 - Fix: BoundedLoads call `nonnegative_load` validator instead of incorrect `nonnegative_costs` validator.
+- Major: Migrated the codebase from pydantic V1 to [attrs](https://www.attrs.org/en/stable/index.html). See [Attrs Migration Guide](https://github.com/bsgip/echo/blob/main/attrs-migration.md) for more details.
+- The ArrayType Class is replaced by a type alias (this was necessary for the migration from pydantic to attrs)
+
+#### Removes
+
+- Pydantic project dependency.
 
 
 ## Releases
