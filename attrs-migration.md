@@ -32,10 +32,10 @@ The following list is a brief description of how `echo` was migrated from pydant
 | `NegativeFloat` | `validators.lt(0)` |
 | `NonPositiveFloat` | `validators.le(0)` |
 | `NonNegativeFloat` | `validators.ge(0)` |
-| `PositiveFloat|None` | `validators.optional(validators.gt(0))` |
-| `NegativeFloat|None` | `validators.optional(validators.lt(0))` |
-| `NonPositiveFloat|None` | `validators.optional(validators.le(0))` |
-| `NonNegativeFloat|None` | `validators.optional(validators.ge(0))` |
+| `PositiveFloat\|None` | `validators.optional(validators.gt(0))` |
+| `NegativeFloat\|None` | `validators.optional(validators.lt(0))` |
+| `NonPositiveFloat\|None` | `validators.optional(validators.le(0))` |
+| `NonNegativeFloat\|None` | `validators.optional(validators.ge(0))` |
 
 - Replace pydantic `@validator`s
   - use the field helper `b: int = field(..., validator=my_custom_validator)` or decorator `@a.validator...`. Example: `@time_periods.validator` on `Window` class.
