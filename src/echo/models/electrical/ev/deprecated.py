@@ -5,11 +5,7 @@ import pandas as pd
 from attrs import define, field
 from deprecated import deprecated
 
-from echo.configuration import (
-    EVChargeMode,
-    EVChargeStatus,
-    TransformRule,
-)
+from echo.configuration import EVChargeMode, EVChargeStatus, TransformRule
 from echo.exceptions import validate
 from echo.models.base import Transform, TransformNode, TransformTerm
 from echo.models.electrical.base import ElectricalDemand, ElectricalPort
@@ -54,7 +50,7 @@ class EV(TransformNode):
     port_dict_name_to_port_uid_map: dict[str, str] | None = None
     port_dict_name_to_port_name_map: dict[str, str] | None = None
 
-    def __attrs_post_init__(self, **data) -> None:
+    def __attrs_post_init__(self) -> None:
         # Check that usage is always <= max discharge of battery, otherwise the problem will be infeasible.
         for i in self.usage:
             if i > self.discharging_power_limit * -1:
@@ -70,15 +66,25 @@ class EV(TransformNode):
         if self.port_dict_name_to_port_name_map is None:
             self.port_dict_name_to_port_name_map = {}
 
-        # Preserve uid and port_name if present on port
+        battery_attributes = [
+            "max_capacity",
+            "depth_of_discharge_limit",
+            "charging_power_limit",
+            "discharging_power_limit",
+            "charging_efficiency",
+            "discharging_efficiency",
+            "initial_state_of_charge",
+        ]
+        battery_params = {k: getattr(self, k) for k in battery_attributes}
         if "vehicle" in self.port_dict_name_to_port_uid_map.keys():
+            # Preserve uid and port_name if present on port
             vehicle = MobileElectricalStorage(
                 uid=self.port_dict_name_to_port_uid_map["vehicle"],
                 port_name=self.port_dict_name_to_port_name_map["vehicle"],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
+                **battery_params,
             )
         else:
-            vehicle = MobileElectricalStorage(**data)
+            vehicle = MobileElectricalStorage(**battery_params)
 
         vehicle.enable_trip_slack = self.trip_slack  # Apply trip slack
         self.ports["vehicle"] = vehicle  # EV always has a storage port
@@ -88,7 +94,6 @@ class EV(TransformNode):
             usage_port = ElectricalDemand(
                 uid=self.port_dict_name_to_port_uid_map["usage"],
                 port_name=self.port_dict_name_to_port_name_map["usage"],
-                **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
             )
         else:
             usage_port = ElectricalDemand()
@@ -104,7 +109,6 @@ class EV(TransformNode):
                 electrical_demand = ElectricalDemand(
                     uid=self.port_dict_name_to_port_uid_map[self.connection_port_name],
                     port_name=self.port_dict_name_to_port_name_map[self.connection_port_name],
-                    **{k: v for k, v in data.items() if k not in ["uid", "port_name"]},
                 )
 
             else:
