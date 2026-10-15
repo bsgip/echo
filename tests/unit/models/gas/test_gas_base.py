@@ -1,7 +1,4 @@
-import attr
-
 from echo.configuration import FlowConstraint, Flows, OptimisationType, Units
-from echo.models.base.port import Port
 from echo.models.gas.base import FixedGasPort, FlexGasPort
 
 
@@ -27,11 +24,3 @@ def test_fixed_gas_port():
     assert fixed_gas_port.import_constraint == FlowConstraint.NoConstraint
     assert fixed_gas_port.export_constraint == FlowConstraint.NoConstraint
     assert fixed_gas_port.flow_type == OptimisationType.Parameter
-
-
-def test_base_port_units():
-    p = Port()
-    print(attr.asdict(p))
-
-    fgp = FlexGasPort()
-    print(attr.asdict(fgp))
