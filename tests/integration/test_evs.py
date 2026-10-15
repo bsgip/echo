@@ -3842,8 +3842,6 @@ def test_update_node_EVV0G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert old_edge_port == old_ev_cp_port
-    # assert id(old_edge_port) != id(old_ev_cp_port)
     assert old_edge_port is old_ev_cp_port
 
     system.update_node(
@@ -3866,15 +3864,11 @@ def test_update_node_EVV0G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert new_edge_port == new_ev_cp_port
-    # assert id(new_edge_port) != id(new_ev_cp_port)
     assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    # assert old_ev_cp_port == new_ev_cp_port
-    # assert id(old_edge_port) == id(new_edge_port)
     assert old_edge_port is new_edge_port
 
     # Test that the update EV node will still work in an optimisation problem.
@@ -3974,8 +3968,6 @@ def test_update_node_EVV1G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert old_edge_port == old_ev_cp_port
-    # assert id(old_edge_port) != id(old_ev_cp_port)
     assert old_edge_port is old_ev_cp_port
 
     system.update_node(
@@ -3998,15 +3990,11 @@ def test_update_node_EVV1G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert new_edge_port == new_ev_cp_port
-    # assert id(new_edge_port) != id(new_ev_cp_port)
     assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    # assert old_ev_cp_port == new_ev_cp_port
-    # assert id(old_edge_port) == id(new_edge_port)
     assert old_ev_cp_port is new_ev_cp_port
 
     # Test that the update EV node will still work in an optimisation problem.
@@ -4106,8 +4094,6 @@ def test_update_node_EVV2G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert old_edge_port == old_ev_cp_port
-    # assert id(old_edge_port) != id(old_ev_cp_port)
     assert old_edge_port is old_ev_cp_port
 
     system.update_node(
@@ -4130,15 +4116,11 @@ def test_update_node_EVV2G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    # assert new_edge_port == new_ev_cp_port
-    # assert id(new_edge_port) != id(new_ev_cp_port)
     assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    # assert old_ev_cp_port == new_ev_cp_port
-    # assert id(old_edge_port) == id(new_edge_port)
     assert old_ev_cp_port is new_ev_cp_port
 
     # Test that the update EV node will still work in an optimisation problem.
