@@ -1,17 +1,18 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 
 import copy
+import os
 import warnings
 from typing import cast
 
 import matplotlib
 import networkx as nx
 import pyomo.environ as en
+from attrs import define, field
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import Units
 from echo.exceptions import ConfigurationError, validate
-from echo.models.base import BaseModel
 from echo.models.base.edge import Edge
 from echo.models.base.node import Node
 from echo.models.base.path import Path
@@ -20,13 +21,11 @@ from echo.models.scenario import EchoConcreteModel
 from echo.validators import ArrayType
 
 
-class OptimisationGraph(BaseModel):
-    node_obj: dict[str, Node] = {}  # Nodes keyed by their node_name
-    edge_obj: dict[tuple[str, str], Edge] = {}
-    paths: dict[tuple, Path] = {}
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+@define
+class OptimisationGraph:
+    node_obj: dict[str, Node] = field(factory=dict)  # Nodes keyed by their node_name
+    edge_obj: dict[tuple[str, str], Edge] = field(factory=dict)
+    paths: dict[tuple, Path] = field(factory=dict)
 
     def node_name_list(self) -> list[str]:
         return list(self.node_obj.keys())
@@ -239,11 +238,12 @@ class OptimisationGraph(BaseModel):
     ) -> None:
         """Creates path objects according to source/sink lists provided."""
 
-        warnings.warn(
-            "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider "
-            + "whether you can convert these tariffs to point/port tariffs.",
-            stacklevel=1,
-        )
+        if os.environ["ECHO_DISABLE_EXPERIMENTAL_PATH_WARNING"] != "1":
+            warnings.warn(
+                "Path tracing is still experimental. If you are generating paths to use path tariffs, please consider "
+                + "whether you can convert these tariffs to point/port tariffs.",
+                stacklevel=1,
+            )
 
         all_paths = {}
         graph = self.convert_to_nx()

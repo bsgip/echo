@@ -1,6 +1,7 @@
+import attrs
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field
+from attrs import define, field
 from pyomo.core.expr import InequalityExpression
 
 from echo.configuration import Flows, Units
@@ -11,6 +12,7 @@ from echo.utils import (
 )
 
 
+@define
 class ControlledLoadOrGen(FlexPort):
     """
     A controlled load or generation has a max/min power, as well as a max/min utilisation.
@@ -20,11 +22,11 @@ class ControlledLoadOrGen(FlexPort):
     and the maximum energy that could be consumed/generated if the load operated at max power.
     """
 
-    min_utilisation: float | None = None
-    max_utilisation: float | None = None
-    max_power: float | None = None
-    min_power: float | None = None
-    units: Units = Units.KW
+    min_utilisation: float | None = field(default=None)
+    max_utilisation: float | None = field(default=None)
+    max_power: float | None = field(default=None)
+    min_power: float | None = field(default=None)
+    units: Units = field(default=Units.KW)
 
     def add_port_to_model(self, model: EchoConcreteModel, profile: pd.DataFrame) -> None:
         super().add_port_to_model(model, profile)
@@ -81,13 +83,15 @@ class ControlledLoadOrGen(FlexPort):
             )
 
 
+@define
 class ControlledLoad(ControlledLoadOrGen):
-    max_power: float = Field(ge=0)
-    min_power: float = Field(ge=0)
+    max_power: float = field(kw_only=True, validator=attrs.validators.ge(0))
+    min_power: float = field(kw_only=True, validator=attrs.validators.ge(0))
     flows = Flows.Import
 
 
+@define
 class ControlledGen(ControlledLoadOrGen):
-    max_power: float = Field(le=0)
-    min_power: float = Field(le=0)
+    max_power: float = field(kw_only=True, validator=attrs.validators.le(0))
+    min_power: float = field(kw_only=True, validator=attrs.validators.le(0))
     flows = Flows.Export

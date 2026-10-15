@@ -1,4 +1,5 @@
 import pyomo.environ as en
+from attrs import define, field
 from pyomo.core.expr import InequalityExpression
 
 from echo.models.agnostic.flex import FlexSink, FlexSource
@@ -6,13 +7,14 @@ from echo.models.agnostic.input_output import InputOutputNode
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class TimeDelayNode(InputOutputNode):
     """A time delay node is an input-output node that implements a fixed delay between input and output."""
 
-    time_delay: int  # number of time intervals delay between input and output
+    time_delay: int = field(kw_only=True)  # number of time intervals delay between input and output
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         self.ports["input"] = FlexSink(units=self.input_port_unit)
         self.ports["output"] = FlexSource(units=self.output_port_unit)
 

@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.electrical import ElectricalPort
 from echo.models.electrical.inverter import Inverter
@@ -11,8 +10,8 @@ from echo.models.electrical.inverter import Inverter
         (0.0, 0.0, None),
         (1.0, 1.0, None),
         (0.4, 0.7, None),
-        (-0.4, 0.7, ValidationError),  # dc_ac_efficiency -ve
-        (0.4, -0.7, ValidationError),  # ac_dc_efficiency -ve
+        (-0.4, 0.7, ValueError),  # dc_ac_efficiency -ve
+        (0.4, -0.7, ValueError),  # ac_dc_efficiency -ve
     ],
 )
 def test_inverter_validation(dc_ac_efficiency, ac_dc_efficiency, expected_error):

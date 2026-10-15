@@ -1,11 +1,13 @@
 import pandas as pd
 import pyomo.environ as en
+from attrs import define
 from pyomo.core.expr import EqualityExpression
 
 from echo.models.base import Node
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class CarbonAggregation(Node):
     """This node has an additional variable, 'total', which equals the sum of all ports defined on the node."""
 

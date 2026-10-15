@@ -5,33 +5,33 @@ from collections.abc import Iterable
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field
+from attrs import define, field
 
 from echo.exceptions import ConfigurationError
-from echo.models.base import BaseModel
 from echo.models.base.port import Port
 from echo.models.scenario import EchoConcreteModel
 
 
-class Node(BaseModel):
+@define
+class Node:
     """
     Nodes are collections of one or more ports that can include non-trivial relationships between the ports,
     this allows transformations to be implemented.
     """
 
-    node_name: str = ""
-    uid: str = Field(default_factory=shortuuid.uuid)
-    ports: dict[str, Port] = {}
-    objective: en.numeric_expr.NumericExpression | float = 0  # For adding any node objectives
+    uid: str = field(factory=shortuuid.uuid)
+    node_name: str = field()
+
+    @node_name.default
+    def _set_node_name_default(self) -> str:
+        return "node_" + str(self.uid)
+
+    ports: dict[str, Port] = field(factory=dict)
+    objective: en.numeric_expr.NumericExpression | float = field(default=0)  # For adding any node objectives
 
     @property
     def inflow(self) -> str:
         return f"inflow_{self.node_name}"
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        if not self.node_name:
-            self.node_name = "node_" + str(self.uid)
 
     def add_port(self, name: str, port: Port) -> None:
         if self.ports.get(name) is None:

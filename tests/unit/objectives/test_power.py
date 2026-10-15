@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.agnostic.storage import Storage
 from echo.objectives.power import FinalChargeObjective, NotFullyChargedPenalty
@@ -9,8 +8,8 @@ from echo.objectives.power import FinalChargeObjective, NotFullyChargedPenalty
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
 def test_notfullychargepenalty_validation(rate, expected_error):
@@ -30,8 +29,8 @@ def test_notfullychargepenalty_validation(rate, expected_error):
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-1.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
 def test_finalchargeobjective_validation(rate, expected_error):

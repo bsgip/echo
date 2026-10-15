@@ -4,12 +4,11 @@ from dataclasses import dataclass
 
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field
+from attrs import define, field
 from pyomo.core.expr.relational_expr import EqualityExpression
 
 from echo.configuration import TransformRule
 from echo.exceptions import ConfigurationError
-from echo.models.base import BaseModel
 from echo.models.base.node import Node
 from echo.models.base.port import Port
 from echo.models.scenario import EchoConcreteModel
@@ -27,17 +26,18 @@ class TransformTerm:
     weight: TimeExpandableType
 
 
-class Transform(BaseModel):
+@define
+class Transform:
     """An object for carrying a generic linear node transformation."""
 
-    uid: str = Field(default_factory=shortuuid.uuid)
-    lhs: list[TransformTerm] = []
-    rhs = 0
+    uid: str = field(factory=shortuuid.uuid)
+    lhs_terms: list[TransformTerm] = field(factory=list)
+    rhs: en.numeric_expr.NumericExpression | float = 0
 
-    def __init__(self, lhs_terms: list[TransformTerm], **data) -> None:
-        super().__init__(**data)
-        if lhs_terms:
-            self.lhs = lhs_terms
+    @property
+    def lhs(self) -> list[TransformTerm]:
+        """lhs is an alias for lhs_terms"""
+        return self.lhs_terms
 
     @property
     def transform_name(self) -> str:
@@ -51,10 +51,11 @@ class Transform(BaseModel):
                 var.constrain_pos_neg(model)
 
 
+@define
 class TransformNode(Node):
     """Implements node constraints using Transforms"""
 
-    transformations: dict[str, Transform] = {}
+    transformations: dict[str, Transform] = field(factory=dict)
 
     def add_transformation(self, transformation_obj: Transform) -> None:
         """Adds a transformation object to a node.

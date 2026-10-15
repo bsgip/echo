@@ -2,6 +2,7 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+from attrs import define
 
 from echo.configuration import (
     EVChargeMode,
@@ -15,6 +16,7 @@ from echo.utils import fix_port_variable
 from echo.validators import ArrayType, check_initial_state_of_charge_within_bounds
 
 
+@define
 class EVV0G(EVBase):
     """This EV object takes an available and usage dataset to precalculate a demand profile.
 
@@ -23,13 +25,13 @@ class EVV0G(EVBase):
     """
 
     # Initialise attributes
-    V0G_delta: ArrayType | list | None
-    V0G_SOC: ArrayType | list | None
-    V0G_trip_infeasibility: ArrayType | list | None
-    charge_status: EVChargeStatus | None
+    V0G_delta: ArrayType | list | None = None
+    V0G_SOC: ArrayType | list | None = None
+    V0G_trip_infeasibility: ArrayType | list | None = None
+    charge_status: EVChargeStatus | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
 
         # Set the charge_mode
         self.charge_mode = EVChargeMode.V0G

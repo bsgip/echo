@@ -1,5 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
+from attrs import define, field
 from pyomo.core.expr import InequalityExpression
 
 from echo.configuration import Units
@@ -8,6 +9,7 @@ from echo.models.agnostic.tellegen.base import TellegenNode
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class ThreeWayValveNode(TellegenNode):
     """A node that implements a Tellegen constraint requiring that port values sum to zero.
 
@@ -16,13 +18,16 @@ class ThreeWayValveNode(TellegenNode):
     At each time the flow is allowed through only one output port.
     """
 
-    units: Units
+    units: Units = field(kw_only=True)
     input_port_name: str = "input_port"
     output_port_name_1: str = "output_port_1"
     output_port_name_2: str = "output_port_2"
 
     # Tuple of two port names on the Node, non-zero flow through only one of the port allowed at any time
     mutually_exclusive_port_flows: tuple[str, str] = None
+
+    def __attrs_post_init__(self) -> None:
+        self.create_ports()
 
     @property
     def binary_variable_flow_through_mutually_exclusive_port_1(self) -> str:
@@ -43,10 +48,6 @@ class ThreeWayValveNode(TellegenNode):
     @property
     def constraint_pos_flow_mutually_exclusive_port_2(self) -> str:
         return f"constraint_pos_flow_mutually_exclusive_port_{self.output_port_name_2}_{self.node_name}"
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.create_ports()
 
     def create_ports(self) -> None:
         # Create input and output ports

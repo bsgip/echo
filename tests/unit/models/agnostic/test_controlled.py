@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.agnostic.controlled import ControlledGen, ControlledLoad
 
@@ -10,8 +9,8 @@ from echo.models.agnostic.controlled import ControlledGen, ControlledLoad
         (0, 0, None),
         (0, 100, None),
         (100, 0, None),
-        (-85, 0, ValidationError),  # min_power -ve
-        (0, -15, ValidationError),  # max_power -ve
+        (-85, 0, ValueError),  # min_power -ve
+        (0, -15, ValueError),  # max_power -ve
     ],
 )
 def test_controlledload_validation(min_power: float, max_power: float, expected_error):
@@ -28,8 +27,8 @@ def test_controlledload_validation(min_power: float, max_power: float, expected_
         (0, 0, None),
         (0, -100, None),
         (-100, 0, None),
-        (85, 0, ValidationError),  # min_power +ve
-        (0, 15, ValidationError),  # max_power +ve
+        (85, 0, ValueError),  # min_power +ve
+        (0, 15, ValueError),  # max_power +ve
     ],
 )
 def test_controlledgen_validation(min_power: float, max_power: float, expected_error):

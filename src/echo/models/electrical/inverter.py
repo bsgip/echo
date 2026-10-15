@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import Field
+from attrs import define, field, validators
 from pyomo.core.expr.relational_expr import EqualityExpression
 
 from echo.exceptions import validate
@@ -9,6 +9,7 @@ from echo.models.electrical.base import ElectricalPort
 from echo.models.scenario import EchoConcreteModel
 
 
+@define
 class Inverter(Node):
     """An inverter is a node with one AC port and at least one DC port.
     Flows from AC to DC, and DC to AC, are subject to conversion efficiencies.
@@ -21,18 +22,16 @@ class Inverter(Node):
     of specifying uids for the ports then use the `add_ac_port` and `add_dc_ports` remembering to supply `uid` values.
     """
 
-    max_import: float | None
-    max_export: float | None
-    dc_ac_efficiency: float = Field(default=1.0, ge=0, le=1)
-    ac_dc_efficiency: float = Field(default=1.0, ge=0, le=1)
+    max_import: float | None = None
+    max_export: float | None = None
+    dc_ac_efficiency: float = field(default=1.0, validator=[validators.ge(0), validators.le(1)])
+    ac_dc_efficiency: float = field(default=1.0, validator=[validators.ge(0), validators.le(1)])
     ac_port_name: str | None = None
-    dc_port_names: list[str] = Field(default_factory=list)
+    dc_port_names: list[str] = field(factory=list)
 
-    def __init__(
+    def __attrs_post_init__(
         self,
-        **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
         if self.ac_port_name:
             self._add_ac_port(port_name=self.ac_port_name)
         for port_name in self.dc_port_names:

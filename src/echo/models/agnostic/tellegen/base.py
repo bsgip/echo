@@ -1,19 +1,20 @@
 import pyomo.environ as en
-from pydantic import root_validator
+from attrs import define, field
 from pyomo.core.expr import EqualityExpression
 
 from echo.exceptions import validate
-from echo.models.base import Node
+from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    node_unit_validator,
+    ports_have_same_units_validator,
 )
 
 
+@define
 class TellegenNode(Node):
     """A node that implements a Tellegen constraint requiring that port values sum to zero."""
 
-    tellegen_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+    ports: dict[str, Port] = field(factory=dict, validator=ports_have_same_units_validator)
 
     def apply_node_constraints(self, model: EchoConcreteModel) -> None:
         def tellegen_node_rule(model: EchoConcreteModel, p: int, t: int) -> EqualityExpression:

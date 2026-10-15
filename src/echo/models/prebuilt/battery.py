@@ -1,9 +1,10 @@
-from pydantic import PositiveFloat
+from attrs import define, field, validators
 
 from echo.models.base.node import Node
 from echo.models.electrical import ElectricalStorage
 
 
+@define
 class Battery(Node):
     def __init__(
         self,
@@ -12,7 +13,7 @@ class Battery(Node):
         initial_state_of_charge: float,
         charging_power_limit: float,
         discharging_power_limit: float,
-        storage_capacity_cost: PositiveFloat | None = None,
+        storage_capacity_cost: float | None = field(default=None, validator=validators.optional(validators.gt(0))),
         charging_efficiency: float = 1,
         discharging_efficiency: float = 1,
         depth_of_discharge_limit: float = 0,
@@ -20,7 +21,7 @@ class Battery(Node):
         regularise: bool = False,
         **data,
     ) -> None:
-        super().__init__(**data)
+        self.__attrs_init__(**data)
         self.ports[port_name] = ElectricalStorage(
             max_capacity=max_capacity,
             depth_of_discharge_limit=depth_of_discharge_limit,

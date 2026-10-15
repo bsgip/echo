@@ -1,6 +1,6 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import PositiveFloat
+from attrs import define, field, validators
 from pyomo.core.expr import EqualityExpression, InequalityExpression
 from scipy import interpolate
 
@@ -15,8 +15,10 @@ from echo.utils import (
     set_float_var_bounds,
     to_initial_values,
 )
+from echo.validators import partial_load_cop_validator, temperature_dependent_cop_validator
 
 
+@define
 class ParameterisedHeatPump(Node):
     """A Parameterised heat pump model.
 
@@ -31,65 +33,85 @@ class ParameterisedHeatPump(Node):
     performance (COP) at each time step.
     """
 
-    nominal_heating_cop: PositiveFloat  # Nominal coefficient of performance in heating mode COP = output/input
-    nominal_cooling_cop: PositiveFloat  # Nominal coefficient of performance in cooling mode COP = output/input
-    max_heating_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
-    max_cooling_capacity: PositiveFloat  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
-    partial_load_cop_heating: dict = {
-        0: 0,
-        0.25: 0.8,
-        0.5: 0.9,
-        0.75: 1,
-        1: 0.85,
-    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
-    partial_load_cop_cooling: dict = {
-        0: 0,
-        0.25: 0.8,
-        0.5: 0.9,
-        0.75: 1,
-        1: 0.85,
-    }  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
-    temperature_dependent_cop_heating: dict = {
-        -10: 0.4,
-        0: 0.6,
-        10: 0.7,
-        20: 0.9,
-        30: 1,
-        45: 1,
-    }  # Scaling factor for the nominal heating COP depending on
+    nominal_heating_cop: float = field(
+        default=1, validator=validators.gt(0)
+    )  # Nominal coefficient of performance in heating mode COP = output/input
+    nominal_cooling_cop: float = field(
+        default=1, validator=validators.gt(0)
+    )  # Nominal coefficient of performance in cooling mode COP = output/input
+    max_heating_capacity: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    max_cooling_capacity: float = field(
+        kw_only=True, validator=validators.gt(0)
+    )  # Maximum cooling output in KWT (1RT ~ 3.5KWT)
+    partial_load_cop_heating: dict = field(
+        default={
+            0: 0,
+            0.25: 0.8,
+            0.5: 0.9,
+            0.75: 1,
+            1: 0.85,
+        },
+        validator=partial_load_cop_validator,
+    )  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    partial_load_cop_cooling: dict = field(
+        default={
+            0: 0,
+            0.25: 0.8,
+            0.5: 0.9,
+            0.75: 1,
+            1: 0.85,
+        },
+        validator=partial_load_cop_validator,
+    )  # Scaling factor for the nominal COP (coefficient of performance) depending on the partial load value
+    temperature_dependent_cop_heating: dict = field(
+        default={
+            -10: 0.4,
+            0: 0.6,
+            10: 0.7,
+            20: 0.9,
+            30: 1,
+            45: 1,
+        },
+        validator=temperature_dependent_cop_validator,
+    )  # Scaling factor for the nominal heating COP depending on
     # the ambient/condenser temperature value
-    temperature_dependent_cop_cooling: dict = {
-        0: 0.7,
-        10: 1,
-        20: 0.5,
-        30: 0.35,
-        45: 0.2,
-    }  # Scaling factor for the nominal cooling COP depending on
+    temperature_dependent_cop_cooling: dict = field(
+        default={
+            0: 0.7,
+            10: 1,
+            20: 0.5,
+            30: 0.35,
+            45: 0.2,
+        },
+        validator=temperature_dependent_cop_validator,
+    )  # Scaling factor for the nominal cooling COP depending on
     # the ambient/condenser temperature value
-    ambient_temperature_dict: dict = (
-        None  # Condenser side temperature ambient air temperature or condenser
-        # water temperature for water cooled chiller
-    )
-    ambient_temperature_ref: str = None  # Ambient temperature array passed by string reference
+    ambient_temperature_dict: dict = field(
+        factory=dict
+    )  # Condenser side temperature ambient air temperature or condenser \
+    # water temperature for water cooled chiller
+    ambient_temperature_ref: str | None = None  # Ambient temperature array passed by string reference
     constant_ambient_temperature: float = 10  # Constant value for ambient temperature in degrees C,
     # when no array data is provided
     heat_intake_rejection_port: bool = False  # If True, add heat intake_rejection port
-    heat_intake_rejection_coefficient: PositiveFloat = 1
+    heat_intake_rejection_coefficient: float = field(default=1, validator=validators.gt(0))
     # Heat intake coefficient  = heating_delivered_to_load/heat_intake_from_source
     # Heat rejection coefficient = cooling_delivered_to_load/heat_rejected_to_source (environment)
 
     # TODO: We do not want user to ever provide these. Rewrite to be pyomo parameter
-    input_points_cooling: dict = None
-    output_points_cooling: dict = None
-    input_points_heating: dict = None
-    output_points_heating: dict = None
+    input_points_cooling: dict | None = None
+    output_points_cooling: dict | None = None
+    input_points_heating: dict | None = None
+    output_points_heating: dict | None = None
 
     electrical_input_port_ref: str = "input"
     thermal_output_port_ref: str = "output"
     heat_intake_rejection_port_ref: str = "heat_intake_rejection"
 
-    # partial_load_cop_check = root_validator(allow_reuse=True)(validate_partial_load_cop)
-    # temperature_cop_check = root_validator(allow_reuse=True)(validate_temperature_dependent_cop)
+    def __attrs_post_init__(self) -> None:
+        self.create_ports()
 
     @property
     def temperature_cop_heating_param(self) -> str:
@@ -106,10 +128,6 @@ class ParameterisedHeatPump(Node):
     @property
     def power_to_cool(self) -> str:
         return "power_to_cool_" + self.node_name
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.create_ports()
 
     def update(self, ambient_temperature_dict: dict[float, float]) -> None:
         self.ambient_temperature_dict = ambient_temperature_dict

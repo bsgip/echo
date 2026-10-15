@@ -1,44 +1,46 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import root_validator
+from attrs import define, field
 from pyomo.core.expr import InequalityExpression
 
 from echo.configuration import FlowConstraint, Flows, OptimisationType
 from echo.models.base import Port
 from echo.models.scenario import EchoConcreteModel
 from echo.validators import (
-    check_bound_order,
+    bound_order_validator,
 )
 
 
+@define
 class FlexPort(Port):
     """Flexible variable port, which can import and export without constraints."""
 
-    flows = Flows.Both
-    import_constraint = FlowConstraint.NoConstraint
-    export_constraint = FlowConstraint.NoConstraint
-    flow_type = OptimisationType.Variable
+    flows: Flows = Flows.Both
+    import_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    export_constraint: FlowConstraint = FlowConstraint.NoConstraint
+    flow_type: OptimisationType = OptimisationType.Variable
 
 
+@define
 class FlexSink(FlexPort):
     """Flexible port, imports only"""
 
-    flows = Flows.Import
+    flows: Flows = Flows.Import
 
 
+@define
 class FlexSource(FlexPort):
     """Flexible ports, exports only"""
 
-    flows = Flows.Export
+    flows: Flows = Flows.Export
 
 
+@define
 class OffOrConstrainedPort(FlexPort):
     """A port that is either off (0) or on, and when it is on it is constrained between a min and max value."""
 
-    lower_bound: float
-    upper_bound: float
-
-    bounds_check = root_validator(allow_reuse=True)(check_bound_order)  # checks that lower bound < upper bound
+    lower_bound: float = field(kw_only=True, validator=bound_order_validator)
+    upper_bound: float = field(kw_only=True, validator=bound_order_validator)
 
     @property
     def active(self) -> str:

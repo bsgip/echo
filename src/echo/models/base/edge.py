@@ -2,33 +2,33 @@ from __future__ import annotations  # Deprecating in python 3.15 in favour of la
 
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field
+from attrs import define, field
 from pyomo.core.expr.relational_expr import EqualityExpression
 
 from echo.configuration import Flows
 from echo.exceptions import ConfigurationError
-from echo.models.base import BaseModel
 from echo.models.base.port import Port
 from echo.models.base.types import ConstraintValueType
 from echo.models.scenario import EchoConcreteModel
 
 
-class Edge(BaseModel):
+@define
+class Edge:
     """
     Edges are used to connect nodes. For an edge (x, y) where x and y are nodes,
     the edge value is equal to the flow from x->y plus the flow from y->x.
     """
 
-    uid: str = Field(default_factory=shortuuid.uuid)
-    edge_name: str | None = None
     vertices: tuple[Port, Port]
-    nodes: tuple[str, str] | None  # tuple of node names - todo make this required
-    tariff: list | None | None
+    nodes: tuple[str, str] | None = None  # tuple of node names - todo make this required
+    tariff: list | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        if self.edge_name is None:
-            self.edge_name = "edge_" + str(self.uid)
+    uid: str = field(factory=shortuuid.uuid)
+    edge_name: str = field()
+
+    @edge_name.default
+    def _set_edge_name_default(self) -> str:
+        return "edge_" + str(self.uid)
 
     def add_vertices(self, obj1: Port, obj2: Port) -> None:
         """Adds edge vertices (which are ports on nodes)

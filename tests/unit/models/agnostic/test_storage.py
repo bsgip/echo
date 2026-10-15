@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic.storage import MobileStorage, Storage
@@ -14,7 +13,7 @@ from echo.models.agnostic.storage import MobileStorage, Storage
     ],
 )
 def test_storage_validation_missing_fields(storage_params):
-    with pytest.raises(ValidationError):
+    with pytest.raises(TypeError):
         Storage(**storage_params)
 
 
@@ -22,13 +21,11 @@ def test_storage_validation_missing_fields(storage_params):
     "storage_capacity_cost, expected_error",
     [
         (5.0, None),
-        (0.0, ValidationError),  # 0 is not a pydantic PositiveFloat
-        (-7.0, ValidationError),  # not a PostiveFloat
+        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (-7.0, ValueError),  # not a PostiveFloat
     ],
 )
-def test_storage_validation_storage_capactity_cost(
-    storage_capacity_cost: float, expected_error: ValidationError | None
-):
+def test_storage_validation_storage_capacity_cost(storage_capacity_cost: float, expected_error):
     storage_params = {"max_capacity": 0, "charging_power_limit": 0, "discharging_power_limit": 0}
     if expected_error:
         with pytest.raises(expected_error):
@@ -41,8 +38,8 @@ def test_storage_validation_storage_capactity_cost(
     "storage_params, expected_error",
     [
         ({"depth_of_discharge_limit": 0.5}, None),
-        ({"depth_of_discharge_limit": -0.5}, ValidationError),  # Dod can't be negative
-        ({"depth_of_discharge_limit": 110}, ValidationError),  # DoD can't be > 100%
+        ({"depth_of_discharge_limit": -0.5}, ValueError),  # Dod can't be negative
+        ({"depth_of_discharge_limit": 110}, ValueError),  # DoD can't be > 100%
     ],
 )
 def test_storage_validation_depth_of_discharge_check(storage_params, expected_error):

@@ -2,30 +2,26 @@ from collections.abc import Iterable
 from functools import partial
 
 import pyomo.environ as en
-from pydantic import Field, root_validator
+from attrs import define, field
 from pyomo.core.expr import EqualityExpression
 
 from echo.exceptions import ConfigurationError
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
-from echo.validators import (
-    validate_partition_ports,
-)
+from echo.validators import partitions_port_validator
 
 
+@define
 class PartitionedMultiCommodityTellegenNode(Node):
     """
     A node with partitions of ports, ports in each partition may have multiple commodities.
     A tellegen constraint is applied per partition per commodity.
     """
 
-    partitions: dict[str, list[Port]] = Field(default_factory=dict)
+    partitions: dict[str, list[Port]] = field(factory=dict, validator=partitions_port_validator)
     default_partition: str = "default_partition"
 
-    partition_port_uniqueness_check = root_validator(allow_reuse=True)(validate_partition_ports)
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
+    def __attrs_post_init__(self) -> None:
         if len(self.ports):
             if len(self.partitions):
                 raise ValueError(

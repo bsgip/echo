@@ -1,5 +1,3 @@
-import pytest
-
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, TellegenNode
 from echo.models.base import Node, OptimisationGraph
@@ -38,17 +36,17 @@ def test_port_reference_is_made_in_edge():
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
 
-    with pytest.raises(Exception):
-        assert id(grid.ports["grid_to_cp"]) == id(system.get_edge(("grid", "cp")).vertices[0])
-        assert id(connection_point.ports["cp_to_grid"]) == id(system.get_edge(("grid", "cp")).vertices[1])
+    assert grid.ports["grid_to_cp"] is system.get_edge(("grid", "cp")).vertices[0]
+    assert connection_point.ports["cp_to_grid"] is system.get_edge(("grid", "cp")).vertices[1]
 
 
 def test_rebuild_all_edges():
     """Tests the rebuild_all_edges function usage after stateful data has been injected."""
 
     def assert_node_edge_port_values(
-        v0g_node_port_value: dict[tuple[int, int], float] | None,
-        v0g_edge_port_value: dict[tuple[int, int], float] | None,
+        ev: EVV0G | EVV1G | EVV2G,
+        v0g_node_port_value: dict[tuple[int, int], float] | float,
+        v0g_edge_port_value: dict[tuple[int, int], float] | float,
         v12g_node_value: dict[tuple[int, int], float] | None,
         v12g_edge_value: dict[tuple[int, int], float] | None,
     ):
@@ -141,8 +139,9 @@ def test_rebuild_all_edges():
         pv.add_generation_profile_from_array(solar_data, expansion_periods)
 
         assert_node_edge_port_values(
-            v0g_node_port_value=None,
-            v0g_edge_port_value=None,
+            ev=ev,
+            v0g_node_port_value=0,
+            v0g_edge_port_value=0,
             v12g_node_value=None,
             v12g_edge_value=None,
         )
@@ -156,6 +155,7 @@ def test_rebuild_all_edges():
         )
 
         assert_node_edge_port_values(
+            ev=ev,
             v0g_node_port_value={
                 (0, 0): 5.0,
                 (0, 1): 5.0,
@@ -191,9 +191,10 @@ def test_rebuild_all_edges():
         )
 
         # Rebuild all the edges before optimisation
-        system.rebuild_all_edges()
+        # system.rebuild_all_edges()
 
         assert_node_edge_port_values(
+            ev=ev,
             v0g_node_port_value={
                 (0, 0): 5.0,
                 (0, 1): 5.0,

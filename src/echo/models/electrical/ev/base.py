@@ -1,4 +1,5 @@
 import numpy as np
+from attrs import define, field
 
 from echo.configuration import (
     EVChargeMode,
@@ -16,10 +17,12 @@ from echo.utils import TimeExpandableType
 from echo.validators import ArrayType
 
 
+@define
 class MobileElectricalStorage(MobileStorage):
-    units = Units.KW
+    units: Units = Units.KW
 
 
+@define
 class EVBase(TransformNode):
     """Base class for EVV0G, EVV1G and EVV2G.
 
@@ -86,35 +89,33 @@ class EVBase(TransformNode):
 
     charge_mode: EVChargeMode | None = None
     connection_port_name: str = "cp"
-    ports: dict[str, ElectricalDemand | ElectricalPort | MobileElectricalStorage] = {}
+    ports: dict[str, ElectricalDemand | ElectricalPort | MobileElectricalStorage] = field(factory=dict)
 
     # Battery attributes
     charging_efficiency: float = 1
-    charging_power_limit: float
+    charging_power_limit: float = field(kw_only=True)
     depth_of_discharge_limit: float = 0
     discharging_efficiency: float = 1
-    discharging_power_limit: float
+    discharging_power_limit: float = field(kw_only=True)
     enable_trip_slack: bool = False
-    max_capacity: float
+    max_capacity: float = field(kw_only=True)
     soc_conserv: TimeExpandableType | None = None
     soc_conserv_cost: float | None = None
     usage_power_limit: float | None = None
 
     # Stateful attributes
-    available: ArrayType | list | None
-    initial_state_of_charge: float | None
-    interval_duration: int | None
+    available: ArrayType | list | None = None
+    initial_state_of_charge: float | None = None
+    interval_duration: int | None = None
     set_stateful_attrs_at_init: bool = True
-    tod_charging: ArrayType | list | str | None
+    tod_charging: ArrayType | list | str | None = None
     usage: ArrayType | list | None = None
 
     # Helpful mappings for port names and uids
     port_dict_name_to_port_name_map: dict[str, str] | None = None
     port_dict_name_to_port_uid_map: dict[str, str] | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-
+    def __attrs_post_init__(self) -> None:
         # If usage_power_limit isn't specified, set it to discharging_power_limit. This is for backwards compatability
         if self.usage_power_limit is None:
             self.usage_power_limit = self.discharging_power_limit

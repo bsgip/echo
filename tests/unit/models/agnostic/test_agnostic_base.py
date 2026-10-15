@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.agnostic.base import Sink, Source
 
@@ -12,9 +11,9 @@ from echo.models.agnostic.base import Sink, Source
         ([-42.0, -12.0], None),
         ([-15], None),
         ([0.0], None),
-        ([5.0], ValidationError),
-        ([42.0, -12.0], ValidationError),
-        ([15], ValidationError),
+        ([5.0], ValueError),
+        ([42.0, -12.0], ValueError),
+        ([15], ValueError),
     ],
 )
 def test_source_port_validation(initial_value, expected_error):
@@ -34,9 +33,9 @@ def test_source_port_validation(initial_value, expected_error):
         ([-42.0, -12.0], None),
         ([-15], None),
         ([0.0], None),
-        ([5.0], ValidationError),
-        ([42.0, -12.0], ValidationError),
-        ([15], ValidationError),
+        ([5.0], ValueError),
+        ([42.0, -12.0], ValueError),
+        ([15], ValueError),
     ],
 )
 def test_source_port_process_initial_value_performs_validation(initial_value, expected_error):
@@ -58,9 +57,9 @@ def test_source_port_process_initial_value_performs_validation(initial_value, ex
         ([42.0, 12.0], None),
         ([15], None),
         ([0.0], None),
-        ([-5.0], ValidationError),
-        ([-42.0, 12.0], ValidationError),
-        ([-15], ValidationError),
+        ([-5.0], ValueError),
+        ([-42.0, 12.0], ValueError),
+        ([-15], ValueError),
     ],
 )
 def test_sink_port_validation(initial_value, expected_error):
@@ -80,9 +79,9 @@ def test_sink_port_validation(initial_value, expected_error):
         ([42.0, 12.0], None),
         ([15], None),
         ([0.0], None),
-        ([-5.0], ValidationError),
-        ([-42.0, 12.0], ValidationError),
-        ([-15], ValidationError),
+        ([-5.0], ValueError),
+        ([-42.0, 12.0], ValueError),
+        ([-15], ValueError),
     ],
 )
 def test_sink_port_process_initial_value_performs_validation(initial_value, expected_error):

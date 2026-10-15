@@ -1,16 +1,17 @@
 import pandas as pd
 import pyomo.environ as en
-from pydantic import root_validator
+from attrs import define, field
 from pyomo.core.expr import EqualityExpression
 
 from echo.configuration import Units
 from echo.exceptions import ConfigurationError
 from echo.models.agnostic.flex import FlexSink
-from echo.models.base import Node
+from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
-from echo.validators import node_unit_validator
+from echo.validators import ports_have_same_units_validator, ports_match_nominal_units_validator
 
 
+@define
 class AggregationNode(Node):
     """Arbitrary commodity aggregation node.
 
@@ -18,9 +19,12 @@ class AggregationNode(Node):
     port_units attribute is used for validation, all ports must be the same commodity.
     """
 
-    port_units: Units
+    port_units: Units = field(kw_only=True)
+    ports: dict[str, Port] = field(
+        factory=dict, validator=[ports_have_same_units_validator, ports_match_nominal_units_validator]
+    )
 
-    aggregator_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
+    # aggregator_unit_check = root_validator(allow_reuse=True)(node_unit_validator)
 
     @property
     def total(self) -> None:

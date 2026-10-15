@@ -1,11 +1,10 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.configuration import Units
 from echo.models.agnostic.flex import FlexPort, FlexSink
 from echo.models.thermal.parameterised_heatpump import ParameterisedHeatPump
 
-values = [(1, None), (0, ValidationError), (-1, ValidationError)]
+values = [(1, None), (0, ValueError), (-1, ValueError)]
 positivefloat_attributes = [
     "nominal_heating_cop",
     "nominal_cooling_cop",

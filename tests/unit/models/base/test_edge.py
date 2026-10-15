@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.models.base.edge import Edge
 from echo.models.base.port import Port
@@ -9,7 +8,7 @@ SHORTUUID_LENGTH = 22
 
 def test_edge_initialisation_missing_required_params():
     # required parameters: vertices
-    with pytest.raises(ValidationError):
+    with pytest.raises(TypeError):
         Edge()
 
 
@@ -17,8 +16,9 @@ def test_edge_initialisation_missing_required_params():
 def test_edge_initialisation(edge_name):
     port_1 = Port()
     required_params = {"vertices": (port_1, port_1)}
+    params = {"edge_name": edge_name} if edge_name else {}
 
-    edge = Edge(edge_name=edge_name, **required_params)
+    edge = Edge(**params, **required_params)
 
     assert len(edge.uid) == SHORTUUID_LENGTH
 

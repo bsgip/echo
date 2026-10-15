@@ -3035,7 +3035,7 @@ def test_ev_demand_profile_set_stateful_attrs():
     assert isinstance(ev.port_uid, str)
 
     # Inject some demand data into it
-    assert ev.ports["demand"].initial_value is None
+    assert ev.ports["demand"].initial_value == 0
     ev.set_stateful_attrs(demand=[1, 2, 3, 4, 5])
     assert isinstance(ev.ports["demand"].initial_value, dict)
     assert len(ev.ports["demand"].initial_value.keys()) == 5
@@ -3842,8 +3842,7 @@ def test_update_node_EVV0G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert old_edge_port == old_ev_cp_port
-    assert id(old_edge_port) != id(old_ev_cp_port)
+    assert old_edge_port is old_ev_cp_port
 
     system.update_node(
         "ev",
@@ -3865,14 +3864,12 @@ def test_update_node_EVV0G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert new_edge_port == new_ev_cp_port
-    assert id(new_edge_port) != id(new_ev_cp_port)
+    assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    assert old_ev_cp_port == new_ev_cp_port
-    assert id(old_edge_port) == id(new_edge_port)
+    assert old_edge_port is new_edge_port
 
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
@@ -3971,8 +3968,7 @@ def test_update_node_EVV1G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert old_edge_port == old_ev_cp_port
-    assert id(old_edge_port) != id(old_ev_cp_port)
+    assert old_edge_port is old_ev_cp_port
 
     system.update_node(
         "ev",
@@ -3994,14 +3990,12 @@ def test_update_node_EVV1G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert new_edge_port == new_ev_cp_port
-    assert id(new_edge_port) != id(new_ev_cp_port)
+    assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    assert old_ev_cp_port == new_ev_cp_port
-    assert id(old_edge_port) == id(new_edge_port)
+    assert old_ev_cp_port is new_ev_cp_port
 
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
@@ -4100,8 +4094,7 @@ def test_update_node_EVV2G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert old_edge_port == old_ev_cp_port
-    assert id(old_edge_port) != id(old_ev_cp_port)
+    assert old_edge_port is old_ev_cp_port
 
     system.update_node(
         "ev",
@@ -4123,14 +4116,12 @@ def test_update_node_EVV2G():
     # Assert that the ElectricalDemand port on the edge and on the EV node are identical, but not the same object. This
     # is where some of the pydantic fun occurs - pydantic will instantiate a new, and identical, instance of a port
     # when constructing the edges.
-    assert new_edge_port == new_ev_cp_port
-    assert id(new_edge_port) != id(new_ev_cp_port)
+    assert new_edge_port is new_ev_cp_port
 
     # Assert that the ElectricalDemand port on the edge as well as the port on the EV node are the same object before
     # and after update_node is called. We need to also assert that the memory location is the same as all attribute
     # names could be potentially identical (if they've been copied into a new instance completely for example).
-    assert old_ev_cp_port == new_ev_cp_port
-    assert id(old_edge_port) == id(new_edge_port)
+    assert old_ev_cp_port is new_ev_cp_port
 
     # Test that the update EV node will still work in an optimisation problem.
     # Create objectives/tariffs
@@ -4206,7 +4197,7 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4263,7 +4254,7 @@ def test_v0g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )
 
@@ -4291,7 +4282,7 @@ def test_v1g_with_discharging_power_limit_and_usage_power_limit_greater_than_usa
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-15,
     )
 
@@ -4321,7 +4312,7 @@ def test_v1g_with_usage_power_limit_less_than_usage():
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4350,7 +4341,7 @@ def test_v1g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4380,7 +4371,7 @@ def test_v1g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4410,7 +4401,7 @@ def test_v1g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )
 
@@ -4438,7 +4429,7 @@ def test_v2g_with_discharging_power_limit_and_usage_power_limit_greater_than_usa
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-15,
     )
 
@@ -4468,7 +4459,7 @@ def test_v2g_with_usage_power_limit_less_than_usage():
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4497,7 +4488,7 @@ def test_v2g_with_discharging_power_limit_lt_usage_usage_power_limit_gt_usage():
         soc_conserv_cost=0.0,
         interval_duration=interval_duration,
         tod_charging=None,
-        trip_slack=False,
+        enable_trip_slack=False,
         usage_power_limit=-10,
     )
 
@@ -4527,7 +4518,7 @@ def test_v2g_with_discharging_power_limit_and_usage_power_limit_less_than_usage(
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=-1,
         )
 
@@ -4557,6 +4548,6 @@ def test_v2g_with_none_usage_power_limit_fails_if_discharge_power_limit_is_small
             soc_conserv_cost=0.0,
             interval_duration=interval_duration,
             tod_charging=None,
-            trip_slack=False,
+            enable_trip_slack=False,
             usage_power_limit=None,
         )

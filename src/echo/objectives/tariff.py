@@ -7,20 +7,25 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as en
 import shortuuid
-from pydantic import Field, NonNegativeFloat, NonPositiveFloat, PositiveFloat, PositiveInt, root_validator, validator
+from attrs import define, field, validators
 from pyomo.core.expr import InequalityExpression
 
 from echo.exceptions import validate
-from echo.models.base import BaseModel as EchoBaseModel
 from echo.models.base import Path, Port
 from echo.models.scenario import EchoConcreteModel
 from echo.objectives.base import Objective
-from echo.validators import ArrayType
+from echo.validators import (
+    ArrayType,
+    block_rates_validator,
+    import_or_export_demand_set_validator,
+    reset_periods_validator,
+)
 
 
+@define
 class Tariff(Objective):
-    tariff_array: ArrayType | list  # tariff array prices should always be positive
-    expansion_periods: PositiveInt | None = 1
+    tariff_array: ArrayType | list = field(kw_only=True)  # tariff array prices should always be positive
+    expansion_periods: int = field(default=1, validator=validators.gt(0))
 
     @staticmethod
     def return_tariff_dict(array: list[float] | np.ndarray, expansion_periods: int) -> dict:
@@ -30,19 +35,20 @@ class Tariff(Objective):
         return vals
 
 
+@define
 class ImportTariff(Tariff):
     """The ImportTariff objective applies a price per kWh of energy imported at a defined port."""
 
-    component: Port
-    import_tariff_dict: dict | None
+    component: Port = field(kw_only=True)
+    import_tariff_dict: dict | None = field()
+
+    @import_tariff_dict.default
+    def _import_tariff_dict_default(self) -> dict:
+        return self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     @property
     def import_tariff(self) -> str:
         return "import_tariff_" + self.name
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.import_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
@@ -67,20 +73,21 @@ class ImportTariff(Tariff):
         )
 
 
+@define
 class ExportTariff(Tariff):
     """The ExportTariff objective applies a tariff, defined as an array of prices,
     to the negative (exporting) component of the specified port."""
 
-    component: Port
-    export_tariff_dict: dict | None
+    component: Port = field(kw_only=True)
+    export_tariff_dict: dict | None = field()
+
+    @export_tariff_dict.default
+    def _export_tariff_dict_default(self) -> dict:
+        return self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     @property
     def export_tariff(self) -> str:
         return "export_tariff_" + self.name
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.export_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
@@ -105,36 +112,29 @@ class ExportTariff(Tariff):
         )
 
 
+@define
 class BlockTariff(Objective):
     """A block tariff, or step tariff, divides consumption over a time period into different blocks, and each block
     has a different price."""
 
-    component: Port
-    blocks: list  # list of consumption blocks/steps (cumulative) as tuple ranges
-    rates: list  # list of rates per tuple
-    reset_periods: list = []
-    reset_index: en.RangeSet
+    component: Port = field(kw_only=True)
+    blocks: list = field(
+        kw_only=True, validator=block_rates_validator
+    )  # list of consumption blocks/steps (cumulative) as tuple ranges
+    rates: list = field(kw_only=True, validator=block_rates_validator)  # list of rates per tuple
+    reset_periods: list = field(factory=list)
+    reset_index: en.RangeSet = field(default=en.RangeSet(0, 0))
+
+    @reset_periods.validator
+    def _set_reset_index(self, attributes, value) -> None:  # noqa ANN001
+        if self.reset_periods is not None:
+            self.reset_index = en.RangeSet(0, len(self.reset_periods) - 1)
+        else:
+            self.reset_index = en.RangeSet(0, 0)
 
     @property
     def num_price_bands(self) -> int:
         return len(self.rates)
-
-    @root_validator
-    def check_block_rates(cls, values: dict) -> dict:
-        validate(
-            len(values.get("blocks")) + 1 == len(values.get("rates")),
-            "Enter one more rate than num blocks",
-        )
-        return values
-
-    @root_validator(pre=True)
-    def set_reset_index(cls, values: dict) -> dict:
-        rp = values.get("reset_periods")
-        if rp is not None:
-            values["reset_index"] = en.RangeSet(0, len(rp) - 1)
-        else:
-            values["reset_index"] = en.RangeSet(0, 0)
-        return values
 
     def get_block_var_name(self, i: int) -> str:
         return "block_" + str(i)
@@ -171,6 +171,7 @@ class BlockTariff(Objective):
         return initial_window_val
 
 
+@define
 class BlockImportTariff(BlockTariff):
     @property
     def window_active(self) -> str:
@@ -218,19 +219,20 @@ class BlockImportTariff(BlockTariff):
         return total
 
 
+@define
 class PathTariff(Tariff):
     """The PathTariff objective applies a cost per kW of power flow on a specified path."""
 
-    component: Path
-    path_tariff_dict: dict | None
+    component: Path = field(kw_only=True)
+    path_tariff_dict: dict = field()
+
+    @path_tariff_dict.default
+    def _path_tariff_dict_default(self) -> dict:
+        return self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     @property
     def path_tariff(self) -> str:
         return "path_tariff_" + self.name
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self.path_tariff_dict = self.return_tariff_dict(self.tariff_array, self.expansion_periods)
 
     def create_params(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         setattr(
@@ -252,11 +254,12 @@ class PathTariff(Tariff):
         )
 
 
+@define
 class ThroughputCost(Objective):
     """A ThroughputCost objective applies a fixed rate to total throughput (i.e. import minus export) at a port."""
 
-    component: Port
-    rate: PositiveFloat
+    component: Port = field(kw_only=True)
+    rate: float = field(kw_only=True, validator=validators.gt(0))
 
     def apply_constraints(self, model: EchoConcreteModel) -> None:
         if hasattr(model, self.component.pos) is False:
@@ -289,7 +292,8 @@ class Day(Enum):
     holiday = "holiday"
 
 
-class TimePeriod(EchoBaseModel):
+@define
+class TimePeriod:
     start_time: time
     end_time: time
     day_type: list[Day]
@@ -363,19 +367,19 @@ class TimePeriod(EchoBaseModel):
         return False
 
 
-class Window(EchoBaseModel):
+@define
+class Window:
     """Class for specifying window over which a tariff is calculated using datetimes"""
 
-    time_periods: list[TimePeriod]
+    time_periods: list[TimePeriod] = field(factory=list)
     reset_periods: ResetPeriod | None = None
 
-    @validator("time_periods")
-    def non_overlapping_periods(cls, v: list[TimePeriod]) -> list[TimePeriod]:
-        for i in range(len(v)):
-            for j in range(i + 1, len(v)):
-                if v[i].overlaps(v[j]):
-                    raise ValueError(f"TimePeriod {v[i]} overlaps with TimePeriod {v[j]}")
-        return v
+    @time_periods.validator
+    def _non_overlapping_periods(self, attributes, value) -> None:  # noqa ANN001
+        for i in range(len(value)):
+            for j in range(i + 1, len(value)):
+                if value[i].overlaps(value[j]):
+                    raise ValueError(f"TimePeriod {value[i]} overlaps with TimePeriod {value[j]}")
 
     def to_bool_periods(self, df: pd.DataFrame) -> np.ndarray:
         """To convert a window to a bool array"""
@@ -446,20 +450,28 @@ class Window(EchoBaseModel):
         return _find_rollover(df, interval_duration)
 
 
-class DemandCharge(EchoBaseModel):
+@define
+class DemandCharge:
     """A demand charge is a rate that applies to the maximum demand over one or many specified time windows."""
 
-    uid: str = Field(default_factory=shortuuid.uuid)
-    name: str
-    rate: NonNegativeFloat
-    min_demand: float = 0.0
-    window_array: ArrayType | list
-    reset_periods: ArrayType | list
-    import_demand: bool = False
-    export_demand: bool = False
-
+    rate: float = field(kw_only=True, validator=validators.ge(0))
+    window_array: ArrayType | list = field(kw_only=True, validator=reset_periods_validator)
+    reset_periods: ArrayType | list | None = field(default=None, validator=reset_periods_validator)
     num_reset_periods: int = 0
-    reset_index: en.RangeSet  # index for separating different reset periods
+    reset_index: en.RangeSet = en.RangeSet(
+        0, 0
+    )  # index for separating different reset periods (get set by 'reset_periods_validator').
+
+    min_demand: float = 0.0
+    import_demand: bool = field(default=False, validator=import_or_export_demand_set_validator)
+    export_demand: bool = field(default=False, validator=import_or_export_demand_set_validator)
+
+    uid: str = field(factory=shortuuid.uuid)
+    name: str = field()
+
+    @name.default
+    def _set_edge_name_default(self) -> str:
+        return "dc_" + str(self.uid)
 
     @property
     def max_demand_val(self) -> str:
@@ -468,43 +480,6 @@ class DemandCharge(EchoBaseModel):
     @property
     def window_active(self) -> str:
         return "window_active_" + self.name
-
-    @root_validator(pre=True)
-    def check_reset_periods(cls, values: dict) -> dict:
-        rp = values.get("reset_periods")
-        window_array = values.get("window_array")
-        if rp is not None:
-            validate(
-                sum(rp) == len(window_array),
-                f"Sum of reset period lengths ({sum(rp)}) is not equal to window array length ({len(window_array)}).",
-            )
-            values["num_reset_periods"] = len(rp)
-        else:
-            values["reset_periods"] = [len(window_array)]
-            values["num_reset_periods"] = 1
-        values["reset_index"] = en.RangeSet(0, values.get("num_reset_periods") - 1)
-        return values
-
-    @root_validator
-    def check_import_or_export(cls, values: dict) -> dict:
-        validate(
-            values.get("import_demand") is True or values.get("export_demand") is True,
-            (
-                "Please use ImportDemandCharge or ExportDemandCharge classes, or alternatively,"
-                " set DemandCharge.import_demand or DemandCharge.export_demand as True before adding "
-                "the demand charge to the demand tariff objective."
-            ),
-        )
-        return values
-
-    @root_validator(pre=True)
-    def set_uid_and_name(cls, values: dict) -> dict:
-        if not values.get("uid"):
-            values["uid"] = shortuuid.uuid()
-
-        if not values.get("name"):
-            values["name"] = "dc_" + str(values["uid"])
-        return values
 
     @staticmethod
     def _get_active_periods(window_bool: np.ndarray, reset_periods: list[int]) -> dict[tuple[int, int, int], float]:
@@ -577,24 +552,27 @@ class DemandCharge(EchoBaseModel):
         return expr
 
 
+@define
 class ImportDemandCharge(DemandCharge):
-    import_demand = True
-    export_demand = False
-    min_demand: NonNegativeFloat = 0.0
+    import_demand: bool = True
+    export_demand: bool = False
+    min_demand: float = field(default=0.0, validator=validators.ge(0))
 
 
+@define
 class ExportDemandCharge(DemandCharge):
-    import_demand = False
-    export_demand = True
-    min_demand: NonPositiveFloat = 0.0
+    import_demand: bool = False
+    export_demand: bool = True
+    min_demand: float = field(default=0.0, validator=validators.le(0))
 
 
+@define
 class DemandTariffObjective(Objective):
     """A demand tariff objective contains a set of one or more demand charges."""
 
-    component: Port
-    demand_charges: list[DemandCharge | ImportDemandCharge | ExportDemandCharge]
-    expansion_periods: PositiveInt | None = 1
+    component: Port = field(kw_only=True)
+    demand_charges: list[DemandCharge | ImportDemandCharge | ExportDemandCharge] = field(kw_only=True)
+    expansion_periods: int = field(default=1, validator=validators.gt(0))
 
     def verify_objective(self, model: EchoConcreteModel, df: pd.DataFrame) -> None:
         def verify_non_overlapping() -> None:

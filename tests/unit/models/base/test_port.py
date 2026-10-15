@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pyomo as pyo
 import pytest
-from pydantic import ValidationError
 from pyomo.core.base.var import IndexedVar
 
 from echo import constants
@@ -13,6 +12,17 @@ from echo.exceptions import ConfigurationError
 from echo.models.base.port import Port
 from echo.models.base.types import InitialValue, InitialValueInput
 from echo.utils import TimeSeriesData
+
+
+def test_default_port_name_based_off_uid():
+    port = Port()
+    assert port.port_name.endswith(port.uid)
+
+
+def test_set_port_name():
+    port_name = "my-port-name"
+    port = Port(port_name=port_name)
+    assert port.port_name == port_name
 
 
 @pytest.mark.parametrize(
@@ -110,22 +120,22 @@ def test_port_raises_configuration_error(port_params: dict):
 def test_port_process_initial_value(raw_initial_val: list, expected_initial_val: dict):
     port = Port(port_name="port_name")
 
-    assert port.initial_value is None
+    assert port.initial_value == 0
     port.process_initial_value(initial_val=raw_initial_val)
     assert port.initial_value == expected_initial_val
 
 
 @pytest.mark.parametrize(
-    "import_constraint_value,export_constraint_value",
+    "import_constraint_value,export_constraint_value,expected_exception",
     [
-        ("NOT VALID", 1.0),  # value must be float or array-like
-        (1.0, "NOT VALID"),  # value must be float or array-like
-        (-1.0, -1.0),  # import value cannot be negative
-        (1.0, 1.0),  # Export value can't be
+        ("NOT VALID", 1.0, TypeError),  # value must be float or array-like
+        (1.0, "NOT VALID", TypeError),  # value must be float or array-like
+        (-1.0, -1.0, ValueError),  # import value cannot be negative
+        (1.0, 1.0, ValueError),  # Export value can't be positive
     ],
 )
-def test_validation(import_constraint_value, export_constraint_value):
-    with pytest.raises(ValidationError):
+def test_validation(import_constraint_value, export_constraint_value, expected_exception):
+    with pytest.raises(expected_exception):
         Port(
             flows=Flows.Both,
             import_constraint=FlowConstraint.Fixed,

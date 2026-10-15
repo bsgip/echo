@@ -1,10 +1,7 @@
 import pytest
-from pydantic import ValidationError
 
 from echo.exceptions import ConfigurationError
 from echo.models.gas.boiler_tempcontrolled import TempControlledBoiler
-
-nonnegativefloat_values = [(1, None), (0, None), (-1, ValidationError)]
 
 
 @pytest.mark.parametrize(
