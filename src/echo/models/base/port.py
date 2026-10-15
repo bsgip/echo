@@ -41,7 +41,7 @@ class Port:
 
     units: Units = Units.NA  # Used to ensure that common units are being optimised over at points of interconnection
 
-    initial_value: dict[tuple[int, int], float] | None = field(default=None)
+    initial_value: dict[tuple[int, int], float] | float = field(default=0)
 
     initial_value_ref: str | None = None  # string ref to df column
     initial_value_scaling: int | None = None  # scaling factor for initial values

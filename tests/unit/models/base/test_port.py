@@ -120,7 +120,7 @@ def test_port_raises_configuration_error(port_params: dict):
 def test_port_process_initial_value(raw_initial_val: list, expected_initial_val: dict):
     port = Port(port_name="port_name")
 
-    assert port.initial_value is None
+    assert port.initial_value == 0
     port.process_initial_value(initial_val=raw_initial_val)
     assert port.initial_value == expected_initial_val
 

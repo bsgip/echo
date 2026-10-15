@@ -29,7 +29,7 @@ class Source(Port):
     flows: Flows = Flows.Export
     export_constraint: FlowConstraint = FlowConstraint.NoConstraint
     flow_type: OptimisationType = OptimisationType.Parameter
-    initial_value: dict[tuple[int, int], float] | None = field(default=None, validator=nonpositive_generation_validator)
+    initial_value: dict[tuple[int, int], float] | float = field(default=0, validator=nonpositive_generation_validator)
 
     def add_source_profile(self, source_values: dict) -> None:
         self.set_initial_value(source_values)
@@ -53,7 +53,7 @@ class Sink(Port):
     import_constraint: FlowConstraint = FlowConstraint.NoConstraint
     flow_type: OptimisationType = OptimisationType.Parameter
 
-    initial_value: dict[tuple[int, int], float] | None = field(default=None, validator=nonnegative_load_validator)
+    initial_value: dict[tuple[int, int], float] | float = field(default=0, validator=nonnegative_load_validator)
 
     def add_sink_profile(self, sink_values: dict[tuple[int, int], float]) -> None:
         self.set_initial_value(sink_values)

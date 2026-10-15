@@ -44,8 +44,9 @@ def test_rebuild_all_edges():
     """Tests the rebuild_all_edges function usage after stateful data has been injected."""
 
     def assert_node_edge_port_values(
-        v0g_node_port_value: dict[tuple[int, int], float] | None,
-        v0g_edge_port_value: dict[tuple[int, int], float] | None,
+        ev: EVV0G | EVV1G | EVV2G,
+        v0g_node_port_value: dict[tuple[int, int], float] | float,
+        v0g_edge_port_value: dict[tuple[int, int], float] | float,
         v12g_node_value: dict[tuple[int, int], float] | None,
         v12g_edge_value: dict[tuple[int, int], float] | None,
     ):
@@ -138,8 +139,9 @@ def test_rebuild_all_edges():
         pv.add_generation_profile_from_array(solar_data, expansion_periods)
 
         assert_node_edge_port_values(
-            v0g_node_port_value=None,
-            v0g_edge_port_value=None,
+            ev=ev,
+            v0g_node_port_value=0,
+            v0g_edge_port_value=0,
             v12g_node_value=None,
             v12g_edge_value=None,
         )
@@ -153,6 +155,7 @@ def test_rebuild_all_edges():
         )
 
         assert_node_edge_port_values(
+            ev=ev,
             v0g_node_port_value={
                 (0, 0): 5.0,
                 (0, 1): 5.0,
@@ -191,6 +194,7 @@ def test_rebuild_all_edges():
         # system.rebuild_all_edges()
 
         assert_node_edge_port_values(
+            ev=ev,
             v0g_node_port_value={
                 (0, 0): 5.0,
                 (0, 1): 5.0,
