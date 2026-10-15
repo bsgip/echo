@@ -1,0 +1,7 @@
+echo.models.base.path module
+============================
+
+.. automodule:: echo.models.base.path
+   :members:
+   :show-inheritance:
+   :undoc-members:

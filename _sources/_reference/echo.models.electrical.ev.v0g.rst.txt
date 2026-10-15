@@ -1,0 +1,7 @@
+echo.models.electrical.ev.v0g module
+====================================
+
+.. automodule:: echo.models.electrical.ev.v0g
+   :members:
+   :show-inheritance:
+   :undoc-members:

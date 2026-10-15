@@ -1,0 +1,7 @@
+echo.models.agnostic.tellegen.multi\_commodity module
+=====================================================
+
+.. automodule:: echo.models.agnostic.tellegen.multi_commodity
+   :members:
+   :show-inheritance:
+   :undoc-members:

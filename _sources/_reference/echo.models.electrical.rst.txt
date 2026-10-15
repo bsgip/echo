@@ -1,0 +1,25 @@
+echo.models.electrical package
+==============================
+
+.. automodule:: echo.models.electrical
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.electrical.ev
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.electrical.base
+   echo.models.electrical.generation
+   echo.models.electrical.inverter

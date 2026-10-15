@@ -1,0 +1,7 @@
+echo.models.agnostic.aggregation module
+=======================================
+
+.. automodule:: echo.models.agnostic.aggregation
+   :members:
+   :show-inheritance:
+   :undoc-members:

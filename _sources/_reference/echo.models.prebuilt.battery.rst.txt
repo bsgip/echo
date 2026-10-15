@@ -1,0 +1,7 @@
+echo.models.prebuilt.battery module
+===================================
+
+.. automodule:: echo.models.prebuilt.battery
+   :members:
+   :show-inheritance:
+   :undoc-members:
