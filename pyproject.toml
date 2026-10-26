@@ -57,7 +57,7 @@ maintainers = [
 
 [project.urls]
 #Homepage = "https://pypi.org/project/PROJECTNAME"
-#Documentation = "https://PROJECTNAME.readthedocs.io"
+Documentation = "https://bsgip.github.io/echo/"
 Repository = "https://github.com/bsip/echo"
 Issues = "https://github.com/bsgip/echo/issues"
 Changelog = "https://github.com/bsgip/echo/blob/main/CHANGELOG.md"
