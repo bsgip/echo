@@ -64,8 +64,9 @@ Let's say we want to override the default value of attribute `b` in a subclass,
 
 ```python
 @define
-class ParentClass():
+class ParentClass:
     b: int = 2
+
 
 @define
 class ChildClass(ParentClass):
@@ -78,8 +79,9 @@ Instead we need the full attribute definition in the subclass (i.e. with the typ
 
 ```python
 @define
-class ParentClass():
+class ParentClass:
     b: int = 2
+
 
 @define
 class ChildClass(ParentClass):
@@ -96,8 +98,9 @@ In the following example, `b` will have a default value of 2 even with instances
 
 ```python
 @define
-class ParentClass():
+class ParentClass:
     b: int = 2
+
 
 # ChildClass missing @define
 class ChildClass(ParentClass):
@@ -118,7 +121,8 @@ To understand what happening let's look at an example,
 @define
 class Parent:
     a: int
-    b: bool = True 
+    b: bool = True
+
 
 @define
 class Child(Parent):
