@@ -2,7 +2,7 @@ import pyomo.environ as en
 from attrs import define, field
 from pyomo.core.expr import EqualityExpression
 
-from echo.configuration import Units
+from echo.configuration import Flows, Units
 from echo.exceptions import ConfigurationError, validate
 from echo.models.base import Node, Port
 from echo.models.scenario import EchoConcreteModel
@@ -34,6 +34,14 @@ class TellegenNode(Node):
         validate(
             len(self.ports) >= 2,
             f"A TellegenNode(id={self.uid}, name={self.node_name}) must have at least two ports.",
+        )
+
+        # We can't have all import or all export ports on a tellegennode
+        flows = {port.flows for port in self.ports.values()}
+        validate(
+            flows != {Flows.Import} and flows != {Flows.Export},
+            f"TellgenNode(id={self.uid}, name={self.node_name}) must have a mixture "
+            f"of import and export ports. Got: {flows}",
         )
 
     @property
