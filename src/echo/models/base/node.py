@@ -34,10 +34,12 @@ class Node:
         return f"inflow_{self.node_name}"
 
     def add_port(self, name: str, port: Port) -> None:
-        if self.ports.get(name) is None:
-            self.ports[name] = port
-        else:
-            raise ConfigurationError(f"Port with name {name} is already defined on node {self.node_name}")
+        if self.ports.get(name) is not None:
+            raise ConfigurationError(
+                f"Port with name '{name}' is already defined on TellegenNode(id={self.uid}, name={self.node_name})."
+            )
+
+        self.ports[name] = port
 
     def add_ports_from_list(self, names: Iterable[str], port_type: type[Port], **kwargs) -> None:
         """Creates a set of ports (using port_type) and adds them to this Node. The ports will be constructed
