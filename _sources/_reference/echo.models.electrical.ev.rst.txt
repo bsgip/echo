@@ -1,0 +1,20 @@
+echo.models.electrical.ev package
+=================================
+
+.. automodule:: echo.models.electrical.ev
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.electrical.ev.base
+   echo.models.electrical.ev.deprecated
+   echo.models.electrical.ev.ev_with_profile
+   echo.models.electrical.ev.v0g
+   echo.models.electrical.ev.v1g
+   echo.models.electrical.ev.v2g

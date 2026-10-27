@@ -1,0 +1,17 @@
+echo.models.gas package
+=======================
+
+.. automodule:: echo.models.gas
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.gas.base
+   echo.models.gas.boiler_fixedcop
+   echo.models.gas.boiler_tempcontrolled

@@ -1,0 +1,306 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>echo.visualization module &mdash; echo (Energy and Commodity Holistic Optimiser) 2.2.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ddecf0d5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="echo.validators module" href="echo.validators.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            echo (Energy and Commodity Holistic Optimiser)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nodes.html"><em>echo</em> Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ports.html"><em>echo</em> Ports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../edges.html"><em>echo</em> Edges</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../echo_graph.html"><em>echo</em> OptimisationGraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../objectives.html"><em>echo</em> Optimisation Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../constraints.html">Defining Optimisation Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimiser.html"><em>echo</em> Optimiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flows.html">Commodity flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../expansion_planning.html">Expansion planning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="echo.html">echo package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="echo.html#subpackages">Subpackages</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="echo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="echo.configuration.html">echo.configuration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.constants.html">echo.constants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.exceptions.html">echo.exceptions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.functional.html">echo.functional module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.optimiser.html">echo.optimiser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.tracker.html">echo.tracker module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.utils.html">echo.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="echo.validators.html">echo.validators module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">echo.visualization module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.PlotlyGraph"><code class="docutils literal notranslate"><span class="pre">PlotlyGraph</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.VizNodeType"><code class="docutils literal notranslate"><span class="pre">VizNodeType</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.echo_edge_text"><code class="docutils literal notranslate"><span class="pre">echo_edge_text()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.echo_node_color"><code class="docutils literal notranslate"><span class="pre">echo_node_color()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.echo_node_size"><code class="docutils literal notranslate"><span class="pre">echo_node_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#echo.visualization.echo_node_text"><code class="docutils literal notranslate"><span class="pre">echo_node_text()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">echo (Energy and Commodity Holistic Optimiser)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="echo.html">echo package</a></li>
+      <li class="breadcrumb-item active">echo.visualization module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_reference/echo.visualization.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-echo.visualization">
+<span id="echo-visualization-module"></span><h1>echo.visualization module<a class="headerlink" href="#module-echo.visualization" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.visualization.PlotlyGraph">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">PlotlyGraph</span></span><a class="headerlink" href="#echo.visualization.PlotlyGraph" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="echo.visualization.PlotlyGraph.plot">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">graph:</span> <span class="pre">~networkx.classes.graph.Graph,</span> <span class="pre">positions:</span> <span class="pre">dict,</span> <span class="pre">node_text:</span> <span class="pre">~collections.abc.Callable[[~typing.Any,</span> <span class="pre">~typing.Any],</span> <span class="pre">str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">node_size:</span> <span class="pre">~collections.abc.Callable[[~typing.Any,</span> <span class="pre">~typing.Any],</span> <span class="pre">int]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">node_color:</span> <span class="pre">~collections.abc.Callable[[~typing.Any,</span> <span class="pre">~typing.Any],</span> <span class="pre">str]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">node_hover_text:</span> <span class="pre">~collections.abc.Callable[[~typing.Any,</span> <span class="pre">~typing.Any],</span> <span class="pre">str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">edge_text:</span> <span class="pre">~collections.abc.Callable[[~typing.Any],</span> <span class="pre">str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">edge_hover_text:</span> <span class="pre">~collections.abc.Callable[[~typing.Any],</span> <span class="pre">str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">PlotlyGraph.&lt;lambda&gt;&gt;,</span> <span class="pre">title:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">add_legend:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">show_node_names:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">color_connection_point_type:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">template:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'plotly_white'</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Figure</span></span></span><a class="headerlink" href="#echo.visualization.PlotlyGraph.plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">VizNodeType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#echo.visualization.VizNodeType" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Battery">
+<span class="sig-name descname"><span class="pre">Battery</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'battery'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Battery" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Boiler">
+<span class="sig-name descname"><span class="pre">Boiler</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'boiler'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Boiler" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Bus">
+<span class="sig-name descname"><span class="pre">Bus</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bus'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Bus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Chiller">
+<span class="sig-name descname"><span class="pre">Chiller</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'chiller'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Chiller" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ConnectionPoint">
+<span class="sig-name descname"><span class="pre">ConnectionPoint</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'connectionpoint'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ConnectionPoint" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.CoolingDemand">
+<span class="sig-name descname"><span class="pre">CoolingDemand</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'coolingdemand'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.CoolingDemand" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.EV">
+<span class="sig-name descname"><span class="pre">EV</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ev'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.EV" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ElectricalLoad">
+<span class="sig-name descname"><span class="pre">ElectricalLoad</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'electricalload'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ElectricalLoad" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.GasGrid">
+<span class="sig-name descname"><span class="pre">GasGrid</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'gasgrid'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.GasGrid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Grid">
+<span class="sig-name descname"><span class="pre">Grid</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'grid'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Grid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.HeatAggregationNode">
+<span class="sig-name descname"><span class="pre">HeatAggregationNode</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'heataggregationnode'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.HeatAggregationNode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.HeatPump">
+<span class="sig-name descname"><span class="pre">HeatPump</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'heatpump'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.HeatPump" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.HeatingDemand">
+<span class="sig-name descname"><span class="pre">HeatingDemand</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'heatingdemand'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.HeatingDemand" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Inverter">
+<span class="sig-name descname"><span class="pre">Inverter</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'inverter'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Inverter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Line">
+<span class="sig-name descname"><span class="pre">Line</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'line'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Line" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Load">
+<span class="sig-name descname"><span class="pre">Load</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'load'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Load" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.MultiCommodityBus">
+<span class="sig-name descname"><span class="pre">MultiCommodityBus</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'multicommoditybus'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.MultiCommodityBus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ParameterisedChiller">
+<span class="sig-name descname"><span class="pre">ParameterisedChiller</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'parameterisedchiller'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ParameterisedChiller" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ParameterisedHeatPump">
+<span class="sig-name descname"><span class="pre">ParameterisedHeatPump</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'parameterisedheatpump'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ParameterisedHeatPump" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.PartitionedMultiCommodityBus">
+<span class="sig-name descname"><span class="pre">PartitionedMultiCommodityBus</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'partitionedmulticommoditybus'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.PartitionedMultiCommodityBus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Solar">
+<span class="sig-name descname"><span class="pre">Solar</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solar'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Solar" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ThermalDistribution">
+<span class="sig-name descname"><span class="pre">ThermalDistribution</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'thermaldistribution'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ThermalDistribution" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ThermalStorage">
+<span class="sig-name descname"><span class="pre">ThermalStorage</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'thermalstorage'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ThermalStorage" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.ThermalTellegen">
+<span class="sig-name descname"><span class="pre">ThermalTellegen</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'thermaltellegen'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.ThermalTellegen" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="echo.visualization.VizNodeType.Transformer">
+<span class="sig-name descname"><span class="pre">Transformer</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'transformer'</span></span><a class="headerlink" href="#echo.visualization.VizNodeType.Transformer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.visualization.echo_edge_text">
+<span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">echo_edge_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#echo.visualization.echo_edge_text" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.visualization.echo_node_color">
+<span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">echo_node_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#echo.visualization.echo_node_color" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.visualization.echo_node_size">
+<span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">echo_node_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#echo.visualization.echo_node_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="echo.visualization.echo_node_text">
+<span class="sig-prename descclassname"><span class="pre">echo.visualization.</span></span><span class="sig-name descname"><span class="pre">echo_node_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#echo.visualization.echo_node_text" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="echo.validators.html" class="btn btn-neutral float-left" title="echo.validators module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSGIP.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
