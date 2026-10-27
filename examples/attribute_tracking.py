@@ -8,8 +8,7 @@ from echo import visualization as viz
 from echo.configuration import Units
 from echo.models.agnostic import FlexPort, Sink, TellegenNode
 from echo.models.base import Node, OptimisationGraph
-from echo.models.scenario import (ScenarioSettings,
-                                  engine_settings_from_environment)
+from echo.models.scenario import ScenarioSettings, engine_settings_from_environment
 from echo.models.thermal import ThermalStorage
 from echo.objectives.base import ObjectiveSet
 from echo.objectives.power import PeakPositivePower
@@ -33,7 +32,7 @@ INTERVAL_DURATION = 30
 NUM_EXPANSION_PERIODS = 1
 
 
-def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True):
+def default_surface_area_of_cylinder(volume: float, include_bottom: bool = True) -> float:
     """Given volume of the cylinder in cubic meters, calculate surface area. Assuming height to diameter ration H/D=3.
 
     If include_bottom is False, do not include bottom surface.
@@ -150,7 +149,7 @@ tracker = optimise_results.model_attribute_tracker
 print(tracker)
 
 
-def to_html_string(attrs: dict[str, list[Any]]):
+def to_html_string(attrs: dict[str, list[Any]]) -> str:
     attr_text = ""
     for attr_class in sorted(attrs.keys()):
         attr_text += "<br>"
@@ -160,7 +159,7 @@ def to_html_string(attrs: dict[str, list[Any]]):
     return attr_text
 
 
-def node_hover_text(node: Any, *_) -> str:
+def node_hover_text(node: Node, *_: object) -> str:
     node_object = optimise_results.graph.node_obj[node]
     node_type = type(node_object).__name__
 
@@ -173,7 +172,7 @@ def node_hover_text(node: Any, *_) -> str:
     return ""
 
 
-def edge_hover_text(edge: Any, *_) -> str:
+def edge_hover_text(edge: Node, *_: object) -> str:
     edge_reversed = edge[::-1]  # reverse the edge tuple (not sure why edges are defined in the opposite sense)
     edge_object = optimise_results.graph.edge_obj[edge_reversed]
 
@@ -185,8 +184,10 @@ def edge_hover_text(edge: Any, *_) -> str:
         return title + to_html_string(attrs)
     return ""
 
-def node_size(*_) -> int:
+
+def node_size(*_: object) -> int:
     return 40
+
 
 # Use the new visualization function to plot the network/graph
 # This function takes callbacks for setting the node (colors, text/labels, hover text etc).
