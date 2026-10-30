@@ -4,7 +4,7 @@
 #
 # Requisites:
 # - uv (https://docs.astral.sh/uv/)
-# - just (https://docs.astral.sh/uv/)
+# - just (https://just.systems/man/en/)
 #
 # Warning:
 # The 'uv run' command used in the recipe below, removes any existing uv-managed virtual environment
