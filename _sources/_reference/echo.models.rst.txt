@@ -1,0 +1,29 @@
+echo.models package
+===================
+
+.. automodule:: echo.models
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.agnostic
+   echo.models.base
+   echo.models.carbon
+   echo.models.electrical
+   echo.models.gas
+   echo.models.prebuilt
+   echo.models.thermal
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.scenario

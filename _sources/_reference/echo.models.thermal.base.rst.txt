@@ -1,0 +1,7 @@
+echo.models.thermal.base module
+===============================
+
+.. automodule:: echo.models.thermal.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

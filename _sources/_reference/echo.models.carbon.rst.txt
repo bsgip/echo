@@ -1,0 +1,16 @@
+echo.models.carbon package
+==========================
+
+.. automodule:: echo.models.carbon
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.carbon.aggregation
+   echo.models.carbon.base

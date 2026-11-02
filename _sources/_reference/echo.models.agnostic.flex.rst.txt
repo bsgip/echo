@@ -1,0 +1,7 @@
+echo.models.agnostic.flex module
+================================
+
+.. automodule:: echo.models.agnostic.flex
+   :members:
+   :show-inheritance:
+   :undoc-members:

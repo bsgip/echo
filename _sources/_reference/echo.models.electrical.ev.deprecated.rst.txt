@@ -1,0 +1,7 @@
+echo.models.electrical.ev.deprecated module
+===========================================
+
+.. automodule:: echo.models.electrical.ev.deprecated
+   :members:
+   :show-inheritance:
+   :undoc-members:

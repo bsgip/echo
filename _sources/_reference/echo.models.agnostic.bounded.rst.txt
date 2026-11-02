@@ -1,0 +1,7 @@
+echo.models.agnostic.bounded module
+===================================
+
+.. automodule:: echo.models.agnostic.bounded
+   :members:
+   :show-inheritance:
+   :undoc-members:

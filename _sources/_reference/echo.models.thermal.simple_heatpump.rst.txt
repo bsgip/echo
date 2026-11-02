@@ -1,0 +1,7 @@
+echo.models.thermal.simple\_heatpump module
+===========================================
+
+.. automodule:: echo.models.thermal.simple_heatpump
+   :members:
+   :show-inheritance:
+   :undoc-members:

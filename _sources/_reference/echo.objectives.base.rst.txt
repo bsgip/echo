@@ -1,0 +1,7 @@
+echo.objectives.base module
+===========================
+
+.. automodule:: echo.objectives.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

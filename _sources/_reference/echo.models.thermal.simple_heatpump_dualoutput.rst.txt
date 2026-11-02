@@ -1,0 +1,7 @@
+echo.models.thermal.simple\_heatpump\_dualoutput module
+=======================================================
+
+.. automodule:: echo.models.thermal.simple_heatpump_dualoutput
+   :members:
+   :show-inheritance:
+   :undoc-members:

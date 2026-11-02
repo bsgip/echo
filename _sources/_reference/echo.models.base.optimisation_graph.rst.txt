@@ -1,0 +1,7 @@
+echo.models.base.optimisation\_graph module
+===========================================
+
+.. automodule:: echo.models.base.optimisation_graph
+   :members:
+   :show-inheritance:
+   :undoc-members:

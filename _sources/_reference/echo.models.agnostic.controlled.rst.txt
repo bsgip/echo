@@ -1,0 +1,7 @@
+echo.models.agnostic.controlled module
+======================================
+
+.. automodule:: echo.models.agnostic.controlled
+   :members:
+   :show-inheritance:
+   :undoc-members:

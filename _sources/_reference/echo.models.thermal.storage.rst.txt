@@ -1,0 +1,7 @@
+echo.models.thermal.storage module
+==================================
+
+.. automodule:: echo.models.thermal.storage
+   :members:
+   :show-inheritance:
+   :undoc-members:

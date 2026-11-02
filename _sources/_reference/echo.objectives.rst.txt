@@ -1,0 +1,18 @@
+echo.objectives package
+=======================
+
+.. automodule:: echo.objectives
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.objectives.base
+   echo.objectives.contingency
+   echo.objectives.power
+   echo.objectives.tariff

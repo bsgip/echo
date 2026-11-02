@@ -1,0 +1,7 @@
+echo.models.carbon.base module
+==============================
+
+.. automodule:: echo.models.carbon.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

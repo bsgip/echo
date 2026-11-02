@@ -1,0 +1,21 @@
+echo.models.thermal package
+===========================
+
+.. automodule:: echo.models.thermal
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   echo.models.thermal.base
+   echo.models.thermal.parameterised_chiller
+   echo.models.thermal.parameterised_heatpump
+   echo.models.thermal.simple_chiller
+   echo.models.thermal.simple_heatpump
+   echo.models.thermal.simple_heatpump_dualoutput
+   echo.models.thermal.storage
