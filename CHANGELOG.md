@@ -7,16 +7,17 @@
 - Adds support for unconnected (dangling) ports by setting `all_dangling_port` to True.
 - Adds support for `ECHO_DISABLE_PATH_WARNING` environment variable. This is enabled by default when running pytest.
 - Adds [attrs](https://www.attrs.org/en/stable/index.html) as a project dependency.
+- Adds support for Python 3.15 (drop support for Python 3.11)
 
 #### Changes
 
 - Prevent warnings for unconnected (dangling) ports on EVs.
 - NewSolar node renamed ScaledSolar.
-- Decomposes the large model modules into smaller more manageable modules. 
+- Decomposes the large model modules into smaller more manageable modules.
 - Trying to add a port to a model with import/export contraints set to `FlowConstraint.Series` or `FlowConstraint.InRange` now raises a `NotImplementedError`.
 - When setting active periods on a Port, the `set_active_periods_from_array` method now accepts a list of booleans in addition to a list of 0's and 1's.
 - The `get_port` method on Node now returns None rather than raising a ValueError, if no such port with that name can be found.
-- `verify_node` now called when adding nodes to models and `verify_node` modified to now verify not only check the node but also verify (via call to `verify_port`) any ports attached to the node. 
+- `verify_node` now called when adding nodes to models and `verify_node` modified to now verify not only check the node but also verify (via call to `verify_port`) any ports attached to the node.
 - Fix: BoundedLoads call `nonnegative_load` validator instead of incorrect `nonnegative_costs` validator.
 - Major: Migrated the codebase from pydantic V1 to [attrs](https://www.attrs.org/en/stable/index.html). See [Attrs Migration Guide](https://github.com/bsgip/echo/blob/main/attrs-migration.md) for more details.
 - The ArrayType Class is replaced by a type alias (this was necessary for the migration from pydantic to attrs)
@@ -24,6 +25,7 @@
 #### Removes
 
 - Pydantic project dependency.
+- Removes support for Python 3.11 (adds support for Python 3.15)
 
 
 ## Releases
