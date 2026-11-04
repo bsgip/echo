@@ -8,7 +8,7 @@ from echo.objectives.contingency import ContingencyNegative, ContingencyPositive
     "duration, expected_error",
     [
         (1.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
@@ -28,7 +28,7 @@ def test_contingencypositive_validation(duration, expected_error):
     "duration, expected_error",
     [
         (1.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
