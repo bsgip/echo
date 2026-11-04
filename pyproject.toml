@@ -10,7 +10,6 @@ description = "The Energy and Commodity Holistic Optimiser (ECHO)."
 keywords = ["energy", "commodity", "modelling", "optimization"]
 classifiers = [
   "Development Status :: 4 - Beta",
-  "Framework :: Pydantic :: 1",
   "Intended Audience :: Science/Research",
   "Operating System :: OS Independent",
   "Topic :: Scientific/Engineering",
