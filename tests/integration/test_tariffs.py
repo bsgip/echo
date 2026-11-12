@@ -429,7 +429,7 @@ def test_block_tariff():
     )
 
     system.add_nodes_from([grid, load])
-    system.connect_ports_and_create_edge(load.ports["load"], grid.ports["grid"], nodes=("grid", "load"))
+    system.connect_ports_and_create_edge(load.ports["load"], grid.ports["grid"])
 
     block_tariff = BlockImportTariff(
         component=load.ports["load"],

@@ -2605,9 +2605,8 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     interval_duration = 60
     time_periods = len(available)
 
-    # Inject data into the EV
-    system.inject_data_into_ev(
-        node_name="ev",
+    # Update EV
+    ev.set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2739,9 +2738,8 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
     n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
     n_demand_attrs_old = len(dir(system.get_node("ev").ports["ev_to_cp"]))
 
-    # Inject data into the EV
-    system.inject_data_into_ev(
-        node_name="ev",
+    # Update EV
+    ev.set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2853,9 +2851,8 @@ def test_set_state_attrs_does_not_add_new_attrs_v1g():
     n_vehicle_attrs_old = len(dir(system.get_node("ev").ports["vehicle"]))
     n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
 
-    # Inject data into the EV
-    system.inject_data_into_ev(
-        node_name="ev",
+    # Update EV
+    ev.set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2970,9 +2967,8 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
     n_usage_attrs_old = len(dir(system.get_node("ev").ports["usage"]))
     n_demand_attrs_old = len(dir(system.get_node("ev").ports["ev_to_cp"]))
 
-    # Inject data into the EV
-    system.inject_data_into_ev(
-        node_name="ev",
+    # Update EV
+    ev.set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -3844,8 +3840,7 @@ def test_update_node_EVV0G():
     # when constructing the edges.
     assert old_edge_port is old_ev_cp_port
 
-    system.update_node(
-        "ev",
+    system.get_node("ev").set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -3970,8 +3965,7 @@ def test_update_node_EVV1G():
     # when constructing the edges.
     assert old_edge_port is old_ev_cp_port
 
-    system.update_node(
-        "ev",
+    system.get_node("ev").set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -4096,8 +4090,7 @@ def test_update_node_EVV2G():
     # when constructing the edges.
     assert old_edge_port is old_ev_cp_port
 
-    system.update_node(
-        "ev",
+    system.get_node("ev").set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,

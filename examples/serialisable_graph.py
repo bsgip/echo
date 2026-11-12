@@ -99,17 +99,14 @@ system.add_nodes_from([grid, battery, load, connection_point])
 system.connect_ports_and_create_edge(
     grid.ports["grid"],
     connection_point.ports["grid"],
-    nodes=(grid.node_name, connection_point.node_name),
 )
 system.connect_ports_and_create_edge(
     connection_point.ports["load"],
     load.ports["load"],
-    nodes=(load.node_name, connection_point.node_name),
 )
 system.connect_ports_and_create_edge(
     connection_point.ports["bess"],
     battery.ports["bess"],
-    nodes=(battery.node_name, connection_point.node_name),
 )
 
 throughput_cost = ThroughputCost(component=b, rate=0.000001)

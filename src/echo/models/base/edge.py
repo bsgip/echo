@@ -20,7 +20,6 @@ class Edge:
     """
 
     vertices: tuple[Port, Port]
-    nodes: tuple[str, str] | None = None  # tuple of node names - todo make this required
     tariff: list | None = None
 
     uid: str = field(factory=shortuuid.uuid)
