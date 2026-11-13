@@ -105,7 +105,7 @@ def test_simple_controlled_load_limited_to_max_energy():
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
     system.add_nodes([grid, controlled_load])
-    system.add_edge_obj(edge)
+    system.add_edge(edge, nodes=(grid.node_name, controlled_load.node_name))
 
     # maximise load imports
     optimise_results = optimise(
@@ -146,7 +146,7 @@ def test_simple_controlled_load_limited_to_max_power():
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
     system.add_nodes([grid, controlled_load])
-    system.add_edge_obj(edge)
+    system.add_edge(edge, nodes=(grid.node_name, controlled_load.node_name))
 
     # maximise imports
     optimise_results = optimise(

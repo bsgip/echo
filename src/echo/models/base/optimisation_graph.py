@@ -95,7 +95,6 @@ class OptimisationGraph:
         for n in nodes:
             self.add_node(n)
 
-    # @deprecated
     def get_node(self, node_name: str) -> Node | None:
         """Returns node object given node name"""
         return self.nodes.get(node_name)
@@ -131,7 +130,8 @@ class OptimisationGraph:
 
         self.edges[(node1_name, node2_name)] = edge
 
-    # @deprecated
+
+    @deprecated(version="2.3.0", reason="Use add_edge method instead.")
     def add_edge_obj(self, edge: list[Edge] | Edge) -> None:
         # todo phase out this method
         if isinstance(edge, list):
@@ -140,7 +140,7 @@ class OptimisationGraph:
         else:
             self.add_edge(edge)
 
-    # @deprecated
+    @deprecated(version="2.3.0", reason="Use add_edge method instead.")
     def add_edges_from(self, edge: list[Edge]) -> None:
         for e in edge:
             self.add_edge(e)
@@ -361,7 +361,7 @@ class OptimisationGraph:
         self,
         axes: matplotlib.axes.Axes,
         with_labels: bool = False,
-        labels: dict[str, str] = None,
+        labels: dict[str, str] | None = None,
         **kwargs,
     ) -> None:
         """Draws the network on a matplotlib plot
@@ -405,7 +405,7 @@ class OptimisationGraph:
 
         return json.dumps(nodes)
 
-    @deprecated
+    @deprecated(version="2.3.0")
     def print_port_names(self) -> None:
         """Prints port name-uid pairs, useful for debugging infeasible optimisation"""
         for n in self.nodes.values():
@@ -420,7 +420,7 @@ class OptimisationGraph:
                     output.add(p.port_name)
         return output
 
-    @deprecated
+    @deprecated(version="2.3.0")
     def get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
         return self._get_port_names_from_nodes(skip_dangling_ports=skip_dangling_ports)
 
@@ -431,7 +431,7 @@ class OptimisationGraph:
             output.add(e.vertices[1].port_name)
         return output
 
-    @deprecated
+    @deprecated(version="2.3.0")
     def get_port_names_from_edges(self) -> set[str]:
         return self._get_port_names_from_edges()
 
@@ -468,16 +468,16 @@ class OptimisationGraph:
         g1_subgraph = system.subgraph(g1_nodes)
         g2_subgraph = system.subgraph(g2_nodes)
 
-        def create_new_graph(nodes: list, edges: list) -> OptimisationGraph:
+        def create_new_graph(nodes: list[str], edges: list) -> OptimisationGraph:
             """Creates a new graph from a list of node names and edge names"""
             new_graph = OptimisationGraph()
             for n in nodes:
                 new_graph.add_nodes(self.nodes[n])
             for ed in edges:
                 if self.edges.get(ed) is not None:
-                    new_graph.add_edge_obj(self.edges[ed])
+                    new_graph.add_edge(self.edges[ed])
                 else:
-                    new_graph.add_edge_obj(self.edges[(ed[1], ed[0])])
+                    new_graph.add_edge(self.edges[(ed[1], ed[0])])
 
             return new_graph
 
@@ -499,10 +499,11 @@ class OptimisationGraph:
         # Inject stateful data
         # If the node has a set_stateful_attrs() function, use that function.
         # If it is not, use node.update()
-        if hasattr(self.get_node(node_name), "set_stateful_attrs"):
-            self.get_node(node_name).set_stateful_attrs(**kwargs)
-        else:
-            self.get_node(node_name).update(**kwargs)
+        if node:= self.nodes.get(node_name):
+            if hasattr(node, "set_stateful_attrs"):
+                node.set_stateful_attrs(**kwargs)
+            else:
+                node.update(**kwargs)
 
     @deprecated(
         version="2.3.0",
