@@ -1,5 +1,6 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 
+from collections.abc import Iterable
 import os
 import warnings
 from typing import cast
@@ -52,22 +53,17 @@ class OptimisationGraph:
         g.add_edges_from(self.edges.keys())
         return g
 
+    # This method should be made private and the public method deprecated
     def add_node(self, node: Node) -> None:
-        validate(
-            node.node_name not in self.nodes,
-            f"Node '{node.node_name}' already defined",
-        )
         self.nodes[node.node_name] = node
 
-    def remove_node(self, node_name: str) -> Node | None:
-        if node_name in self.nodes:
-            return self.nodes.pop(node_name)
-        return None
+    def add_nodes(self, nodes: Node | Iterable[Node]) -> None:
+        if isinstance(nodes, Node):
+            self.add_node(nodes)
+            return
 
-    def remove_edge(self, edge_nodes: tuple[str, str]) -> Edge | None:
-        if edge_nodes in self.edges:
-            return self.edges.pop(edge_nodes)
-        return None
+        for node in nodes:
+            self.add_node(node)
 
     # @deprecated
     def delete_node(self, node_name: str) -> None:
