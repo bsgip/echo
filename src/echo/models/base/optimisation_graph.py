@@ -28,7 +28,6 @@ class OptimisationGraph:
     edges: dict[tuple[str, str], Edge] = field(factory=dict)
     paths: dict[tuple, Path] = field(factory=dict)
 
-
     @property
     # @deprecated
     def node_obj(self) -> dict[str, Node]:
@@ -65,14 +64,14 @@ class OptimisationGraph:
         for node in nodes:
             self.add_node(node)
 
-    # @deprecated
+    @deprecated(version="2.3.0")
     def delete_node(self, node_name: str) -> None:
         if self.get_node(node_name) is not None:
             del self.nodes[node_name]
         else:
             print(f"Node {node_name} not found.")
 
-    # @deprecated
+    @deprecated(version="2.3.0")
     def delete_edge(self, edge_nodes: tuple[str, str]) -> None:
         if self.get_edge(edge_nodes) is not None:
             del self.edges[edge_nodes]
@@ -111,7 +110,7 @@ class OptimisationGraph:
 
         return None
 
-    def add_edge(self, edge: Edge, nodes: tuple[str,str]|None=None) -> None:
+    def add_edge(self, edge: Edge, nodes: tuple[str, str] | None = None) -> None:
         port1 = edge.vertices[0]
         port2 = edge.vertices[1]
         validate(
@@ -145,7 +144,6 @@ class OptimisationGraph:
         for e in edge:
             self.add_edge(e)
 
-
     # @deprecated
     def connect_ports_and_create_edge(
         self,
@@ -156,7 +154,6 @@ class OptimisationGraph:
         """Creates an edge between port1 and port2 and adds it to the graph"""
         edge = Edge(vertices=(port1, port2), edge_name=edge_name) if edge_name else Edge(vertices=(port1, port2))
         self.add_edge(edge)
-
 
     @deprecated(
         version="2.3.0",
@@ -414,7 +411,6 @@ class OptimisationGraph:
             for pn, p in n.ports.items():
                 print(pn, ", ", p.port_name)
 
-
     def _get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
         output = set()
         for n in self.nodes.values():
@@ -422,7 +418,6 @@ class OptimisationGraph:
                 if skip_dangling_ports and not p.allow_dangling_port:
                     output.add(p.port_name)
         return output
-
 
     @deprecated
     def get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
@@ -507,7 +502,6 @@ class OptimisationGraph:
             self.get_node(node_name).set_stateful_attrs(**kwargs)
         else:
             self.get_node(node_name).update(**kwargs)
-
 
     @deprecated(
         version="2.3.0",

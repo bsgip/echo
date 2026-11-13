@@ -291,10 +291,6 @@ def test_v0g_with_stateful_data_injection():
             interval_duration=new_interval_duration,
         )
 
-        # Update the edge
-        system.delete_edge(("cp", "ev"))
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-
         assert system.node_obj["ev"].initial_state_of_charge == 50
         assert system.node_obj["ev"].ports["vehicle"].initial_state_of_charge == 50
 
@@ -664,10 +660,6 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
         interval_duration=interval_duration,
     )
 
-    # Update the edge
-    system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
-
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
     assert system.get_edge(("cp", "ev")).vertices[1].initial_value == system.get_node("ev").ports["cp"].initial_value
@@ -826,10 +818,6 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
         initial_state_of_charge=initial_state_of_charge,
         interval_duration=interval_duration,
     )
-
-    # Update the edge
-    system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev_v0g"], ev.ports["cp"])
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection cp
     # and ev
@@ -1322,10 +1310,6 @@ def test_simple_v1g_with_stateful_data_injection():
         interval_duration=new_interval_duration,
     )
 
-    # Update the edge
-    system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
-
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
     # cp and ev
     assert system.get_edge(("cp", "ev")).vertices[1].active_periods == system.get_node("ev").ports["cp"].active_periods
@@ -1420,10 +1404,6 @@ def test_simple_v2g_with_stateful_data_injection():
         initial_state_of_charge=new_initial_state_of_charge,
         interval_duration=new_interval_duration,
     )
-
-    # Update the edge
-    system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
     # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
     # cp and ev
@@ -1537,10 +1517,6 @@ def test_simple_v1g_with_stateful_data_injection_2():
             initial_state_of_charge=new_initial_state_of_charge,
             interval_duration=new_interval_duration,
         )
-
-        # Update the edge
-        system.delete_edge(("cp", "ev"))
-        system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
         # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp" connection
         # cp and ev
@@ -1657,10 +1633,6 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
                 initial_state_of_charge=new_initial_state_of_charge,
                 interval_duration=new_interval_duration,
             )
-
-            # Update the edge
-            system.delete_edge(("cp", "ev"))
-            system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
             # Check that the values of initial_value on the ev node "cp" port is the same as the Edge port "cp"
             # connection cp and ev
@@ -2247,10 +2219,6 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
         interval_duration=interval_duration,
     )
 
-    # Update the edge
-    system.delete_edge(("connection_point", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-
     # Create objectives/tariffs
     import_cost = ImportTariff(
         component=connection_point.ports["cp_to_grid"],
@@ -2383,10 +2351,6 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
         interval_duration=interval_duration,
     )
 
-    # Update the edge
-    system.delete_edge(("connection_point", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["cp_to_ev"], ev.ports["ev_to_cp"])
-
     # Create objectives/tariffs
     import_cost = ImportTariff(
         component=connection_point.ports["cp_to_grid"],
@@ -2486,10 +2450,6 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
         initial_state_of_charge=new_initial_state_of_charge,
         interval_duration=new_interval_duration,
     )
-
-    # Update the edge
-    system.delete_edge(("cp", "ev"))
-    system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
 
     # Get node uid
     new_node_uid = system.get_node("ev").uid
