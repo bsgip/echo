@@ -69,7 +69,7 @@ def test_system_precharges_for_demand_tariff(demand, minimum_demand, battery_cap
     site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
     cp1 = site1.ports["cp"]
 
-    system.add_node_obj([grid, battery1, load1, site1])
+    system.add_nodes([grid, battery1, load1, site1])
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
@@ -154,7 +154,7 @@ def test_demand_charge_minimised_given_random_demand_in_period(demand_period_dem
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load1.ports["demand"] = l1
 
-    system.add_node_obj([grid, battery1, site1, solar, load1])
+    system.add_nodes([grid, battery1, site1, solar, load1])
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
     system.connect_ports_and_create_edge(pv1, site1.ports["pv"])
@@ -239,7 +239,7 @@ def test_system_path_flows_adjust_to_path_tariffs():
     site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
     cp1 = site1.ports["cp"]
 
-    system.add_node_obj([grid, battery1, load1, site1])
+    system.add_nodes([grid, battery1, load1, site1])
 
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
@@ -314,7 +314,7 @@ def test_path_flows_respect_port_constraints():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load.ports["demand"] = l1
 
-    system.add_node_obj([grid, battery, site, solar, load])
+    system.add_nodes([grid, battery, site, solar, load])
     system.connect_ports_and_create_edge(site.ports["bess"], b1)
     system.connect_ports_and_create_edge(site.ports["load"], l1)
     system.connect_ports_and_create_edge(pv1, site.ports["pv"])
@@ -380,7 +380,7 @@ def test_demand_tariff_reset_periods():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load.ports["demand"] = l1
 
-    system.add_node_obj([grid, load])
+    system.add_nodes([grid, load])
     system.connect_ports_and_create_edge(grid.ports["load"], l1)
 
     tariff_array_day = [0] * 12 + [1] * 12 + [0] * 12 + [1] * 12
@@ -428,7 +428,7 @@ def test_block_tariff():
         port_unit=Units.KW,
     )
 
-    system.add_nodes_from([grid, load])
+    system.add_nodes([grid, load])
     system.connect_ports_and_create_edge(load.ports["load"], grid.ports["grid"])
 
     block_tariff = BlockImportTariff(

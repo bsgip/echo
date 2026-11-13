@@ -41,7 +41,7 @@ def test_positive_contingency_unaffected_by_uncurtailable_solar_capacity():
     inverter.add_ports_from_list(["cp", "bess", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([grid, battery, solar, inverter])
+    system.add_nodes([grid, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
@@ -103,7 +103,7 @@ def test_storage_discharge_and_solar_curtailment_to_maximise_positive_contingenc
     inverter.add_ports_from_list(["cp", "bess", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([grid, battery, solar, inverter])
+    system.add_nodes([grid, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
@@ -173,7 +173,7 @@ def test_positive_contingency_calculation_with_storage_full():
     l1.add_demand_profile_from_array([6.0] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)

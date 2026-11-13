@@ -57,6 +57,7 @@ class OptimisationGraph:
         self.nodes[node.node_name] = node
 
     def add_nodes(self, nodes: Node | Iterable[Node]) -> None:
+        """Adds either a single node or list of nodes to graph"""
         if isinstance(nodes, Node):
             self.add_node(nodes)
             return
@@ -78,7 +79,7 @@ class OptimisationGraph:
         else:
             print(f"Edge {edge_nodes} not found.")
 
-    # @deprecated
+    @deprecated(version="2.3.0", reason="Use add_nodes method instead.")
     def add_node_obj(self, node: list | Node) -> None:
         """Adds either a single node or list of nodes to graph"""
         # todo phase out this method
@@ -88,7 +89,7 @@ class OptimisationGraph:
         else:
             self.add_node(node)
 
-    # @deprecated
+    @deprecated(version="2.3.0", reason="Use add_nodes method instead.")
     def add_nodes_from(self, nodes: list[Node]) -> None:
         """Adds a list of nodes to the graph."""
         for n in nodes:
@@ -471,7 +472,7 @@ class OptimisationGraph:
             """Creates a new graph from a list of node names and edge names"""
             new_graph = OptimisationGraph()
             for n in nodes:
-                new_graph.add_node_obj(self.nodes[n])
+                new_graph.add_nodes(self.nodes[n])
             for ed in edges:
                 if self.edges.get(ed) is not None:
                     new_graph.add_edge_obj(self.edges[ed])

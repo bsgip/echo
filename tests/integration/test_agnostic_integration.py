@@ -73,7 +73,7 @@ def test_partitioned_bus_flows():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj(
+    system.add_nodes(
         [
             thermal_mains_1,
             thermal_mains_2,

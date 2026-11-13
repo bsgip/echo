@@ -36,7 +36,7 @@ def test_solar_generation_limited_by_inverter_size():
     inverter.add_ports_from_list(["cp", "pv", "ground"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([cp, solar, inverter, ground])
+    system.add_nodes([cp, solar, inverter, ground])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], cp.ports["inverter"])
@@ -85,7 +85,7 @@ def test_non_curtailable_system_not_curtailed():
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_nodes([grid, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
@@ -134,7 +134,7 @@ def test_curtailable_system_curtailed():
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_nodes([grid, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])

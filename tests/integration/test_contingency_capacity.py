@@ -54,7 +54,7 @@ def test_negative_contingency_respects_hybrid_inverter_constraints():
     l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
@@ -132,7 +132,7 @@ def test_negative_contingency_maximisation_curtails_solar():
     l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
@@ -214,7 +214,7 @@ def test_negative_contingency_calculation_with_no_available_energy():
     l1.add_demand_profile_from_array([6.0] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)

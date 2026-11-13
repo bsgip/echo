@@ -31,7 +31,7 @@ def test_port_reference_is_made_in_edge():
     connection_point.add_ports_from_list(["cp_to_grid"], FlexPort, units=Units.KW)
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, connection_point])
+    system.add_nodes([grid, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -119,7 +119,7 @@ def test_rebuild_all_edges():
         )
 
         # Add nodes to the OptimisationGraph
-        system.add_node_obj([grid, connection_point, inverter, solar, ev])
+        system.add_nodes([grid, connection_point, inverter, solar, ev])
 
         # Create edge objects and add to graph
         system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])

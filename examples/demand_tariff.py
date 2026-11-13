@@ -45,7 +45,7 @@ load = Load(node_name="load", port_name="load", port_unit=Units.KW, profile=[2] 
 site = TellegenNode()
 site.add_ports_from_list(["cp", "load", "battery"], FlexPort, units=Units.KW)
 
-system.add_node_obj([grid, battery, load, site])
+system.add_nodes([grid, battery, load, site])
 
 system.connect_ports_and_create_edge(grid.ports["grid"], site.ports["cp"])
 system.connect_ports_and_create_edge(battery.ports["battery"], site.ports["battery"])

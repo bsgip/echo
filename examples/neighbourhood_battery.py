@@ -96,7 +96,7 @@ pv.add_generation_profile_from_array(test_pv, expansion_periods)
 solar.ports["pv"] = pv
 
 # Populate graph with assets (nodes)
-system.add_node_obj([grid, battery, load, solar, connection_point])
+system.add_nodes([grid, battery, load, solar, connection_point])
 
 # Add edges to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])

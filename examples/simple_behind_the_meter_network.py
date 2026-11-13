@@ -80,7 +80,7 @@ solar.ports["pv"] = pv  # add the electrical generation to a port on the solar n
 network = OptimisationGraph()
 
 # Populate graph with assets (nodes)
-network.add_node_obj([grid, battery, load, solar, connection_point, inverter])
+network.add_nodes([grid, battery, load, solar, connection_point, inverter])
 
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 network.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])

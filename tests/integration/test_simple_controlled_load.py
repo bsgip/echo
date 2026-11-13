@@ -22,7 +22,7 @@ def test_simple_controlled_load_does_minimum_energy_action():
     cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0 / 60.0)
     controlled_load.ports["cload"] = cl
 
-    system.add_node_obj([grid, controlled_load])
+    system.add_nodes([grid, controlled_load])
     system.connect_ports_and_create_edge(grid.ports["grid"], cl)
 
     optimise_results = optimise(
@@ -61,7 +61,7 @@ def test_simple_controlled_load_does_minimum_power_action():
     cl = ControlledLoad(max_power=5.0, min_power=2.0, min_utilisation=5.0 / 60.0, max_utilisation=None)
     controlled_load.ports["cload"] = cl
 
-    system.add_node_obj([grid, controlled_load])
+    system.add_nodes([grid, controlled_load])
     system.connect_ports_and_create_edge(grid.ports["grid"], cl)
 
     # minimise imports
@@ -104,7 +104,7 @@ def test_simple_controlled_load_limited_to_max_energy():
     controlled_load.ports["cload"] = cl
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
-    system.add_node_obj([grid, controlled_load])
+    system.add_nodes([grid, controlled_load])
     system.add_edge_obj(edge)
 
     # maximise load imports
@@ -145,7 +145,7 @@ def test_simple_controlled_load_limited_to_max_power():
     controlled_load.ports["cload"] = cl
 
     edge = Edge(vertices=[grid.ports["grid"], cl])
-    system.add_node_obj([grid, controlled_load])
+    system.add_nodes([grid, controlled_load])
     system.add_edge_obj(edge)
 
     # maximise imports

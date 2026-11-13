@@ -66,7 +66,7 @@ def test_v0g():
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -130,7 +130,7 @@ def test_v0g_2():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -194,7 +194,7 @@ def test_v0g_3():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -272,7 +272,7 @@ def test_v0g_with_stateful_data_injection():
             enable_trip_slack=True,
         )
 
-        system.add_node_obj([grid, ev_cp, connection_point])
+        system.add_nodes([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
         system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -353,7 +353,7 @@ def test_v0g_output_matches_expectation():
     )
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
@@ -491,7 +491,7 @@ def test_v0g_output_matches_expectation_with_tod_charging():
     )
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
@@ -633,7 +633,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["cp"], connection_point.ports["grid"])
@@ -793,7 +793,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -905,7 +905,7 @@ def test_v1g_no_objective():
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -969,7 +969,7 @@ def test_v1g_no_objective_2():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -1033,7 +1033,7 @@ def test_v1g_no_objective_3():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -1096,7 +1096,7 @@ def test_v2g_no_objective():
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -1160,7 +1160,7 @@ def test_v2g_no_objective_2():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -1224,7 +1224,7 @@ def test_v2g_no_objective_3():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])
@@ -1291,7 +1291,7 @@ def test_simple_v1g_with_stateful_data_injection():
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -1386,7 +1386,7 @@ def test_simple_v2g_with_stateful_data_injection():
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -1499,7 +1499,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
             enable_trip_slack=True,
         )
 
-        system.add_node_obj([grid, ev_cp, connection_point])
+        system.add_nodes([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
         system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -1614,7 +1614,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
             enable_trip_slack=True,
         )
 
-        system.add_node_obj([grid, ev_cp, connection_point])
+        system.add_nodes([grid, ev_cp, connection_point])
 
         # Create edge objects and add to graph
         system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -1723,7 +1723,7 @@ def test_v1g_with_objective():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -1838,7 +1838,7 @@ def test_v1g_with_load_with_objective():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -1954,7 +1954,7 @@ def test_v2g_with_load_with_objective():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2074,7 +2074,7 @@ def test_v2g_with_load_with_objective_v2g_behaviour():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2192,7 +2192,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2324,7 +2324,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2426,7 +2426,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
         enable_trip_slack=True,
     )
 
-    system.add_node_obj([grid, ev_cp, connection_point])
+    system.add_nodes([grid, ev_cp, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(connection_point.ports["ev"], ev_cp.ports["cp"])
@@ -2544,7 +2544,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection_with_mes_defa
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2673,7 +2673,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v0g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2787,7 +2787,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v1g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -2902,7 +2902,7 @@ def test_set_state_attrs_does_not_add_new_attrs_v2g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3059,7 +3059,7 @@ def test_ev_demand_profile_in_simple_network():
     assert len(ev.ports.keys()) == 1
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3184,7 +3184,7 @@ def test_set_state_attrs_does_not_need_to_rebuild_ports_in_optimisation_graph():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3346,7 +3346,7 @@ def test_set_state_attrs_without_dummy_variables_for_v2g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3482,7 +3482,7 @@ def test_set_state_attrs_without_dummy_variables_for_v1g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3617,7 +3617,7 @@ def test_set_state_attrs_without_dummy_variables_for_v0g():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point, load, inverter, solar])
+    system.add_nodes([grid, ev, connection_point, load, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3774,7 +3774,7 @@ def test_update_node_EVV0G():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -3899,7 +3899,7 @@ def test_update_node_EVV1G():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -4024,7 +4024,7 @@ def test_update_node_EVV2G():
     assert len(ev.ports.keys()) == 3
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, ev, connection_point])
+    system.add_nodes([grid, ev, connection_point])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -4158,7 +4158,7 @@ def test_v0g_with_discharging_power_limit_and_usage_power_limit():
     system = OptimisationGraph()
 
     # Add nodes to the optimisation graph
-    system.add_node_obj(
+    system.add_nodes(
         [
             grid,
             connection_point,

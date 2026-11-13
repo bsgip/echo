@@ -134,8 +134,8 @@ ev_with_profile = EVWithProfile(
     demand=ev_with_profile_demand,
 )
 
-# system.add_node_obj([grid, ev_v0g, ev_v1g, ev_v2g, ev_with_profile, connection_point])
-system.add_node_obj(
+# system.add_nodes([grid, ev_v0g, ev_v1g, ev_v2g, ev_with_profile, connection_point])
+system.add_nodes(
     [
         grid,
         connection_point,
