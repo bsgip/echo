@@ -30,4 +30,3 @@ def test_port_reference_is_made_in_edge():
 
     assert grid.ports["grid_to_cp"] is system.get_edge(("grid", "cp")).vertices[0]
     assert connection_point.ports["cp_to_grid"] is system.get_edge(("grid", "cp")).vertices[1]
-

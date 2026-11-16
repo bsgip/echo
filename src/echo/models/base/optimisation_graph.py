@@ -130,7 +130,6 @@ class OptimisationGraph:
 
         self.edges[(node1_name, node2_name)] = edge
 
-
     @deprecated(version="2.3.0", reason="Use add_edge method instead.")
     def add_edge_obj(self, edge: list[Edge] | Edge) -> None:
         # todo phase out this method
@@ -501,7 +500,7 @@ class OptimisationGraph:
         # Inject stateful data
         # If the node has a set_stateful_attrs() function, use that function.
         # If it is not, use node.update()
-        if node:= self.nodes.get(node_name):
+        if node := self.nodes.get(node_name):
             if hasattr(node, "set_stateful_attrs"):
                 node.set_stateful_attrs(**kwargs)
             else:
