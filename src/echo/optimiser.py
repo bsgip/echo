@@ -252,10 +252,10 @@ def _build_model(
         tracker.mark(f"{node_obj.node_name}:node-constraints")
 
     # Initialise edge variables/params and add edge constraints
-    for edge_obj in graph.edge_obj.values():
-        edge_obj.verify_edge()
-        edge_obj.add_edge_to_model(model)
-        tracker.mark(edge_obj.edge_name)
+    for edge in graph.edges.values():
+        edge.verify_edge()
+        edge.add_edge_to_model(model)
+        tracker.mark(edge.edge_name)
 
     # Initialise paths
     for path in graph.paths.values():

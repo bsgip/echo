@@ -174,7 +174,7 @@ def node_hover_text(node: Node, *_: object) -> str:
 
 def edge_hover_text(edge: Node, *_: object) -> str:
     edge_reversed = edge[::-1]  # reverse the edge tuple (not sure why edges are defined in the opposite sense)
-    edge_object = optimise_results.graph.edge_obj[edge_reversed]
+    edge_object = optimise_results.graph.edges[edge_reversed]
 
     tracker = optimise_results.model_attribute_tracker
     if tracker is not None:

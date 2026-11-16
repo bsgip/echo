@@ -34,7 +34,7 @@ class OptimisationGraph:
         return self.nodes
 
     @property
-    # @deprecated
+    @deprecated
     def edge_obj(self) -> dict[tuple[str, str], Edge]:
         return self.edges
 
@@ -146,6 +146,8 @@ class OptimisationGraph:
             self.add_edge(e)
 
     # @deprecated
+    # Ideally this should be deprecated and users should use `add_edge` as the main
+    # way off adding edges to the optimisation graph.
     def connect_ports_and_create_edge(
         self,
         port1: Port,
