@@ -1,16 +1,16 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 
-from collections.abc import Iterable
 import os
 import warnings
+from collections.abc import Iterable
 from typing import cast
 
 import matplotlib
 import networkx as nx
 import pyomo.environ as en
 from attrs import define, field
-from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 from deprecated import deprecated
+from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import Units
 from echo.exceptions import ConfigurationError, validate
