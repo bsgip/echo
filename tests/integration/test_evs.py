@@ -284,15 +284,15 @@ def test_v0g_with_stateful_data_injection():
         new_time_periods = 6
 
         # Inject stateful data
-        system.node_obj["ev"].set_stateful_attrs(
+        system.nodes["ev"].set_stateful_attrs(
             available=available_usages[0],
             usage=available_usages[1],
             initial_state_of_charge=new_initial_state_of_charge,
             interval_duration=new_interval_duration,
         )
 
-        assert system.node_obj["ev"].initial_state_of_charge == 50
-        assert system.node_obj["ev"].ports["vehicle"].initial_state_of_charge == 50
+        assert system.nodes["ev"].initial_state_of_charge == 50
+        assert system.nodes["ev"].ports["vehicle"].initial_state_of_charge == 50
 
         # Optimise
         optimise(
@@ -653,7 +653,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_expanding_dat
     time_periods = len(available)
 
     # Inject stateful data
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -812,7 +812,7 @@ def test_v0g_output_matches_expectation_after_initialise_data_with_contracting_d
     interval_duration = 10
     time_periods = len(available)
 
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -1303,7 +1303,7 @@ def test_simple_v1g_with_stateful_data_injection():
     new_time_periods = 6
 
     # Update ev with stateful parameters
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=good_available_usage[0],
         usage=good_available_usage[1],
         initial_state_of_charge=new_initial_state_of_charge,
@@ -1398,7 +1398,7 @@ def test_simple_v2g_with_stateful_data_injection():
     new_time_periods = 6
 
     # Update ev with stateful parameters
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=good_available_usage[0],
         usage=good_available_usage[1],
         initial_state_of_charge=new_initial_state_of_charge,
@@ -1511,7 +1511,7 @@ def test_simple_v1g_with_stateful_data_injection_2():
         new_time_periods = 6
 
         # Update ev with stateful parameters
-        system.node_obj["ev"].set_stateful_attrs(
+        system.nodes["ev"].set_stateful_attrs(
             available=available_usage[0],
             usage=available_usage[1],
             initial_state_of_charge=new_initial_state_of_charge,
@@ -1627,7 +1627,7 @@ def test_simple_v0g_with_stateful_data_injection_for_invalid_input_detection():
 
         with pytest.raises(Exception):
             # Update ev with stateful parameters
-            system.node_obj["ev"].set_stateful_attrs(
+            system.nodes["ev"].set_stateful_attrs(
                 available=available_usage[0],
                 usage=available_usage[1],
                 initial_state_of_charge=new_initial_state_of_charge,
@@ -2212,7 +2212,7 @@ def test_v1g_with_load_with_objective_with_stateful_data_injection():
     initial_state_of_charge = 0
     interval_duration = 60
 
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2344,7 +2344,7 @@ def test_v2g_with_load_with_objective_with_stateful_data_injection():
     initial_state_of_charge = 0
     interval_duration = 60
 
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=available,
         usage=usage,
         initial_state_of_charge=initial_state_of_charge,
@@ -2444,7 +2444,7 @@ def test_node_and_port_uids_on_ev_are_set_properly_when_injecting_stateful_data(
     old_port_uids = {port.uid for port in system.get_node("ev").ports.values()}
 
     # Inject stateful data
-    system.node_obj["ev"].set_stateful_attrs(
+    system.nodes["ev"].set_stateful_attrs(
         available=np.array([1, 1, 0, 0, 1, 1]),
         usage=np.array([0, 0, 10, 10, 0, 0]),
         initial_state_of_charge=new_initial_state_of_charge,

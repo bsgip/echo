@@ -160,7 +160,7 @@ def to_html_string(attrs: dict[str, list[Any]]) -> str:
 
 
 def node_hover_text(node: Node, *_: object) -> str:
-    node_object = optimise_results.graph.node_obj[node]
+    node_object = optimise_results.graph.nodes[node]
     node_type = type(node_object).__name__
 
     tracker = optimise_results.model_attribute_tracker

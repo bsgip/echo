@@ -29,7 +29,7 @@ class OptimisationGraph:
     paths: dict[tuple, Path] = field(factory=dict)
 
     @property
-    # @deprecated
+    @deprecated
     def node_obj(self) -> dict[str, Node]:
         return self.nodes
 

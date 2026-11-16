@@ -75,7 +75,7 @@ class OptimisationResult:
     def df_by_node(self) -> pd.DataFrame:
         """Returns a df of results by node, using the port names given in each node's 'ports' dict"""
         dct = {}
-        for node_name, node in self.graph.node_obj.items():
+        for node_name, node in self.graph.nodes.items():
             for port_name, p in node.ports.items():
                 dct[node_name + "-" + port_name] = getattr(self.model, p.port_name).extract_values()
 
@@ -85,7 +85,7 @@ class OptimisationResult:
     def df_by_port(self) -> pd.DataFrame:
         """Returns a df of results by port, using port names given in each node's 'ports' dict"""
         dct = {}
-        for node_name, node in self.graph.node_obj.items():
+        for node_name, node in self.graph.nodes.items():
             for port_name, p in node.ports.items():
                 if dct.get(port_name) is not None:
                     # We have an existing key - make a new name using the node name
@@ -139,10 +139,10 @@ class OptimisationResult:
                 # if it has no index, we can directly return value
                 return var_obj.value
 
-    def node_values(self, node_obj: Node, expansion_period: int = 0) -> dict[str, np.ndarray]:
+    def node_values(self, node: Node, expansion_period: int = 0) -> dict[str, np.ndarray]:
         """Returns all values of all ports in a specified node for a single specified expansion period."""
         outputs = {}
-        for name, var_obj in node_obj.ports.items():
+        for name, var_obj in node.ports.items():
             outputs[name] = self.values(var_obj.port_name, expansion_period)
         return outputs
 
@@ -170,9 +170,9 @@ def validate_network_graph(graph: OptimisationGraph) -> None:
     - name consistency between objects (e.g. node.node_name) and graph nodes
     - floating nodes that have no edge connecting them to another node
     """
-    for node_name, node_obj in graph.node_obj.items():
+    for node_name, node in graph.nodes.items():
         validate(
-            node_obj.node_name == node_name,
+            node.node_name == node_name,
             f"Node {node_name} name has been updated after being added to the network graph.",
         )
 
@@ -245,11 +245,11 @@ def _build_model(
     tracker.mark("model-setup")
 
     # Initialise node variables/params and add node constraints
-    for node_obj in graph.node_obj.values():
-        node_obj.verify_node()
-        node_obj.add_node_to_model(model, profile)
-        node_obj.apply_node_constraints(model)
-        tracker.mark(f"{node_obj.node_name}:node-constraints")
+    for node in graph.nodes.values():
+        node.verify_node()
+        node.add_node_to_model(model, profile)
+        node.apply_node_constraints(model)
+        tracker.mark(f"{node.node_name}:node-constraints")
 
     # Initialise edge variables/params and add edge constraints
     for edge in graph.edges.values():
@@ -285,19 +285,19 @@ def _build_objective(
         tracker.mark("model-adding-objective-set")
 
     # Add any other costs that are defined on graph nodes/ports/paths
-    for node_obj in graph.node_obj.values():
-        node_obj.add_objective(model)
-        objective += node_obj.objective
-        for port_obj in node_obj.ports.values():
-            port_obj.add_objective(model)  # populate the .objective attribute for each port
-            objective += port_obj.objective  # add the newly populated attribute to our total
-        tracker.mark(f"{node_obj.node_name}:objectives")
+    for node in graph.nodes.values():
+        node.add_objective(model)
+        objective += node.objective
+        for port in node.ports.values():
+            port.add_objective(model)  # populate the .objective attribute for each port
+            objective += port.objective  # add the newly populated attribute to our total
+        tracker.mark(f"{node.node_name}:objectives")
 
-    for path_obj in graph.paths.values():
-        path_obj.add_objective(model)
-        objective += path_obj.objective
+    for path in graph.paths.values():
+        path.add_objective(model)
+        objective += path.objective
 
-        tracker.mark(path_obj.path_name if path_obj.path_name is not None else "model-adding-path-objectives")
+        tracker.mark(path.path_name if path.path_name is not None else "model-adding-path-objectives")
 
     # Determine if we failed to build an objective
     if isinstance(objective, float) and objective == 0:
