@@ -152,7 +152,7 @@ def test_thermal_storage_no_objective():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.add_nodes([storage, thermal_demand, thermal_mains, cp])
     system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
     system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -254,7 +254,7 @@ def test_thermal_storage_end_temperature():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.add_nodes([storage, thermal_demand, thermal_mains, cp])
     system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
     system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -334,7 +334,7 @@ def test_thermal_storage():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.add_nodes([storage, thermal_demand, thermal_mains, cp])
     system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
     system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -429,7 +429,7 @@ def test_thermal_storage_with_profile():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.add_nodes([storage, thermal_demand, thermal_mains, cp])
     system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
     system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -521,7 +521,7 @@ def test_thermal_storage_no_ambient_temp():
         },
     )
     system = OptimisationGraph()
-    system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+    system.add_nodes([storage, thermal_demand, thermal_mains, cp])
     system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
     system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -604,7 +604,7 @@ def test_thermal_storage_2_ports():
     )
 
     system = OptimisationGraph()
-    system.add_node_obj([storage_2p, thermal_demand, thermal_mains, cp_1, cp_2])
+    system.add_nodes([storage_2p, thermal_demand, thermal_mains, cp_1, cp_2])
     system.connect_ports_and_create_edge(cp_1.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
     system.connect_ports_and_create_edge(cp_1.ports["to_storage_input_kwt"], storage_2p.ports["input"])
     system.connect_ports_and_create_edge(cp_1.ports["to_demand_cp_kwt"], cp_2.ports["to_supply_cp_kwt"])
@@ -696,7 +696,7 @@ def test_chiller_operation():
     chiller = ParameterisedChiller(max_cooling_capacity=10, nominal_cop=2.5)
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
-    system.add_node_obj([grid, chiller, cooling_load])
+    system.add_nodes([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
@@ -752,7 +752,7 @@ def test_chiller_with_heat_rejection():
     waste_heat_agg = AggregationNode(port_units=Units.KWT)
     waste_heat_agg.add_port("chiller_waste_heat")
 
-    system.add_node_obj([grid, chiller, cooling_load, waste_heat_agg])
+    system.add_nodes([grid, chiller, cooling_load, waste_heat_agg])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
@@ -826,7 +826,7 @@ def test_chiller_with_temperature_cop():
     # Need non zero
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
 
-    system.add_node_obj([grid, chiller, cooling_load])
+    system.add_nodes([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
@@ -907,7 +907,7 @@ def test_chiller_with_pl_cop():
     # Need non zero
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict_non_zero)
 
-    system.add_node_obj([grid, chiller, cooling_load])
+    system.add_nodes([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         chiller.ports[chiller.thermal_output_port_ref],
@@ -971,7 +971,7 @@ def test_simple_chiller():
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
-    system.add_node_obj([grid, chiller, cooling_load])
+    system.add_nodes([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports["input"])
     system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
@@ -1033,7 +1033,7 @@ def test_simple_heatpump_single_output():
     )
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
-    system.add_node_obj([grid, heatpump, thermal_load])
+    system.add_nodes([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
@@ -1115,7 +1115,7 @@ def test_simple_heatpump_dual_output():
     heating_load = Node(node_name="heating_load", ports={"heating_demand_kwt": Sink(units=Units.KWT)})
     heating_load.ports["heating_demand_kwt"].add_sink_profile(heating_load_dict)
 
-    system.add_node_obj([grid, heatpump, cooling_load, heating_load])
+    system.add_nodes([grid, heatpump, cooling_load, heating_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.cooling_output_port_ref],
@@ -1214,7 +1214,7 @@ def test_parameterised_heatpump_single_output():
     )
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
-    system.add_node_obj([grid, heatpump, thermal_load])
+    system.add_nodes([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
@@ -1295,7 +1295,7 @@ def test_simple_chiller_constant_cop():
     cooling_load = Node(node_name="cooling_load", ports={"cooling_demand_kwt": Source(units=Units.KWT)})
     cooling_load.ports["cooling_demand_kwt"].add_source_profile(cooling_demand_dict)
 
-    system.add_node_obj([grid, chiller, cooling_load])
+    system.add_nodes([grid, chiller, cooling_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], chiller.ports[chiller.electrical_input_port_ref])
     system.connect_ports_and_create_edge(chiller.ports["output"], cooling_load.ports["cooling_demand_kwt"])
 
@@ -1340,7 +1340,7 @@ def test_simple_heatpump_constant_cop():
     )
     thermal_load.ports["thermal_demand_kwt"].set_initial_value(combined_thermal_load_dict)
 
-    system.add_node_obj([grid, heatpump, thermal_load])
+    system.add_nodes([grid, heatpump, thermal_load])
     system.connect_ports_and_create_edge(grid.ports["supply_kw"], heatpump.ports[heatpump.electrical_input_port_ref])
     system.connect_ports_and_create_edge(
         heatpump.ports[heatpump.thermal_output_port_ref],
@@ -1404,7 +1404,7 @@ def test_chiller_with_parametrised_tellegen_heat_rejection():
             import_constraint_value=waste_heat_agg_2_max_flow,
         ),
     )
-    system.add_node_obj(
+    system.add_nodes(
         [
             grid,
             chiller,

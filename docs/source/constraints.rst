@@ -82,7 +82,7 @@ An example of how this might be done in code is shown below. First, we define an
     site = TellegenNode()
     site.add_electrical_ports_from_list(['cp', 'load', 'battery'])
 
-    system.add_node_obj([grid, battery, load, site])
+    system.add_nodes([grid, battery, load, site])
 
     system.connect_ports_and_create_edge(grid.ports['grid'], site.ports['cp'])
     system.connect_ports_and_create_edge(battery.ports['battery'], site.ports['battery'])

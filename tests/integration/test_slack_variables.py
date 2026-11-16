@@ -32,7 +32,7 @@ def test_export_slack_var_is_minimised():
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=[5.0] * time_periods, slack=True)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_nodes([grid, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
@@ -74,7 +74,7 @@ def test_import_slack_var_is_minimised():
     inverter = TellegenNode()
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_nodes([grid, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])
@@ -117,7 +117,7 @@ def test_slack_vars_take_up_slack_when_forced_to():
     inverter.add_ports_from_list(["cp", "pv"], FlexPort, units=Units.KW)
     inverter.ports["cp"].set_flow_constraints(max_export=-5.0, max_import=5.0, slack=True)
 
-    system.add_node_obj([grid, solar, inverter])
+    system.add_nodes([grid, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
     system.connect_ports_and_create_edge(inverter.ports["cp"], grid.ports["grid"])

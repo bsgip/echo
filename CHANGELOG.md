@@ -8,6 +8,7 @@
 - Adds support for `ECHO_DISABLE_PATH_WARNING` environment variable. This is enabled by default when running pytest.
 - Adds [attrs](https://www.attrs.org/en/stable/index.html) as a project dependency.
 - Adds support for Python 3.15 (drop support for Python 3.11)
+- Adds `add_nodes` method to OptimisationGraph
 
 #### Changes
 
@@ -26,6 +27,11 @@
 
 - Pydantic project dependency.
 - Removes support for Python 3.11 (adds support for Python 3.15)
+
+#### Deprecates
+
+- The following attributes of Optimisationgraph: `node_obj` and `edge_obj`.
+- The following methods from OptimisationGraph: `delete_node`, `delete_edge`, `add_node_obj`, `add_nodes_from`, `add_edge_obj`, `add_edges_from`, `connect_ports_and_create_edge`, `rebuild_all_edges`, `print_port_names`, `get_port_names_from_nodes`, `get_port_names_from_edges`, `update_node` and `inject_data_into_ev`.
 
 
 ## Releases

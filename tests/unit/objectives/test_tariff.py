@@ -208,8 +208,8 @@ def test_window_validation_non_overlapping_periods(time_periods, expected_error)
     "expansion_periods, expected_error",
     [
         (1, None),
-        (0, ValueError),  # 0 is not a pydantic PositiveFloat
-        (-1, ValueError),  # not a PostiveFloat
+        (0, ValueError),  # not > 0
+        (-1, ValueError),  # not > 0
         (-1.0, ValueError),  # not an int
         (0.0, ValueError),  # not an int
         (-1.0, ValueError),  # not an int
@@ -229,7 +229,7 @@ def test_demandtariffobjective_validation(expansion_periods, expected_error):
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
@@ -247,7 +247,7 @@ def test_throughputcost_validation(rate, expected_error):
     "expansion_periods, expected_error",
     [
         (1, None),
-        (0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0, ValueError),  # not > 0
         (-1, ValueError),  # not a PostiveFloat
         (-1.0, ValueError),  # not an int
         (0.0, ValueError),  # not an int

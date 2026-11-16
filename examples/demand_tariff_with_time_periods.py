@@ -54,7 +54,7 @@ site1 = TellegenNode()
 site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
 cp1 = site1.ports["cp"]
 
-system.add_node_obj([grid, battery1, load1, site1])
+system.add_nodes([grid, battery1, load1, site1])
 
 system.connect_ports_and_create_edge(grid.ports["grid"], cp1)
 system.connect_ports_and_create_edge(site1.ports["bess"], b1)

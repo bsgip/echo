@@ -50,7 +50,7 @@ def test_efficiency():
     )
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, connection_point, inverter, solar])
+    system.add_nodes([grid, connection_point, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -108,7 +108,7 @@ def test_efficiency():
     )
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, connection_point, inverter, solar])
+    system.add_nodes([grid, connection_point, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])
@@ -166,7 +166,7 @@ def test_efficiency():
     )
 
     # Add nodes to the OptimisationGraph
-    system.add_node_obj([grid, connection_point, inverter, solar])
+    system.add_nodes([grid, connection_point, inverter, solar])
 
     # Create edge objects and add to graph
     system.connect_ports_and_create_edge(grid.ports["grid_to_cp"], connection_point.ports["cp_to_grid"])

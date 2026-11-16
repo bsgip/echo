@@ -25,7 +25,7 @@ def test_simple_bounded_load():
     l1 = BoundedElectricalLoad(upper_bound=ub, lower_bound=lb)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, load])
+    system.add_nodes([grid, load])
     system.connect_ports_and_create_edge(grid.ports["grid"], l1)
 
     optimise_results = optimise(
@@ -66,7 +66,7 @@ def test_time_delay_node(time_delay):
     l1.add_demand_profile_from_array(demand)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, td, load])
+    system.add_nodes([grid, td, load])
     system.connect_ports_and_create_edge(grid.ports["grid"], td.ports["input"])
     system.connect_ports_and_create_edge(td.ports["output"], l1)
 
@@ -124,7 +124,7 @@ def test_feedback_loop():
     t = Transform(lhs_terms=lhs_terms)
     load.add_transformation(t)
 
-    system.add_node_obj([supply, cp, td, load])
+    system.add_nodes([supply, cp, td, load])
 
     # system.connect_ports_and_create_edge(cp.ports['upstream'], s, edge_name='upstream_to_cp')
     # system.connect_ports_and_create_edge(cp.ports['supply'], l1, edge_name='cp_to_load')

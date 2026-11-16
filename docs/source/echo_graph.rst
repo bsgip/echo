@@ -30,7 +30,7 @@ Once the graph has been created, we can create some nodes and add them to the gr
                  port_unit=Units.KW,
                  profile=[2]*24)  # creates a node with one fixed demand port called 'load'
 
-    system.add_node_obj([grid, battery])
+    system.add_nodes([grid, battery])
 
 
 To connect nodes together via ports, we need to retrieve the port objects as well as the node names. We can then create an edge using the ``.connect_ports_and_create_edge`` method, as shown below:
@@ -39,7 +39,7 @@ To connect nodes together via ports, we need to retrieve the port objects as wel
 
     grid_port = grid.get_port('grid')
     load_port = load.get_port('load')
-    system.connect_ports_and_create_edge(grid_port, load_port, nodes=('grid', 'load'))
+    system.connect_ports_and_create_edge(grid_port, load_port)
 
 .. note::
     Any nodes that are part of an edge must be added to the graph first, before edges can be created.

@@ -29,7 +29,7 @@ def test_controlled_load_with_peak_power_objective(can_optimiser_do_non_linear_o
     cl = ControlledLoad(max_power=5.0, min_power=0.0, max_utilisation=None, min_utilisation=5.0 / 60.0)
     controlled_load.ports["cload"] = cl
 
-    system.add_node_obj([grid, controlled_load])
+    system.add_nodes([grid, controlled_load])
     system.connect_ports_and_create_edge(grid.ports["grid"], cl)
 
     quad_power = QuadraticPower(component=grid.ports["grid"])

@@ -114,7 +114,7 @@ cp = TellegenNode(
 #                  storage
 #
 system = OptimisationGraph()
-system.add_node_obj([storage, thermal_demand, thermal_mains, cp])
+system.add_nodes([storage, thermal_demand, thermal_mains, cp])
 system.connect_ports_and_create_edge(cp.ports["to_supply_kwt"], thermal_mains.ports["supply_kwt"])
 system.connect_ports_and_create_edge(cp.ports["to_storage_kwt"], storage.ports["input_output"])
 system.connect_ports_and_create_edge(cp.ports["to_demand_kwt"], thermal_demand.ports["demand_kwt"])
@@ -160,7 +160,7 @@ def to_html_string(attrs: dict[str, list[Any]]) -> str:
 
 
 def node_hover_text(node: Node, *_: object) -> str:
-    node_object = optimise_results.graph.node_obj[node]
+    node_object = optimise_results.graph.nodes[node]
     node_type = type(node_object).__name__
 
     tracker = optimise_results.model_attribute_tracker
@@ -174,7 +174,7 @@ def node_hover_text(node: Node, *_: object) -> str:
 
 def edge_hover_text(edge: Node, *_: object) -> str:
     edge_reversed = edge[::-1]  # reverse the edge tuple (not sure why edges are defined in the opposite sense)
-    edge_object = optimise_results.graph.edge_obj[edge_reversed]
+    edge_object = optimise_results.graph.edges[edge_reversed]
 
     tracker = optimise_results.model_attribute_tracker
     if tracker is not None:

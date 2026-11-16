@@ -1,14 +1,15 @@
 from __future__ import annotations  # Deprecating in python 3.15 in favour of lazy annotations (PEP 649 and 749)
 
-import copy
 import os
 import warnings
+from collections.abc import Iterable
 from typing import cast
 
 import matplotlib
 import networkx as nx
 import pyomo.environ as en
 from attrs import define, field
+from deprecated import deprecated
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression
 
 from echo.configuration import Units
@@ -23,128 +24,145 @@ from echo.validators import ArrayType
 
 @define
 class OptimisationGraph:
-    node_obj: dict[str, Node] = field(factory=dict)  # Nodes keyed by their node_name
-    edge_obj: dict[tuple[str, str], Edge] = field(factory=dict)
+    nodes: dict[str, Node] = field(factory=dict)  # Nodes keyed by their node_name
+    edges: dict[tuple[str, str], Edge] = field(factory=dict)
     paths: dict[tuple, Path] = field(factory=dict)
 
+    @property
+    @deprecated
+    def node_obj(self) -> dict[str, Node]:
+        return self.nodes
+
+    @property
+    @deprecated
+    def edge_obj(self) -> dict[tuple[str, str], Edge]:
+        return self.edges
+
     def node_name_list(self) -> list[str]:
-        return list(self.node_obj.keys())
+        return list(self.nodes.keys())
 
     def edge_list(self) -> list[str]:
-        return list(self.edge_obj.keys())
+        return [e.edge_name for e in self.edges.values()]
 
     def convert_to_nx(self) -> nx.Graph:
         """Converts the OptimisationGraph to a networkx graph, where nx nodes are echo node names and nx edges are
         nx node pairs"""
         g = nx.Graph()
-        g.add_nodes_from(self.node_obj.keys())
-        g.add_edges_from(self.edge_obj.keys())
+        g.add_nodes_from(self.nodes.keys())
+        g.add_edges_from(self.edges.keys())
         return g
 
-    def _add_single_node(self, node_obj: Node) -> None:
-        validate(
-            node_obj.node_name not in self.node_obj,
-            f"Node '{node_obj.node_name}' already defined",
-        )
-        self.node_obj[node_obj.node_name] = node_obj
+    # This method should be made private and the public method deprecated
+    def add_node(self, node: Node) -> None:
+        self.nodes[node.node_name] = node
 
+    def add_nodes(self, nodes: Node | Iterable[Node]) -> None:
+        """Adds either a single node or list of nodes to graph"""
+        if isinstance(nodes, Node):
+            self.add_node(nodes)
+            return
+
+        for node in nodes:
+            self.add_node(node)
+
+    @deprecated(version="2.3.0")
     def delete_node(self, node_name: str) -> None:
         if self.get_node(node_name) is not None:
-            del self.node_obj[node_name]
+            del self.nodes[node_name]
         else:
             print(f"Node {node_name} not found.")
 
+    @deprecated(version="2.3.0")
     def delete_edge(self, edge_nodes: tuple[str, str]) -> None:
         if self.get_edge(edge_nodes) is not None:
-            del self.edge_obj[edge_nodes]
+            del self.edges[edge_nodes]
         else:
             print(f"Edge {edge_nodes} not found.")
 
+    @deprecated(version="2.3.0", reason="Use add_nodes method instead.")
     def add_node_obj(self, node: list | Node) -> None:
         """Adds either a single node or list of nodes to graph"""
         # todo phase out this method
         if isinstance(node, list):
             for n in node:
-                self._add_single_node(n)
+                self.add_node(n)
         else:
-            self._add_single_node(node)
+            self.add_node(node)
 
+    @deprecated(version="2.3.0", reason="Use add_nodes method instead.")
     def add_nodes_from(self, nodes: list[Node]) -> None:
         """Adds a list of nodes to the graph."""
         for n in nodes:
-            self._add_single_node(n)
-
-    def add_node(self, node: Node) -> None:
-        """Adds a single node to the graph."""
-        self._add_single_node(node)
+            self.add_node(n)
 
     def get_node(self, node_name: str) -> Node | None:
         """Returns node object given node name"""
-        return self.node_obj.get(node_name)
+        return self.nodes.get(node_name)
 
-    def get_edge(self, nodes: tuple[str, str], warn: bool = False) -> Edge | None:
+    def get_edge(self, nodes: tuple[str, str]) -> Edge | None:
         """Retrieves the edge that connects a tuple of nodes, if an edge exists."""
-        if self.edge_obj.get(nodes) is not None:
-            return self.edge_obj.get(nodes)
+        if nodes in self.edges:
+            return self.edges.get(nodes)
 
         reversed_nodes = (nodes[1], nodes[0])
-        edge = self.edge_obj.get(reversed_nodes)
-        if edge is not None:
-            return edge
-        elif warn:
-            print(f"Edge between {nodes[0]} and {nodes[1]} does not exist")
+        if reversed_nodes in self.edges:
+            return self.edges.get(reversed_nodes)
 
-    def _add_single_edge(self, edge_obj: Edge) -> None:
-        port1 = edge_obj.vertices[0]
-        port2 = edge_obj.vertices[1]
+        return None
+
+    def add_edge(self, edge: Edge, nodes: tuple[str, str] | None = None) -> None:
+        port1 = edge.vertices[0]
+        port2 = edge.vertices[1]
         validate(
             port1.units == port2.units,
             f"Ports on edge must have matching units. {port1.units} != {port2.units}",
         )
-        if edge_obj.nodes is None:
+        if nodes is None:
             # Want to avoid doing this lookup - very slow
             node1_name = self.lookup_node_names_from_port(port1)
             node2_name = self.lookup_node_names_from_port(port2)
         else:
-            node1_name = edge_obj.nodes[0]
-            node2_name = edge_obj.nodes[1]
+            node1_name = nodes[0]
+            node2_name = nodes[1]
         # Need to check whether an edge already exists between these two nodes
         if self.get_edge(nodes=(node1_name, node2_name)) is not None:
             raise ValueError("An edge between these nodes already exists")
 
-        self.edge_obj[(node1_name, node2_name)] = edge_obj
+        self.edges[(node1_name, node2_name)] = edge
 
+    @deprecated(version="2.3.0", reason="Use add_edge method instead.")
     def add_edge_obj(self, edge: list[Edge] | Edge) -> None:
         # todo phase out this method
         if isinstance(edge, list):
             for e in edge:
-                self._add_single_edge(e)
+                self.add_edge(e)
         else:
-            self._add_single_edge(edge)
+            self.add_edge(edge)
 
+    @deprecated(version="2.3.0", reason="Use add_edge method instead.")
     def add_edges_from(self, edge: list[Edge]) -> None:
         for e in edge:
-            self._add_single_edge(e)
+            self.add_edge(e)
 
-    def add_edge(self, edge: Edge) -> None:
-        self._add_single_edge(edge)
-
+    # @deprecated
+    # Ideally this should be deprecated and users should use `add_edge` as the main
+    # way off adding edges to the optimisation graph.
     def connect_ports_and_create_edge(
         self,
         port1: Port,
         port2: Port,
         edge_name: str | None = None,
-        nodes: tuple[str] | None = None,
-        warn: bool = False,
     ) -> None:
         """Creates an edge between port1 and port2 and adds it to the graph"""
-        if nodes is None and warn is True:
-            print("No edge nodes defined. Defining edge nodes here speeds up constructing of echo graph.")
-        e = Edge(vertices=(port1, port2), edge_name=edge_name, nodes=nodes)
-        self.add_edge(e)
+        edge = Edge(vertices=(port1, port2), edge_name=edge_name) if edge_name else Edge(vertices=(port1, port2))
+        self.add_edge(edge)
 
+    @deprecated(
+        version="2.3.0",
+        reason="No longer needed after migration to attrs",
+    )
     def rebuild_all_edges(self) -> None:
-        """Deletes and rebuilds all edges.
+        """Deletes and rebuilds all edges. Deprecated and replaced with a `pass` (i.e. no operation)
 
         To be used after stateful data has been injected into ports. Injecting stateful data into ports alters the
         port. The new altered port correctly remains associated with the node, but does not remain associated with
@@ -154,27 +172,11 @@ class OptimisationGraph:
         Returns:
             None
         """
-
-        for edge_node_names in self.edge_list():
-            # Get the port names from the edge
-            port_names = copy.copy([port.port_name for port in self.get_edge(nodes=edge_node_names).vertices])
-
-            # Remove the old edge
-            self.delete_edge(edge_node_names)
-
-            port_name_in_dict_1 = self.get_node(edge_node_names[0]).get_port_name_to_port_dict_name_map()[port_names[0]]
-            port_name_in_dict_2 = self.get_node(edge_node_names[1]).get_port_name_to_port_dict_name_map()[port_names[1]]
-
-            # Find the ports to build the new edges
-            new_port_1 = self.get_node(edge_node_names[0]).ports[port_name_in_dict_1]
-            new_port_2 = self.get_node(edge_node_names[1]).ports[port_name_in_dict_2]
-
-            # Build the new edges
-            self.connect_ports_and_create_edge(port1=new_port_1, port2=new_port_2, nodes=edge_node_names)
+        pass
 
     def lookup_node_names_from_port(self, port: Port) -> str:
         """Returns node name of the node that a specified port belongs to, if the port belongs to a node."""
-        for node_name, node in self.node_obj.items():
+        for node_name, node in self.nodes.items():
             for p in node.ports.values():
                 if port == p:
                     return node_name
@@ -182,13 +184,13 @@ class OptimisationGraph:
 
     def get_ports_on_edge_from_nodes(self, node1: str, node2: str) -> tuple[Port, Port] | None:
         """Returns the ports that are on the edge from node1 to node2."""
-        connecting_edge = self.edge_obj.get((node1, node2))
+        connecting_edge = self.edges.get((node1, node2))
         if connecting_edge:
             node1_port = connecting_edge.vertices[0]
             node2_port = connecting_edge.vertices[1]
             return node1_port, node2_port
         else:
-            connecting_edge = self.edge_obj.get((node2, node1))
+            connecting_edge = self.edges.get((node2, node1))
             if connecting_edge:
                 node1_port = connecting_edge.vertices[1]
                 node2_port = connecting_edge.vertices[0]
@@ -307,7 +309,7 @@ class OptimisationGraph:
                 if path.vertices[-1] is current_node_name:  # If the path ends at the current node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
-                a <= getattr(model, current_node_obj.inflow)[p, t] * model.big_m
+                a <= getattr(model, current_node.inflow)[p, t] * model.big_m
             )  # Incoming paths can only be non-zero if inflow=1
 
         def only_inflow_or_outflow2(model: EchoConcreteModel, p: int, t: int) -> InequalityExpression:
@@ -316,12 +318,12 @@ class OptimisationGraph:
                 if path.vertices[0] is current_node_name:  # If the path starts at the node
                     a += getattr(model, path.flow_value)[p, t]  # Add the flow value
             return (
-                a <= (1 - getattr(model, current_node_obj.inflow)[p, t]) * model.big_m
+                a <= (1 - getattr(model, current_node.inflow)[p, t]) * model.big_m
             )  # Outgoing paths can only be non-zero if inflow=0
 
         sources_and_sinks = self.get_sources_and_sinks()  # returns concatenated list of all source/sink nodes
         for current_node_name in sources_and_sinks:  # Iterate through the source/sink nodes
-            current_node_obj = self.node_obj[current_node_name]  # get the node obj
+            current_node = self.nodes[current_node_name]  # get the node obj
             for (
                 path_vertices,
                 path_obj,
@@ -340,7 +342,7 @@ class OptimisationGraph:
             # Create an indicator var for when there are flows into a node
             setattr(
                 model,
-                current_node_obj.inflow,
+                current_node.inflow,
                 en.Var(model.Expansion, model.Time, initialize=0, domain=en.Binary),
             )
 
@@ -360,7 +362,7 @@ class OptimisationGraph:
         self,
         axes: matplotlib.axes.Axes,
         with_labels: bool = False,
-        labels: dict[str, str] = None,
+        labels: dict[str, str] | None = None,
         **kwargs,
     ) -> None:
         """Draws the network on a matplotlib plot
@@ -404,34 +406,43 @@ class OptimisationGraph:
 
         return json.dumps(nodes)
 
+    @deprecated(version="2.3.0")
     def print_port_names(self) -> None:
         """Prints port name-uid pairs, useful for debugging infeasible optimisation"""
-        for n in self.node_obj.values():
+        for n in self.nodes.values():
             for pn, p in n.ports.items():
                 print(pn, ", ", p.port_name)
 
-    def get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
+    def _get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
         output = set()
-        for n in self.node_obj.values():
+        for n in self.nodes.values():
             for p in n.ports.values():
                 if skip_dangling_ports and not p.allow_dangling_port:
                     output.add(p.port_name)
         return output
 
-    def get_port_names_from_edges(self) -> set[str]:
+    @deprecated(version="2.3.0")
+    def get_port_names_from_nodes(self, skip_dangling_ports: bool = False) -> set[str]:
+        return self._get_port_names_from_nodes(skip_dangling_ports=skip_dangling_ports)
+
+    def _get_port_names_from_edges(self) -> set[str]:
         output = set()
-        for e in self.edge_obj.values():
+        for e in self.edges.values():
             output.add(e.vertices[0].port_name)
             output.add(e.vertices[1].port_name)
         return output
+
+    @deprecated(version="2.3.0")
+    def get_port_names_from_edges(self) -> set[str]:
+        return self._get_port_names_from_edges()
 
     def verify_graph(self) -> None:
         """Checks that the graph is connected (all nodes have at least one edge), and warns if there
         are unconnected ports"""
         validate(nx.is_connected(self.convert_to_nx()) is True, "Graph is not connected.")
         # Check graph for ports that are not connected
-        ports_on_edges = self.get_port_names_from_nodes(skip_dangling_ports=True)
-        ports_on_nodes = self.get_port_names_from_edges()
+        ports_on_edges = self._get_port_names_from_nodes(skip_dangling_ports=True)
+        ports_on_nodes = self._get_port_names_from_edges()
         diff = ports_on_edges - ports_on_nodes  # check overlap
         if len(diff) != 0:
             warnings.warn(
@@ -458,16 +469,16 @@ class OptimisationGraph:
         g1_subgraph = system.subgraph(g1_nodes)
         g2_subgraph = system.subgraph(g2_nodes)
 
-        def create_new_graph(nodes: list, edges: list) -> OptimisationGraph:
+        def create_new_graph(nodes: list[str], edges: list) -> OptimisationGraph:
             """Creates a new graph from a list of node names and edge names"""
             new_graph = OptimisationGraph()
             for n in nodes:
-                new_graph.add_node_obj(self.node_obj[n])
+                new_graph.add_nodes(self.nodes[n])
             for ed in edges:
-                if self.edge_obj.get(ed) is not None:
-                    new_graph.add_edge_obj(self.edge_obj[ed])
+                if self.edges.get(ed) is not None:
+                    new_graph.add_edge(self.edges[ed])
                 else:
-                    new_graph.add_edge_obj(self.edge_obj[(ed[1], ed[0])])
+                    new_graph.add_edge(self.edges[(ed[1], ed[0])])
 
             return new_graph
 
@@ -476,43 +487,29 @@ class OptimisationGraph:
 
         return graph1, graph2
 
+    @deprecated(
+        version="2.3.0",
+        reason="No longer needed after migration to attrs. Modify nodes directly.",
+    )
     def update_node(self, node_name: str, **kwargs) -> None:
-        # Update the edge associated with the EV
-        found_edge = None
-        for edge in self.edge_list():
-            if node_name in edge:
-                found_edge = edge
-                edge_node_1_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[0])
-                edge_node_2_name = self.lookup_node_names_from_port(self.get_edge(edge).vertices[1])
-                edge_node_1_port_name = self.get_edge(edge).vertices[0].port_name
-                edge_node_2_port_name = self.get_edge(edge).vertices[1].port_name
+        # Originally this method was necessary because pydantic created clones of objects upon mutation
+        # and the edges that made up the optimisation graph
 
-        if found_edge is None:
-            raise ValueError(f"No edges contain node: {node_name}")
+        # The user should no longer need this function since they can either modifify nodes directly.
 
         # Inject stateful data
         # If the node has a set_stateful_attrs() function, use that function.
-        # If it is not, use node.update(), create a new edge object with the updated ports and delete the old edge.
-        # The creation of a new edge and the deletion of the old edge is required as pydantic creates copies of objects
-        # upon data injection (under the old way of doing it), which would mean the port on the node and the port
-        # defining the edge are no longer the same port, even if they share identical sets of attributes.
-        if hasattr(self.get_node(node_name), "set_stateful_attrs"):
-            self.get_node(node_name).set_stateful_attrs(**kwargs)
-        else:
-            self.get_node(node_name).update(**kwargs)
+        # If it is not, use node.update()
+        if node := self.nodes.get(node_name):
+            if hasattr(node, "set_stateful_attrs"):
+                node.set_stateful_attrs(**kwargs)
+            else:
+                node.update(**kwargs)
 
-            # Get the correct port objects to build a new edge
-            node1 = self.node_obj[edge_node_1_name]
-            node2 = self.node_obj[edge_node_2_name]
-            edge_node_1_port_dict_name = node1.get_port_name_to_port_dict_name_map()[edge_node_1_port_name]
-            edge_node_2_port_dict_name = node2.get_port_name_to_port_dict_name_map()[edge_node_2_port_name]
-            port1 = node1.ports[edge_node_1_port_dict_name]
-            port2 = node2.ports[edge_node_2_port_dict_name]
-
-            # Update the edge
-            self.delete_edge(found_edge)
-            self.connect_ports_and_create_edge(port1, port2)
-
+    @deprecated(
+        version="2.3.0",
+        reason="No longer needed after migration to attrs. Modify EV nodes directly.",
+    )
     def inject_data_into_ev(
         self,
         node_name: str,
