@@ -1,0 +1,7 @@
+echo.models.gas.base module
+===========================
+
+.. automodule:: echo.models.gas.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,7 @@
+echo.models.scenario module
+===========================
+
+.. automodule:: echo.models.scenario
+   :members:
+   :show-inheritance:
+   :undoc-members:
