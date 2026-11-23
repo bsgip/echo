@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 dynamic = ["version", "readme"]
-name = "echo"
+name = "eris-echo"
 description = "The Energy and Commodity Holistic Optimiser (ECHO)."
 keywords = ["energy", "commodity", "modelling", "optimization"]
 classifiers = [
@@ -54,7 +54,7 @@ maintainers = [
 
 
 [project.urls]
-#Homepage = "https://pypi.org/project/PROJECTNAME"
+Homepage = "https://pypi.org/project/eris-echo"
 Documentation = "https://bsgip.github.io/echo/"
 Repository = "https://github.com/bsip/echo"
 Issues = "https://github.com/bsgip/echo/issues"
