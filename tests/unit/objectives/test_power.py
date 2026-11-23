@@ -8,7 +8,7 @@ from echo.objectives.power import FinalChargeObjective, NotFullyChargedPenalty
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-1.0, ValueError),  # not a PostiveFloat
     ],
 )
@@ -29,7 +29,7 @@ def test_notfullychargepenalty_validation(rate, expected_error):
     "rate, expected_error",
     [
         (1.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-1.0, ValueError),  # not a PostiveFloat
     ],
 )

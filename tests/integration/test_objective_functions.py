@@ -55,7 +55,7 @@ def test_objectives_sum_correctly():
     l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)

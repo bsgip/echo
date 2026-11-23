@@ -28,7 +28,7 @@ def test_system_import_demand_tariff():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load1.ports["demand"] = l1
 
-    system.add_node_obj([grid, load1])
+    system.add_nodes([grid, load1])
     system.connect_ports_and_create_edge(l1, grid.ports["grid"])
 
     dc_window = [1] * 24 + [0] * 24
@@ -78,7 +78,7 @@ def test_system_export_demand_tariff():
     g1.add_generation_profile_from_array(gen_array, expansion_periods)
     gen.ports["gen"] = g1
 
-    system.add_node_obj([grid, gen])
+    system.add_nodes([grid, gen])
     system.connect_ports_and_create_edge(g1, grid.ports["grid"])
 
     dc_window = [1] * 24 + [0] * 24
@@ -128,7 +128,7 @@ def test_system_import_demand_tariff_two_resets():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load1.ports["demand"] = l1
 
-    system.add_node_obj([grid, load1])
+    system.add_nodes([grid, load1])
     system.connect_ports_and_create_edge(grid.ports["grid"], l1)
 
     dc_window = [1] * 6 + [0] * 6 + [0] * 24 + [1] * 6 + [0] * 6
@@ -180,7 +180,7 @@ def test_demand_tariff_read_and_implemented_correctly():
     l1.add_demand_profile_from_array(demand, expansion_periods)
     load1.ports["demand"] = l1
 
-    system.add_node_obj([grid, load1])
+    system.add_nodes([grid, load1])
     system.connect_ports_and_create_edge(l1, grid.ports["grid"])
 
     demand_charge_window_1 = [1] * 3 + [0] * 6

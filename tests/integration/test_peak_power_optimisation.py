@@ -41,7 +41,7 @@ def test_peak_positive_power_objective():
     site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
     cp1 = site1.ports["cp"]
 
-    system.add_node_obj([grid, battery1, load1, site1])
+    system.add_nodes([grid, battery1, load1, site1])
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])
@@ -99,7 +99,7 @@ def test_peak_negative_power_objective():
     site1.add_ports_from_list(["cp", "load", "bess"], FlexPort, units=Units.KW)
     cp1 = site1.ports["cp"]
 
-    system.add_node_obj([grid, battery1, load1, site1])
+    system.add_nodes([grid, battery1, load1, site1])
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)
     system.connect_ports_and_create_edge(site1.ports["load"], l1)
     system.connect_ports_and_create_edge(cp1, grid.ports["grid"])

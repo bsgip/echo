@@ -53,7 +53,7 @@ def test_partitioning_regions_for_path_flow():
     l1.add_demand_profile_from_array([6] * time_periods, expansion_periods)
     load.ports["load"] = l1
 
-    system.add_node_obj([grid, cp, load, battery, solar, inverter])
+    system.add_nodes([grid, cp, load, battery, solar, inverter])
 
     system.connect_ports_and_create_edge(inverter.ports["bess"], b1)
     system.connect_ports_and_create_edge(inverter.ports["pv"], pv1)
@@ -129,7 +129,7 @@ def test_regularisation_of_path_flows(can_optimiser_do_non_linear_optimisation):
     l2.add_demand_profile_from_array([2] * time_periods, expansion_periods)
     load2.ports["l2"] = l2
 
-    system.add_node_obj([source1, source2, load1, load2, cp])
+    system.add_nodes([source1, source2, load1, load2, cp])
     system.connect_ports_and_create_edge(s1, cp.ports["s1"])
     system.connect_ports_and_create_edge(s2, cp.ports["s2"])
     system.connect_ports_and_create_edge(l1, cp.ports["l1"])

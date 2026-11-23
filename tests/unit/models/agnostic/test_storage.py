@@ -21,7 +21,7 @@ def test_storage_validation_missing_fields(storage_params):
     "storage_capacity_cost, expected_error",
     [
         (5.0, None),
-        (0.0, ValueError),  # 0 is not a pydantic PositiveFloat
+        (0.0, ValueError),  # not > 0
         (-7.0, ValueError),  # not a PostiveFloat
     ],
 )

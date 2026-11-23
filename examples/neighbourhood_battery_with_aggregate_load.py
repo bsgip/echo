@@ -91,7 +91,7 @@ b = ElectricalStorage(
 battery.ports["bess"] = b
 
 # Populate graph with assets (nodes)
-system.add_node_obj([grid, battery, load, connection_point])
+system.add_nodes([grid, battery, load, connection_point])
 
 # Add edges to graph
 system.connect_ports_and_create_edge(grid.ports["grid"], connection_point.ports["grid"])

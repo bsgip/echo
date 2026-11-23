@@ -31,7 +31,7 @@ def test_gas_boiler_fixed_cop():
     hl.add_sink_profile_from_array([5] * time_periods, expansion_periods)
     heating_load.ports["load"] = hl
 
-    system.add_node_obj([gas_mains, boiler, heating_load])
+    system.add_nodes([gas_mains, boiler, heating_load])
     system.connect_ports_and_create_edge(gas_mains.ports["mains"], boiler.ports["input"])
     system.connect_ports_and_create_edge(boiler.ports["output"], hl)
 
@@ -74,7 +74,7 @@ def test_modulating_gas_boiler():
     hl.add_sink_profile_from_array([5] * time_periods, expansion_periods)
     heating_load.ports["load"] = hl
 
-    system.add_node_obj([gas_mains, boiler, heating_load])
+    system.add_nodes([gas_mains, boiler, heating_load])
     system.connect_ports_and_create_edge(gas_mains.ports["mains"], boiler.ports["input"])
     system.connect_ports_and_create_edge(boiler.ports["output"], hl)
 
@@ -133,7 +133,7 @@ def test_carbon_aggregation():
     carbon_aggr.ports["grid"] = CarbonSink()
     carbon_aggr.ports["bess"] = CarbonSink()
 
-    system.add_node_obj([grid, battery1, load1, site1, carbon_aggr])
+    system.add_nodes([grid, battery1, load1, site1, carbon_aggr])
     system.connect_ports_and_create_edge(grid.ports["grid"], site1.ports["cp"])
     system.connect_ports_and_create_edge(grid.ports["CO2"], carbon_aggr.ports["grid"])
     system.connect_ports_and_create_edge(site1.ports["bess"], b1)

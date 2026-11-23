@@ -117,7 +117,7 @@ diesel_gen = DieselGenerator(max_output=-5, min_output=-5 * 0.3, startup_efficie
 
 
 # Populate graph with assets (nodes)
-system.add_node_obj([battery, load, solar, connection_point, inverter, diesel_gen])
+system.add_nodes([battery, load, solar, connection_point, inverter, diesel_gen])
 
 # Add edges to graph (i.e. connect up the graph structure how we want it)
 # system.connect_ports_and_create_edge(grid.ports['grid'], connection_point.ports['grid'])
