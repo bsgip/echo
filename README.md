@@ -1,30 +1,31 @@
-# echo (energy and commodity holistic optimiser)
+<p align="center">
+  <a href="https://github.com/bsgip/echo"><img width="400" height="120" src="https://github.com/bsgip/echo/blob/c56b6362f2143468cd0524087f5a3ea9c2078cfb/docs/source/images/echo.png" alt='echo'></a>
+</p>
+
+<p align="center"><strong>echo</strong> <em>- An energy and commodity holistic optimiser.</em></p>
+
+<p align="center">
+<a href="https://github.com/bsgip/echo/actions/">
+    <img src="https://github.com/bsgip/echo/actions/workflows/linttest.yml/badge.svg" alt="Test Suite">
+</a>
+<a href="https://pypi.org/project/eris-echo">
+    <img src="https://badge.fury.io/py/eris-echo.svg" alt="PyPI version">
+</a>
+</p>
 
 `echo` is a python-based multi-commodity energy system optimisation tool designed to answer grid integration questions.
-
 This project is developed and maintained by the [Centre for Energy Systems](https://energysystems.anu.edu.au/) at the Australian National University.
 
-## Installation
+---
 
-`echo` requires requires python 3.11-3.14.
+echo is part of the [Eris modelling tools](https://bsgip.github.io/eris/).
 
-To install this package you need to:
+Install echo with pip:
 
-1. Clone this repo:
-   `git clone git@github.com:bsgip/echo.git`
+```sh
+pip install eris-echo
+```
 
-2. Change to the echo directory:
-   `cd echo`
-
-3. Install using `uv` (recommended):
-
-   `uv sync --python 3.13 --all-extras`
-
-   or `pip`:
-
-   `pip install --group all`
-
-NOTE: This package is not on pypi - **`pip install echo` will NOT install this package**. It will install a different package with the same name.
 
 ## Solver
 
@@ -50,6 +51,26 @@ The following solvers can be used.
 | CBC    | Minimal testing | Open source                                    | [All OSs](https://github.com/coin-or/cbc#download)                                                     | cbc                |
 | GLPK   | No testing      | Open source                                    | [Linux](https://www.gnu.org/software/glpk/#TOCdownloading)                                             | glpk               |
 | Xpress | No testing      | Commercial, free for academic use with licence | [All OSs](https://www.fico.com/fico-xpress-optimization/docs/latest/installguide/dhtml/chapinst1.html) | xpress             |
+
+## Getting Started for Devs
+
+`echo` requires requires python 3.12-3.15.
+
+To install this package you need to:
+
+1. Clone this repo:
+   `git clone git@github.com:bsgip/echo.git`
+
+2. Change to the echo directory:
+   `cd echo`
+
+3. Install using `uv` (recommended):
+
+   `uv sync --python 3.13 --all-extras`
+
+   or `pip`:
+
+   `pip install --group all`
 
 ## Documentation
 
