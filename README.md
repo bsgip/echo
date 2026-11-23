@@ -13,12 +13,12 @@
 </a>
 </p>
 
-`echo` is a python-based multi-commodity energy system optimisation tool designed to answer grid integration questions.
-This project is developed and maintained by the [Centre for Energy Systems](https://energysystems.anu.edu.au/) at the Australian National University.
+echo is a python-based multi-commodity energy system optimisation tool designed for answering grid integration questions.
+
+echo is part of the [Eris](https://bsgip.github.io/eris/) collection of energy modelling tools. echo and Eris are developed and maintained by the [Centre for Energy Systems](https://energysystems.anu.edu.au/) at the Australian National University.
 
 ---
 
-echo is part of the [Eris modelling tools](https://bsgip.github.io/eris/).
 
 Install echo with pip:
 
