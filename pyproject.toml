@@ -70,7 +70,7 @@ all = [{ include-group = "dev" }, { include-group = "docs" }]
 
 
 [tool.setuptools.package-data]
-"echo" = ["py.typed"]
+"eris-echo" = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = { attr = "echo.__version__" }
