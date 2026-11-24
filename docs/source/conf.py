@@ -18,11 +18,11 @@ from datetime import datetime
 # -- Project information -----------------------------------------------------
 
 project = "echo (Energy and Commodity Holistic Optimiser)"
-copyright = f"{datetime.utcnow().year}, BSGIP"
-author = "BSGIP"
+copyright = f"{datetime.utcnow().year}, ANU Centre for Energy Systems"
+author = "ACES"
 
 # The short version
-version = importlib.metadata.version("echo")
+version = importlib.metadata.version("eris-echo")
 # The full version, including alpha/beta/rc tags
 release = version
 
