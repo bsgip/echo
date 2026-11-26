@@ -19,82 +19,42 @@ echo is part of the [Eris](https://bsgip.github.io/eris/) collection of energy m
 
 ---
 
-
 Install echo with pip:
 
 ```sh
 pip install eris-echo
 ```
 
+Install a solver.
 
-## Solver
+echo requires a third party solver to optimise energy modelling scenarios. [cplex](https://www.ibm.com/products/ilog-cplex-optimization-studio) is our preferred solver. See the [documentation](https://bsgip.github.io/echo/getting_started.html#solver-executable) for details of compatible solvers and how to interface them with echo.
 
-Different solvers can be used within echo. Solvers are installed separately; see below for links to install instructions.
+## Tutorial
 
-There are three prerequisites to using a solver in `echo`:
+Point to documentation
 
-1. The solver must be installed.
-2. The solver's executable must be in the `PATH` or equivalent. For example:
-   `PATH="/opt/cplex:$PATH`
-   in `~/.bashrc` for linux systems using bash.
-3. `echo` needs to know which solver to use. There are two ways of doing this:
+Concepts
 
-- Exporting the `OPTIMISER_ENGINE` environment variable, eg. `export OPTIMISER_ENGINE=cplex` in a terminal. Defaults to `cplex`.
-- Setting `echo.models.scenario.EngineSettings.engine`. Defaults to `"cplex"`
+Examples
 
-The following solvers can be used.
+- [Simple behind the meter network](https://github.com/bsgip/echo/blob/8e05610958ad12f4d653a542a9f7b35e7f985381/examples/simple_behind_the_meter_network.py)
+- [Neighbourhood battery with aggregate load](https://github.com/bsgip/echo/blob/8e05610958ad12f4d653a542a9f7b35e7f985381/examples/neighbourhood_battery_with_aggregate_load.py)
 
-| Solver | Testing Status  | License                                        | Installation                                                                                           | Known as in `echo` |
-| ------ | --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------ |
-| CPLEX  | Most tested     | Commercial, free for academic use with licence | [All OSs](https://www.ibm.com/products/ilog-cplex-optimization-studio)                                 | cplex              |
-| GUROBI | Minimal testing | Commercial, free for academic use with licence | [Linux](https:/./www.gurobi.com/documentation/9.5/remoteservices/linux_installation.html)              | gurobi             |
-| CBC    | Minimal testing | Open source                                    | [All OSs](https://github.com/coin-or/cbc#download)                                                     | cbc                |
-| GLPK   | No testing      | Open source                                    | [Linux](https://www.gnu.org/software/glpk/#TOCdownloading)                                             | glpk               |
-| Xpress | No testing      | Commercial, free for academic use with licence | [All OSs](https://www.fico.com/fico-xpress-optimization/docs/latest/installguide/dhtml/chapinst1.html) | xpress             |
+More examples can be found in the [examples directory](https://github.com/bsgip/echo/tree/8e05610958ad12f4d653a542a9f7b35e7f985381/examples).
 
-## Getting Started for Devs
+## Contributing
 
-`echo` requires requires python 3.12-3.15.
+The echo project welcomes [contributions](https://github.com/bsgip/echo/blob/8e05610958ad12f4d653a542a9f7b35e7f985381/CONTRIBUTING.md).
 
-To install this package you need to:
 
-1. Clone this repo:
-   `git clone git@github.com:bsgip/echo.git`
-
-2. Change to the echo directory:
-   `cd echo`
-
-3. Install using `uv` (recommended):
-
-   `uv sync --python 3.13 --all-extras`
-
-   or `pip`:
-
-   `pip install --group all`
-
-## Documentation
-
-### Building the documentation
-
-Make sure you have the documentation dependencies installed
-
-1. Generate the documentation for the echo package (from docstrings)
-   `sphinx-apidoc --force --implicit-namespaces --module-first --no-toc --separate -o docs/source/_reference src/echo`
-   The auto-generated documentation can be found in `docs/source/_reference`
-
-2. Build the documentation (as html)
-   `sphinx-build -b html docs/source docs/_build`
-   The built documentation can be found in `docs/_build`. Warnings about duplicated labels can be safely ignored.
-
-### Design (under creation)
-
-Please see the design file [here](https://github.com/bsgip/echo/blob/V1/design.md).
 
 ## Issues
 
 Please log any issues in the [issue tracker](https://github.com/bsgip/echo/issues).
 
 ## Roadmap
+
+echo is being actively developed...
 
 | Item                               | Status      | Reference                                  | Completion Date |
 | ---------------------------------- | ----------- | ------------------------------------------ | --------------- |
