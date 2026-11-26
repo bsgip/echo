@@ -1,0 +1,7 @@
+echo.models.prebuilt.diesel\_generator module
+=============================================
+
+.. automodule:: echo.models.prebuilt.diesel_generator
+   :members:
+   :show-inheritance:
+   :undoc-members:

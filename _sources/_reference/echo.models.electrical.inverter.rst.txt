@@ -1,0 +1,7 @@
+echo.models.electrical.inverter module
+======================================
+
+.. automodule:: echo.models.electrical.inverter
+   :members:
+   :show-inheritance:
+   :undoc-members:

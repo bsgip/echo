@@ -1,0 +1,7 @@
+echo.optimiser module
+=====================
+
+.. automodule:: echo.optimiser
+   :members:
+   :show-inheritance:
+   :undoc-members:

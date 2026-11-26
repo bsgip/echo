@@ -1,0 +1,7 @@
+echo.models.base.edge module
+============================
+
+.. automodule:: echo.models.base.edge
+   :members:
+   :show-inheritance:
+   :undoc-members:
